@@ -53,13 +53,16 @@ describe('Story X page experience', () => {
     expect(app).toContain('Engineered for story integrity');
   });
 
-  it('keeps landing and post-start nav visually consistent and anchor based', () => {
+  it('keeps landing nav polished and turns post-start navigation into fullscreen steps', () => {
     expect(app).toContain('<StoryXTopNav');
     expect(app).toContain('ariaLabel="Story X"');
-    expect(app).toContain('ariaLabel="homepage"');
     expect(app).toContain('href={`#${link.target}`}');
-    expect(app).toContain("const homeNavLinks = [");
-    expect(app).toContain("label: '작업 선택'");
+    expect(app).toContain("type HomeFlowStep = 'medium' | 'intake'");
+    expect(app).toContain('const [homeFlowStep, setHomeFlowStep]');
+    expect(app).toContain('className="storyx-fullscreen-flow"');
+    expect(app).toContain('className="home-flow-track"');
+    expect(app).toContain('translateX(-${homeFlowIndex * 100}%)');
+    expect(app).toContain('flow-agent-layer-card');
     expect(app).not.toContain("label: '창작 선택'");
     expect(app).not.toContain('nav-menu-trigger');
     expect(app).not.toContain('role="menu"');
@@ -67,6 +70,12 @@ describe('Story X page experience', () => {
     expect(css).toContain('.storyx-site-nav > div');
     expect(css).toContain('.storyx-site-nav a.is-nav-link');
     expect(css).toContain('.liquid-glass-nav');
+    expect(css).toContain('.storyx-home');
+    expect(css).toContain('height: 100dvh');
+    expect(css).toContain('overflow: hidden');
+    expect(css).toContain('.home-flow-panel');
+    expect(css).toContain('flex: 0 0 100%');
+    expect(css).toContain('.flow-agent-layer-card');
     expect(app).not.toContain('<MediaBridgeSection compact />');
     expect(app).not.toContain('<FrontendAgentShowcase compact />');
   });
@@ -113,11 +122,15 @@ describe('Story X page experience', () => {
   it('adds objective agent questions before starting a new project', () => {
     expect(app).toContain('buildProjectIntakePlan');
     expect(app).toContain('getFocusedServiceScope');
+    expect(app).toContain('buildFlowAgentMap');
     expect(app).toContain('const intakePlan = useMemo');
-    expect(app).toContain('className="home-intake-questionnaire"');
+    expect(app).toContain('className="home-intake-questionnaire compact"');
     expect(app).toContain('객관식');
     expect(app).toContain('나중에 언제든지 바꿀 수 있습니다');
     expect(app).toContain('이미지 생성은 후속 단계');
+    expect(app).toContain('프론트 에이전트');
+    expect(app).toContain('미드 에이전트');
+    expect(app).toContain('백 에이전트');
     expect(css).toContain('.home-intake-questionnaire');
     expect(css).toContain('.intake-question-card');
     expect(css).toContain('.scope-focus-strip');

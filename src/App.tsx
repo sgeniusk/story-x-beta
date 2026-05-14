@@ -35,6 +35,7 @@ import {
   type CreativeMedium
 } from './lib/projectBlueprint';
 import { buildProjectIntakePlan, getFocusedServiceScope } from './lib/projectIntake';
+import { buildFlowAgentMap, type FlowAgentAssignment } from './lib/agentOrchestration';
 import {
   createDefaultDevelopmentInput,
   developCreativeProject,
@@ -174,6 +175,7 @@ const homepageRoadmapItems = [
 
 type ActivePane = 'chapter' | 'canon';
 type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor';
+type HomeFlowStep = 'medium' | 'intake';
 type StoryXNavLink = {
   label: string;
   target: string;
@@ -789,174 +791,214 @@ function StoryXHome({
   const workflowPhases = blueprint.productionPhases;
   const intakePlan = useMemo(() => buildProjectIntakePlan(blueprint), [blueprint]);
   const focusedScope = useMemo(() => getFocusedServiceScope(), []);
+  const flowAgentMap = useMemo(() => buildFlowAgentMap(), []);
   const [intakeAnswers, setIntakeAnswers] = useState<Record<string, string>>({});
-  const homeNavLinks = [
-    { label: '작업 선택', target: 'choose' },
-    { label: '세팅 질문', target: 'intake' },
-    { label: '제작 보드', target: 'workflow' },
-    { label: '검토 기준', target: 'evaluation-update' },
-    { label: '작가진', target: 'agents' },
-    { label: '에디터 준비', target: 'roadmap' }
+  const [homeFlowStep, setHomeFlowStep] = useState<HomeFlowStep>('medium');
+  const homeFlowSteps: Array<{ id: HomeFlowStep; label: string; caption: string }> = [
+    { id: 'medium', label: '매체 선택', caption: '무엇을 만들지 정합니다.' },
+    { id: 'intake', label: '성향 질문', caption: '에이전트가 작품 기준을 묻습니다.' }
   ];
+  const homeFlowIndex = homeFlowSteps.findIndex((step) => step.id === homeFlowStep);
 
   return (
     <main className="storyx-home">
-      <StoryXTopNav
-        ariaLabel="homepage"
-        navLinks={homeNavLinks}
-        ctaLabel="에디터로"
-        onLogoClick={onOpenLanding}
-        onCtaClick={onOpenEditor}
-      />
-
-      <section className="home-hero" aria-labelledby="home-title">
-        <div>
-          <p className="framer-eyebrow">Homepage</p>
-          <h1 id="home-title">오늘 만들 이야기를 선택하세요.</h1>
-          <p>
-            매체와 포맷을 고르면 Story X가 필요한 에이전트, 스킬, 제작 단계, 품질 게이트,
-            매체 전환 후보를 한 번에 조립합니다. 핵심은 하나의 이야기가 형태를 바꿔도 무너지지 않는 것입니다.
-          </p>
-        </div>
-        <aside className="home-summary-card">
-          <span>Selected pipeline</span>
-          <strong>
-            {blueprint.mediumLabel} · {blueprint.formatLabel}
-          </strong>
-          <p>{blueprint.projectRoomSubtitle}</p>
-          <button type="button" className="button-primary" onClick={onOpenEditor}>
-            이 구조로 제작 시작
+      <section className="storyx-fullscreen-flow" aria-label="Story X 제작 플로우">
+        <header className="storyx-app-nav">
+          <button type="button" className="framer-wordmark" onClick={onOpenLanding}>
+            <BrandWordmark />
           </button>
-        </aside>
-      </section>
-
-      <section className="home-builder-grid" id="choose" aria-label="creative homepage">
-        <article className="home-choice-panel">
-          <div className="home-section-head">
-            <span>01</span>
-            <h2>무엇을 만들까요?</h2>
-          </div>
-          <div className="home-option-grid">
-            {mediumOptions.map((option) => (
+          <nav aria-label="창작 단계">
+            {homeFlowSteps.map((step) => (
               <button
+                key={step.id}
                 type="button"
-                key={option.id}
-                className={medium === option.id ? 'is-selected' : ''}
-                onClick={() => onSelectMedium(option.id)}
+                className={homeFlowStep === step.id ? 'is-active' : ''}
+                onClick={() => setHomeFlowStep(step.id)}
               >
-                {getMediumIcon(option.id)}
-                <strong>{option.label}</strong>
-                <span>{option.signal}</span>
-                <p>{option.description}</p>
+                <strong>{step.label}</strong>
+                <span>{step.caption}</span>
               </button>
             ))}
-          </div>
-        </article>
+          </nav>
+          <button type="button" className="button-primary" onClick={onOpenEditor}>
+            에디터로
+          </button>
+        </header>
 
-        <article className="home-choice-panel">
-          <div className="home-section-head">
-            <span>02</span>
-            <h2>어떤 형태인가요?</h2>
-          </div>
-          <div className="home-format-stack">
-            {formatOptions.map((option) => (
-              <button
-                type="button"
-                key={option.id}
-                className={format === option.id ? 'is-selected' : ''}
-                onClick={() => onSelectFormat(option.id)}
-              >
-                <span>{option.cadence}</span>
-                <strong>{option.label}</strong>
-                <p>{option.description}</p>
+        <div className="home-flow-track" style={{ transform: `translateX(-${homeFlowIndex * 100}%)` }}>
+          <section className="home-flow-panel is-medium" id="choose" aria-label="매체와 형식 선택">
+            <div className="home-flow-main">
+              <div className="home-flow-copy">
+                <p className="framer-eyebrow">01 · Medium</p>
+                <h1 id="home-title">무엇을 만들까요?</h1>
+                <p>
+                  매체와 형식을 정하면 Story X가 필요한 작가진, 기억은행, 검토 흐름을 먼저 조립합니다.
+                  지금은 소설과 에세이에 집중하고, 만화는 스토리보드까지 선명하게 잡습니다.
+                </p>
+              </div>
+              <div className="home-option-grid">
+                {mediumOptions.map((option) => (
+                  <button
+                    type="button"
+                    key={option.id}
+                    className={medium === option.id ? 'is-selected' : ''}
+                    onClick={() => onSelectMedium(option.id)}
+                  >
+                    {getMediumIcon(option.id)}
+                    <strong>{option.label}</strong>
+                    <span>{option.signal}</span>
+                    <p>{option.description}</p>
+                  </button>
+                ))}
+              </div>
+              <div className="home-format-stack">
+                {formatOptions.map((option) => (
+                  <button
+                    type="button"
+                    key={option.id}
+                    className={format === option.id ? 'is-selected' : ''}
+                    onClick={() => onSelectFormat(option.id)}
+                  >
+                    <span>{option.cadence}</span>
+                    <strong>{option.label}</strong>
+                    <p>{option.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <aside className="home-flow-side">
+              <FlowAgentLayerCard assignment={flowAgentMap.medium} />
+              <article className="gradient-spotlight-card gradient-spotlight-card-magenta" id="workflow">
+                <span>Workflow</span>
+                <h2>{blueprint.projectRoomTitle}</h2>
+                <p>{blueprint.projectRoomSubtitle}</p>
+                <ul>
+                  {workflowPhases.map((phase) => (
+                    <li key={phase.title}>
+                      <strong>{phase.title}</strong>
+                      <small>{phase.outcome}</small>
+                    </li>
+                  ))}
+                </ul>
+                <div className="workflow-quality-strip" aria-label="공통 품질 게이트">
+                  {workflowBoard.qualityGateIds.map((gate) => (
+                    <span key={gate}>{gate}</span>
+                  ))}
+                </div>
+                <p className="workflow-proof">{workflowBoard.platformProof}</p>
+              </article>
+              <button type="button" className="button-primary home-next-button" onClick={() => setHomeFlowStep('intake')}>
+                질문으로 계속
               </button>
-            ))}
-          </div>
-        </article>
+            </aside>
+          </section>
 
-        <aside className="gradient-spotlight-card gradient-spotlight-card-magenta" id="workflow">
-          <span>03 · Workflow</span>
-          <h2>{blueprint.projectRoomTitle}</h2>
-          <p>{blueprint.projectRoomSubtitle}</p>
-          <ul>
-            {workflowPhases.map((phase) => (
-              <li key={phase.title}>
-                <strong>{phase.title}</strong>
-                <small>{phase.outcome}</small>
-              </li>
-            ))}
-          </ul>
-          <div className="workflow-quality-strip" aria-label="공통 품질 게이트">
-            {workflowBoard.qualityGateIds.map((gate) => (
-              <span key={gate}>{gate}</span>
-            ))}
-          </div>
-          <p className="workflow-proof">{workflowBoard.platformProof}</p>
-        </aside>
-      </section>
+          <section className="home-flow-panel is-intake" id="intake" aria-label="새 프로젝트 에이전트 질문">
+            <div className="home-flow-main">
+              <section className="home-intake-questionnaire compact">
+                <div className="home-intake-head">
+                  <div>
+                    <p className="framer-eyebrow">02 · Agent setup · 객관식</p>
+                    <h2>에이전트들이 먼저 묻는 세팅 질문</h2>
+                    <p>
+                      {intakePlan.summary} 이 선택은 나중에 언제든지 바꿀 수 있습니다. 변경이 기존 출간본과
+                      충돌하면 변경 로그와 캐논 리팩터가 먼저 검토합니다.
+                    </p>
+                  </div>
+                  <aside>
+                    <span>{intakePlan.focusLabel}</span>
+                    <p>{intakePlan.notice}</p>
+                  </aside>
+                </div>
+                <div className="scope-focus-strip" aria-label="현재 개발 집중 범위">
+                  <strong>현재 집중</strong>
+                  {focusedScope.now.map((item) => (
+                    <span key={item}>{item}</span>
+                  ))}
+                  <em>후속: {focusedScope.later.join(' · ')}. 만화의 완성 이미지 생성은 후속 단계입니다.</em>
+                </div>
+                <div className="intake-question-grid">
+                  {intakePlan.questions.map((question, index) => {
+                    const selectedOption = intakeAnswers[question.id] ?? question.recommendedOptionId;
 
-      <section className="home-intake-questionnaire" id="intake" aria-label="새 프로젝트 에이전트 질문">
-        <div className="home-intake-head">
-          <div>
-            <p className="framer-eyebrow">Agent setup · 객관식</p>
-            <h2>에이전트들이 먼저 묻는 세팅 질문</h2>
-            <p>
-              {intakePlan.summary} 이 선택은 나중에 언제든지 바꿀 수 있습니다. 변경이 기존 출간본과 충돌하면
-              변경 로그와 캐논 리팩터가 먼저 검토합니다.
-            </p>
-          </div>
-          <aside>
-            <span>{intakePlan.focusLabel}</span>
-            <p>{intakePlan.notice}</p>
-          </aside>
-        </div>
-        <div className="scope-focus-strip" aria-label="현재 개발 집중 범위">
-          <strong>현재 집중</strong>
-          {focusedScope.now.map((item) => (
-            <span key={item}>{item}</span>
-          ))}
-          <em>후속: {focusedScope.later.join(' · ')}. 만화의 완성 이미지 생성은 후속 단계입니다.</em>
-        </div>
-        <div className="intake-question-grid">
-          {intakePlan.questions.map((question, index) => {
-            const selectedOption = intakeAnswers[question.id] ?? question.recommendedOptionId;
-
-            return (
-              <article className="intake-question-card" key={question.id}>
-                <span>
-                  {String(index + 1).padStart(2, '0')} · {question.agentLabel}
-                </span>
-                <h3>{question.question}</h3>
-                <div>
-                  {question.options.map((option) => (
-                    <button
-                      key={option.id}
-                      type="button"
-                      className={selectedOption === option.id ? 'is-selected' : ''}
-                      onClick={() => setIntakeAnswers((current) => ({ ...current, [question.id]: option.id }))}
-                    >
-                      <strong>{option.label}</strong>
-                      <small>{option.impact}</small>
-                    </button>
+                    return (
+                      <article className="intake-question-card" key={question.id}>
+                        <span>
+                          {String(index + 1).padStart(2, '0')} · {question.agentLabel}
+                        </span>
+                        <h3>{question.question}</h3>
+                        <div>
+                          {question.options.map((option) => (
+                            <button
+                              key={option.id}
+                              type="button"
+                              className={selectedOption === option.id ? 'is-selected' : ''}
+                              onClick={() => setIntakeAnswers((current) => ({ ...current, [question.id]: option.id }))}
+                            >
+                              <strong>{option.label}</strong>
+                              <small>{option.impact}</small>
+                            </button>
+                          ))}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+            <aside className="home-flow-side">
+              <FlowAgentLayerCard assignment={flowAgentMap.intake} />
+              <article className="home-summary-card">
+                <span>Selected pipeline</span>
+                <strong>
+                  {blueprint.mediumLabel} · {blueprint.formatLabel}
+                </strong>
+                <p>{blueprint.projectRoomSubtitle}</p>
+                <div className="home-agent-strip" id="agents">
+                  {blueprint.agentStack.slice(0, 5).map((agent) => (
+                    <span key={agent}>{agent}</span>
                   ))}
                 </div>
               </article>
-            );
-          })}
+              <div className="home-flow-actions">
+                <button type="button" className="button-secondary" onClick={() => setHomeFlowStep('medium')}>
+                  이전
+                </button>
+                <button type="button" className="button-primary" onClick={onOpenEditor}>
+                  에디터 화면으로 시작
+                </button>
+              </div>
+            </aside>
+          </section>
         </div>
       </section>
-
-      <TesterEvaluationUpdateSection blueprint={blueprint} />
-      <HomepageRoadmapSection />
-
-      <section className="home-agent-strip" id="agents">
-        {blueprint.agentStack.slice(0, 6).map((agent) => (
-          <span key={agent}>{agent}</span>
-        ))}
-      </section>
-
-      <ServiceOperationsSection compact />
     </main>
+  );
+}
+
+function FlowAgentLayerCard({ assignment }: { assignment: FlowAgentAssignment }) {
+  const layerRows = [
+    { label: '프론트 에이전트', agents: [assignment.frontAgent] },
+    { label: '미드 에이전트', agents: assignment.midAgents },
+    { label: '백 에이전트', agents: assignment.backAgents }
+  ];
+
+  return (
+    <article className="flow-agent-layer-card" aria-label="단계별 에이전트 운영">
+      <span>Agent Stack</span>
+      <h2>보이는 도움과 보이지 않는 관리</h2>
+      {layerRows.map((row) => (
+        <div key={row.label}>
+          <strong>{row.label}</strong>
+          {row.agents.map((agent) => (
+            <p key={agent.id}>
+              <b>{agent.label}</b>
+              <small>{agent.role}</small>
+            </p>
+          ))}
+        </div>
+      ))}
+    </article>
   );
 }
 

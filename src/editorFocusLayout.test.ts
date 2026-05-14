@@ -17,11 +17,14 @@ describe('Story X focused editor layout', () => {
   });
 
   it('keeps the creative artifact as the 70 percent center of the editor', () => {
-    expect(css).toContain('grid-template-columns: minmax(220px, 15%) minmax(0, 70%) minmax(220px, 15%)');
+    expect(css).toContain('grid-template-columns: clamp(200px, 15vw, 260px) minmax(0, 1fr) clamp(220px, 18vw, 320px)');
+    expect(css).toContain('@media (max-width: 1040px)');
     expect(css).toContain('.sx-creative-stage');
     expect(css).toContain('.sx-writing-surface');
     expect(css).toContain('.sx-canvas-surface');
     expect(css).toContain('.sx-storyboard-surface');
+    expect(css).toContain('grid-template-rows: auto auto minmax(0, 1fr)');
+    expect(css).toContain('height: 100%');
     expect(css).toContain('--sx-paper: var(--framer-canvas)');
     expect(css).toContain('.sx-workbench {\n    order: 1;');
   });
@@ -61,16 +64,18 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-chapter-tree');
   });
 
-  it('uses a two-track editor with media changes moved to the top right', () => {
-    expect(desk).toContain("type DeskTrack = 'draft' | 'bible' | 'publish'");
+  it('uses a two-track editor with publishing moved to a separate action', () => {
+    expect(desk).toContain("type DeskTrack = 'draft' | 'bible'");
     expect(desk).toContain("type BibleSection = 'overview' | 'characters' | 'world' | 'canon' | 'voice' | 'approval'");
     expect(desk).toContain('const [activeTrack, setActiveTrack]');
+    expect(desk).toContain('const [isPublishingMode, setIsPublishingMode]');
     expect(desk).toContain('const [activeBibleSection, setActiveBibleSection]');
     expect(desk).toContain('const [approvalDecisions, setApprovalDecisions]');
     expect(desk).toContain('const [isMediaPanelOpen, setIsMediaPanelOpen]');
     expect(desk).toContain('원고 편집');
     expect(desk).toContain('작품 바이블');
     expect(desk).toContain('출간 준비');
+    expect(desk).toContain('className="sx-publish-button"');
     expect(desk).toContain('매체 변경');
     expect(desk).toContain('className="sx-track-tabs"');
     expect(desk).toContain('className="sx-media-change-panel"');
@@ -85,6 +90,7 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('수정 요청됨');
     expect(desk).toContain('보류됨');
     expect(css).toContain('.sx-track-tabs');
+    expect(css).toContain('.sx-publish-button');
     expect(css).toContain('.sx-media-change-panel');
     expect(css).toContain('.sx-bible-studio');
     expect(css).toContain('.sx-bible-card textarea');
@@ -100,6 +106,7 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('const publishingPlan = useMemo');
     expect(desk).toContain('PublishingStudio');
     expect(desk).toContain('PublishingIndexCard');
+    expect(desk).toContain('onBackToEditor');
     expect(desk).toContain('출간 스냅샷');
     expect(desk).toContain('변경 로그 검토');
     expect(desk).toContain('첫 300자');

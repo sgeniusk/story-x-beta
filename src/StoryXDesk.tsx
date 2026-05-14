@@ -72,7 +72,7 @@ import {
 } from './lib/canonRefactor';
 import { clearProject, loadProject, saveProject } from './lib/storage';
 
-type DeskTrack = 'draft' | 'bible' | 'publish';
+type DeskTrack = 'draft' | 'bible';
 type BibleSection = 'overview' | 'characters' | 'world' | 'canon' | 'voice' | 'approval';
 type ApprovalDecision = MemoryApprovalDecision;
 
@@ -378,6 +378,7 @@ export function StoryXDesk({
   const [reviewProvider, setReviewProvider] = useState<AiCliProvider>('mock');
   const [latestReviewResult, setLatestReviewResult] = useState<AiCliReviewResult | null>(null);
   const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(false);
+  const [isPublishingMode, setIsPublishingMode] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AgentDialogSelection | null>(null);
   const [canonChanges, setCanonChanges] = useState<CanonChangeEntry[]>([]);
 
@@ -577,6 +578,7 @@ export function StoryXDesk({
     setAgentRuns(result.agentRuns);
     setLatestChapter(result.chapter);
     setActiveTrack('draft');
+    setIsPublishingMode(false);
   }
 
   function reviewDraft() {
@@ -626,6 +628,7 @@ export function StoryXDesk({
     setApprovalStatementOverrides({});
     setLatestReviewResult(null);
     setIsMediaPanelOpen(false);
+    setIsPublishingMode(false);
     setCanonChanges([]);
   }
 
@@ -663,6 +666,7 @@ export function StoryXDesk({
               className={activeTrack === 'draft' ? 'is-active' : ''}
               onClick={() => {
                 setActiveTrack('draft');
+                setIsPublishingMode(false);
                 setIsMediaPanelOpen(false);
               }}
             >
@@ -674,24 +678,26 @@ export function StoryXDesk({
               className={activeTrack === 'bible' ? 'is-active' : ''}
               onClick={() => {
                 setActiveTrack('bible');
+                setIsPublishingMode(false);
                 setIsMediaPanelOpen(false);
               }}
             >
               <Database size={16} />
               작품 바이블
             </button>
-            <button
-              type="button"
-              className={activeTrack === 'publish' ? 'is-active' : ''}
-              onClick={() => {
-                setActiveTrack('publish');
-                setIsMediaPanelOpen(false);
-              }}
-            >
-              <FileText size={16} />
-              출간 준비
-            </button>
           </nav>
+          <button
+            type="button"
+            className="sx-publish-button"
+            data-active={isPublishingMode ? 'true' : 'false'}
+            onClick={() => {
+              setIsPublishingMode(true);
+              setIsMediaPanelOpen(false);
+            }}
+          >
+            <FileText size={16} />
+            출간 준비
+          </button>
           <button
             type="button"
             className="sx-media-change-button"
@@ -751,14 +757,14 @@ export function StoryXDesk({
 
           <CurrentBlueprintCard blueprint={blueprint} onOpenMediaPanel={() => setIsMediaPanelOpen(true)} />
 
-          {activeTrack === 'draft' ? (
+          {isPublishingMode ? (
+            <PublishingIndexCard plan={publishingPlan} />
+          ) : activeTrack === 'draft' ? (
             <ChapterTreeCard
               project={project}
               selectedChapterId={latestChapter?.id ?? null}
               onSelectChapter={setLatestChapter}
             />
-          ) : activeTrack === 'publish' ? (
-            <PublishingIndexCard plan={publishingPlan} />
           ) : (
             <BibleIndexCard
               project={project}
@@ -769,7 +775,7 @@ export function StoryXDesk({
             />
           )}
 
-          {activeTrack === 'draft' && (
+          {!isPublishingMode && activeTrack === 'draft' && (
           <section className="sx-brief-panel">
             <div className="sx-panel-heading">
               <ClipboardCheck size={16} />
@@ -840,7 +846,20 @@ export function StoryXDesk({
         </aside>
 
         <section className="sx-workbench" aria-label="Story X 작업대">
-          {activeTrack === 'draft' ? (
+          {isPublishingMode ? (
+            <PublishingStudio
+              project={project}
+              blueprint={blueprint}
+              plan={publishingPlan}
+              onBackToEditor={() => setIsPublishingMode(false)}
+              onOpenBible={() => {
+                setIsPublishingMode(false);
+                setActiveTrack('bible');
+                setActiveBibleSection('approval');
+              }}
+              onReviewDraft={reviewDraft}
+            />
+          ) : activeTrack === 'draft' ? (
             <>
               <section className="sx-editor-titlebar">
                 <div>
@@ -893,7 +912,7 @@ export function StoryXDesk({
                 onReviewDraft={reviewDraft}
               />
             </>
-          ) : activeTrack === 'bible' ? (
+          ) : (
             <MemoryBankStudio
               project={project}
               bank={memoryBank}
@@ -911,17 +930,6 @@ export function StoryXDesk({
               canonChanges={canonChanges}
               canonRefactorPlan={canonRefactorPlan}
               onClearCanonChanges={() => setCanonChanges([])}
-            />
-          ) : (
-            <PublishingStudio
-              project={project}
-              blueprint={blueprint}
-              plan={publishingPlan}
-              onOpenBible={() => {
-                setActiveTrack('bible');
-                setActiveBibleSection('approval');
-              }}
-              onReviewDraft={reviewDraft}
             />
           )}
         </section>
@@ -1152,12 +1160,14 @@ function PublishingStudio({
   project,
   blueprint,
   plan,
+  onBackToEditor,
   onOpenBible,
   onReviewDraft
 }: {
   project: SeriesProject;
   blueprint: CreativeBlueprint;
   plan: PublishingPlan;
+  onBackToEditor: () => void;
   onOpenBible: () => void;
   onReviewDraft: () => void;
 }) {
@@ -1178,6 +1188,9 @@ function PublishingStudio({
           <span>게시 위치</span>
           <strong>{blueprint.mediumLabel} · {blueprint.formatLabel}</strong>
           <small>{latestChapter ? `${latestChapter.episode}화 기준` : '초안 생성 후 출간 스냅샷 생성'}</small>
+          <button type="button" className="sx-secondary-button" onClick={onBackToEditor}>
+            편집으로 돌아가기
+          </button>
         </aside>
       </header>
 
