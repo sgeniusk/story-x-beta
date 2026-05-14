@@ -43,6 +43,13 @@ import {
   type SeriesProject
 } from './lib/storyEngine';
 import {
+  agentReportsToRuns,
+  buildAiCliRunPlan,
+  buildMockAiCliReviewResult,
+  type AiCliReviewResult,
+  type AiCliScale
+} from './lib/aiCliHarness';
+import {
   buildMemoryBankWorkbench,
   buildStoryMemoryBank,
   type MemoryBankRecordKind,
@@ -354,6 +361,8 @@ export function StoryXDesk({
   const [activeTrack, setActiveTrack] = useState<DeskTrack>('draft');
   const [activeBibleSection, setActiveBibleSection] = useState<BibleSection>('overview');
   const [approvalDecisions, setApprovalDecisions] = useState<Record<string, ApprovalDecision>>({});
+  const [reviewScale, setReviewScale] = useState<AiCliScale>('small');
+  const [latestReviewResult, setLatestReviewResult] = useState<AiCliReviewResult | null>(null);
   const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AgentDialogSelection | null>(null);
 
@@ -365,6 +374,16 @@ export function StoryXDesk({
   const memoryBank = useMemo(() => buildStoryMemoryBank(project), [project]);
   const memoryWorkbench = useMemo(() => buildMemoryBankWorkbench(project), [project]);
   const evaluatorWorkflow = useMemo(() => buildTesterDrivenWorkflow(blueprint), [blueprint]);
+  const aiCliRunPlan = useMemo(
+    () =>
+      buildAiCliRunPlan({
+        provider: 'mock',
+        mode: 'review',
+        scale: reviewScale,
+        project
+      }),
+    [project, reviewScale]
+  );
   const displayedAgentRuns = useMemo(
     () => (blueprint.nextWorkspace === 'visual-storyboard-studio' ? mergeAgentRuns(agentRuns, visualStoryAgentRuns) : agentRuns),
     [agentRuns, blueprint.nextWorkspace]
@@ -439,18 +458,19 @@ export function StoryXDesk({
 
   function reviewDraft() {
     const reviewTarget = editorText.trim() || draftPrompt.trim() || project.logline;
-    const manualEditNote = editedSinceReview ? '직접 편집한 문장이 있어 수정 구간을 우선 검토합니다.' : '현재 초안과 입력 브리프를 기준으로 검토합니다.';
-    const reviewRuns: AgentRun[] = defaultRuns.map((run, index) => ({
-      ...run,
-      status: 'complete',
-      output:
-        index === 0
-          ? `${manualEditNote} 독자 약속과 다음 장면 질문을 먼저 확인했습니다.`
-          : `${run.output} 검토 대상: ${reviewTarget.slice(0, 34)}${reviewTarget.length > 34 ? '...' : ''}`,
-      evidence: [...run.evidence, editedSinceReview ? 'manual-edit' : 'review-request']
-    }));
+    const result = buildMockAiCliReviewResult(
+      {
+        provider: 'mock',
+        mode: 'review',
+        scale: reviewScale,
+        project
+      },
+      reviewTarget
+    );
+    const reviewRuns = agentReportsToRuns(result);
 
     setAgentRuns(reviewRuns);
+    setLatestReviewResult(result);
     setEditedSinceReview(false);
   }
 
@@ -758,6 +778,14 @@ export function StoryXDesk({
           />
 
           <MemoryBankCard bank={memoryBank} />
+
+          <AiCliHarnessCard
+            plan={aiCliRunPlan}
+            result={latestReviewResult}
+            reviewScale={reviewScale}
+            onSelectScale={setReviewScale}
+            onRunReview={reviewDraft}
+          />
 
           <EvaluatorQualityCard workflow={evaluatorWorkflow} />
 
@@ -1388,6 +1416,77 @@ function MemoryBankCard({ bank }: { bank: StoryMemoryBank }) {
         ))}
       </div>
       <small>원문 자료는 private/raw-sources에 두고, 에이전트는 필요한 구조 기억만 읽습니다.</small>
+    </section>
+  );
+}
+
+function AiCliHarnessCard({
+  plan,
+  result,
+  reviewScale,
+  onSelectScale,
+  onRunReview
+}: {
+  plan: ReturnType<typeof buildAiCliRunPlan>;
+  result: AiCliReviewResult | null;
+  reviewScale: AiCliScale;
+  onSelectScale: (scale: AiCliScale) => void;
+  onRunReview: () => void;
+}) {
+  const scaleOptions: Array<{ id: AiCliScale; label: string; caption: string }> = [
+    { id: 'small', label: 'Small', caption: '3 agents' },
+    { id: 'standard', label: 'Standard', caption: '5 agents' },
+    { id: 'deep', label: 'Deep', caption: 'visual/audio 포함' }
+  ];
+
+  return (
+    <section className="sx-panel sx-ai-harness-card" aria-label="AI CLI 하네스">
+      <div className="sx-panel-heading">
+        <WandSparkles size={16} />
+        <h2>AI CLI 하네스</h2>
+      </div>
+      <p>브라우저에서는 mock으로 안전하게 검토 흐름을 확인하고, CLI에서는 같은 계약으로 Claude/Codex를 실행합니다.</p>
+      <div className="sx-review-scale-row" aria-label="검토 규모">
+        {scaleOptions.map((option) => (
+          <button
+            type="button"
+            key={option.id}
+            className={reviewScale === option.id ? 'is-selected' : ''}
+            onClick={() => onSelectScale(option.id)}
+          >
+            <strong>{option.label}</strong>
+            <span>{option.caption}</span>
+          </button>
+        ))}
+      </div>
+      <div className="sx-cli-command-preview">
+        <span>{plan.provider} · {plan.mode}</span>
+        <code>{plan.commandPreview.slice(0, 4).join(' ')}</code>
+        <small>{plan.selectedAgentIds.length} agents · approval required before sync</small>
+      </div>
+      <button type="button" className="sx-primary-button" onClick={onRunReview}>
+        <ClipboardCheck size={16} />
+        하네스 검토 실행
+      </button>
+      {result && (
+        <div className="sx-review-result-block">
+          <strong>{result.summary}</strong>
+          <div className="sx-memory-candidate-list" aria-label="memoryCandidates">
+            {result.memoryCandidates.map((candidate) => (
+              <article key={candidate.id} className={`is-${candidate.status}`}>
+                <span>{candidate.owner} · {candidate.status}</span>
+                <p>{candidate.statement}</p>
+                <small>{candidate.targetPath}</small>
+              </article>
+            ))}
+          </div>
+          <ul>
+            {result.nextActions.map((action) => (
+              <li key={action}>{action}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }

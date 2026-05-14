@@ -35,5 +35,7 @@ describe('storyx CLI script', () => {
     const saved = readFileSync(payload.pendingReviewPath, 'utf8');
     expect(saved).toContain('Mock review completed');
     expect(saved).toContain('memoryCandidates');
+    expect(saved).toContain('reviews/pending/plot-candidates.json');
+    expect(saved).toContain('approvalRequiredBeforeSync');
   });
 });

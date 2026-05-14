@@ -111,4 +111,20 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-packet-summary-grid');
     expect(css).toContain('.sx-memory-safety-list');
   });
+
+  it('connects the review button to the AI CLI harness preview and pending memory candidates', () => {
+    expect(desk).toContain('buildAiCliRunPlan');
+    expect(desk).toContain('buildMockAiCliReviewResult');
+    expect(desk).toContain('agentReportsToRuns');
+    expect(desk).toContain('const [reviewScale, setReviewScale]');
+    expect(desk).toContain('const [latestReviewResult, setLatestReviewResult]');
+    expect(desk).toContain('function AiCliHarnessCard');
+    expect(desk).toContain('AI CLI 하네스');
+    expect(desk).toContain('검토 규모');
+    expect(desk).toContain('memoryCandidates');
+    expect(desk).toContain('setLatestReviewResult(result)');
+    expect(css).toContain('.sx-ai-harness-card');
+    expect(css).toContain('.sx-review-scale-row');
+    expect(css).toContain('.sx-memory-candidate-list');
+  });
 });

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildAiCliRunPlan, buildProviderCommand, getProviderRuntimeChecks } from './aiCliHarness';
+import {
+  agentReportsToRuns,
+  buildAiCliRunPlan,
+  buildMockAiCliReviewResult,
+  buildProviderCommand,
+  getProviderRuntimeChecks
+} from './aiCliHarness';
 import { createSeedProject } from './storyEngine';
 
 describe('Story X AI CLI harness', () => {
@@ -54,5 +60,25 @@ describe('Story X AI CLI harness', () => {
     expect(checks.find((check) => check.provider === 'mock')?.available).toBe(true);
     expect(mockPlan.commandPreview).toEqual(['storyx-mock', 'draft', '--scale', 'small']);
     expect(mockPlan.expectedOutputSections).toEqual(['summary', 'agentReports', 'memoryCandidates', 'nextActions']);
+  });
+
+  it('returns structured mock review output that can feed the editor rails', () => {
+    const project = createSeedProject();
+    const result = buildMockAiCliReviewResult({
+      provider: 'mock',
+      mode: 'review',
+      scale: 'standard',
+      project
+    }, '서윤이 탑에서 오빠의 새 표식을 발견하고 이안은 대가를 숨긴다.');
+    const runs = agentReportsToRuns(result);
+
+    expect(result.summary).toContain('Story X mock review');
+    expect(result.agentReports.length).toBe(5);
+    expect(result.memoryCandidates.length).toBeGreaterThan(0);
+    expect(result.memoryCandidates[0].status).toBe('pending');
+    expect(result.memoryCandidates[0].targetPath).toContain('reviews/pending');
+    expect(result.approvalRequiredBeforeSync).toBe(true);
+    expect(runs[0].agentId).toBe('showrunner');
+    expect(runs[0].output).toContain('mock');
   });
 });

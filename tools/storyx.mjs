@@ -47,8 +47,28 @@ if (command === 'review') {
         { agent: 'showrunner', status: 'pass', note: '독자 약속과 다음 행동을 먼저 확인합니다.' },
         { agent: 'continuity-editor', status: 'revise', note: '새 기억 후보는 승인 대기 큐에 둡니다.' }
       ],
-      memoryCandidates: [],
-      nextActions: ['실제 호출 전 review scale을 선택하세요.']
+      memoryCandidates: [
+        {
+          id: 'mock-memory-plot',
+          owner: 'plot',
+          status: 'pending',
+          statement: 'mock 검토 대상의 중심 사건은 사용자 승인 전까지 canon이 아니라 pending 후보로 둡니다.',
+          sourceAgentId: 'showrunner',
+          targetPath: 'reviews/pending/plot-candidates.json',
+          rationale: '검토 결과는 먼저 승인 대기에 저장하고, 사용자가 승인한 후보만 memory bank에 반영합니다.'
+        },
+        {
+          id: 'mock-memory-voice',
+          owner: 'voice',
+          status: 'pending',
+          statement: '사용자 직접 편집 문장은 다음 문체 검토의 우선 증거로 표시합니다.',
+          sourceAgentId: 'voice-curator',
+          targetPath: 'reviews/pending/voice-candidates.json',
+          rationale: '사용자의 수정은 문체 취향을 보존하는 가장 강한 신호입니다.'
+        }
+      ],
+      nextActions: ['실제 호출 전 review scale을 선택하세요.'],
+      approvalRequiredBeforeSync: true
     };
 
     const pendingReviewPath = writePendingReviewFile(outDir, provider, scale, result);
@@ -59,8 +79,7 @@ if (command === 'review') {
 
     printJson({
       ...result,
-      pendingReviewPath,
-      approvalRequiredBeforeSync: true
+      pendingReviewPath
     });
     process.exit(0);
   }
