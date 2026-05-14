@@ -109,6 +109,12 @@ describe('Story X focused editor layout', () => {
   });
 
   it('keeps editor rails focused and moves memory, quality, and harness work into the bible flow', () => {
+    expect(desk).toContain('buildAlphaReadinessReport');
+    expect(desk).toContain('const alphaReport = useMemo');
+    expect(desk).toContain('function AlphaSelfCheckCard');
+    expect(desk).toContain('alphaReport={alphaReport}');
+    expect(desk).toContain('알파 셀프체크');
+    expect(desk).toContain('report.gates.map');
     expect(desk).not.toContain('<CurrentBlueprintCard');
     expect(desk).not.toContain('<MemoryBankCard bank={memoryBank} />');
     expect(desk).not.toContain('<AiCliHarnessCard');
@@ -123,6 +129,8 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('sx-focused-assist-rail');
     expect(css).toContain('.sx-focused-assist-rail');
     expect(css).toContain('.sx-bible-assistant-sidebar');
+    expect(css).toContain('.sx-alpha-check-card');
+    expect(css).toContain('.sx-alpha-gate-list');
   });
 
   it('adds a publishing studio for release snapshots and change-log review', () => {

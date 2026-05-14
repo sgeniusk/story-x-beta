@@ -62,6 +62,7 @@ import {
 import { buildTesterDrivenWorkflow, type TesterDrivenWorkflow } from './lib/evaluationSynthesis';
 import { buildComicsVisualWorkflow } from './lib/visualProduction';
 import { buildPublishingPlan, type PublishingPlan } from './lib/publishing';
+import { buildAlphaReadinessReport, type AlphaReadinessReport } from './lib/alphaReadiness';
 import {
   buildCanonRefactorPlan,
   createCanonChangeEntry,
@@ -579,6 +580,19 @@ export function StoryXDesk({
   const evaluatorWorkflow = useMemo(() => buildTesterDrivenWorkflow(blueprint), [blueprint]);
   const publishingPlan = useMemo(() => buildPublishingPlan(project, blueprint), [blueprint, project]);
   const canonRefactorPlan = useMemo(() => buildCanonRefactorPlan(project, canonChanges), [canonChanges, project]);
+  const alphaReport = useMemo(
+    () =>
+      buildAlphaReadinessReport({
+        project,
+        blueprint,
+        memoryBank,
+        approvalQueue,
+        canonRefactorPlan,
+        latestReviewResult,
+        publishingPlan
+      }),
+    [approvalQueue, blueprint, canonRefactorPlan, latestReviewResult, memoryBank, project, publishingPlan]
+  );
   const aiCliRunPlan = useMemo(
     () =>
       buildAiCliRunPlan({
@@ -1078,6 +1092,7 @@ export function StoryXDesk({
               <OpenThreadsCard threads={project.openThreads} />
             </>
           )}
+          <AlphaSelfCheckCard alphaReport={alphaReport} />
         </aside>
       </section>
       {selectedAgent && (
@@ -1978,6 +1993,48 @@ function EvaluatorQualityCard({ workflow }: { workflow: TesterDrivenWorkflow }) 
         ))}
       </ol>
       <small>{workflow.approvalRule}</small>
+    </section>
+  );
+}
+
+function AlphaSelfCheckCard({ alphaReport: report }: { alphaReport: AlphaReadinessReport }) {
+  const statusLabels: Record<AlphaReadinessReport['status'], string> = {
+    ready: '출시 가능',
+    'needs-review': '검토 필요',
+    blocked: '차단'
+  };
+  const gateLabels: Record<AlphaReadinessReport['status'], string> = {
+    ready: '통과',
+    'needs-review': '검토',
+    blocked: '차단'
+  };
+
+  return (
+    <section className={`sx-panel sx-alpha-check-card is-${report.status}`} aria-label="알파 셀프체크">
+      <div className="sx-panel-heading">
+        <ClipboardCheck size={16} />
+        <h2>알파 셀프체크</h2>
+      </div>
+      <div className="sx-alpha-score">
+        <strong>{report.score}%</strong>
+        <span>{statusLabels[report.status]}</span>
+      </div>
+      <p>{report.proofSummary}</p>
+      <small>{report.releaseScope}</small>
+      <div className="sx-alpha-gate-list">
+        {report.gates.map((gate) => (
+          <article key={gate.id} className={`is-${gate.status}`}>
+            <span>{gateLabels[gate.status]}</span>
+            <strong>{gate.label}</strong>
+            <small>{gate.owner}</small>
+          </article>
+        ))}
+      </div>
+      <ol className="sx-alpha-next-actions">
+        {report.nextActions.map((action) => (
+          <li key={action}>{action}</li>
+        ))}
+      </ol>
     </section>
   );
 }
