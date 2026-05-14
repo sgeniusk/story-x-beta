@@ -4569,11 +4569,12 @@ body {
   line-height: 1.4;
 }
 
-.sx-bible-section-tabs {
+.sx-bible-workbench {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-  padding: 8px;
+  gap: 12px;
+  align-content: start;
+  min-height: min(760px, calc(100vh - 260px));
+  padding: 14px;
   border: 1px solid var(--sx-line);
   border-radius: var(--framer-rounded-xl);
   background:
@@ -4582,60 +4583,8 @@ body {
   box-shadow: var(--sx-shadow);
 }
 
-.sx-bible-section-tabs button {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-  min-height: 58px;
-  padding: 9px 10px;
-  border: 1px solid transparent;
-  border-radius: 14px;
-  background: transparent;
-  color: var(--sx-muted);
-  text-align: left;
-}
-
-.sx-bible-section-tabs button.is-active {
-  border-color: var(--sx-ink);
-  background: var(--sx-ink);
-  color: var(--sx-card);
-}
-
-.sx-bible-section-tabs strong {
-  overflow: hidden;
-  color: inherit;
-  font-size: 0.84rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sx-bible-section-tabs span {
-  overflow: hidden;
-  color: inherit;
-  font-size: 0.68rem;
-  line-height: 1.25;
-  opacity: 0.72;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sx-memory-workbench-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(220px, 0.55fr);
-  gap: 12px;
-}
-
-.sx-memory-workbench-panel > article {
-  display: grid;
-  gap: 12px;
-  min-width: 0;
-  padding: 16px;
-  border: 1px solid var(--sx-line);
-  border-radius: var(--framer-rounded-xl);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.48)),
-    var(--sx-card);
-  box-shadow: var(--sx-shadow);
+.sx-bible-workbench .sx-bible-grid {
+  min-height: 100%;
 }
 
 .sx-canon-refactor-panel {
@@ -5338,6 +5287,28 @@ body {
 .sx-agent-sidebar > div:last-child {
   display: grid;
   gap: 10px;
+}
+
+.sx-bible-assistant-sidebar > p {
+  margin: -2px 0 12px;
+  color: var(--sx-ink-2);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.sx-bible-assistant-sidebar .sx-panel-heading h2::after {
+  content: 'Bible Assist';
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  margin-left: 8px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(176, 88, 159, 0.14);
+  color: var(--sx-accent);
+  font-size: 0.68rem;
+  font-weight: 800;
+  vertical-align: middle;
 }
 
 .sx-agent-card {
@@ -6139,7 +6110,6 @@ body {
   .sx-desk-grid,
   .sx-hero-card,
   .sx-brief-grid,
-  .sx-memory-workbench-panel,
   .sx-publishing-hero,
   .sx-publishing-grid,
   .sx-release-checklist > div,

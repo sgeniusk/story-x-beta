@@ -54,12 +54,9 @@ import {
 } from './lib/aiCliHarness';
 import {
   buildMemoryApprovalQueue,
-  buildMemoryBankWorkbench,
   buildStoryMemoryBank,
   type MemoryApprovalDecision,
   type MemoryApprovalQueue,
-  type MemoryBankRecordKind,
-  type MemoryBankWorkbench,
   type StoryMemoryBank
 } from './lib/memoryBank';
 import { buildTesterDrivenWorkflow, type TesterDrivenWorkflow } from './lib/evaluationSynthesis';
@@ -343,6 +340,62 @@ const visualStoryAgentRuns: AgentRun[] = [
   }
 ];
 
+function buildBibleAssistantRuns(
+  project: SeriesProject,
+  approvalQueue: MemoryApprovalQueue,
+  canonRefactorPlan: CanonRefactorPlan,
+  latestReviewResult: AiCliReviewResult | null
+): AgentRun[] {
+  const pendingCount = approvalQueue.items.filter((item) => item.status !== 'approved').length;
+  const reviewCount = latestReviewResult?.agentReports.length ?? 0;
+
+  return [
+    {
+      agentId: 'continuity-editor',
+      title: '캐논 리팩터',
+      status: 'complete',
+      output:
+        canonRefactorPlan.status === 'blocked'
+          ? `${canonRefactorPlan.conflictWarnings.length}개 충돌이 있어 승인 전 영향 회차를 먼저 정리해야 합니다.`
+          : `${project.canonFacts.length}개 캐논과 ${project.chapters.length}개 회차를 기준으로 변경 영향을 추적합니다.`,
+      evidence: ['canon ledger', 'timeline']
+    },
+    {
+      agentId: 'character-custodian',
+      title: '캐릭터 편집 조수',
+      status: 'complete',
+      output: `${project.characters.length}명의 욕망, 상처, 현재 상태를 다음 원고 기준으로 편집 가능하게 관리합니다.`,
+      evidence: ['desire', 'wound', 'relationship-state']
+    },
+    {
+      agentId: 'world-keeper',
+      title: '세계관 편집 조수',
+      status: 'complete',
+      output: `${project.worldRules.length}개 세계 규칙의 비용, 예외, 금지 충돌을 한곳에서 고정합니다.`,
+      evidence: ['world rules', 'cost', 'forbidden contradiction']
+    },
+    {
+      agentId: 'voice-curator',
+      title: '문체 조수',
+      status: 'complete',
+      output: '문체, 감각, 시각/오디오 앵커를 매체 전환용 기억 패킷으로 정리합니다.',
+      evidence: ['voice bible', 'visual anchor', 'audio rhythm']
+    },
+    {
+      agentId: 'essay-interviewer',
+      title: '승인 대기 조수',
+      status: 'complete',
+      output:
+        pendingCount > 0
+          ? `${pendingCount}개 기억 후보가 승인 대기 중입니다. 사용자가 승인하기 전에는 canon에 반영하지 않습니다.`
+          : reviewCount > 0
+            ? `${reviewCount}개 검토 보고서를 반영했고, 새 후보는 승인 대기함으로만 이동합니다.`
+            : '새 기억 후보는 검토 후 승인 대기함에 쌓이고, 직접 확인한 항목만 동기화됩니다.',
+      evidence: ['approval queue', 'user decision']
+    }
+  ];
+}
+
 interface StoryXDeskProps {
   initialMedium?: CreativeMedium;
   initialFormat?: CreativeFormat;
@@ -391,7 +444,6 @@ export function StoryXDesk({
     [project, request.intent, request.pressure]
   );
   const memoryBank = useMemo(() => buildStoryMemoryBank(project), [project]);
-  const memoryWorkbench = useMemo(() => buildMemoryBankWorkbench(project), [project]);
   const approvalQueue = useMemo(
     () =>
       buildMemoryApprovalQueue({
@@ -419,12 +471,17 @@ export function StoryXDesk({
     () => (blueprint.nextWorkspace === 'visual-storyboard-studio' ? mergeAgentRuns(agentRuns, visualStoryAgentRuns) : agentRuns),
     [agentRuns, blueprint.nextWorkspace]
   );
+  const bibleAssistantRuns = useMemo(
+    () => buildBibleAssistantRuns(project, approvalQueue, canonRefactorPlan, latestReviewResult),
+    [approvalQueue, canonRefactorPlan, latestReviewResult, project]
+  );
   const canonHealth = useMemo(() => {
     const total = project.canonFacts.length + project.worldRules.length + project.characters.length;
     const episodes = Math.max(project.currentEpisode, 1);
     return Math.min(99, Math.round((total / (episodes + 6)) * 16));
   }, [project]);
   const bibleAlertCount = editorWorkspace.continuitySummary.blocked + editorWorkspace.continuitySummary.warnings;
+  const isBibleMode = activeTrack === 'bible' && !isPublishingMode;
 
   useEffect(() => {
     saveProject(project);
@@ -849,8 +906,6 @@ export function StoryXDesk({
               project={project}
               bank={memoryBank}
               activeSection={activeBibleSection}
-              workbench={memoryWorkbench}
-              onSelectSection={setActiveBibleSection}
               onUpdateCharacter={updateCharacterMemory}
               onUpdateWorldRule={updateWorldMemory}
               onUpdateCanon={updateCanonMemory}
@@ -866,13 +921,23 @@ export function StoryXDesk({
           )}
         </section>
 
-        <aside className="sx-codex-rail sx-focused-assist-rail" aria-label="작가진과 열린 질문">
-          <AgentSidebar
-            runs={displayedAgentRuns}
-            onSelectAgent={(run, persona) => setSelectedAgent({ run, persona })}
-          />
+        <aside className="sx-codex-rail sx-focused-assist-rail" aria-label={isBibleMode ? '조수진과 바이블 검토' : '작가진과 열린 질문'}>
+          {isBibleMode ? (
+            <BibleAssistantSidebar
+              runs={bibleAssistantRuns}
+              activeSection={activeBibleSection}
+              onSelectAgent={(run, persona) => setSelectedAgent({ run, persona })}
+            />
+          ) : (
+            <>
+              <AgentSidebar
+                runs={displayedAgentRuns}
+                onSelectAgent={(run, persona) => setSelectedAgent({ run, persona })}
+              />
 
-          <OpenThreadsCard threads={project.openThreads} />
+              <OpenThreadsCard threads={project.openThreads} />
+            </>
+          )}
         </aside>
       </section>
       {selectedAgent && (
@@ -1125,8 +1190,6 @@ function MemoryBankStudio({
   project,
   bank,
   activeSection,
-  workbench,
-  onSelectSection,
   onUpdateCharacter,
   onUpdateWorldRule,
   onUpdateCanon,
@@ -1142,8 +1205,6 @@ function MemoryBankStudio({
   project: SeriesProject;
   bank: StoryMemoryBank;
   activeSection: BibleSection;
-  workbench: MemoryBankWorkbench;
-  onSelectSection: (section: BibleSection) => void;
   onUpdateCharacter: (characterId: string, field: 'desire' | 'wound' | 'currentState', value: string) => void;
   onUpdateWorldRule: (ruleId: string, value: string) => void;
   onUpdateCanon: (canonId: string, value: string) => void;
@@ -1174,33 +1235,8 @@ function MemoryBankStudio({
         </aside>
       </header>
 
-      <nav className="sx-bible-section-tabs" aria-label="바이블 섹션">
-        {bibleSections.map((section) => (
-          <button
-            key={section.id}
-            type="button"
-            className={activeSection === section.id ? 'is-active' : ''}
-            onClick={() => onSelectSection(section.id)}
-          >
-            <strong>{section.label}</strong>
-            <span>{section.summary}</span>
-          </button>
-        ))}
-      </nav>
-
-      <MemoryWorkbenchPanel
-        workbench={workbench}
-        activeSection={activeSection}
-        onOpenRecordSection={onSelectSection}
-      />
-
-      <CanonRefactorPanel
-        changes={canonChanges}
-        plan={canonRefactorPlan}
-        onClearChanges={onClearCanonChanges}
-      />
-
-      {activeSection === 'overview' && (
+      <div className={`sx-bible-workbench is-${activeSection}`}>
+        {activeSection === 'overview' && (
         <div className="sx-bible-grid">
           <article className="sx-bible-card is-wide sx-memory-packet-card">
             <span>Story Core</span>
@@ -1235,9 +1271,9 @@ function MemoryBankStudio({
             <p>{bank.syncableFiles.length}개는 동기화 가능, private/raw-sources는 기본 컨텍스트에서 제외됩니다.</p>
           </article>
         </div>
-      )}
+        )}
 
-      {activeSection === 'characters' && (
+        {activeSection === 'characters' && (
         <div className="sx-bible-grid">
           {project.characters.map((character) => (
           <article className="sx-bible-card" key={character.id}>
@@ -1276,9 +1312,9 @@ function MemoryBankStudio({
           </article>
           ))}
         </div>
-      )}
+        )}
 
-      {activeSection === 'world' && (
+        {activeSection === 'world' && (
         <div className="sx-bible-grid">
           {project.worldRules.map((rule) => (
           <article className="sx-bible-card is-world" key={rule.id}>
@@ -1296,42 +1332,49 @@ function MemoryBankStudio({
           </article>
           ))}
         </div>
-      )}
+        )}
 
-      {activeSection === 'canon' && (
-        <div className="sx-bible-grid sx-canon-board">
-          <article className="sx-bible-card is-wide">
-            <span>Canon Ledger</span>
-            <h3>승인된 사실</h3>
-            <div className="sx-canon-editor-list">
-              {project.canonFacts.map((fact) => (
-                <label key={fact.id}>
-                  <small>EP {fact.episode} · {fact.owner}</small>
-                  <textarea value={fact.statement} onChange={(event) => onUpdateCanon(fact.id, event.target.value)} rows={2} />
-                </label>
-              ))}
+        {activeSection === 'canon' && (
+          <>
+            <div className="sx-bible-grid sx-canon-board">
+              <article className="sx-bible-card is-wide">
+                <span>Canon Ledger</span>
+                <h3>승인된 사실</h3>
+                <div className="sx-canon-editor-list">
+                  {project.canonFacts.map((fact) => (
+                    <label key={fact.id}>
+                      <small>EP {fact.episode} · {fact.owner}</small>
+                      <textarea value={fact.statement} onChange={(event) => onUpdateCanon(fact.id, event.target.value)} rows={2} />
+                    </label>
+                  ))}
+                </div>
+              </article>
+              <article className="sx-bible-card is-wide">
+                <span>Timeline</span>
+                <h3>회차 흐름</h3>
+                <div className="sx-timeline-list">
+                  {project.chapters.length === 0 ? (
+                    <p>첫 초안을 생성하면 회차 타임라인이 이곳에 쌓입니다.</p>
+                  ) : (
+                    project.chapters.map((chapter) => (
+                      <div key={chapter.id}>
+                        <strong>{chapter.episode}화 · {chapter.title}</strong>
+                        <span>{chapter.hook}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </article>
             </div>
-          </article>
-          <article className="sx-bible-card is-wide">
-            <span>Timeline</span>
-            <h3>회차 흐름</h3>
-            <div className="sx-timeline-list">
-              {project.chapters.length === 0 ? (
-                <p>첫 초안을 생성하면 회차 타임라인이 이곳에 쌓입니다.</p>
-              ) : (
-                project.chapters.map((chapter) => (
-                  <div key={chapter.id}>
-                    <strong>{chapter.episode}화 · {chapter.title}</strong>
-                    <span>{chapter.hook}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </article>
-        </div>
-      )}
+            <CanonRefactorPanel
+              changes={canonChanges}
+              plan={canonRefactorPlan}
+              onClearChanges={onClearCanonChanges}
+            />
+          </>
+        )}
 
-      {activeSection === 'voice' && (
+        {activeSection === 'voice' && (
         <div className="sx-bible-grid">
           <article className="sx-bible-card is-wide">
           <span>문체 바이블</span>
@@ -1365,9 +1408,9 @@ function MemoryBankStudio({
             <p>톤, 쉼, 반복 후크, 발음 주의 단어는 오디오북/영상 보드의 기준으로 쓰입니다.</p>
           </article>
         </div>
-      )}
+        )}
 
-      {activeSection === 'approval' && (
+        {activeSection === 'approval' && (
         <div className="sx-bible-grid sx-approval-queue">
           <article className="sx-bible-card sx-bible-approval is-wide">
             <span>승인 대기</span>
@@ -1441,7 +1484,8 @@ function MemoryBankStudio({
             </div>
           </article>
         </div>
-      )}
+        )}
+      </div>
     </section>
   );
 }
@@ -1531,105 +1575,6 @@ function CanonRefactorPanel({
       </div>
     </section>
   );
-}
-
-function MemoryWorkbenchPanel({
-  workbench,
-  activeSection,
-  onOpenRecordSection
-}: {
-  workbench: MemoryBankWorkbench;
-  activeSection: BibleSection;
-  onOpenRecordSection: (section: BibleSection) => void;
-}) {
-  const records = filterWorkbenchRecords(workbench, activeSection).slice(0, 6);
-
-  return (
-    <section className="sx-memory-workbench-panel" aria-label="메모리뱅크 작업대">
-      <article>
-        <div className="sx-panel-heading">
-          <Database size={16} />
-          <h2>편집 가능한 기억</h2>
-        </div>
-        <div className="sx-memory-record-grid">
-          {records.map((record) => (
-            <button type="button" key={record.id} onClick={() => onOpenRecordSection(resolveRecordSection(record.kind))}>
-              <span>{record.kind}</span>
-              <strong>{record.title}</strong>
-              <p>{record.summary}</p>
-              <small>{record.sourcePath}</small>
-            </button>
-          ))}
-        </div>
-      </article>
-      <article>
-        <div className="sx-panel-heading">
-          <BrainCircuit size={16} />
-          <h2>에이전트 기억 패킷</h2>
-        </div>
-        <div className="sx-packet-summary-grid">
-          {workbench.packetSummaries.slice(0, 6).map((packet) => (
-            <div key={packet.agentId}>
-              <strong>{packet.label}</strong>
-              <span>{packet.sections.join(' · ')}</span>
-              <small>{packet.includesRawManuscript ? '원문 포함' : '구조 기억만 전달'} · anchor {packet.anchorCount}</small>
-            </div>
-          ))}
-        </div>
-      </article>
-      <article className="sx-memory-safety-list">
-        <div className="sx-panel-heading">
-          <ShieldAlert size={16} />
-          <h2>안전 규칙</h2>
-        </div>
-        <ul>
-          {workbench.safetyRules.map((rule) => (
-            <li key={rule}>{rule}</li>
-          ))}
-        </ul>
-      </article>
-    </section>
-  );
-}
-
-function resolveRecordSection(kind: MemoryBankRecordKind): BibleSection {
-  if (kind === 'character') {
-    return 'characters';
-  }
-
-  if (kind === 'world') {
-    return 'world';
-  }
-
-  if (kind === 'canon') {
-    return 'canon';
-  }
-
-  if (kind === 'voice' || kind === 'visual' || kind === 'audio') {
-    return 'voice';
-  }
-
-  return 'overview';
-}
-
-function filterWorkbenchRecords(workbench: MemoryBankWorkbench, activeSection: BibleSection) {
-  if (activeSection === 'characters') {
-    return workbench.editableRecords.filter((record) => record.kind === 'character');
-  }
-
-  if (activeSection === 'world') {
-    return workbench.editableRecords.filter((record) => record.kind === 'world' || record.kind === 'visual');
-  }
-
-  if (activeSection === 'canon' || activeSection === 'approval') {
-    return workbench.editableRecords.filter((record) => record.kind === 'canon' || record.kind === 'story-core');
-  }
-
-  if (activeSection === 'voice') {
-    return workbench.editableRecords.filter((record) => ['voice', 'visual', 'audio'].includes(record.kind));
-  }
-
-  return workbench.editableRecords;
 }
 
 function ProjectStateCard({ project, canonHealth }: { project: SeriesProject; canonHealth: number }) {
@@ -1877,6 +1822,54 @@ function AgentSidebar({
               <AgentPixelPortrait persona={persona} />
               <div>
                 <span>{persona.subtitle}</span>
+                <strong>{persona.title}</strong>
+                <p>{run.output}</p>
+                <small>
+                  <MessageCircle size={13} />
+                  대화하기
+                </small>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function BibleAssistantSidebar({
+  runs,
+  activeSection,
+  onSelectAgent
+}: {
+  runs: AgentRun[];
+  activeSection: BibleSection;
+  onSelectAgent: (run: AgentRun, persona: AgentPersona) => void;
+}) {
+  const activeLabel = bibleSections.find((section) => section.id === activeSection)?.label ?? '바이블';
+
+  return (
+    <section className="sx-panel sx-agent-sidebar sx-bible-assistant-sidebar" aria-label="AI 조수진">
+      <div className="sx-panel-heading">
+        <BrainCircuit size={16} />
+        <h2>조수진</h2>
+      </div>
+      <p>{activeLabel} 작업장을 기준으로 필요한 기억, 충돌, 승인 상태만 옆에서 확인합니다.</p>
+      <div>
+        {runs.map((run) => {
+          const persona = getAgentPersona(run);
+
+          return (
+            <button
+              key={`${run.agentId}-${run.title}`}
+              type="button"
+              className="sx-agent-card"
+              aria-label={`${persona.title} 자세한 지시사항 열기`}
+              onClick={() => onSelectAgent(run, persona)}
+            >
+              <AgentPixelPortrait persona={persona} />
+              <div>
+                <span>{run.title}</span>
                 <strong>{persona.title}</strong>
                 <p>{run.output}</p>
                 <small>

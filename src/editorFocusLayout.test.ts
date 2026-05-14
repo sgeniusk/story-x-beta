@@ -100,8 +100,8 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-publish-button');
     expect(css).toContain('.sx-media-change-panel');
     expect(css).toContain('.sx-bible-studio');
+    expect(css).toContain('.sx-bible-workbench');
     expect(css).toContain('.sx-bible-card textarea');
-    expect(css).toContain('.sx-bible-section-tabs');
     expect(css).toContain('.sx-canon-board');
     expect(css).toContain('.sx-memory-packet-card');
     expect(css).toContain('.sx-approval-queue');
@@ -114,10 +114,15 @@ describe('Story X focused editor layout', () => {
     expect(desk).not.toContain('<AiCliHarnessCard');
     expect(desk).not.toContain('<EvaluatorQualityCard workflow={evaluatorWorkflow} />');
     expect(desk).not.toContain('<ContinuitySummaryCard');
+    expect(desk).toContain("const isBibleMode = activeTrack === 'bible' && !isPublishingMode");
     expect(desk).toContain('function OpenThreadsCard');
     expect(desk).toContain('<OpenThreadsCard threads={project.openThreads} />');
+    expect(desk).toContain('function BibleAssistantSidebar');
+    expect(desk).toContain('조수진');
+    expect(desk).toContain('<BibleAssistantSidebar');
     expect(desk).toContain('sx-focused-assist-rail');
     expect(css).toContain('.sx-focused-assist-rail');
+    expect(css).toContain('.sx-bible-assistant-sidebar');
   });
 
   it('adds a publishing studio for release snapshots and change-log review', () => {
@@ -136,22 +141,21 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-platform-proof-card');
   });
 
-  it('turns the memory bank into an editable workbench with agent context packets', () => {
-    expect(desk).toContain('buildMemoryBankWorkbench');
-    expect(desk).toContain('const memoryWorkbench = useMemo(() => buildMemoryBankWorkbench(project), [project])');
-    expect(desk).toContain('workbench={memoryWorkbench}');
-    expect(desk).toContain('sx-memory-workbench-panel');
-    expect(desk).toContain('편집 가능한 기억');
-    expect(desk).toContain('에이전트 기억 패킷');
-    expect(desk).toContain('안전 규칙');
-    expect(desk).toContain('packet.includesRawManuscript ?');
-    expect(desk).toContain('record.sourcePath');
-    expect(desk).toContain('onOpenRecordSection(resolveRecordSection(record.kind))');
-    expect(desk).toContain('function resolveRecordSection');
-    expect(css).toContain('.sx-memory-workbench-panel');
-    expect(css).toContain('.sx-memory-record-grid');
-    expect(css).toContain('.sx-packet-summary-grid');
-    expect(css).toContain('.sx-memory-safety-list');
+  it('turns the memory bank into a left-indexed central editing workspace', () => {
+    expect(desk).toContain('className={`sx-bible-workbench is-${activeSection}`}');
+    expect(desk).toContain("activeSection === 'characters'");
+    expect(desk).toContain("activeSection === 'world'");
+    expect(desk).toContain("activeSection === 'canon'");
+    expect(desk).toContain("activeSection === 'voice'");
+    expect(desk).toContain("activeSection === 'approval'");
+    expect(desk).toContain('onUpdateCharacter(character.id');
+    expect(desk).toContain('onUpdateWorldRule(rule.id');
+    expect(desk).toContain('onUpdateCanon(fact.id');
+    expect(desk).toContain('CanonRefactorPanel');
+    expect(desk).not.toContain('className="sx-bible-section-tabs"');
+    expect(desk).not.toContain('<MemoryWorkbenchPanel');
+    expect(css).toContain('.sx-bible-workbench');
+    expect(css).toContain('.sx-bible-card textarea');
   });
 
   it('tracks bible edits through a canon refactor impact panel', () => {
