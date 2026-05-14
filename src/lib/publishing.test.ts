@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { buildMemoryApprovalQueue } from './memoryBank';
 import { buildCreativeBlueprint } from './projectBlueprint';
 import { buildPublishingPlan } from './publishing';
 import { createSeedProject, produceNextChapter } from './storyEngine';
+import { buildOneProjectVerticalSlice } from './verticalSlice';
 
 function projectWithChapter() {
   const seed = createSeedProject();
@@ -48,5 +50,48 @@ describe('Story X publishing plan', () => {
     expect(plan.mode).toBe('storyboard-package');
     expect(plan.releaseNotice).toContain('이미지 생성은 후속 단계');
     expect(plan.packageItems).toEqual(expect.arrayContaining(['첫 3컷 스토리보드', '말풍선 밀도표']));
+  });
+
+  it('turns pending memory approvals into a publishing release gate', () => {
+    const project = projectWithChapter();
+    const verticalSlice = buildOneProjectVerticalSlice();
+    const approvalQueue = buildMemoryApprovalQueue({
+      project,
+      reviewCandidates: verticalSlice.memoryCandidates
+    });
+    const plan = buildPublishingPlan(
+      project,
+      buildCreativeBlueprint({ medium: 'novel', format: 'long-novel' }),
+      { approvalQueue }
+    );
+    const memoryGate = plan.checklist.find((item) => item.id === 'memory-approval');
+
+    expect(memoryGate?.status).toBe('review');
+    expect(memoryGate?.detail).toContain('승인 대기');
+    expect(plan.changeLogReview.join(' ')).toContain('승인 대기');
+  });
+
+  it('marks the publishing memory gate ready when every memory candidate can sync', () => {
+    const project = projectWithChapter();
+    const verticalSlice = buildOneProjectVerticalSlice();
+    const pendingQueue = buildMemoryApprovalQueue({
+      project,
+      reviewCandidates: verticalSlice.memoryCandidates
+    });
+    const approvalQueue = buildMemoryApprovalQueue({
+      project,
+      reviewCandidates: verticalSlice.memoryCandidates,
+      decisions: Object.fromEntries(pendingQueue.items.map((item) => [item.id, 'approved']))
+    });
+    const plan = buildPublishingPlan(
+      project,
+      buildCreativeBlueprint({ medium: 'novel', format: 'long-novel' }),
+      { approvalQueue }
+    );
+    const memoryGate = plan.checklist.find((item) => item.id === 'memory-approval');
+
+    expect(memoryGate?.status).toBe('ready');
+    expect(memoryGate?.detail).toContain('동기화 가능');
+    expect(plan.snapshotItems).toContain('승인된 메모리 후보');
   });
 });

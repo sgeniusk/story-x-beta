@@ -152,6 +152,7 @@ describe('Story X focused editor layout', () => {
   it('adds a publishing studio for release snapshots and change-log review', () => {
     expect(desk).toContain('buildPublishingPlan');
     expect(desk).toContain('const publishingPlan = useMemo');
+    expect(desk).toContain('{ approvalQueue }');
     expect(desk).toContain('PublishingStudio');
     expect(desk).toContain('PublishingIndexCard');
     expect(desk).toContain('onBackToEditor');
@@ -159,9 +160,11 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('변경 로그 검토');
     expect(desk).toContain('첫 300자');
     expect(desk).toContain('게시 위치');
+    expect(desk).toContain('memory-approval');
     expect(desk).toContain('만화는 스토리보드 패키지');
     expect(css).toContain('.sx-publishing-studio');
     expect(css).toContain('.sx-release-checklist');
+    expect(css).toContain('.sx-release-gate-state');
     expect(css).toContain('.sx-platform-proof-card');
   });
 

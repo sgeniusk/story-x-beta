@@ -5406,7 +5406,7 @@ body {
 
 .sx-release-checklist > div {
   display: grid;
-  grid-template-columns: auto minmax(0, 0.32fr) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 0.32fr) auto minmax(0, 1fr);
   gap: 8px;
   align-items: start;
   padding: 12px;
@@ -5426,6 +5426,23 @@ body {
 .sx-release-checklist strong {
   color: var(--sx-ink);
   font-size: 0.9rem;
+}
+
+.sx-release-gate-state {
+  align-self: start;
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(94, 138, 78, 0.12);
+  color: var(--sx-ink);
+  font-size: 0.72rem;
+  font-weight: 780;
+  line-height: 1;
+}
+
+.sx-release-checklist > div.is-review .sx-release-gate-state {
+  background: rgba(176, 88, 159, 0.14);
+  color: #80316f;
 }
 
 .sx-publishing-grid ul {

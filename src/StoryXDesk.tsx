@@ -591,7 +591,10 @@ export function StoryXDesk({
     [approvalDecisions, approvalStatementOverrides, latestReviewResult, project, verticalSlice]
   );
   const evaluatorWorkflow = useMemo(() => buildTesterDrivenWorkflow(blueprint), [blueprint]);
-  const publishingPlan = useMemo(() => buildPublishingPlan(project, blueprint), [blueprint, project]);
+  const publishingPlan = useMemo(
+    () => buildPublishingPlan(project, blueprint, { approvalQueue }),
+    [approvalQueue, blueprint, project]
+  );
   const canonRefactorPlan = useMemo(() => buildCanonRefactorPlan(project, canonChanges), [canonChanges, project]);
   const alphaReport = useMemo(
     () =>
@@ -1360,9 +1363,10 @@ function PublishingStudio({
           <span>Release Gates</span>
           <h3>출간 전 체크리스트</h3>
           {plan.checklist.map((item) => (
-            <div key={item.id} className={`is-${item.status}`}>
+            <div key={item.id} className={`is-${item.status} ${item.id === 'memory-approval' ? 'is-memory-approval' : ''}`}>
               <Check size={15} />
               <strong>{item.label}</strong>
+              <span className="sx-release-gate-state">{item.status === 'ready' ? 'ready' : 'review'}</span>
               <small>{item.detail}</small>
             </div>
           ))}

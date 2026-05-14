@@ -1,3 +1,4 @@
+import type { MemoryApprovalQueue } from './memoryBank';
 import type { CreativeBlueprint } from './projectBlueprint';
 import type { SeriesProject } from './storyEngine';
 
@@ -23,14 +24,23 @@ export interface PublishingPlan {
   packageItems: string[];
 }
 
-export function buildPublishingPlan(project: SeriesProject, blueprint: CreativeBlueprint): PublishingPlan {
+export interface BuildPublishingPlanOptions {
+  approvalQueue?: MemoryApprovalQueue;
+}
+
+export function buildPublishingPlan(
+  project: SeriesProject,
+  blueprint: CreativeBlueprint,
+  options: BuildPublishingPlanOptions = {}
+): PublishingPlan {
   const latestChapter = project.chapters[project.chapters.length - 1] ?? null;
   const proofText = (latestChapter?.prose ?? project.logline).replace(/\s+/g, ' ').trim();
   const excerpt = proofText.length > 300 ? `${proofText.slice(0, 300)}...` : proofText;
   const releaseTarget = latestChapter ? `${latestChapter.episode}화 · ${latestChapter.title}` : '초안 없음';
+  let plan: PublishingPlan;
 
   if (blueprint.medium === 'essay') {
-    return {
+    plan = {
       mode: 'essay-piece',
       title: `${blueprint.formatLabel} 출간 준비`,
       platformProof: `첫 300자 미리보기: ${excerpt}`,
@@ -60,10 +70,12 @@ export function buildPublishingPlan(project: SeriesProject, blueprint: CreativeB
       changeLogReview: ['변경 로그 검토', '실제 인물 보호 영향 범위', '문체 리팩터 영향 범위'],
       packageItems: ['본문 원고', '소개 문구', '낭독 전환 후보']
     };
+
+    return withMemoryApprovalGate(plan, options.approvalQueue);
   }
 
   if (blueprint.medium === 'comics') {
-    return {
+    plan = {
       mode: 'storyboard-package',
       title: `${blueprint.formatLabel} 스토리보드 출간 준비`,
       platformProof: `첫 3컷 스토리보드: ${latestChapter?.outline.slice(0, 3).join(' / ') ?? '초안 생성 후 구성됩니다.'}`,
@@ -93,10 +105,12 @@ export function buildPublishingPlan(project: SeriesProject, blueprint: CreativeB
       changeLogReview: ['변경 로그 검토', '캐릭터 외형 후보 영향 범위', '컷 순서 영향 범위'],
       packageItems: ['첫 3컷 스토리보드', '말풍선 밀도표', '컷별 연출 메모', '이미지 프롬프트 후속 후보']
     };
+
+    return withMemoryApprovalGate(plan, options.approvalQueue);
   }
 
   if (blueprint.medium === 'audiobook') {
-    return {
+    plan = {
       mode: 'future-package',
       title: `${blueprint.formatLabel} 오디오 패키지 준비`,
       platformProof: `첫 30초 낭독 증거: ${excerpt}`,
@@ -114,9 +128,11 @@ export function buildPublishingPlan(project: SeriesProject, blueprint: CreativeB
       changeLogReview: ['변경 로그 검토', '문체/낭독 영향 범위'],
       packageItems: ['내레이션 원고', '첫 30초 증거', '음악 큐 후보']
     };
+
+    return withMemoryApprovalGate(plan, options.approvalQueue);
   }
 
-  return {
+  plan = {
     mode: 'serial-episode',
     title: `${releaseTarget} 출간 준비`,
     platformProof: `첫 300자 미리보기: ${excerpt}`,
@@ -145,5 +161,38 @@ export function buildPublishingPlan(project: SeriesProject, blueprint: CreativeB
     snapshotItems: ['회차 출간 스냅샷', '첫 300자', '새 캐논 후보', '다음 화 질문'],
     changeLogReview: ['변경 로그 검토', '캐논 리팩터 영향 범위', '기존 회차 충돌', '앞으로 전개 조언'],
     packageItems: ['본문 원고', '플랫폼 소개 문구', '웹툰/동화책 전환 후보', '오디오북 제안']
+  };
+
+  return withMemoryApprovalGate(plan, options.approvalQueue);
+}
+
+function withMemoryApprovalGate(plan: PublishingPlan, approvalQueue?: MemoryApprovalQueue): PublishingPlan {
+  if (!approvalQueue || approvalQueue.summary.total === 0) {
+    return plan;
+  }
+
+  const needsApproval =
+    approvalQueue.summary.undecided > 0 || approvalQueue.summary.revision > 0 || approvalQueue.summary.hold > 0;
+  const status: PublishingChecklistStatus = needsApproval ? 'review' : 'ready';
+  const detail = needsApproval
+    ? `승인 대기 ${approvalQueue.summary.undecided}개, 수정 요청 ${approvalQueue.summary.revision}개, 보류 ${approvalQueue.summary.hold}개를 출간 전에 정리합니다.`
+    : `${approvalQueue.summary.canSync}개 후보가 동기화 가능 상태입니다. 승인된 기억만 출간 스냅샷 기준으로 사용합니다.`;
+  const memoryGate: PublishingChecklistItem = {
+    id: 'memory-approval',
+    label: '메모리 승인 큐',
+    status,
+    detail
+  };
+
+  return {
+    ...plan,
+    checklist: [...plan.checklist, memoryGate],
+    snapshotItems: status === 'ready' ? [...plan.snapshotItems, '승인된 메모리 후보'] : plan.snapshotItems,
+    changeLogReview: [
+      ...plan.changeLogReview,
+      status === 'ready'
+        ? `${approvalQueue.summary.canSync}개 승인 후보 동기화 가능`
+        : `승인 대기 ${approvalQueue.summary.undecided}개 메모리 후보`
+    ]
   };
 }
