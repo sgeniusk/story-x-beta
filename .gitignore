@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.DS_Store
+.omc/
+.superpowers/
+.storyx-runs/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+memory-bank/**/private/

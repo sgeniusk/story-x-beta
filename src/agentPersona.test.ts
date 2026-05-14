@@ -1,0 +1,27 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+const desk = readFileSync(resolve(__dirname, 'StoryXDesk.tsx'), 'utf8');
+const css = readFileSync(resolve(__dirname, 'styles.css'), 'utf8');
+
+describe('agent personas', () => {
+  it('renders agents as clickable pixel-character personas', () => {
+    expect(desk).toContain('const agentPersonas');
+    expect(desk).toContain('function AgentPixelPortrait');
+    expect(desk).toContain('function AgentProfileDialog');
+    expect(desk).toContain('onSelectAgent');
+    expect(desk).toContain('자세한 지시사항');
+    expect(desk).toContain('말풍선 연출가');
+    expect(desk).toContain('원화/키프레임 감독');
+    expect(desk).toContain('프레임 조립가');
+  });
+
+  it('styles pixel busts and the agent chat dialog', () => {
+    expect(css).toContain('.pixel-agent');
+    expect(css).toContain('.pixel-agent-head');
+    expect(css).toContain('.pixel-agent-body');
+    expect(css).toContain('.agent-dialog-backdrop');
+    expect(css).toContain('.agent-chat-message.is-agent');
+  });
+});
