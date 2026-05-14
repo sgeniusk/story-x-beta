@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createSeedProject, produceNextChapter } from './storyEngine';
 import {
+  buildMemoryApprovalQueue,
   buildMemoryBankWorkbench,
   buildMemoryBankContextPacket,
   buildStoryMemoryBank,
@@ -75,6 +76,49 @@ describe('Story X memory bank', () => {
     );
     expect(workbench.packetSummaries.every((packet) => packet.includesRawManuscript === false)).toBe(true);
     expect(workbench.safetyRules).toContain('private/raw-sources는 에이전트 기본 패킷에 넣지 않습니다.');
+  });
+
+  it('merges chapter canon candidates and AI review memory candidates into an approval queue', () => {
+    const project = produceNextChapter(createSeedProject(), {
+      genre: 'romance-fantasy',
+      intent: '서윤이 탑의 하층 기록실에서 새 표식을 발견한다',
+      pressure: '이안이 숨긴 대가가 관계를 흔들기 시작한다'
+    }).updatedProject;
+
+    const queue = buildMemoryApprovalQueue({
+      project,
+      reviewCandidates: [
+        {
+          id: 'provider-memory-01',
+          owner: 'visual',
+          status: 'pending',
+          statement: '서윤의 기준 원화는 은빛 필사 도구와 어두운 망토 실루엣을 유지한다.',
+          sourceAgentId: 'da-vinci',
+          targetPath: 'visual/style-bible.md',
+          rationale: '만화 전환 시 같은 인물로 보이기 위한 visual DNA 후보'
+        }
+      ],
+      decisions: {
+        'canon-001-a': 'approved',
+        'provider-memory-01': 'revision'
+      }
+    });
+
+    expect(queue.summary.total).toBeGreaterThanOrEqual(2);
+    expect(queue.summary.approved).toBe(1);
+    expect(queue.summary.revision).toBe(1);
+
+    const canonCandidate = queue.items.find((item) => item.source === 'chapter-canon');
+    expect(canonCandidate?.decision).toBe('approved');
+    expect(canonCandidate?.targetPath).toContain('context/canon.md');
+    expect(canonCandidate?.canSync).toBe(true);
+
+    const visualCandidate = queue.items.find((item) => item.id === 'provider-memory-01');
+    expect(visualCandidate?.source).toBe('ai-review');
+    expect(visualCandidate?.impactAreas).toEqual(['visual', 'production']);
+    expect(visualCandidate?.decision).toBe('revision');
+    expect(visualCandidate?.canSync).toBe(false);
+    expect(visualCandidate?.editableStatement).toContain('은빛 필사 도구');
   });
 
   it('documents the target folder template', () => {

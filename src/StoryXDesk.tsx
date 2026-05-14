@@ -51,8 +51,11 @@ import {
   type AiCliScale
 } from './lib/aiCliHarness';
 import {
+  buildMemoryApprovalQueue,
   buildMemoryBankWorkbench,
   buildStoryMemoryBank,
+  type MemoryApprovalDecision,
+  type MemoryApprovalQueue,
   type MemoryBankRecordKind,
   type MemoryBankWorkbench,
   type StoryMemoryBank
@@ -63,7 +66,7 @@ import { clearProject, loadProject, saveProject } from './lib/storage';
 
 type DeskTrack = 'draft' | 'bible';
 type BibleSection = 'overview' | 'characters' | 'world' | 'canon' | 'voice' | 'approval';
-type ApprovalDecision = 'approved' | 'revision' | 'hold';
+type ApprovalDecision = MemoryApprovalDecision;
 
 const genreProfiles = getGenreProfiles();
 const mediumOptions = getMediumOptions();
@@ -362,6 +365,7 @@ export function StoryXDesk({
   const [activeTrack, setActiveTrack] = useState<DeskTrack>('draft');
   const [activeBibleSection, setActiveBibleSection] = useState<BibleSection>('overview');
   const [approvalDecisions, setApprovalDecisions] = useState<Record<string, ApprovalDecision>>({});
+  const [approvalStatementOverrides, setApprovalStatementOverrides] = useState<Record<string, string>>({});
   const [reviewScale, setReviewScale] = useState<AiCliScale>('small');
   const [reviewProvider, setReviewProvider] = useState<AiCliProvider>('mock');
   const [latestReviewResult, setLatestReviewResult] = useState<AiCliReviewResult | null>(null);
@@ -375,6 +379,16 @@ export function StoryXDesk({
   );
   const memoryBank = useMemo(() => buildStoryMemoryBank(project), [project]);
   const memoryWorkbench = useMemo(() => buildMemoryBankWorkbench(project), [project]);
+  const approvalQueue = useMemo(
+    () =>
+      buildMemoryApprovalQueue({
+        project,
+        reviewCandidates: latestReviewResult?.memoryCandidates ?? [],
+        decisions: approvalDecisions,
+        statementOverrides: approvalStatementOverrides
+      }),
+    [approvalDecisions, approvalStatementOverrides, latestReviewResult, project]
+  );
   const evaluatorWorkflow = useMemo(() => buildTesterDrivenWorkflow(blueprint), [blueprint]);
   const aiCliRunPlan = useMemo(
     () =>
@@ -450,6 +464,10 @@ export function StoryXDesk({
     setApprovalDecisions((current) => ({ ...current, [candidateId]: decision }));
   }
 
+  function updateApprovalStatement(candidateId: string, value: string) {
+    setApprovalStatementOverrides((current) => ({ ...current, [candidateId]: value }));
+  }
+
   function produceEpisode() {
     const result = produceNextChapter(project, { ...request, intent: draftPrompt || request.intent });
     setProject(result.updatedProject);
@@ -502,6 +520,8 @@ export function StoryXDesk({
     setActiveTrack('draft');
     setActiveBibleSection('overview');
     setApprovalDecisions({});
+    setApprovalStatementOverrides({});
+    setLatestReviewResult(null);
     setIsMediaPanelOpen(false);
   }
 
@@ -626,6 +646,7 @@ export function StoryXDesk({
             <BibleIndexCard
               project={project}
               bank={memoryBank}
+              approvalQueue={approvalQueue}
               activeSection={activeBibleSection}
               onSelectSection={setActiveBibleSection}
             />
@@ -766,8 +787,10 @@ export function StoryXDesk({
               onUpdateWorldRule={updateWorldMemory}
               onUpdateCanon={updateCanonMemory}
               onUpdateProject={updateProject}
+              approvalQueue={approvalQueue}
               approvalDecisions={approvalDecisions}
               onSetApprovalDecision={setApprovalDecision}
+              onUpdateApprovalStatement={updateApprovalStatement}
             />
           )}
         </section>
@@ -789,6 +812,10 @@ export function StoryXDesk({
             onSelectProvider={setReviewProvider}
             onSelectScale={setReviewScale}
             onRunReview={reviewDraft}
+            onOpenApprovalQueue={() => {
+              setActiveTrack('bible');
+              setActiveBibleSection('approval');
+            }}
           />
 
           <EvaluatorQualityCard workflow={evaluatorWorkflow} />
@@ -930,22 +957,23 @@ function CurrentBlueprintCard({ blueprint, onOpenMediaPanel }: { blueprint: Crea
 function BibleIndexCard({
   project,
   bank,
+  approvalQueue,
   activeSection,
   onSelectSection
 }: {
   project: SeriesProject;
   bank: StoryMemoryBank;
+  approvalQueue: MemoryApprovalQueue;
   activeSection: BibleSection;
   onSelectSection: (section: BibleSection) => void;
 }) {
-  const latestChapter = project.chapters.length > 0 ? project.chapters[project.chapters.length - 1] : null;
   const sectionCounts: Record<BibleSection, string> = {
     overview: `${bank.syncableFiles.length}개 동기화 기억`,
     characters: `${project.characters.length}명 · 욕망/상처/현재 상태`,
     world: `${project.worldRules.length}개 규칙 · 비용/예외/장소`,
     canon: `${project.canonFacts.length}개 사실 · ${project.chapters.length}개 회차`,
     voice: `${project.characters.flatMap((character) => character.voiceRules).length}개 말투 규칙`,
-    approval: `${latestChapter?.newCanonFacts.length ?? 0}개 최신 후보`
+    approval: `${approvalQueue.summary.total}개 후보 · ${approvalQueue.summary.canSync}개 동기화 가능`
   };
 
   return (
@@ -980,8 +1008,10 @@ function MemoryBankStudio({
   onUpdateWorldRule,
   onUpdateCanon,
   onUpdateProject,
+  approvalQueue,
   approvalDecisions,
-  onSetApprovalDecision
+  onSetApprovalDecision,
+  onUpdateApprovalStatement
 }: {
   project: SeriesProject;
   bank: StoryMemoryBank;
@@ -992,11 +1022,11 @@ function MemoryBankStudio({
   onUpdateWorldRule: (ruleId: string, value: string) => void;
   onUpdateCanon: (canonId: string, value: string) => void;
   onUpdateProject: (field: 'title' | 'logline' | 'audiencePromise' | 'tone', value: string) => void;
+  approvalQueue: MemoryApprovalQueue;
   approvalDecisions: Record<string, ApprovalDecision>;
   onSetApprovalDecision: (candidateId: string, decision: ApprovalDecision) => void;
+  onUpdateApprovalStatement: (candidateId: string, value: string) => void;
 }) {
-  const latestChapter = project.chapters.length > 0 ? project.chapters[project.chapters.length - 1] : null;
-
   return (
     <section className="sx-bible-studio" aria-label="작품 바이블">
       <header className="sx-bible-hero">
@@ -1205,27 +1235,52 @@ function MemoryBankStudio({
       {activeSection === 'approval' && (
         <div className="sx-bible-grid sx-approval-queue">
           <article className="sx-bible-card sx-bible-approval is-wide">
-          <span>승인 대기</span>
-          <h3>새 기억 후보</h3>
-          <p>검토 버튼을 누른 뒤 생긴 새 캐논, 캐릭터 변화, 세계관 예외는 이곳에서 승인/수정/거절하게 됩니다.</p>
-          {latestChapter ? (
+            <span>승인 대기</span>
+            <h3>메모리 승인 큐</h3>
+            <p>회차에서 생긴 캐논 후보와 AI 검토 memoryCandidates를 한곳에서 편집한 뒤 승인/수정/보류합니다.</p>
+            <div className="sx-approval-summary" aria-label="메모리 승인 요약">
+              <strong>{approvalQueue.summary.total}</strong>
+              <span>전체 후보</span>
+              <strong>{approvalQueue.summary.approved}</strong>
+              <span>승인됨</span>
+              <strong>{approvalQueue.summary.canSync}</strong>
+              <span>동기화 가능</span>
+            </div>
+          {approvalQueue.items.length > 0 ? (
             <div className="sx-approval-list">
-              {latestChapter.newCanonFacts.map((fact) => {
-                const decision = approvalDecisions[fact.id];
+              {approvalQueue.items.map((item) => {
+                const decision = approvalDecisions[item.id];
 
                 return (
-                  <article key={fact.id} className={decision ? `is-${decision}` : undefined}>
-                    <span>EP {fact.episode} · {fact.owner}</span>
-                    <p>{fact.statement}</p>
+                  <article key={item.id} className={decision ? `is-${decision}` : undefined}>
+                    <span>
+                      <b className="sx-approval-source-pill">{item.source === 'ai-review' ? 'AI 검토' : '회차 캐논'}</b>
+                      {item.owner} · {item.status}
+                    </span>
+                    <label>
+                      <small>승인 전 편집</small>
+                      <textarea
+                        value={item.editableStatement}
+                        onChange={(event) => onUpdateApprovalStatement(item.id, event.target.value)}
+                        rows={3}
+                      />
+                    </label>
+                    <p>{item.rationale}</p>
+                    <small>{item.targetPath}</small>
+                    <div className="sx-approval-impact-tags" aria-label="영향 범위">
+                      {item.impactAreas.map((area) => (
+                        <em key={`${item.id}-${area}`}>{area}</em>
+                      ))}
+                    </div>
                     {decision && <strong className="sx-approval-status">{approvalDecisionLabels[decision]}</strong>}
                     <div>
-                      <button type="button" onClick={() => onSetApprovalDecision(fact.id, 'approved')}>
+                      <button type="button" onClick={() => onSetApprovalDecision(item.id, 'approved')}>
                         승인
                       </button>
-                      <button type="button" onClick={() => onSetApprovalDecision(fact.id, 'revision')}>
+                      <button type="button" onClick={() => onSetApprovalDecision(item.id, 'revision')}>
                         수정 요청
                       </button>
-                      <button type="button" onClick={() => onSetApprovalDecision(fact.id, 'hold')}>
+                      <button type="button" onClick={() => onSetApprovalDecision(item.id, 'hold')}>
                         보류
                       </button>
                     </div>
@@ -1234,18 +1289,20 @@ function MemoryBankStudio({
               })}
             </div>
           ) : (
-            <p>아직 생성된 회차가 없어 승인 대기 후보가 없습니다.</p>
+            <p>아직 승인 대기 후보가 없습니다. 초안 생성 또는 검토를 실행하면 이곳에 후보가 쌓입니다.</p>
           )}
           </article>
           <article className="sx-bible-card is-wide">
             <span>Impact Preview</span>
             <h3>영향 범위</h3>
-            <p>새 기억을 승인하면 캐릭터, 세계관, 문체, 회차 타임라인 중 어느 영역이 바뀌는지 이곳에 표시합니다.</p>
+            <p>승인된 항목만 다음 동기화 후보가 됩니다. 수정 요청과 보류는 원문을 덮어쓰지 않고 검토 기록으로 남깁니다.</p>
             <div className="sx-bible-memory-tags">
               <em>characters</em>
               <em>world</em>
               <em>canon</em>
               <em>voice</em>
+              <em>visual</em>
+              <em>audio</em>
             </div>
           </article>
         </div>
@@ -1431,7 +1488,8 @@ function AiCliHarnessCard({
   reviewScale,
   onSelectProvider,
   onSelectScale,
-  onRunReview
+  onRunReview,
+  onOpenApprovalQueue
 }: {
   plan: ReturnType<typeof buildAiCliRunPlan>;
   result: AiCliReviewResult | null;
@@ -1440,6 +1498,7 @@ function AiCliHarnessCard({
   onSelectProvider: (provider: AiCliProvider) => void;
   onSelectScale: (scale: AiCliScale) => void;
   onRunReview: () => void;
+  onOpenApprovalQueue: () => void;
 }) {
   const providerOptions: Array<{ id: AiCliProvider; label: string; caption: string }> = [
     { id: 'mock', label: 'Mock', caption: '무료 테스트' },
@@ -1516,6 +1575,10 @@ function AiCliHarnessCard({
               <li key={action}>{action}</li>
             ))}
           </ul>
+          <button type="button" className="sx-secondary-button" onClick={onOpenApprovalQueue}>
+            <Database size={15} />
+            승인 대기함 열기
+          </button>
         </div>
       )}
     </section>

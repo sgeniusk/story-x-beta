@@ -56,6 +56,53 @@ export interface MemoryBankWorkbench {
   safetyRules: string[];
 }
 
+export type MemoryApprovalDecision = 'approved' | 'revision' | 'hold';
+export type MemoryApprovalSource = 'chapter-canon' | 'ai-review';
+
+export interface MemoryApprovalSourceCandidate {
+  id: string;
+  owner: 'character' | 'world' | 'plot' | 'voice' | 'visual' | 'audio';
+  status: string;
+  statement: string;
+  sourceAgentId: string;
+  targetPath: string;
+  rationale: string;
+}
+
+export interface MemoryApprovalQueueItem {
+  id: string;
+  source: MemoryApprovalSource;
+  owner: MemoryApprovalSourceCandidate['owner'];
+  status: string;
+  decision?: MemoryApprovalDecision;
+  statement: string;
+  editableStatement: string;
+  sourceAgentId: string;
+  targetPath: string;
+  rationale: string;
+  impactAreas: string[];
+  canSync: boolean;
+}
+
+export interface MemoryApprovalQueue {
+  items: MemoryApprovalQueueItem[];
+  summary: {
+    total: number;
+    undecided: number;
+    approved: number;
+    revision: number;
+    hold: number;
+    canSync: number;
+  };
+}
+
+export interface BuildMemoryApprovalQueueOptions {
+  project: SeriesProject;
+  reviewCandidates?: MemoryApprovalSourceCandidate[];
+  decisions?: Record<string, MemoryApprovalDecision>;
+  statementOverrides?: Record<string, string>;
+}
+
 export const memoryBankTemplate = `memory-bank/storyx/{project_id}/
   manifest.json
   story-core.md
@@ -252,6 +299,117 @@ export function buildMemoryBankWorkbench(project: SeriesProject): MemoryBankWork
       '원화 후보는 사용자가 선택한 뒤에만 visual DNA로 승격합니다.'
     ]
   };
+}
+
+export function buildMemoryApprovalQueue({
+  project,
+  reviewCandidates = [],
+  decisions = {},
+  statementOverrides = {}
+}: BuildMemoryApprovalQueueOptions): MemoryApprovalQueue {
+  const root = `memory-bank/storyx/${slugProjectId(project.id)}`;
+  const chapterCandidates = project.chapters
+    .flatMap((chapter) => chapter.newCanonFacts.map((fact) => ({ chapter, fact })))
+    .map<MemoryApprovalQueueItem>(({ chapter, fact }) => {
+      const decision = decisions[fact.id];
+      const editableStatement = statementOverrides[fact.id] ?? fact.statement;
+
+      return {
+        id: fact.id,
+        source: 'chapter-canon',
+        owner: fact.owner,
+        status: 'pending',
+        decision,
+        statement: fact.statement,
+        editableStatement,
+        sourceAgentId: 'continuity-editor',
+        targetPath: `${root}/context/canon.md`,
+        rationale: `${chapter.episode}화에서 발생한 새 사실 후보입니다. 승인 전까지 다음 회차 canon으로 고정하지 않습니다.`,
+        impactAreas: resolveImpactAreas(fact.owner, `${root}/context/canon.md`),
+        canSync: decision === 'approved'
+      };
+    });
+
+  const aiCandidates = reviewCandidates.map<MemoryApprovalQueueItem>((candidate) => {
+    const decision = decisions[candidate.id];
+    const editableStatement = statementOverrides[candidate.id] ?? candidate.statement;
+
+    return {
+      id: candidate.id,
+      source: 'ai-review',
+      owner: candidate.owner,
+      status: candidate.status,
+      decision,
+      statement: candidate.statement,
+      editableStatement,
+      sourceAgentId: candidate.sourceAgentId,
+      targetPath: normalizeMemoryTargetPath(root, candidate.targetPath, candidate.owner),
+      rationale: candidate.rationale,
+      impactAreas: resolveImpactAreas(candidate.owner, candidate.targetPath),
+      canSync: decision === 'approved' && candidate.status !== 'blocked'
+    };
+  });
+
+  const items = [...chapterCandidates, ...aiCandidates];
+
+  return {
+    items,
+    summary: {
+      total: items.length,
+      undecided: items.filter((item) => !item.decision).length,
+      approved: items.filter((item) => item.decision === 'approved').length,
+      revision: items.filter((item) => item.decision === 'revision').length,
+      hold: items.filter((item) => item.decision === 'hold').length,
+      canSync: items.filter((item) => item.canSync).length
+    }
+  };
+}
+
+function normalizeMemoryTargetPath(root: string, targetPath: string, owner: MemoryApprovalSourceCandidate['owner']) {
+  if (!targetPath) {
+    return `${root}/${resolveOwnerDefaultPath(owner)}`;
+  }
+
+  if (targetPath.startsWith('memory-bank/')) {
+    return targetPath;
+  }
+
+  return `${root}/${targetPath.replace(/^\/+/, '')}`;
+}
+
+function resolveOwnerDefaultPath(owner: MemoryApprovalSourceCandidate['owner']) {
+  const paths: Record<MemoryApprovalSourceCandidate['owner'], string> = {
+    character: 'characters/relationships.md',
+    world: 'world/rules.md',
+    plot: 'context/canon.md',
+    voice: 'voice/author-voice-bible.md',
+    visual: 'visual/style-bible.md',
+    audio: 'audio/narration-bible.md'
+  };
+
+  return paths[owner];
+}
+
+function resolveImpactAreas(owner: MemoryApprovalSourceCandidate['owner'], targetPath: string) {
+  const baseByOwner: Record<MemoryApprovalSourceCandidate['owner'], string[]> = {
+    character: ['characters', 'canon'],
+    world: ['world', 'canon'],
+    plot: ['canon', 'timeline'],
+    voice: ['voice', 'draft'],
+    visual: ['visual', 'production'],
+    audio: ['audio', 'production']
+  };
+  const impactAreas = new Set(baseByOwner[owner]);
+
+  if (targetPath.includes('production/')) {
+    impactAreas.add('production');
+  }
+
+  if (targetPath.includes('reviews/')) {
+    impactAreas.add('reviews');
+  }
+
+  return Array.from(impactAreas);
 }
 
 function buildEditableRecords(project: SeriesProject, root: string): MemoryBankEditableRecord[] {

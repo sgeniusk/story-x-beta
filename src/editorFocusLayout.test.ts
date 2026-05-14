@@ -131,4 +131,21 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-review-scale-row');
     expect(css).toContain('.sx-memory-candidate-list');
   });
+
+  it('routes AI review memory candidates into an editable memory approval queue', () => {
+    expect(desk).toContain('buildMemoryApprovalQueue');
+    expect(desk).toContain('const approvalQueue = useMemo');
+    expect(desk).toContain('latestReviewResult?.memoryCandidates ?? []');
+    expect(desk).toContain('const [approvalStatementOverrides, setApprovalStatementOverrides]');
+    expect(desk).toContain('function updateApprovalStatement');
+    expect(desk).toContain('approvalQueue={approvalQueue}');
+    expect(desk).toContain('onUpdateApprovalStatement={updateApprovalStatement}');
+    expect(desk).toContain('approvalQueue.items.map');
+    expect(desk).toContain('value={item.editableStatement}');
+    expect(desk).toContain('승인 대기함 열기');
+    expect(desk).toContain('동기화 가능');
+    expect(css).toContain('.sx-approval-summary');
+    expect(css).toContain('.sx-approval-source-pill');
+    expect(css).toContain('.sx-approval-impact-tags');
+  });
 });
