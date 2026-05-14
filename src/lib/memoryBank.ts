@@ -24,6 +24,38 @@ export interface MemoryBankContextPacket {
   content: string;
 }
 
+export type MemoryBankRecordKind = 'story-core' | 'character' | 'world' | 'canon' | 'voice' | 'visual' | 'audio';
+
+export interface MemoryBankEditableRecord {
+  id: string;
+  kind: MemoryBankRecordKind;
+  title: string;
+  summary: string;
+  sourcePath: string;
+  syncPolicy: MemoryBankSyncPolicy;
+  fields: Array<{
+    label: string;
+    value: string;
+  }>;
+  tags: string[];
+}
+
+export interface MemoryBankPacketSummary {
+  agentId: string;
+  label: string;
+  sections: string[];
+  anchorCount: number;
+  includesRawManuscript: boolean;
+  sourcePaths: string[];
+}
+
+export interface MemoryBankWorkbench {
+  root: string;
+  editableRecords: MemoryBankEditableRecord[];
+  packetSummaries: MemoryBankPacketSummary[];
+  safetyRules: string[];
+}
+
 export const memoryBankTemplate = `memory-bank/storyx/{project_id}/
   manifest.json
   story-core.md
@@ -182,6 +214,178 @@ export function buildMemoryBankContextPacket(project: SeriesProject, agentId: st
     includesRawManuscript: false,
     content: [`# Context Packet: ${agentId}`, ...contentBlocks].join('\n\n')
   };
+}
+
+export function buildMemoryBankWorkbench(project: SeriesProject): MemoryBankWorkbench {
+  const bank = buildStoryMemoryBank(project);
+  const packetAgentIds = [
+    'showrunner',
+    'character-custodian',
+    'world-keeper',
+    'genre-stylist',
+    'continuity-editor',
+    'voice-curator',
+    'storyboard-agent',
+    'da-vinci',
+    'audio-narration-director'
+  ];
+
+  return {
+    root: bank.root,
+    editableRecords: buildEditableRecords(project, bank.root),
+    packetSummaries: packetAgentIds.map((agentId) => {
+      const packet = buildMemoryBankContextPacket(project, agentId);
+
+      return {
+        agentId,
+        label: getPacketLabel(agentId),
+        sections: packet.sections,
+        anchorCount: packet.memoryAnchors.length,
+        includesRawManuscript: packet.includesRawManuscript,
+        sourcePaths: packet.sections.map((section) => resolveSectionSourcePath(bank.root, section))
+      };
+    }),
+    safetyRules: [
+      'private/raw-sources는 에이전트 기본 패킷에 넣지 않습니다.',
+      '캐논 충돌은 다수결로 통과시키지 않고 reveal, revision, blocked draft 중 하나로 분류합니다.',
+      '캐릭터/세계관/문체 변경은 저장 전에 영향 범위를 먼저 확인합니다.',
+      '원화 후보는 사용자가 선택한 뒤에만 visual DNA로 승격합니다.'
+    ]
+  };
+}
+
+function buildEditableRecords(project: SeriesProject, root: string): MemoryBankEditableRecord[] {
+  const storyCore: MemoryBankEditableRecord = {
+    id: `record-story-core-${project.id}`,
+    kind: 'story-core',
+    title: project.title,
+    summary: project.logline,
+    sourcePath: `${root}/story-core.md`,
+    syncPolicy: 'sync',
+    fields: [
+      { label: 'logline', value: project.logline },
+      { label: 'tone', value: project.tone },
+      { label: 'audiencePromise', value: project.audiencePromise }
+    ],
+    tags: ['story-contract', 'north-star']
+  };
+
+  const characterRecords = project.characters.map<MemoryBankEditableRecord>((character) => ({
+    id: `record-character-${character.id}`,
+    kind: 'character',
+    title: character.name,
+    summary: character.role,
+    sourcePath: `${root}/characters/${slugProjectId(character.id)}.json`,
+    syncPolicy: 'sync',
+    fields: [
+      { label: 'desire', value: character.desire },
+      { label: 'wound', value: character.wound },
+      { label: 'currentState', value: character.currentState },
+      { label: 'voiceRules', value: character.voiceRules.join(' / ') }
+    ],
+    tags: ['character', 'voice', ...character.canonAnchors.slice(0, 2)]
+  }));
+
+  const worldRecords = project.worldRules.map<MemoryBankEditableRecord>((rule) => ({
+    id: `record-world-${rule.id}`,
+    kind: 'world',
+    title: rule.title,
+    summary: rule.rule,
+    sourcePath: `${root}/world/rules.md`,
+    syncPolicy: 'sync',
+    fields: [
+      { label: 'rule', value: rule.rule },
+      { label: 'forbiddenContradictions', value: rule.forbiddenContradictions.map((item) => item.claim).join(' / ') }
+    ],
+    tags: ['world', 'cost-rule']
+  }));
+
+  const canonRecords = project.canonFacts.map<MemoryBankEditableRecord>((fact) => ({
+    id: `record-canon-${fact.id}`,
+    kind: 'canon',
+    title: `EP ${fact.episode} · ${fact.owner}`,
+    summary: fact.statement,
+    sourcePath: `${root}/context/canon.md`,
+    syncPolicy: 'sync',
+    fields: [{ label: 'statement', value: fact.statement }],
+    tags: ['canon', fact.owner]
+  }));
+
+  const voiceRecord: MemoryBankEditableRecord = {
+    id: `record-voice-${project.id}`,
+    kind: 'voice',
+    title: '문체 바이블',
+    summary: project.tone,
+    sourcePath: `${root}/voice/author-voice-bible.md`,
+    syncPolicy: 'sync',
+    fields: [
+      { label: 'globalTone', value: project.tone },
+      { label: 'characterVoiceRules', value: project.characters.flatMap((character) => character.voiceRules).join(' / ') }
+    ],
+    tags: ['voice', 'korean-naturalness']
+  };
+
+  const visualRecord: MemoryBankEditableRecord = {
+    id: `record-visual-${project.id}`,
+    kind: 'visual',
+    title: '시각 바이블',
+    summary: `${project.tone} 기반의 캐릭터 외형, 조명, 렌즈, 말풍선 기준`,
+    sourcePath: `${root}/visual/style-bible.md`,
+    syncPolicy: 'sync',
+    fields: [
+      { label: 'style', value: project.tone },
+      { label: 'characterAppearance', value: project.characters.map((character) => character.name).join(' / ') }
+    ],
+    tags: ['visual', 'da-vinci', 'midjourney-keyframe']
+  };
+
+  const audioRecord: MemoryBankEditableRecord = {
+    id: `record-audio-${project.id}`,
+    kind: 'audio',
+    title: '오디오 바이블',
+    summary: `${project.tone} 기반의 낭독 속도, 쉼, 발음, 음악 모티프`,
+    sourcePath: `${root}/audio/narration-bible.md`,
+    syncPolicy: 'sync',
+    fields: [
+      { label: 'narrationTone', value: project.tone },
+      { label: 'pronunciationTargets', value: project.characters.map((character) => character.name).join(' / ') }
+    ],
+    tags: ['audio', 'narration', 'music-cue']
+  };
+
+  return [storyCore, ...characterRecords, ...worldRecords, ...canonRecords, voiceRecord, visualRecord, audioRecord];
+}
+
+function getPacketLabel(agentId: string) {
+  const labels: Record<string, string> = {
+    showrunner: '쇼러너',
+    'character-custodian': '캐릭터 큐레이터',
+    'world-keeper': '배경 설계자',
+    'genre-stylist': '장르 스타일리스트',
+    'continuity-editor': '연속성 감수자',
+    'voice-curator': '문체 큐레이터',
+    'storyboard-agent': '웹툰 연출가',
+    'da-vinci': '다빈치',
+    'audio-narration-director': '오디오 연출가'
+  };
+
+  return labels[agentId] ?? agentId;
+}
+
+function resolveSectionSourcePath(root: string, section: string) {
+  const paths: Record<string, string> = {
+    'story-core': 'story-core.md',
+    canon: 'context/canon.md',
+    'open-threads': 'context/unresolved-questions.md',
+    'recent-chapters': 'production/episodes/README.md',
+    characters: 'characters/relationships.md',
+    world: 'world/rules.md',
+    voice: 'voice/author-voice-bible.md',
+    visual: 'visual/style-bible.md',
+    audio: 'audio/narration-bible.md'
+  };
+
+  return `${root}/${paths[section] ?? 'manifest.json'}`;
 }
 
 function renderContextSection(project: SeriesProject, section: string) {

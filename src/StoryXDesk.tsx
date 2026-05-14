@@ -42,7 +42,13 @@ import {
   type ProductionRequest,
   type SeriesProject
 } from './lib/storyEngine';
-import { buildStoryMemoryBank, type StoryMemoryBank } from './lib/memoryBank';
+import {
+  buildMemoryBankWorkbench,
+  buildStoryMemoryBank,
+  type MemoryBankRecordKind,
+  type MemoryBankWorkbench,
+  type StoryMemoryBank
+} from './lib/memoryBank';
 import { buildTesterDrivenWorkflow, type TesterDrivenWorkflow } from './lib/evaluationSynthesis';
 import { buildComicsVisualWorkflow } from './lib/visualProduction';
 import { clearProject, loadProject, saveProject } from './lib/storage';
@@ -357,6 +363,7 @@ export function StoryXDesk({
     [project, request.intent, request.pressure]
   );
   const memoryBank = useMemo(() => buildStoryMemoryBank(project), [project]);
+  const memoryWorkbench = useMemo(() => buildMemoryBankWorkbench(project), [project]);
   const evaluatorWorkflow = useMemo(() => buildTesterDrivenWorkflow(blueprint), [blueprint]);
   const displayedAgentRuns = useMemo(
     () => (blueprint.nextWorkspace === 'visual-storyboard-studio' ? mergeAgentRuns(agentRuns, visualStoryAgentRuns) : agentRuns),
@@ -731,6 +738,7 @@ export function StoryXDesk({
               project={project}
               bank={memoryBank}
               activeSection={activeBibleSection}
+              workbench={memoryWorkbench}
               onSelectSection={setActiveBibleSection}
               onUpdateCharacter={updateCharacterMemory}
               onUpdateWorldRule={updateWorldMemory}
@@ -934,6 +942,7 @@ function MemoryBankStudio({
   project,
   bank,
   activeSection,
+  workbench,
   onSelectSection,
   onUpdateCharacter,
   onUpdateWorldRule,
@@ -945,6 +954,7 @@ function MemoryBankStudio({
   project: SeriesProject;
   bank: StoryMemoryBank;
   activeSection: BibleSection;
+  workbench: MemoryBankWorkbench;
   onSelectSection: (section: BibleSection) => void;
   onUpdateCharacter: (characterId: string, field: 'desire' | 'wound' | 'currentState', value: string) => void;
   onUpdateWorldRule: (ruleId: string, value: string) => void;
@@ -986,6 +996,12 @@ function MemoryBankStudio({
           </button>
         ))}
       </nav>
+
+      <MemoryWorkbenchPanel
+        workbench={workbench}
+        activeSection={activeSection}
+        onOpenRecordSection={onSelectSection}
+      />
 
       {activeSection === 'overview' && (
         <div className="sx-bible-grid">
@@ -1204,6 +1220,105 @@ function MemoryBankStudio({
       )}
     </section>
   );
+}
+
+function MemoryWorkbenchPanel({
+  workbench,
+  activeSection,
+  onOpenRecordSection
+}: {
+  workbench: MemoryBankWorkbench;
+  activeSection: BibleSection;
+  onOpenRecordSection: (section: BibleSection) => void;
+}) {
+  const records = filterWorkbenchRecords(workbench, activeSection).slice(0, 6);
+
+  return (
+    <section className="sx-memory-workbench-panel" aria-label="메모리뱅크 작업대">
+      <article>
+        <div className="sx-panel-heading">
+          <Database size={16} />
+          <h2>편집 가능한 기억</h2>
+        </div>
+        <div className="sx-memory-record-grid">
+          {records.map((record) => (
+            <button type="button" key={record.id} onClick={() => onOpenRecordSection(resolveRecordSection(record.kind))}>
+              <span>{record.kind}</span>
+              <strong>{record.title}</strong>
+              <p>{record.summary}</p>
+              <small>{record.sourcePath}</small>
+            </button>
+          ))}
+        </div>
+      </article>
+      <article>
+        <div className="sx-panel-heading">
+          <BrainCircuit size={16} />
+          <h2>에이전트 기억 패킷</h2>
+        </div>
+        <div className="sx-packet-summary-grid">
+          {workbench.packetSummaries.slice(0, 6).map((packet) => (
+            <div key={packet.agentId}>
+              <strong>{packet.label}</strong>
+              <span>{packet.sections.join(' · ')}</span>
+              <small>{packet.includesRawManuscript ? '원문 포함' : '구조 기억만 전달'} · anchor {packet.anchorCount}</small>
+            </div>
+          ))}
+        </div>
+      </article>
+      <article className="sx-memory-safety-list">
+        <div className="sx-panel-heading">
+          <ShieldAlert size={16} />
+          <h2>안전 규칙</h2>
+        </div>
+        <ul>
+          {workbench.safetyRules.map((rule) => (
+            <li key={rule}>{rule}</li>
+          ))}
+        </ul>
+      </article>
+    </section>
+  );
+}
+
+function resolveRecordSection(kind: MemoryBankRecordKind): BibleSection {
+  if (kind === 'character') {
+    return 'characters';
+  }
+
+  if (kind === 'world') {
+    return 'world';
+  }
+
+  if (kind === 'canon') {
+    return 'canon';
+  }
+
+  if (kind === 'voice' || kind === 'visual' || kind === 'audio') {
+    return 'voice';
+  }
+
+  return 'overview';
+}
+
+function filterWorkbenchRecords(workbench: MemoryBankWorkbench, activeSection: BibleSection) {
+  if (activeSection === 'characters') {
+    return workbench.editableRecords.filter((record) => record.kind === 'character');
+  }
+
+  if (activeSection === 'world') {
+    return workbench.editableRecords.filter((record) => record.kind === 'world' || record.kind === 'visual');
+  }
+
+  if (activeSection === 'canon' || activeSection === 'approval') {
+    return workbench.editableRecords.filter((record) => record.kind === 'canon' || record.kind === 'story-core');
+  }
+
+  if (activeSection === 'voice') {
+    return workbench.editableRecords.filter((record) => ['voice', 'visual', 'audio'].includes(record.kind));
+  }
+
+  return workbench.editableRecords;
 }
 
 function ProjectStateCard({ project, canonHealth }: { project: SeriesProject; canonHealth: number }) {

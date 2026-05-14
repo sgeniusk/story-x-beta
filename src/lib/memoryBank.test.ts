@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createSeedProject, produceNextChapter } from './storyEngine';
 import {
+  buildMemoryBankWorkbench,
   buildMemoryBankContextPacket,
   buildStoryMemoryBank,
   memoryBankTemplate
@@ -55,6 +56,25 @@ describe('Story X memory bank', () => {
     expect(packet.memoryAnchors.length).toBeGreaterThan(0);
     expect(packet.content).toContain('Audience Promise');
     expect(packet.content).toContain('Open Threads');
+  });
+
+  it('builds an editable memory workbench with records and role packets', () => {
+    const project = produceNextChapter(createSeedProject(), {
+      genre: 'romance-fantasy',
+      intent: '서윤이 탑의 하층 기록실에서 새 표식을 발견한다',
+      pressure: '이안이 숨긴 대가가 관계를 흔들기 시작한다'
+    }).updatedProject;
+
+    const workbench = buildMemoryBankWorkbench(project);
+
+    expect(workbench.editableRecords.some((record) => record.kind === 'character' && record.title === '한서윤')).toBe(true);
+    expect(workbench.editableRecords.some((record) => record.kind === 'world' && record.sourcePath.endsWith('world/rules.md'))).toBe(true);
+    expect(workbench.editableRecords.some((record) => record.kind === 'canon' && record.title.includes('EP 1'))).toBe(true);
+    expect(workbench.packetSummaries.map((packet) => packet.agentId)).toEqual(
+      expect.arrayContaining(['showrunner', 'character-custodian', 'world-keeper', 'voice-curator', 'da-vinci'])
+    );
+    expect(workbench.packetSummaries.every((packet) => packet.includesRawManuscript === false)).toBe(true);
+    expect(workbench.safetyRules).toContain('private/raw-sources는 에이전트 기본 패킷에 넣지 않습니다.');
   });
 
   it('documents the target folder template', () => {

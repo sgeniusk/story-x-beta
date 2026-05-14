@@ -93,4 +93,22 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-approval-queue');
     expect(css).toContain('.sx-approval-status');
   });
+
+  it('turns the memory bank into an editable workbench with agent context packets', () => {
+    expect(desk).toContain('buildMemoryBankWorkbench');
+    expect(desk).toContain('const memoryWorkbench = useMemo(() => buildMemoryBankWorkbench(project), [project])');
+    expect(desk).toContain('workbench={memoryWorkbench}');
+    expect(desk).toContain('sx-memory-workbench-panel');
+    expect(desk).toContain('편집 가능한 기억');
+    expect(desk).toContain('에이전트 기억 패킷');
+    expect(desk).toContain('안전 규칙');
+    expect(desk).toContain('packet.includesRawManuscript ?');
+    expect(desk).toContain('record.sourcePath');
+    expect(desk).toContain('onOpenRecordSection(resolveRecordSection(record.kind))');
+    expect(desk).toContain('function resolveRecordSection');
+    expect(css).toContain('.sx-memory-workbench-panel');
+    expect(css).toContain('.sx-memory-record-grid');
+    expect(css).toContain('.sx-packet-summary-grid');
+    expect(css).toContain('.sx-memory-safety-list');
+  });
 });

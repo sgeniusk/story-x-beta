@@ -4379,6 +4379,114 @@ body {
   white-space: nowrap;
 }
 
+.sx-memory-workbench-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(220px, 0.55fr);
+  gap: 12px;
+}
+
+.sx-memory-workbench-panel > article {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--sx-line);
+  border-radius: var(--framer-rounded-xl);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.48)),
+    var(--sx-card);
+  box-shadow: var(--sx-shadow);
+}
+
+.sx-memory-record-grid,
+.sx-packet-summary-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.sx-memory-record-grid button {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--sx-line);
+  border-radius: 13px;
+  background: var(--sx-paper);
+  color: var(--sx-ink);
+  text-align: left;
+}
+
+.sx-memory-record-grid button span,
+.sx-packet-summary-grid div small {
+  color: var(--sx-accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.sx-memory-record-grid button strong,
+.sx-packet-summary-grid div strong {
+  overflow: hidden;
+  color: var(--sx-ink);
+  font-size: 0.88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sx-memory-record-grid button p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+  color: var(--sx-ink-2);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.sx-memory-record-grid button small,
+.sx-packet-summary-grid div span {
+  overflow-wrap: anywhere;
+  color: var(--sx-muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.sx-packet-summary-grid div {
+  display: grid;
+  gap: 4px;
+  padding: 10px 11px;
+  border: 1px solid var(--sx-line);
+  border-radius: 13px;
+  background: var(--sx-paper);
+}
+
+.sx-memory-safety-list ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sx-memory-safety-list li {
+  padding-left: 14px;
+  color: var(--sx-ink-2);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  position: relative;
+}
+
+.sx-memory-safety-list li::before {
+  content: "";
+  position: absolute;
+  top: 0.62em;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--sx-accent);
+}
+
 .sx-bible-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5422,6 +5530,7 @@ body {
   .sx-desk-grid,
   .sx-hero-card,
   .sx-brief-grid,
+  .sx-memory-workbench-panel,
   .sx-codex-rail {
     grid-template-columns: 1fr;
   }
