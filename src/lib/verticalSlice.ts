@@ -4,7 +4,7 @@ import {
   type CreativeDevelopmentInput,
   type StoryContract
 } from './creativeDevelopment';
-import { buildStoryMemoryBank } from './memoryBank';
+import { buildStoryMemoryBank, type MemoryApprovalSourceCandidate } from './memoryBank';
 import { buildCreativeBlueprint, type CreativeFormat, type CreativeMedium } from './projectBlueprint';
 import { createSeedProject, type SeriesProject } from './storyEngine';
 
@@ -56,6 +56,7 @@ export interface OneProjectVerticalSlice {
   memoryRoot: string;
   artifacts: VerticalSliceArtifact[];
   evidenceLedger: VerticalSliceEvidence[];
+  memoryCandidates: MemoryApprovalSourceCandidate[];
   provenanceLog: VerticalSliceProvenance[];
   approvalRequiredBeforeSync: true;
   nextActions: string[];
@@ -155,6 +156,7 @@ export function buildOneProjectVerticalSlice(input: OneProjectVerticalSliceInput
         requiredApproval: true
       }
     ],
+    memoryCandidates: buildVerticalSliceMemoryCandidates(sharedStoryContract, normalizedInput),
     provenanceLog: [
       {
         medium: 'story-core',
@@ -185,6 +187,50 @@ export function buildOneProjectVerticalSlice(input: OneProjectVerticalSliceInput
       '승인된 변경만 memory bank에 sync합니다.'
     ]
   };
+}
+
+function buildVerticalSliceMemoryCandidates(
+  storyContract: StoryContract,
+  input: Required<OneProjectVerticalSliceInput>
+): MemoryApprovalSourceCandidate[] {
+  return [
+    {
+      id: 'vertical-slice-story-contract',
+      owner: 'plot',
+      status: 'pending',
+      statement: `Story Contract: ${storyContract.audiencePromise} / 금지 클리셰 ${storyContract.forbiddenCliches.join(', ')}`,
+      sourceAgentId: 'showrunner',
+      targetPath: 'reviews/vertical-slice-approval.md',
+      rationale: '한 프로젝트를 여러 매체로 전환하기 전, 공통 스토리 계약을 사용자가 승인해야 합니다.'
+    },
+    {
+      id: 'vertical-slice-web-novel',
+      owner: 'plot',
+      status: 'pending',
+      statement: `웹소설 첫 proof: ${input.material}에서 시작해 ${input.storySeed}로 다음 화 질문을 엽니다.`,
+      sourceAgentId: 'genre-stylist',
+      targetPath: 'reviews/vertical-slice-approval.md',
+      rationale: '초안 첫 300자와 다음 화 질문은 출간 전 승인 후보로 남겨야 합니다.'
+    },
+    {
+      id: 'vertical-slice-insta-toon',
+      owner: 'visual',
+      status: 'pending',
+      statement: `인스타툰 4컷 proof: ${input.artDirection} 기준으로 컷 목적과 저장 컷을 설계합니다.`,
+      sourceAgentId: 'storyboard-agent',
+      targetPath: 'reviews/vertical-slice-approval.md',
+      rationale: '스토리보드는 완성 이미지가 아니라 승인 전 시각 전환 후보로 관리해야 합니다.'
+    },
+    {
+      id: 'vertical-slice-audiobook',
+      owner: 'audio',
+      status: 'pending',
+      statement: `오디오북 30초 proof: ${input.material}와 ${input.storySeed}를 pause, 화자, music cue로 시험합니다.`,
+      sourceAgentId: 'audio-narration-director',
+      targetPath: 'reviews/vertical-slice-approval.md',
+      rationale: '낭독 리듬과 음악 큐는 원고 canon과 분리해 승인 후 audio bible에 반영해야 합니다.'
+    }
+  ];
 }
 
 function normalizeVerticalSliceInput(input: OneProjectVerticalSliceInput): Required<OneProjectVerticalSliceInput> {

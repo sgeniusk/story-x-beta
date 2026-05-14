@@ -63,6 +63,7 @@ import { buildTesterDrivenWorkflow, type TesterDrivenWorkflow } from './lib/eval
 import { buildComicsVisualWorkflow } from './lib/visualProduction';
 import { buildPublishingPlan, type PublishingPlan } from './lib/publishing';
 import { buildAlphaReadinessReport, type AlphaReadinessReport } from './lib/alphaReadiness';
+import { buildOneProjectVerticalSlice, type OneProjectVerticalSlice } from './lib/verticalSlice';
 import {
   buildCanonRefactorPlan,
   createCanonChangeEntry,
@@ -567,15 +568,27 @@ export function StoryXDesk({
     [project, request.intent, request.pressure]
   );
   const memoryBank = useMemo(() => buildStoryMemoryBank(project), [project]);
+  const verticalSlice = useMemo(
+    () =>
+      buildOneProjectVerticalSlice({
+        material: draftPrompt || request.intent,
+        storySeed: request.pressure || project.logline,
+        characterSeed: project.characters
+          .map((character) => `${character.name}: ${character.role} / ${character.desire}`)
+          .join('\n'),
+        artDirection: project.tone
+      }),
+    [draftPrompt, project.characters, project.logline, project.tone, request.intent, request.pressure]
+  );
   const approvalQueue = useMemo(
     () =>
       buildMemoryApprovalQueue({
         project,
-        reviewCandidates: latestReviewResult?.memoryCandidates ?? [],
+        reviewCandidates: [...(latestReviewResult?.memoryCandidates ?? []), ...verticalSlice.memoryCandidates],
         decisions: approvalDecisions,
         statementOverrides: approvalStatementOverrides
       }),
-    [approvalDecisions, approvalStatementOverrides, latestReviewResult, project]
+    [approvalDecisions, approvalStatementOverrides, latestReviewResult, project, verticalSlice]
   );
   const evaluatorWorkflow = useMemo(() => buildTesterDrivenWorkflow(blueprint), [blueprint]);
   const publishingPlan = useMemo(() => buildPublishingPlan(project, blueprint), [blueprint, project]);
@@ -1096,11 +1109,18 @@ export function StoryXDesk({
                 blueprint={blueprint}
                 chapter={latestChapter}
                 project={project}
+                verticalSlice={verticalSlice}
                 editableText={editorText}
                 editedSinceReview={editedSinceReview}
                 isFocusMode={isFocusMode}
                 onEditableTextChange={updateEditorText}
                 onReviewDraft={reviewDraft}
+                onOpenApprovalQueue={() => {
+                  setActiveTrack('bible');
+                  setIsPublishingMode(false);
+                  setIsMediaPanelOpen(false);
+                  setActiveBibleSection('approval');
+                }}
                 onToggleFocusMode={() => setIsFocusMode((current) => !current)}
               />
             </>
@@ -2354,21 +2374,25 @@ function CreativeStage({
   blueprint,
   chapter,
   project,
+  verticalSlice,
   editableText,
   editedSinceReview,
   isFocusMode,
   onEditableTextChange,
   onReviewDraft,
+  onOpenApprovalQueue,
   onToggleFocusMode
 }: {
   blueprint: CreativeBlueprint;
   chapter: Chapter | null;
   project: SeriesProject;
+  verticalSlice: OneProjectVerticalSlice;
   editableText: string;
   editedSinceReview: boolean;
   isFocusMode: boolean;
   onEditableTextChange: (value: string) => void;
   onReviewDraft: () => void;
+  onOpenApprovalQueue: () => void;
   onToggleFocusMode: () => void;
 }) {
   const expandButton = (
@@ -2376,6 +2400,9 @@ function CreativeStage({
       {isFocusMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
       {isFocusMode ? '축소' : '편집기 확대'}
     </button>
+  );
+  const verticalSlicePanel = (
+    <VerticalSliceProofPanel verticalSlice={verticalSlice} onOpenApprovalQueue={onOpenApprovalQueue} />
   );
 
   if (blueprint.medium === 'comics') {
@@ -2420,6 +2447,7 @@ function CreativeStage({
               ))}
             </div>
           </div>
+          {verticalSlicePanel}
         </div>
       </section>
     );
@@ -2452,6 +2480,7 @@ function CreativeStage({
               </article>
             ))}
           </div>
+          {verticalSlicePanel}
         </div>
       </section>
     );
@@ -2502,6 +2531,51 @@ function CreativeStage({
             {project.openThreads.length > 0 && <small>열린 질문 {project.openThreads.length}개가 대기 중입니다.</small>}
           </article>
         )}
+        {verticalSlicePanel}
+      </div>
+    </section>
+  );
+}
+
+function VerticalSliceProofPanel({
+  verticalSlice,
+  onOpenApprovalQueue
+}: {
+  verticalSlice: OneProjectVerticalSlice;
+  onOpenApprovalQueue: () => void;
+}) {
+  return (
+    <section className="sx-vertical-slice-panel" aria-label="웹소설 1화, 인스타툰 4컷, 오디오북 30초 승인 proof">
+      <header>
+        <div>
+          <p className="sx-eyebrow">One Project Vertical Slice</p>
+          <h3>하나의 이야기, 세 가지 proof</h3>
+          <p>웹소설 1화, 인스타툰 4컷, 오디오북 30초를 같은 Story Contract로 묶어 승인 전 proof로 확인합니다.</p>
+        </div>
+        <button type="button" className="sx-secondary-button" onClick={onOpenApprovalQueue}>
+          <Database size={15} />
+          승인 대기함 열기
+        </button>
+      </header>
+      <div className="sx-vertical-slice-artifacts">
+        {verticalSlice.artifacts.map((artifact) => (
+          <article key={artifact.id} className={`is-${artifact.status}`}>
+            <span>{artifact.label}</span>
+            <strong>{artifact.status === 'draft-proof' ? 'draft proof' : 'needs review'}</strong>
+            <p>{artifact.proof}</p>
+          </article>
+        ))}
+      </div>
+      <div className="sx-vertical-slice-ledger" aria-label="승인 증거 장부">
+        {verticalSlice.evidenceLedger
+          .filter((entry) => entry.requiredApproval)
+          .slice(0, 4)
+          .map((entry) => (
+            <span key={entry.id}>
+              <Check size={13} />
+              {entry.label}
+            </span>
+          ))}
       </div>
     </section>
   );

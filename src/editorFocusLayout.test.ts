@@ -240,4 +240,20 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-approval-source-pill');
     expect(css).toContain('.sx-approval-impact-tags');
   });
+
+  it('surfaces the one-project vertical slice inside the editor approval flow', () => {
+    expect(desk).toContain('buildOneProjectVerticalSlice');
+    expect(desk).toContain('const verticalSlice = useMemo');
+    expect(desk).toContain('...verticalSlice.memoryCandidates');
+    expect(desk).toContain('VerticalSliceProofPanel');
+    expect(desk).toContain('verticalSlice={verticalSlice}');
+    expect(desk).toContain('onOpenApprovalQueue');
+    expect(desk).toContain('승인 대기함 열기');
+    expect(desk).toContain('웹소설 1화');
+    expect(desk).toContain('인스타툰 4컷');
+    expect(desk).toContain('오디오북 30초');
+    expect(css).toContain('.sx-vertical-slice-panel');
+    expect(css).toContain('.sx-vertical-slice-artifacts');
+    expect(css).toContain('.sx-vertical-slice-ledger');
+  });
 });

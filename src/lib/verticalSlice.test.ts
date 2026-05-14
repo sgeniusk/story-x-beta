@@ -55,4 +55,33 @@ describe('One Project Vertical Slice', () => {
     );
     expect(slice.nextActions[0]).toContain('웹소설 1화');
   });
+
+  it('turns each medium proof into pending memory approval candidates', () => {
+    const slice = buildOneProjectVerticalSlice();
+
+    expect(slice.memoryCandidates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'vertical-slice-story-contract',
+          owner: 'plot',
+          status: 'pending',
+          sourceAgentId: 'showrunner'
+        }),
+        expect.objectContaining({
+          id: 'vertical-slice-insta-toon',
+          owner: 'visual',
+          status: 'pending',
+          sourceAgentId: 'storyboard-agent'
+        }),
+        expect.objectContaining({
+          id: 'vertical-slice-audiobook',
+          owner: 'audio',
+          status: 'pending',
+          sourceAgentId: 'audio-narration-director'
+        })
+      ])
+    );
+    expect(slice.memoryCandidates.every((candidate) => candidate.targetPath.startsWith('reviews/'))).toBe(true);
+    expect(slice.memoryCandidates.every((candidate) => candidate.rationale.includes('승인'))).toBe(true);
+  });
 });
