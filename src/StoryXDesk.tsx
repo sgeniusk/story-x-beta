@@ -764,8 +764,7 @@ export function StoryXDesk({
     setIsPublishingMode(false);
   }
 
-  function reviewDraft() {
-    const reviewTarget = editorText.trim() || draftPrompt.trim() || project.logline;
+  function runAiReview(reviewTarget: string) {
     const result = buildMockAiCliReviewResult(
       {
         provider: 'mock',
@@ -780,6 +779,24 @@ export function StoryXDesk({
     setAgentRuns(reviewRuns);
     setLatestReviewResult(result);
     setEditedSinceReview(false);
+  }
+
+  function reviewDraft() {
+    runAiReview(editorText.trim() || draftPrompt.trim() || project.logline);
+  }
+
+  function requestBibleReview() {
+    const changeLog =
+      canonChanges.length > 0
+        ? canonChanges
+            .map((change) => `${change.kind} · ${change.targetLabel} · ${change.fieldLabel}: ${change.before} -> ${change.after}`)
+            .join('\n')
+        : '아직 수동 변경 로그는 없지만, 현재 바이블 기준으로 승인 대기 후보와 캐논 상태를 검토합니다.';
+
+    runAiReview([project.logline, canonRefactorPlan.summary, changeLog].join('\n\n'));
+    setActiveTrack('bible');
+    setIsPublishingMode(false);
+    setActiveBibleSection('approval');
   }
 
   function updateEditorText(value: string) {
@@ -1036,6 +1053,7 @@ export function StoryXDesk({
               approvalDecisions={approvalDecisions}
               onSetApprovalDecision={setApprovalDecision}
               onUpdateApprovalStatement={updateApprovalStatement}
+              onRequestReview={requestBibleReview}
               canonChanges={canonChanges}
               canonRefactorPlan={canonRefactorPlan}
               onClearCanonChanges={() => setCanonChanges([])}
@@ -1320,6 +1338,7 @@ function MemoryBankStudio({
   approvalDecisions,
   onSetApprovalDecision,
   onUpdateApprovalStatement,
+  onRequestReview,
   canonChanges,
   canonRefactorPlan,
   onClearCanonChanges
@@ -1335,6 +1354,7 @@ function MemoryBankStudio({
   approvalDecisions: Record<string, ApprovalDecision>;
   onSetApprovalDecision: (candidateId: string, decision: ApprovalDecision) => void;
   onUpdateApprovalStatement: (candidateId: string, value: string) => void;
+  onRequestReview: () => void;
   canonChanges: CanonChangeEntry[];
   canonRefactorPlan: CanonRefactorPlan;
   onClearCanonChanges: () => void;
@@ -1367,7 +1387,7 @@ function MemoryBankStudio({
       </header>
 
       <div className={`sx-bible-workbench is-${activeSection}`}>
-        <BibleWorkbenchHeader sectionState={sectionState} />
+        <BibleWorkbenchHeader sectionState={sectionState} onRequestReview={onRequestReview} />
 
         {activeSection === 'overview' && (
         <div className="sx-bible-grid">
@@ -1623,13 +1643,23 @@ function MemoryBankStudio({
   );
 }
 
-function BibleWorkbenchHeader({ sectionState }: { sectionState: BibleSectionState }) {
+function BibleWorkbenchHeader({
+  sectionState,
+  onRequestReview
+}: {
+  sectionState: BibleSectionState;
+  onRequestReview: () => void;
+}) {
   return (
     <header className="sx-bible-workbench-header" aria-label={`${sectionState.label} 작업 기준`}>
       <div>
         <p className="sx-eyebrow">Bible Workbench</p>
         <h3>{sectionState.label}</h3>
         <p>{sectionState.directive}</p>
+        <button type="button" className="sx-bible-review-request" onClick={onRequestReview}>
+          <ClipboardCheck size={16} />
+          변경 검토 요청
+        </button>
       </div>
       <div className="sx-bible-impact-strip" aria-label="바이블 작업 영향 요약">
         <article>

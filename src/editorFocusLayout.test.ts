@@ -148,6 +148,10 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('sectionState.reviewAgents.map');
     expect(desk).toContain('변경 영향');
     expect(desk).toContain('검토 순서');
+    expect(desk).toContain('function requestBibleReview');
+    expect(desk).toContain('onRequestReview={requestBibleReview}');
+    expect(desk).toContain('변경 검토 요청');
+    expect(desk).toContain('className="sx-bible-review-request"');
     expect(desk).toContain("activeSection === 'characters'");
     expect(desk).toContain("activeSection === 'world'");
     expect(desk).toContain("activeSection === 'canon'");
@@ -162,6 +166,7 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-bible-workbench');
     expect(css).toContain('.sx-bible-workbench-header');
     expect(css).toContain('.sx-bible-impact-strip');
+    expect(css).toContain('.sx-bible-review-request');
     expect(css).toContain('.sx-bible-card textarea');
   });
 

@@ -4617,6 +4617,28 @@ body {
   line-height: 1.55;
 }
 
+.sx-bible-review-request {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  width: fit-content;
+  margin-top: 14px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--framer-rounded-pill);
+  background: var(--sx-ink);
+  color: var(--sx-paper);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.sx-bible-review-request:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(25, 22, 20, 0.16);
+}
+
 .sx-bible-impact-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
