@@ -9189,7 +9189,8 @@ body {
 }
 
 .tester-workflow-card,
-.tester-capability-grid article {
+.tester-capability-grid article,
+.vertical-slice-proof-card {
   min-width: 0;
   border: 1px solid var(--framer-hairline-soft);
   background: var(--framer-surface-1);
@@ -9268,6 +9269,62 @@ body {
   color: var(--framer-ink-muted);
   font-size: 0.8rem;
   line-height: 1.42;
+}
+
+.vertical-slice-proof-card {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 14px;
+  padding: 22px;
+  border-radius: var(--framer-rounded-xl);
+}
+
+.vertical-slice-proof-card > span {
+  color: var(--framer-accent-blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.vertical-slice-proof-card > strong {
+  color: var(--framer-ink);
+  font-size: clamp(1.35rem, 2vw, 2rem);
+  line-height: 1.1;
+}
+
+.vertical-slice-proof-card > p {
+  margin: 0;
+  color: var(--framer-ink-muted);
+  line-height: 1.6;
+}
+
+.vertical-slice-proof-card div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.vertical-slice-proof-card small {
+  display: grid;
+  gap: 5px;
+  padding: 11px 12px;
+  border: 1px solid var(--framer-hairline-soft);
+  border-radius: var(--framer-rounded-lg);
+  background: color-mix(in srgb, var(--framer-surface-1) 72%, white);
+  color: var(--framer-ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.vertical-slice-proof-card b {
+  color: var(--framer-ink-muted);
+  font-size: 0.72rem;
+}
+
+.vertical-slice-proof-card em {
+  color: var(--framer-ink-muted);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 700;
 }
 
 .tester-roadmap-strip {
@@ -9503,7 +9560,8 @@ body {
   }
 
   .duna-pillar-grid,
-  .tester-capability-grid {
+  .tester-capability-grid,
+  .vertical-slice-proof-card div {
     grid-template-columns: 1fr;
   }
 

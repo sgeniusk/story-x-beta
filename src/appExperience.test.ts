@@ -159,4 +159,14 @@ describe('Story X page experience', () => {
     expect(app).toContain('유료 검토/패키징');
     expect(css).toContain('.homepage-roadmap-section');
   });
+
+  it('surfaces the one-project vertical slice as the next evaluator proof', () => {
+    expect(app).toContain('buildOneProjectVerticalSlice');
+    expect(app).toContain('p05EvaluationFollowups');
+    expect(app).toContain('One Project Vertical Slice');
+    expect(app).toContain('웹소설 1화');
+    expect(app).toContain('인스타툰 4컷');
+    expect(app).toContain('오디오북 30초');
+    expect(css).toContain('.vertical-slice-proof-card');
+  });
 });

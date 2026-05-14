@@ -46,8 +46,10 @@ import {
   buildTesterDrivenWorkflow,
   evaluationDrivenRoadmap,
   evaluationNorthStar,
+  p05EvaluationFollowups,
   p0EvaluationCapabilities
 } from './lib/evaluationSynthesis';
+import { buildOneProjectVerticalSlice } from './lib/verticalSlice';
 import {
   getServiceAgentsByGroup,
   serviceOperationsAgents,
@@ -1000,12 +1002,14 @@ function FlowAgentLayerCard({ assignment }: { assignment: FlowAgentAssignment })
 
 function TesterEvaluationUpdateSection({ blueprint }: { blueprint: CreativeBlueprint }) {
   const workflowBoard = buildTesterDrivenWorkflow(blueprint);
+  const verticalSlice = buildOneProjectVerticalSlice();
+  const verticalSliceFollowup = p05EvaluationFollowups.find((followup) => followup.id === 'one-project-vertical-slice');
 
   return (
     <section className="tester-update-section" id="evaluation-update" aria-label="테스터 평가 반영 업데이트">
       <div className="tester-update-head">
-        <p className="framer-eyebrow">Evaluator Update · 2026-05-14</p>
-        <h2>12인 창작자 테스터 의견은 여섯 개의 제품 원칙으로 압축했습니다.</h2>
+        <p className="framer-eyebrow">Evaluator Update · 2026-05-15</p>
+        <h2>20인 재테스트는 다음 증명을 One Project Vertical Slice로 좁혔습니다.</h2>
         <p>{evaluationNorthStar}</p>
       </div>
       <div className="tester-update-grid">
@@ -1033,6 +1037,21 @@ function TesterEvaluationUpdateSection({ blueprint }: { blueprint: CreativeBluep
             </article>
           ))}
         </div>
+        <article className="vertical-slice-proof-card">
+          <span>One Project Vertical Slice</span>
+          <strong>{verticalSlice.title}</strong>
+          <p>짧은 원작을 웹소설 1화, 인스타툰 4컷, 오디오북 30초 샘플로 증명합니다.</p>
+          <p>{verticalSliceFollowup?.proof}</p>
+          <div>
+            {verticalSlice.artifacts.map((artifact) => (
+              <small key={artifact.id}>
+                {artifact.label}
+                <b>{artifact.proof.split(':')[0]}</b>
+              </small>
+            ))}
+          </div>
+          <em>{verticalSlice.approvalRequiredBeforeSync ? '승인 전 memory sync 금지' : '자동 sync 가능'}</em>
+        </article>
       </div>
       <div className="tester-roadmap-strip">
         <span>Now: {evaluationDrivenRoadmap.now[0]}</span>
