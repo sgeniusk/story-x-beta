@@ -36,9 +36,17 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-evaluator-card');
   });
 
-  it('keeps the focused editor readable and avoids floating duplicate navigation', () => {
+  it('uses a compact app shell instead of the marketing banner inside the editor', () => {
     expect(desk).toContain('sx-topbar-actions');
-    expect(desk).toContain('sx-editor-links');
+    expect(desk).toContain('className="sx-app-breadcrumb"');
+    expect(desk).toContain('className="sx-command-k"');
+    expect(desk).toContain('className="sx-save-chip"');
+    expect(desk).toContain('function StoryXStatusBar');
+    expect(desk).toContain('<StoryXStatusBar alphaReport={alphaReport}');
+    expect(desk).not.toContain('AI 작가진과 함께, 흔들림 없는 세계관을 만듭니다.');
+    expect(desk).not.toContain('<AlphaSelfCheckCard alphaReport={alphaReport} />');
+    expect(css).toContain('.sx-statusbar');
+    expect(css).toContain('height: 32px');
     expect(css).toContain('--sx-ink-2: rgba(32, 32, 30, 0.74)');
     expect(css).toContain('.sx-writing-surface .sx-writing-page h2');
     expect(css).toContain('color: #f7f3ea');
@@ -119,10 +127,10 @@ describe('Story X focused editor layout', () => {
   it('keeps editor rails focused and moves memory, quality, and harness work into the bible flow', () => {
     expect(desk).toContain('buildAlphaReadinessReport');
     expect(desk).toContain('const alphaReport = useMemo');
-    expect(desk).toContain('function AlphaSelfCheckCard');
+    expect(desk).toContain('function StoryXStatusBar');
     expect(desk).toContain('alphaReport={alphaReport}');
     expect(desk).toContain('알파 셀프체크');
-    expect(desk).toContain('report.gates.map');
+    expect(desk).toContain('report.nextActions[0]');
     expect(desk).not.toContain('<CurrentBlueprintCard');
     expect(desk).not.toContain('<MemoryBankCard bank={memoryBank} />');
     expect(desk).not.toContain('<AiCliHarnessCard');
@@ -137,8 +145,8 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('sx-focused-assist-rail');
     expect(css).toContain('.sx-focused-assist-rail');
     expect(css).toContain('.sx-bible-assistant-sidebar');
-    expect(css).toContain('.sx-alpha-check-card');
-    expect(css).toContain('.sx-alpha-gate-list');
+    expect(css).toContain('.sx-statusbar');
+    expect(css).toContain('.sx-statusbar-alpha');
   });
 
   it('adds a publishing studio for release snapshots and change-log review', () => {

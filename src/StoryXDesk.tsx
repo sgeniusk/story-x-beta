@@ -618,6 +618,9 @@ export function StoryXDesk({
   }, [project]);
   const bibleAlertCount = editorWorkspace.continuitySummary.blocked + editorWorkspace.continuitySummary.warnings;
   const isBibleMode = activeTrack === 'bible' && !isPublishingMode;
+  const activeModeLabel = isPublishingMode ? '출간 준비' : activeTrack === 'bible' ? '작품 바이블' : '원고';
+  const chapterCrumb = latestChapter ? `${latestChapter.episode}화` : '새 초안';
+  const saveLabel = editedSinceReview ? '수정 중' : '저장됨';
 
   useEffect(() => {
     saveProject(project);
@@ -848,32 +851,45 @@ export function StoryXDesk({
 
   return (
     <main className={`sx-desk sx-genre-${request.genre} ${isFocusMode ? 'is-focus-mode' : ''}`}>
-      <header className="sx-topbar">
+      <header className="sx-topbar sx-app-shell-topbar">
         <div className="sx-brand">
           <span className="sx-brand-mark">
             <Sparkles size={17} />
           </span>
-          <div>
-            <p>Story X</p>
-            <h1>AI 작가진과 함께, 흔들림 없는 세계관을 만듭니다.</h1>
-          </div>
+          <nav className="sx-app-breadcrumb" aria-label="현재 위치">
+            <span>Story X</span>
+            <ChevronRight size={13} />
+            <strong>{project.title}</strong>
+            <ChevronRight size={13} />
+            <span>{activeModeLabel}</span>
+            {!isPublishingMode && <em>{chapterCrumb}</em>}
+          </nav>
         </div>
         <div className="sx-topbar-actions">
           {(onOpenProjects || onOpenLanding) && (
-            <div className="sx-editor-links" aria-label="에디터 이동">
+            <div className="sx-app-nav-links" aria-label="앱 이동">
               {onOpenProjects && (
-                <button type="button" onClick={onOpenProjects}>
+                <button type="button" aria-label="프로젝트로 이동" onClick={onOpenProjects}>
                   <Home size={14} />
-                  프로젝트
                 </button>
               )}
               {onOpenLanding && (
-                <button type="button" onClick={onOpenLanding}>
-                  소개
+                <button type="button" aria-label="소개로 이동" onClick={onOpenLanding}>
+                  Story X
                 </button>
               )}
             </div>
           )}
+          <button type="button" className="sx-command-k" aria-label="명령 팔레트 열기">
+            ⌘K
+          </button>
+          <span className="sx-save-chip" data-state={editedSinceReview ? 'dirty' : 'synced'}>
+            <Save size={14} />
+            {saveLabel}
+          </span>
+          <span className="sx-user-avatar" aria-label="사용자 프로필">
+            TX
+          </span>
           <nav className="sx-track-tabs" aria-label="작업 트랙">
             <button
               type="button"
@@ -1126,9 +1142,9 @@ export function StoryXDesk({
               <OpenThreadsCard threads={project.openThreads} />
             </>
           )}
-          <AlphaSelfCheckCard alphaReport={alphaReport} />
         </aside>
       </section>
+      <StoryXStatusBar alphaReport={alphaReport} project={project} editedSinceReview={editedSinceReview} />
       {selectedAgent && (
         <AgentProfileDialog
           run={selectedAgent.run}
@@ -2031,45 +2047,32 @@ function EvaluatorQualityCard({ workflow }: { workflow: TesterDrivenWorkflow }) 
   );
 }
 
-function AlphaSelfCheckCard({ alphaReport: report }: { alphaReport: AlphaReadinessReport }) {
+function StoryXStatusBar({
+  alphaReport: report,
+  project,
+  editedSinceReview
+}: {
+  alphaReport: AlphaReadinessReport;
+  project: SeriesProject;
+  editedSinceReview: boolean;
+}) {
   const statusLabels: Record<AlphaReadinessReport['status'], string> = {
     ready: '출시 가능',
     'needs-review': '검토 필요',
     blocked: '차단'
   };
-  const gateLabels: Record<AlphaReadinessReport['status'], string> = {
-    ready: '통과',
-    'needs-review': '검토',
-    blocked: '차단'
-  };
 
   return (
-    <section className={`sx-panel sx-alpha-check-card is-${report.status}`} aria-label="알파 셀프체크">
-      <div className="sx-panel-heading">
+    <footer className={`sx-statusbar is-${report.status}`} aria-label="Story X 상태 표시줄">
+      <span className="sx-statusbar-alpha">
         <ClipboardCheck size={16} />
-        <h2>알파 셀프체크</h2>
-      </div>
-      <div className="sx-alpha-score">
-        <strong>{report.score}%</strong>
-        <span>{statusLabels[report.status]}</span>
-      </div>
-      <p>{report.proofSummary}</p>
-      <small>{report.releaseScope}</small>
-      <div className="sx-alpha-gate-list">
-        {report.gates.map((gate) => (
-          <article key={gate.id} className={`is-${gate.status}`}>
-            <span>{gateLabels[gate.status]}</span>
-            <strong>{gate.label}</strong>
-            <small>{gate.owner}</small>
-          </article>
-        ))}
-      </div>
-      <ol className="sx-alpha-next-actions">
-        {report.nextActions.map((action) => (
-          <li key={action}>{action}</li>
-        ))}
-      </ol>
-    </section>
+        알파 셀프체크 {report.score}% · {statusLabels[report.status]}
+      </span>
+      <span>{report.nextActions[0]}</span>
+      <span>{project.chapters.length} episodes · {project.canonFacts.length} canon</span>
+      <span>{editedSinceReview ? '수정 미검토' : 'synced'}</span>
+      <span>⌘K 명령 · ⌘. 집중</span>
+    </footer>
   );
 }
 
