@@ -59,10 +59,15 @@ Source: `docs/story-x-12-creator-tester-report.md`
 - Story Contract, Workflow Board, Quality Gates, Refactor Impact Preview, AI Output Autopsy를 생성 결과에 포함.
 - 평가담당 에이전트의 공통 의견을 서비스 운영실 책임으로 매핑.
 - 홈/온보딩에서 매체 전환 브릿지, 프론트엔드 제작팀, 워크플로우 라이브러리의 의미를 먼저 보여준다.
+- Creator Memory Bank UI를 작품 바이블 트랙으로 확장하고, story/character/world/canon/voice/visual/audio 기억을 편집 가능한 작업대로 노출한다.
+- AI CLI 하네스가 mock/Claude/Codex provider 계약, raw output 정규화, pending review 저장 모델을 공유한다.
+- AI review memoryCandidates와 회차 canon 후보를 메모리 승인 큐로 합쳐 사용자가 편집/승인/수정 요청/보류할 수 있게 했다.
 
 ### Next
 
-- Creator Memory Bank UI를 `story bible`, `voice bible`, `visual bible`, `audio bible`, `review ledger` 탭으로 확장.
+- `storyx init`, `storyx serve`, `storyx memory sync`를 구현해 현재 UI의 승인 큐가 실제 `memory-bank/` 파일과 연결되게 한다.
+- CLI가 만든 `reviews/pending` 파일을 웹 에디터가 읽어 승인 큐에 반영한다.
+- 직접 편집 diff를 변경 블록 단위로 만들고, 검토 에이전트가 diff와 필요한 기억 패킷만 읽게 한다.
 - Panel/Audio Line Alignment: 만화는 beat -> panel -> bubble -> crop/export, 오디오는 paragraph -> speaker -> pronunciation -> pause -> music/SFX cue.
 - Platform Packaging Lab: 웹소설 첫 문장, 웹툰 첫 3컷, 인스타툰 저장 포인트, 오디오북 첫 30초.
 - Creative Coach Mode: 막힌 사용자에게 바로 대신 쓰기보다 2-3개의 선택 질문을 제공.

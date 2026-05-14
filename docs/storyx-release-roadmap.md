@@ -6,22 +6,38 @@
 
 현재 프로토타입은 다음 범위에서는 문제없이 동작한다.
 
-- `npm test`: 55개 테스트 통과.
+- `npm test`: 73개 테스트 통과.
 - `npm run build`: TypeScript와 Vite 프로덕션 빌드 통과.
+- GitHub `main` 푸시와 Vercel 프로덕션 배포가 연결되어 있으며, 최신 알파는 `https://story-x-alpha.vercel.app`에서 확인 가능하다.
 - 브라우저 스모크 테스트: 랜딩 -> 로그인 -> 프로젝트 -> 새 프로젝트 -> 에디터 -> 초안 생성 -> 직접 편집 -> 검토 흐름 확인.
 - 홈/랜딩 내비 분리: 같은 리퀴드 글라스 형태를 유지하되, 페이지별 내비 내용은 분리됨.
 - 에디터 기본 구조: 왼쪽 이야기 형태, 중앙 창작물/편집기, 오른쪽 메모리 뱅크/품질 게이트/에이전트 의견 구조 확인.
 - 원고 직접 편집: 생성된 원고를 편집할 수 있고, 수정 상태와 검토 버튼 흐름이 동작함.
 - 회차 이동: 1화/2화 탭과 작품 목차 트리의 UI 기반이 들어감.
+- 작품 바이블: story, character, world, canon/timeline, voice/visual/audio, approval 대기 트랙이 분리됨.
+- 메모리 뱅크 작업대: editable records, role-specific context packets, private/raw-sources 제외 규칙을 UI와 도메인 모델로 확인함.
+- AI CLI 하네스: mock/Claude/Codex provider 선택, 검토 규모 선택, provider raw output 정규화, `reviews/pending` 저장 계약을 테스트함.
+- 메모리 승인 큐: 회차 canon 후보와 AI review `memoryCandidates`를 하나로 모으고, 편집/승인/수정 요청/보류/동기화 가능 여부를 표시함.
 
 아직 "출시 품질"이라고 말하면 안 되는 범위는 다음과 같다.
 
-- 실제 Claude Code CLI/프로젝트 서브에이전트 실행 하네스는 아직 앱 명령으로 묶이지 않았다.
-- 2026-05-14 업데이트: `npm run storyx -- doctor`와 `npm run storyx -- review --provider mock|claude|codex --scale small --dry-run` 알파 하네스가 추가되었다. 실제 Claude/Codex 호출은 토큰 사용 전 규모 확인 뒤 실행한다.
-- 메모리 뱅크는 논리 모델과 UI가 있으나, 실제 프로젝트 폴더에 안전하게 쓰고 승인하는 파일 워크플로우가 더 필요하다.
-- 에이전트 검토는 현재 프로토타입 결과이며, 실제 LLM 호출/비용/실패 복구/재시도 정책은 베타에서 구현해야 한다.
+- Claude/Codex provider 어댑터와 정규화기는 있으나, 실제 사용자 프로젝트에서 반복 실행한 비용/실패/재시도 검증은 아직 부족하다.
+- `storyx init`, `storyx serve`, `storyx memory sync`, `storyx export`는 아직 베타 수준 명령으로 완성되지 않았다.
+- 메모리 뱅크는 논리 모델, UI, 승인 큐가 있으나, 승인된 항목을 실제 프로젝트 폴더 파일에 안전하게 쓰는 `memory sync` 루프가 더 필요하다.
+- 에이전트 검토는 mock과 provider output 계약을 검증한 단계이며, 실제 장편 프로젝트에서 에이전트별 품질 차이를 측정해야 한다.
 - 장편 연재 수준의 장기 회귀 테스트, 한국어 문체 유지 평가, 매체 전환 산출물 검증은 아직 부족하다.
+- 만화/오디오북은 workflow board와 메모리 구조가 있으나, 실제 컷 편집기, 이미지 프롬프트 팩, 오디오 라인 편집기는 아직 초기 설계 단계다.
 - 결제, 계정, 클라우드 저장, 팀 협업, 퍼블리싱 패키지는 최종 서비스 단계 과제다.
+
+## 1.1 현재 알파 판정
+
+현재 상태는 "로컬 알파"로 보는 것이 맞다.
+
+- UI 알파: 랜딩, 홈, 프로젝트, 에디터, 작품 바이블, 검토 레일, 승인 큐가 이어진다.
+- 엔진 알파: story engine, memory bank, AI CLI harness, visual workflow, evaluator workflow가 테스트로 보호된다.
+- 베타 전 미완성: 실제 파일 기반 프로젝트 초기화, 승인 후 파일 동기화, 실제 Claude/Codex 반복 실행, 장편 회귀 테스트, export package.
+
+따라서 다음 목표는 "기능을 더 많이 보이게 하기"보다 "지금 보이는 흐름이 실제 로컬 프로젝트 파일을 읽고 쓰게 만들기"다.
 
 ## 2. 제품 원칙
 
@@ -62,7 +78,7 @@ Claude Code처럼 프로젝트 폴더를 중심으로 실행한다.
 
 ### Phase 0. 프로토타입 안정화
 
-상태: 진행 중, UI 기본 구조 완료.
+상태: 대부분 완료. 현재 알파 기준으로 UI 구조와 핵심 도메인 계약은 통과했다.
 
 목표:
 
@@ -76,8 +92,16 @@ Claude Code처럼 프로젝트 폴더를 중심으로 실행한다.
 - `npm test`, `npm run build` 통과.
 - 브라우저에서 기본 제작 플로우가 끊기지 않는다.
 - 영어 내부 용어가 사용자 화면의 핵심 영역에 남지 않는다.
+- 검토 결과가 승인 큐로 이동하고, 승인 전에는 메모리 뱅크에 반영되지 않는다.
+
+남은 정리:
+
+- 일부 내부 용어와 밀도 높은 카드의 카피를 더 서비스 언어로 다듬는다.
+- 작은 화면에서 에디터/바이블/검토 레일의 사용성을 한 번 더 확인한다.
 
 ### Phase 1. CLI 베타 하네스
+
+상태: 부분 완료. `tools/storyx.mjs` 기반 알파 하네스, mock/provider review, raw output normalization, pending review 저장 계약은 들어갔다.
 
 목표:
 
@@ -86,11 +110,11 @@ Claude Code처럼 프로젝트 폴더를 중심으로 실행한다.
 
 구현 항목:
 
-- `src/cli/` 또는 `tools/storyx-cli/`에 명령 엔트리 추가.
+- `tools/storyx.mjs`를 베타 CLI의 임시 엔트리로 유지하되, 명령 구조가 커지면 `src/cli/` 또는 `tools/storyx-cli/`로 분리.
 - `storyx.config.json` 스키마 정의.
 - `memory-bank/` 실제 파일 생성, 읽기, 승인 대기, 동기화 명령 구현.
 - `storyx doctor`, `storyx init`, `storyx serve`, `storyx review`부터 구현.
-- 알파 우선순위는 `doctor`와 `review --dry-run`으로 provider 연결을 먼저 검증하고, 그 다음 실제 `claude --print` 실행과 파일 저장을 붙인다.
+- 알파 우선순위는 `doctor`, `review --provider mock|claude|codex`, `normalize-provider-output`을 유지하고, 다음은 `init`, `serve`, `memory sync`다.
 - CLI 테스트 추가.
 
 완료 기준:
@@ -98,8 +122,11 @@ Claude Code처럼 프로젝트 폴더를 중심으로 실행한다.
 - 새 폴더에서 `storyx init` 후 `storyx serve`로 현재 웹 에디터가 열린다.
 - `storyx review --scale small`이 에이전트별 검토 보고서를 만든다.
 - 승인되지 않은 새 캐논은 메모리 뱅크에 쓰이지 않는다.
+- `storyx memory sync`가 승인 큐의 approved 항목만 실제 memory-bank 파일에 반영한다.
 
 ### Phase 2. 쓰기방/검토방 베타
+
+상태: UI/모델 일부 완료. 실제 반복 작업 품질 검증은 미완료.
 
 목표:
 
@@ -111,8 +138,9 @@ Claude Code처럼 프로젝트 폴더를 중심으로 실행한다.
 - 에이전트 실행 순서: Story Contract -> Character/World Checks -> Genre/Voice Pass -> Continuity Gate -> User Approval.
 - 검토 규모: 빠른 검토, 표준 검토, 깊은 검토.
 - 직접 편집 구간 diff 표시.
-- 검토 결과를 `review-ledger`에 저장.
+- 검토 결과를 `review-ledger`와 `reviews/pending`에 저장.
 - 사용자 승인 후에만 `canon`, `voice`, `character`, `world` 기억 갱신.
+- AI Output Autopsy가 만든 memoryCandidates를 승인 큐에 합류시킨다.
 
 완료 기준:
 
@@ -121,6 +149,8 @@ Claude Code처럼 프로젝트 폴더를 중심으로 실행한다.
 - 검토 보고서가 "문제", "대안", "반영 여부", "메모리 업데이트 후보"를 분리한다.
 
 ### Phase 3. 매체별 제작 워크플로우
+
+상태: 소설/에세이/만화/오디오북의 선택 구조와 workflow board는 존재한다. 실제 매체별 편집기는 초기 프로토타입이다.
 
 목표:
 
@@ -135,6 +165,7 @@ Claude Code처럼 프로젝트 폴더를 중심으로 실행한다.
 - 만화 추가 기준: 스토리보드, 말풍선 연출, Midjourney 원화/키프레임 선택, 다빈치 컷별 프롬프트, 프레임 조립을 분리한다.
 - 오디오북/영상: 낭독 톤, 쉼표, 음악 큐, 자막 밀도, 장면별 오디오 보드.
 - 매체 전환 명령: `storyx convert novel-to-comic`, `storyx convert essay-to-audio`, `storyx convert comic-to-video-board`.
+- 변환 결과도 기존 story contract와 memory bank를 읽고, 새 visual/audio 후보는 승인 큐를 거친다.
 
 완료 기준:
 
@@ -210,11 +241,11 @@ Claude Code처럼 프로젝트 폴더를 중심으로 실행한다.
 
 P0:
 
-- CLI 하네스.
-- 실제 파일 기반 메모리 뱅크.
-- 검토 버튼 기반 에이전트 실행.
-- 승인 전 메모리 반영 차단.
-- 직접 편집 diff와 회차/목차 이동.
+- `storyx init` / `storyx serve` / `storyx memory sync`.
+- 승인 큐 -> 실제 memory-bank 파일 반영.
+- 실제 Claude/Codex small review 반복 검증과 실패 복구.
+- 직접 편집 diff와 review-ledger 저장.
+- 장편 10화 회귀 테스트 하네스.
 
 P1:
 
@@ -223,6 +254,7 @@ P1:
 - 에세이 인터뷰/문체 일관성.
 - 오디오북 낭독 보드.
 - 프로젝트 버전 히스토리.
+- Platform Packaging Lab: 웹소설 첫 문장, 웹툰 첫 3컷, 인스타툰 저장 컷, 오디오북 첫 30초.
 
 P2:
 
@@ -233,16 +265,15 @@ P2:
 
 ## 6. 다음 구현 순서
 
-1. `storyx` CLI 골격을 만든다.
-2. 실제 `claude --print` small review를 사용자 승인 후 한 번 실행하고 결과를 `reviews/pending`에 저장한다.
-3. `storyx init`과 `storyx serve`를 연결한다.
-4. `memory-bank/` 실제 파일 모델을 구현한다.
-5. `storyx review --scale small|standard|deep`의 저장/승인/동기화 루프를 만든다.
-6. 웹 에디터의 검토 버튼이 CLI/하네스 결과와 같은 보고서 모델을 쓰게 한다.
-6. 직접 편집 diff를 빨간 글씨 수준이 아니라 변경 단위로 표시한다.
-7. 승인 버튼을 추가해 캐논/문체/캐릭터/세계관 업데이트를 명시적으로 반영한다.
-8. 소설 -> 만화/동화책/오디오북 변환 보드를 만든다.
-9. 10개 실제 샘플 프로젝트로 비공개 베타 테스트를 돌린다.
+1. `storyx init`: 새 프로젝트 폴더, `storyx.config.json`, `memory-bank/`, `.claude/` 호환 자산을 생성한다.
+2. `storyx serve`: 생성된 프로젝트 폴더를 기준으로 웹 에디터를 연다.
+3. `storyx memory sync`: 승인 큐의 approved 항목만 실제 `canon`, `characters`, `world`, `voice`, `visual`, `audio` 파일에 반영한다.
+4. 실제 `claude --print` / `codex exec` small review를 같은 샘플로 반복 실행하고 실패/비용/정규화 로그를 남긴다.
+5. 웹 에디터에서 CLI가 만든 `reviews/pending` 파일을 불러와 승인 큐에 표시한다.
+6. 직접 편집 diff를 줄 단위가 아니라 변경 블록 단위로 표시하고, 검토 요청 시 diff만 에이전트 패킷에 포함한다.
+7. `review-ledger`와 `failure-log`를 실제 파일로 저장한다.
+8. 소설 -> 만화/동화책/오디오북 변환 보드를 만들고, visual/audio 후보도 승인 큐를 통과시킨다.
+9. 장편 10화, 에세이 3편, 인스타툰 2편, 오디오북 1편의 로컬 베타 샘플을 제작한다.
 10. 가격/크레딧/출판 패키지를 붙여 공개 베타로 간다.
 
 ## 7. 베타 성공 기준
