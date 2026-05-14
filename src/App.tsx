@@ -34,6 +34,7 @@ import {
   type CreativeFormat,
   type CreativeMedium
 } from './lib/projectBlueprint';
+import { buildProjectIntakePlan, getFocusedServiceScope } from './lib/projectIntake';
 import {
   createDefaultDevelopmentInput,
   developCreativeProject,
@@ -460,6 +461,8 @@ function MarketingLanding({
         </div>
       </section>
 
+      <StoryCurrentSection />
+
       <section className="duna-marquee" aria-label="creative formats">
         {['Novel', 'Webtoon', 'Insta-toon', 'Audiobook', 'Audio drama', 'Reference DNA', 'Story refactor'].map((item) => (
           <span key={item}>{item}</span>
@@ -549,6 +552,29 @@ function MarketingLanding({
         </button>
       </section>
     </main>
+  );
+}
+
+function StoryCurrentSection() {
+  return (
+    <section className="story-current-section" aria-label="Story X brand concept">
+      <div>
+        <p className="framer-eyebrow">Brand Current</p>
+        <h2>바람과 물결이 교차할 때, 나의 이야기가 완성됩니다.</h2>
+        <p>
+          바람은 작가가 던지는 선택, 수정, 충동입니다. 물결은 메모리 뱅크와 에이전트 검토가 남기는
+          흐름입니다. Story X는 둘이 만나는 지점에서 회차, 문체, 인물, 세계관을 다시 정렬합니다.
+        </p>
+      </div>
+      <div className="current-wave-map" aria-hidden="true">
+        <span>wind</span>
+        <i />
+        <i />
+        <i />
+        <strong>story</strong>
+        <em>wave</em>
+      </div>
+    </section>
   );
 }
 
@@ -761,8 +787,12 @@ function StoryXHome({
   const formatOptions = getFormatOptions(medium);
   const workflowBoard = buildTesterDrivenWorkflow(blueprint);
   const workflowPhases = blueprint.productionPhases;
+  const intakePlan = useMemo(() => buildProjectIntakePlan(blueprint), [blueprint]);
+  const focusedScope = useMemo(() => getFocusedServiceScope(), []);
+  const [intakeAnswers, setIntakeAnswers] = useState<Record<string, string>>({});
   const homeNavLinks = [
     { label: '작업 선택', target: 'choose' },
+    { label: '세팅 질문', target: 'intake' },
     { label: '제작 보드', target: 'workflow' },
     { label: '검토 기준', target: 'evaluation-update' },
     { label: '작가진', target: 'agents' },
@@ -863,6 +893,57 @@ function StoryXHome({
           </div>
           <p className="workflow-proof">{workflowBoard.platformProof}</p>
         </aside>
+      </section>
+
+      <section className="home-intake-questionnaire" id="intake" aria-label="새 프로젝트 에이전트 질문">
+        <div className="home-intake-head">
+          <div>
+            <p className="framer-eyebrow">Agent setup · 객관식</p>
+            <h2>에이전트들이 먼저 묻는 세팅 질문</h2>
+            <p>
+              {intakePlan.summary} 이 선택은 나중에 언제든지 바꿀 수 있습니다. 변경이 기존 출간본과 충돌하면
+              변경 로그와 캐논 리팩터가 먼저 검토합니다.
+            </p>
+          </div>
+          <aside>
+            <span>{intakePlan.focusLabel}</span>
+            <p>{intakePlan.notice}</p>
+          </aside>
+        </div>
+        <div className="scope-focus-strip" aria-label="현재 개발 집중 범위">
+          <strong>현재 집중</strong>
+          {focusedScope.now.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+          <em>후속: {focusedScope.later.join(' · ')}. 만화의 완성 이미지 생성은 후속 단계입니다.</em>
+        </div>
+        <div className="intake-question-grid">
+          {intakePlan.questions.map((question, index) => {
+            const selectedOption = intakeAnswers[question.id] ?? question.recommendedOptionId;
+
+            return (
+              <article className="intake-question-card" key={question.id}>
+                <span>
+                  {String(index + 1).padStart(2, '0')} · {question.agentLabel}
+                </span>
+                <h3>{question.question}</h3>
+                <div>
+                  {question.options.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={selectedOption === option.id ? 'is-selected' : ''}
+                      onClick={() => setIntakeAnswers((current) => ({ ...current, [question.id]: option.id }))}
+                    >
+                      <strong>{option.label}</strong>
+                      <small>{option.impact}</small>
+                    </button>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </section>
 
       <TesterEvaluationUpdateSection blueprint={blueprint} />

@@ -62,9 +62,10 @@ import {
 } from './lib/memoryBank';
 import { buildTesterDrivenWorkflow, type TesterDrivenWorkflow } from './lib/evaluationSynthesis';
 import { buildComicsVisualWorkflow } from './lib/visualProduction';
+import { buildPublishingPlan, type PublishingPlan } from './lib/publishing';
 import { clearProject, loadProject, saveProject } from './lib/storage';
 
-type DeskTrack = 'draft' | 'bible';
+type DeskTrack = 'draft' | 'bible' | 'publish';
 type BibleSection = 'overview' | 'characters' | 'world' | 'canon' | 'voice' | 'approval';
 type ApprovalDecision = MemoryApprovalDecision;
 
@@ -390,6 +391,7 @@ export function StoryXDesk({
     [approvalDecisions, approvalStatementOverrides, latestReviewResult, project]
   );
   const evaluatorWorkflow = useMemo(() => buildTesterDrivenWorkflow(blueprint), [blueprint]);
+  const publishingPlan = useMemo(() => buildPublishingPlan(project, blueprint), [blueprint, project]);
   const aiCliRunPlan = useMemo(
     () =>
       buildAiCliRunPlan({
@@ -576,6 +578,17 @@ export function StoryXDesk({
               <Database size={16} />
               작품 바이블
             </button>
+            <button
+              type="button"
+              className={activeTrack === 'publish' ? 'is-active' : ''}
+              onClick={() => {
+                setActiveTrack('publish');
+                setIsMediaPanelOpen(false);
+              }}
+            >
+              <FileText size={16} />
+              출간 준비
+            </button>
           </nav>
           <button
             type="button"
@@ -642,6 +655,8 @@ export function StoryXDesk({
               selectedChapterId={latestChapter?.id ?? null}
               onSelectChapter={setLatestChapter}
             />
+          ) : activeTrack === 'publish' ? (
+            <PublishingIndexCard plan={publishingPlan} />
           ) : (
             <BibleIndexCard
               project={project}
@@ -776,7 +791,7 @@ export function StoryXDesk({
                 onReviewDraft={reviewDraft}
               />
             </>
-          ) : (
+          ) : activeTrack === 'bible' ? (
             <MemoryBankStudio
               project={project}
               bank={memoryBank}
@@ -791,6 +806,17 @@ export function StoryXDesk({
               approvalDecisions={approvalDecisions}
               onSetApprovalDecision={setApprovalDecision}
               onUpdateApprovalStatement={updateApprovalStatement}
+            />
+          ) : (
+            <PublishingStudio
+              project={project}
+              blueprint={blueprint}
+              plan={publishingPlan}
+              onOpenBible={() => {
+                setActiveTrack('bible');
+                setActiveBibleSection('approval');
+              }}
+              onReviewDraft={reviewDraft}
             />
           )}
         </section>
@@ -994,6 +1020,121 @@ function BibleIndexCard({
         </button>
       ))}
       <small>원고에서 생긴 새 사실은 바로 저장하지 않고 승인 대기 목록으로 보냅니다.</small>
+    </section>
+  );
+}
+
+function PublishingIndexCard({ plan }: { plan: PublishingPlan }) {
+  return (
+    <section className="sx-panel sx-publishing-index-card" aria-label="출간 준비 목차">
+      <div className="sx-panel-heading">
+        <FileText size={16} />
+        <h2>출간 준비</h2>
+      </div>
+      <strong>{plan.title}</strong>
+      <p>{plan.releaseNotice}</p>
+      <div>
+        {plan.snapshotItems.map((item) => (
+          <span key={item}>{item}</span>
+        ))}
+      </div>
+      <small>출간 후 수정은 변경 로그 검토를 거쳐 다음 전개와 캐논에 반영합니다.</small>
+    </section>
+  );
+}
+
+function PublishingStudio({
+  project,
+  blueprint,
+  plan,
+  onOpenBible,
+  onReviewDraft
+}: {
+  project: SeriesProject;
+  blueprint: CreativeBlueprint;
+  plan: PublishingPlan;
+  onOpenBible: () => void;
+  onReviewDraft: () => void;
+}) {
+  const latestChapter = project.chapters[project.chapters.length - 1] ?? null;
+
+  return (
+    <section className="sx-publishing-studio" aria-label="출간 준비">
+      <header className="sx-publishing-hero">
+        <div>
+          <p className="sx-eyebrow">Publishing Studio</p>
+          <h2>출간 준비</h2>
+          <p>
+            완성 버튼을 누르는 화면이 아니라, 출간본을 잠그고 이후 수정이 작품 전체에 어떤 영향을 주는지
+            검토하는 단계입니다. 만화는 스토리보드 패키지까지 준비하고 완성 이미지 생성은 후속 단계로 둡니다.
+          </p>
+        </div>
+        <aside>
+          <span>게시 위치</span>
+          <strong>{blueprint.mediumLabel} · {blueprint.formatLabel}</strong>
+          <small>{latestChapter ? `${latestChapter.episode}화 기준` : '초안 생성 후 출간 스냅샷 생성'}</small>
+        </aside>
+      </header>
+
+      <div className="sx-publishing-grid">
+        <article className="sx-platform-proof-card">
+          <span>Platform Proof</span>
+          <h3>첫 300자</h3>
+          <p>{plan.platformProof}</p>
+          <blockquote>{plan.excerpt}</blockquote>
+        </article>
+
+        <article className="sx-release-checklist">
+          <span>Release Gates</span>
+          <h3>출간 전 체크리스트</h3>
+          {plan.checklist.map((item) => (
+            <div key={item.id} className={`is-${item.status}`}>
+              <Check size={15} />
+              <strong>{item.label}</strong>
+              <small>{item.detail}</small>
+            </div>
+          ))}
+        </article>
+
+        <article>
+          <span>Release Snapshot</span>
+          <h3>출간 스냅샷</h3>
+          <ul>
+            {plan.snapshotItems.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </article>
+
+        <article>
+          <span>Change Log</span>
+          <h3>변경 로그 검토</h3>
+          <ul>
+            {plan.changeLogReview.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+          <button type="button" className="sx-secondary-button" onClick={onOpenBible}>
+            <Database size={15} />
+            메모리 승인 큐 확인
+          </button>
+        </article>
+
+        <article className="is-wide">
+          <span>Output Package</span>
+          <h3>산출물 패키지</h3>
+          <div className="sx-publishing-package-row">
+            {plan.packageItems.map((item) => (
+              <em key={item}>{item}</em>
+            ))}
+          </div>
+          <p>{plan.releaseNotice}</p>
+          <button type="button" className="sx-primary-button" onClick={onReviewDraft}>
+            <ClipboardCheck size={16} />
+            출간 전 검토 실행
+          </button>
+        </article>
+      </div>
     </section>
   );
 }

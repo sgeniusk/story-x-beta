@@ -97,13 +97,30 @@ describe('Story X page experience', () => {
   it('explains Story X as a cross-media creative operating system on the homepage', () => {
     expect(app).toContain('const landingWorkflowTracks = [');
     expect(app).toContain('className="landing-workflow-track"');
+    expect(app).toContain('function StoryCurrentSection');
+    expect(app).toContain('바람과 물결이 교차할 때');
     expect(app).toContain('소설에서 시작해 웹툰, 동화책, 오디오북으로 자연스럽게 확장');
     expect(app).toContain('function MediaBridgeSection');
     expect(app).toContain('소설 → 웹툰');
     expect(app).toContain('에세이 → 오디오북');
     expect(app).toContain('만화 → 컷별 영상');
+    expect(css).toContain('.story-current-section');
+    expect(css).toContain('.current-wave-map');
     expect(css).toContain('.media-bridge-section');
     expect(css).toContain('.bridge-route-grid');
+  });
+
+  it('adds objective agent questions before starting a new project', () => {
+    expect(app).toContain('buildProjectIntakePlan');
+    expect(app).toContain('getFocusedServiceScope');
+    expect(app).toContain('const intakePlan = useMemo');
+    expect(app).toContain('className="home-intake-questionnaire"');
+    expect(app).toContain('객관식');
+    expect(app).toContain('나중에 언제든지 바꿀 수 있습니다');
+    expect(app).toContain('이미지 생성은 후속 단계');
+    expect(css).toContain('.home-intake-questionnaire');
+    expect(css).toContain('.intake-question-card');
+    expect(css).toContain('.scope-focus-strip');
   });
 
   it('introduces frontend production agents like a service team section', () => {

@@ -62,7 +62,7 @@ describe('Story X focused editor layout', () => {
   });
 
   it('uses a two-track editor with media changes moved to the top right', () => {
-    expect(desk).toContain("type DeskTrack = 'draft' | 'bible'");
+    expect(desk).toContain("type DeskTrack = 'draft' | 'bible' | 'publish'");
     expect(desk).toContain("type BibleSection = 'overview' | 'characters' | 'world' | 'canon' | 'voice' | 'approval'");
     expect(desk).toContain('const [activeTrack, setActiveTrack]');
     expect(desk).toContain('const [activeBibleSection, setActiveBibleSection]');
@@ -70,6 +70,7 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('const [isMediaPanelOpen, setIsMediaPanelOpen]');
     expect(desk).toContain('원고 편집');
     expect(desk).toContain('작품 바이블');
+    expect(desk).toContain('출간 준비');
     expect(desk).toContain('매체 변경');
     expect(desk).toContain('className="sx-track-tabs"');
     expect(desk).toContain('className="sx-media-change-panel"');
@@ -92,6 +93,21 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-memory-packet-card');
     expect(css).toContain('.sx-approval-queue');
     expect(css).toContain('.sx-approval-status');
+  });
+
+  it('adds a publishing studio for release snapshots and change-log review', () => {
+    expect(desk).toContain('buildPublishingPlan');
+    expect(desk).toContain('const publishingPlan = useMemo');
+    expect(desk).toContain('PublishingStudio');
+    expect(desk).toContain('PublishingIndexCard');
+    expect(desk).toContain('출간 스냅샷');
+    expect(desk).toContain('변경 로그 검토');
+    expect(desk).toContain('첫 300자');
+    expect(desk).toContain('게시 위치');
+    expect(desk).toContain('만화는 스토리보드 패키지');
+    expect(css).toContain('.sx-publishing-studio');
+    expect(css).toContain('.sx-release-checklist');
+    expect(css).toContain('.sx-platform-proof-card');
   });
 
   it('turns the memory bank into an editable workbench with agent context packets', () => {
