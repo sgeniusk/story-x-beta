@@ -831,10 +831,6 @@ function StoryXHome({
               <div className="home-flow-copy">
                 <p className="framer-eyebrow">01 · Medium</p>
                 <h1 id="home-title">무엇을 만들까요?</h1>
-                <p>
-                  매체와 형식을 정하면 Story X가 필요한 작가진, 기억은행, 검토 흐름을 먼저 조립합니다.
-                  지금은 소설과 에세이에 집중하고, 만화는 스토리보드까지 선명하게 잡습니다.
-                </p>
               </div>
               <div className="home-option-grid">
                 {mediumOptions.map((option) => (

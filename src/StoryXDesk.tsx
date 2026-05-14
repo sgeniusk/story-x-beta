@@ -11,7 +11,9 @@ import {
   Layers,
   Library,
   ListChecks,
+  Maximize2,
   MessageCircle,
+  Minimize2,
   PenLine,
   RotateCcw,
   Save,
@@ -379,6 +381,7 @@ export function StoryXDesk({
   const [latestReviewResult, setLatestReviewResult] = useState<AiCliReviewResult | null>(null);
   const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(false);
   const [isPublishingMode, setIsPublishingMode] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AgentDialogSelection | null>(null);
   const [canonChanges, setCanonChanges] = useState<CanonChangeEntry[]>([]);
 
@@ -421,6 +424,7 @@ export function StoryXDesk({
     const episodes = Math.max(project.currentEpisode, 1);
     return Math.min(99, Math.round((total / (episodes + 6)) * 16));
   }, [project]);
+  const bibleAlertCount = editorWorkspace.continuitySummary.blocked + editorWorkspace.continuitySummary.warnings;
 
   useEffect(() => {
     saveProject(project);
@@ -633,7 +637,7 @@ export function StoryXDesk({
   }
 
   return (
-    <main className={`sx-desk sx-genre-${request.genre}`}>
+    <main className={`sx-desk sx-genre-${request.genre} ${isFocusMode ? 'is-focus-mode' : ''}`}>
       <header className="sx-topbar">
         <div className="sx-brand">
           <span className="sx-brand-mark">
@@ -684,6 +688,7 @@ export function StoryXDesk({
             >
               <Database size={16} />
               작품 바이블
+              {bibleAlertCount > 0 && <span className="sx-bible-alert-badge">{bibleAlertCount}</span>}
             </button>
           </nav>
           <button
@@ -755,8 +760,6 @@ export function StoryXDesk({
         <aside className="sx-project-rail" aria-label="프로젝트 대시보드">
           <ProjectStateCard project={project} canonHealth={canonHealth} />
 
-          <CurrentBlueprintCard blueprint={blueprint} onOpenMediaPanel={() => setIsMediaPanelOpen(true)} />
-
           {isPublishingMode ? (
             <PublishingIndexCard plan={publishingPlan} />
           ) : activeTrack === 'draft' ? (
@@ -773,75 +776,6 @@ export function StoryXDesk({
               activeSection={activeBibleSection}
               onSelectSection={setActiveBibleSection}
             />
-          )}
-
-          {!isPublishingMode && activeTrack === 'draft' && (
-          <section className="sx-brief-panel">
-            <div className="sx-panel-heading">
-              <ClipboardCheck size={16} />
-              <h2>작업 브리프</h2>
-            </div>
-            <div className="sx-brief-grid">
-              <label>
-                <span>장르 리듬</span>
-                <select
-                  value={request.genre}
-                  name="genre"
-                  onChange={(event) => setRequest((current) => ({ ...current, genre: event.target.value as GenreId }))}
-                >
-                  {Object.entries(genreProfiles).map(([id, profile]) => (
-                    <option key={id} value={id}>
-                      {profile.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>독자 약속</span>
-                <input
-                  value={project.audiencePromise}
-                  name="audience-promise"
-                  onChange={(event) => updateProject('audiencePromise', event.target.value)}
-                  autoComplete="off"
-                />
-              </label>
-              <label className="sx-wide-field">
-                <span>이번 회차 사건</span>
-                <input
-                  value={request.intent}
-                  name="episode-intent"
-                  onChange={(event) => updateDraftPrompt(event.target.value)}
-                  autoComplete="off"
-                />
-              </label>
-              <label className="sx-wide-field">
-                <span>감정 압력</span>
-                <input
-                  value={request.pressure}
-                  name="episode-pressure"
-                  onChange={(event) => setRequest((current) => ({ ...current, pressure: event.target.value }))}
-                  autoComplete="off"
-                />
-              </label>
-            </div>
-            <div className="sx-brief-actions">
-              <button type="button" className="sx-primary-button" onClick={produceEpisode}>
-                <WandSparkles size={17} />
-                초안 생성
-              </button>
-              <button type="button" className="sx-secondary-button" onClick={reviewDraft}>
-                <ClipboardCheck size={16} />
-                검토
-              </button>
-              <button type="button" className="sx-secondary-button" onClick={() => saveProject(project)}>
-                <Save size={16} />
-                저장
-              </button>
-              <button type="button" className="sx-icon-button" aria-label="프로젝트 초기화" onClick={resetProject}>
-                <RotateCcw size={16} />
-              </button>
-            </div>
-          </section>
           )}
         </aside>
 
@@ -885,13 +819,9 @@ export function StoryXDesk({
                 </div>
                 <div className="sx-editor-titlebar-actions">
                   <span>{blueprint.projectRoomTitle}</span>
-                  <button type="button" className="sx-primary-button" onClick={produceEpisode}>
-                    <WandSparkles size={17} />
-                    초안 생성
-                  </button>
-                  <button type="button" className="sx-secondary-button" onClick={reviewDraft}>
-                    <ClipboardCheck size={16} />
-                    검토
+                  <button type="button" className="sx-primary-button" onClick={latestChapter ? reviewDraft : produceEpisode}>
+                    {latestChapter ? <ClipboardCheck size={16} /> : <WandSparkles size={17} />}
+                    {latestChapter ? '흐름 검증' : '초안 생성'}
                   </button>
                 </div>
               </section>
@@ -908,8 +838,10 @@ export function StoryXDesk({
                 project={project}
                 editableText={editorText}
                 editedSinceReview={editedSinceReview}
+                isFocusMode={isFocusMode}
                 onEditableTextChange={updateEditorText}
                 onReviewDraft={reviewDraft}
+                onToggleFocusMode={() => setIsFocusMode((current) => !current)}
               />
             </>
           ) : (
@@ -934,63 +866,13 @@ export function StoryXDesk({
           )}
         </section>
 
-        <aside className="sx-codex-rail" aria-label="연속성 레저">
-          <ContinuitySummaryCard
-            status={editorWorkspace.continuitySummary.status}
-            blocked={editorWorkspace.continuitySummary.blocked}
-              warnings={editorWorkspace.continuitySummary.warnings}
-          />
-
-          <MemoryBankCard bank={memoryBank} />
-
-          <AiCliHarnessCard
-            plan={aiCliRunPlan}
-            result={latestReviewResult}
-            reviewProvider={reviewProvider}
-            reviewScale={reviewScale}
-            onSelectProvider={setReviewProvider}
-            onSelectScale={setReviewScale}
-            onRunReview={reviewDraft}
-            onOpenApprovalQueue={() => {
-              setActiveTrack('bible');
-              setActiveBibleSection('approval');
-            }}
-          />
-
-          <EvaluatorQualityCard workflow={evaluatorWorkflow} />
-
+        <aside className="sx-codex-rail sx-focused-assist-rail" aria-label="작가진과 열린 질문">
           <AgentSidebar
             runs={displayedAgentRuns}
             onSelectAgent={(run, persona) => setSelectedAgent({ run, persona })}
           />
 
-          <section className="sx-panel">
-            <div className="sx-panel-heading">
-              <GitBranch size={16} />
-              <h2>캐논 장부</h2>
-            </div>
-            <div className="sx-canon-list">
-              {project.canonFacts.slice(-6).map((fact) => (
-                <article key={fact.id}>
-                  <span>EP {fact.episode} · {fact.owner}</span>
-                  <p>{fact.statement}</p>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="sx-panel">
-            <div className="sx-panel-heading">
-              <ListChecks size={16} />
-              <h2>열린 질문</h2>
-            </div>
-            <ul className="sx-thread-list">
-              {project.openThreads.map((thread) => (
-                <li key={thread}>{thread}</li>
-              ))}
-            </ul>
-          </section>
-
+          <OpenThreadsCard threads={project.openThreads} />
         </aside>
       </section>
       {selectedAgent && (
@@ -1071,24 +953,6 @@ function ChapterTreeCard({
           ))
         )}
       </div>
-    </section>
-  );
-}
-
-function CurrentBlueprintCard({ blueprint, onOpenMediaPanel }: { blueprint: CreativeBlueprint; onOpenMediaPanel: () => void }) {
-  return (
-    <section className="sx-panel sx-current-blueprint-card" aria-label="현재 제작 형태">
-      <div className="sx-panel-heading">
-        <Layers size={16} />
-        <h2>현재 제작 형태</h2>
-      </div>
-      <strong>{blueprint.mediumLabel}</strong>
-      <p>{blueprint.formatLabel}</p>
-      <small>{blueprint.projectRoomSubtitle}</small>
-      <button type="button" className="sx-secondary-button" onClick={onOpenMediaPanel}>
-        <Layers size={15} />
-        매체 변경
-      </button>
     </section>
   );
 }
@@ -1969,6 +1833,22 @@ function EvaluatorQualityCard({ workflow }: { workflow: TesterDrivenWorkflow }) 
   );
 }
 
+function OpenThreadsCard({ threads }: { threads: string[] }) {
+  return (
+    <section className="sx-panel sx-open-threads-card" aria-label="열린 질문">
+      <div className="sx-panel-heading">
+        <ListChecks size={16} />
+        <h2>열린 질문</h2>
+      </div>
+      <ul className="sx-thread-list">
+        {threads.map((thread) => (
+          <li key={thread}>{thread}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function AgentSidebar({
   runs,
   onSelectAgent
@@ -2185,17 +2065,28 @@ function CreativeStage({
   project,
   editableText,
   editedSinceReview,
+  isFocusMode,
   onEditableTextChange,
-  onReviewDraft
+  onReviewDraft,
+  onToggleFocusMode
 }: {
   blueprint: CreativeBlueprint;
   chapter: Chapter | null;
   project: SeriesProject;
   editableText: string;
   editedSinceReview: boolean;
+  isFocusMode: boolean;
   onEditableTextChange: (value: string) => void;
   onReviewDraft: () => void;
+  onToggleFocusMode: () => void;
 }) {
+  const expandButton = (
+    <button type="button" className="sx-expand-editor-button" onClick={onToggleFocusMode}>
+      {isFocusMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+      {isFocusMode ? '축소' : '편집기 확대'}
+    </button>
+  );
+
   if (blueprint.medium === 'comics') {
     const visualWorkflow = buildComicsVisualWorkflow(blueprint.format);
     const frameLabels =
@@ -2206,6 +2097,7 @@ function CreativeStage({
     return (
       <section className="sx-creative-stage" aria-label="만화 캔버스">
         <div className="sx-canvas-surface">
+          <div className="sx-stage-toolbar">{expandButton}</div>
           <header>
             <p className="sx-eyebrow">Comic Canvas</p>
             <h2>{blueprint.formatLabel} 캔버스</h2>
@@ -2252,6 +2144,7 @@ function CreativeStage({
     return (
       <section className="sx-creative-stage" aria-label="오디오북 스토리보드">
         <div className="sx-storyboard-surface">
+          <div className="sx-stage-toolbar">{expandButton}</div>
           <header>
             <p className="sx-eyebrow">Audio / Video Board</p>
             <h2>{blueprint.formatLabel} 스토리보드</h2>
@@ -2276,6 +2169,7 @@ function CreativeStage({
   return (
     <section className="sx-creative-stage" aria-label="글쓰기 원고">
       <div className={`sx-writing-surface ${editedSinceReview ? 'is-edited' : ''}`}>
+        <div className="sx-stage-toolbar">{expandButton}</div>
         {chapter ? (
           <article className="sx-writing-page">
             <p className="sx-eyebrow">Episode {chapter.episode}</p>
@@ -2311,7 +2205,7 @@ function CreativeStage({
             <p className="sx-eyebrow">{blueprint.projectRoomTitle}</p>
             <h2>원고는 이 중앙 무대에서 자랍니다.</h2>
             <p>
-              왼쪽에서 작업 브리프를 조정하고 실행하면, 초안과 후크가 이 영역에 크게 배치됩니다. 열린 질문은
+              주요 내용을 적고 초안 생성을 누르면, 원고와 후크가 이 영역에 크게 배치됩니다. 열린 질문은
               오른쪽 레일에 남겨 장면을 쓰는 동안 시야를 빼앗지 않게 했습니다.
             </p>
             {project.openThreads.length > 0 && <small>열린 질문 {project.openThreads.length}개가 대기 중입니다.</small>}

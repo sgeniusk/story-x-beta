@@ -23,7 +23,7 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-writing-surface');
     expect(css).toContain('.sx-canvas-surface');
     expect(css).toContain('.sx-storyboard-surface');
-    expect(css).toContain('grid-template-rows: auto auto minmax(0, 1fr)');
+    expect(css).toContain('grid-template-rows: auto auto minmax(620px, 1fr)');
     expect(css).toContain('height: 100%');
     expect(css).toContain('--sx-paper: var(--framer-canvas)');
     expect(css).toContain('.sx-workbench {\n    order: 1;');
@@ -53,12 +53,18 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('function reviewDraft');
     expect(desk).toContain('aria-label="주요 내용 입력"');
     expect(desk).toContain('aria-label="원고 편집기"');
+    expect(desk).toContain('const [isFocusMode, setIsFocusMode]');
+    expect(desk).toContain('className="sx-expand-editor-button"');
+    expect(desk).toContain('편집기 확대');
+    expect(desk).toContain("{latestChapter ? '흐름 검증' : '초안 생성'}");
     expect(desk).toContain('수정됨');
     expect(desk).toContain('ChapterNavigator');
     expect(desk).toContain('ChapterTreeCard');
     expect(desk).toContain('작품 목차');
     expect(desk).toContain('검토');
     expect(css).toContain('.sx-manuscript-editor');
+    expect(css).toContain('.sx-desk.is-focus-mode .sx-project-rail');
+    expect(css).toContain('.sx-expand-editor-button');
     expect(css).toContain('.sx-manuscript-editor.is-edited');
     expect(css).toContain('.sx-episode-tabs');
     expect(css).toContain('.sx-chapter-tree');
@@ -78,6 +84,7 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('className="sx-publish-button"');
     expect(desk).toContain('매체 변경');
     expect(desk).toContain('className="sx-track-tabs"');
+    expect(desk).toContain('className="sx-bible-alert-badge"');
     expect(desk).toContain('className="sx-media-change-panel"');
     expect(desk).toContain('function MemoryBankStudio');
     expect(desk).toContain('function updateCharacterMemory');
@@ -99,6 +106,18 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-memory-packet-card');
     expect(css).toContain('.sx-approval-queue');
     expect(css).toContain('.sx-approval-status');
+  });
+
+  it('keeps editor rails focused and moves memory, quality, and harness work into the bible flow', () => {
+    expect(desk).not.toContain('<CurrentBlueprintCard');
+    expect(desk).not.toContain('<MemoryBankCard bank={memoryBank} />');
+    expect(desk).not.toContain('<AiCliHarnessCard');
+    expect(desk).not.toContain('<EvaluatorQualityCard workflow={evaluatorWorkflow} />');
+    expect(desk).not.toContain('<ContinuitySummaryCard');
+    expect(desk).toContain('function OpenThreadsCard');
+    expect(desk).toContain('<OpenThreadsCard threads={project.openThreads} />');
+    expect(desk).toContain('sx-focused-assist-rail');
+    expect(css).toContain('.sx-focused-assist-rail');
   });
 
   it('adds a publishing studio for release snapshots and change-log review', () => {
@@ -150,7 +169,7 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-refactor-review-order');
   });
 
-  it('connects the review button to the AI CLI harness preview and pending memory candidates', () => {
+  it('connects the flow validation button to the AI review contract and pending memory candidates', () => {
     expect(desk).toContain('buildAiCliRunPlan');
     expect(desk).toContain('buildMockAiCliReviewResult');
     expect(desk).toContain('agentReportsToRuns');
@@ -158,15 +177,10 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('const [reviewProvider, setReviewProvider]');
     expect(desk).toContain('const [latestReviewResult, setLatestReviewResult]');
     expect(desk).toContain('function AiCliHarnessCard');
-    expect(desk).toContain('AI CLI 하네스');
-    expect(desk).toContain('Provider');
-    expect(desk).toContain('검토 규모');
-    expect(desk).toContain('onSelectProvider={setReviewProvider}');
+    expect(desk).not.toContain('<AiCliHarnessCard');
+    expect(desk).toContain('흐름 검증');
     expect(desk).toContain('memoryCandidates');
     expect(desk).toContain('setLatestReviewResult(result)');
-    expect(css).toContain('.sx-ai-harness-card');
-    expect(css).toContain('.sx-provider-row');
-    expect(css).toContain('.sx-review-scale-row');
     expect(css).toContain('.sx-memory-candidate-list');
   });
 

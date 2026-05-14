@@ -3240,6 +3240,7 @@ body {
 }
 
 .sx-topbar nav button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -3252,6 +3253,20 @@ body {
   color: var(--sx-card);
   border-color: var(--sx-ink);
   background: var(--sx-ink);
+}
+
+.sx-bible-alert-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--sx-accent) 72%, #ffffff);
+  color: var(--sx-ink);
+  font-size: 0.68rem;
+  font-weight: 850;
+  line-height: 1;
 }
 
 .sx-track-tabs {
@@ -3366,10 +3381,10 @@ body {
   grid-template-columns: clamp(200px, 15vw, 260px) minmax(0, 1fr) clamp(220px, 18vw, 320px);
   gap: 18px;
   max-width: 1720px;
-  height: calc(100dvh - 112px);
+  min-height: calc(100vh - 112px);
   margin: 0 auto;
   align-items: start;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .sx-project-rail,
@@ -3383,15 +3398,33 @@ body {
   overscroll-behavior: contain;
 }
 
+.sx-focused-assist-rail {
+  align-content: start;
+}
+
 .sx-workbench {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(620px, 1fr);
   gap: 14px;
   min-width: 0;
   height: 100%;
-  max-height: 100%;
-  overflow: hidden;
+  max-height: calc(100vh - 112px);
+  overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.sx-desk.is-focus-mode .sx-project-rail,
+.sx-desk.is-focus-mode .sx-codex-rail {
+  display: none;
+}
+
+.sx-desk.is-focus-mode .sx-desk-grid {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 1180px;
+}
+
+.sx-desk.is-focus-mode .sx-workbench {
+  max-height: calc(100vh - 112px);
 }
 
 .sx-panel,
@@ -3765,30 +3798,6 @@ body {
   overflow-wrap: anywhere;
   color: var(--sx-muted);
   font-size: 0.68rem;
-}
-
-.sx-current-blueprint-card {
-  display: grid;
-  gap: 9px;
-}
-
-.sx-current-blueprint-card > strong {
-  color: var(--sx-ink);
-  font-size: 1.1rem;
-  line-height: 1.2;
-}
-
-.sx-current-blueprint-card > p,
-.sx-current-blueprint-card > small {
-  margin: 0;
-  color: var(--sx-muted);
-  font-size: 0.84rem;
-  line-height: 1.45;
-}
-
-.sx-current-blueprint-card button {
-  width: fit-content;
-  margin-top: 4px;
 }
 
 .sx-bible-index-card {
@@ -4167,7 +4176,7 @@ body {
 
 .sx-creative-stage {
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .sx-writing-surface,
@@ -4183,6 +4192,31 @@ body {
     linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 26%),
     #0a0a0b;
   box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.08), 0 30px 80px rgba(0, 0, 0, 0.35);
+}
+
+.sx-stage-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: -20px -20px 18px;
+}
+
+.sx-expand-editor-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #f7f3ea;
+  font-size: 0.82rem;
+  font-weight: 760;
+  backdrop-filter: blur(14px);
+}
+
+.sx-expand-editor-button:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .sx-writing-page {
@@ -6961,10 +6995,9 @@ body {
 }
 
 .storyx-home {
-  height: 100dvh;
-  min-height: 100dvh;
-  padding: 0;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .marketing-landing button,
@@ -7271,9 +7304,9 @@ body {
 .storyx-fullscreen-flow {
   position: relative;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  height: 100dvh;
-  overflow: hidden;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+  overflow: visible;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(247, 245, 239, 0.94)),
     linear-gradient(135deg, rgba(217, 235, 228, 0.7), rgba(246, 221, 189, 0.44));
@@ -7343,6 +7376,8 @@ body {
   display: flex;
   width: 100%;
   min-height: 0;
+  align-items: flex-start;
+  overflow: visible;
   transition: transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -7353,7 +7388,7 @@ body {
   gap: 20px;
   width: 100%;
   min-width: 100%;
-  min-height: 0;
+  min-height: calc(100vh - 80px);
   padding: 22px;
 }
 
@@ -7361,13 +7396,13 @@ body {
 .home-flow-side {
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
+  overflow: visible;
   overscroll-behavior: contain;
 }
 
 .home-flow-main {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto;
   gap: 16px;
   padding: clamp(20px, 3vw, 36px);
   border: 1px solid rgba(32, 32, 30, 0.08);
@@ -7403,11 +7438,11 @@ body {
 
 .home-flow-panel .home-option-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  align-self: stretch;
+  align-self: start;
 }
 
 .home-flow-panel .home-option-grid button {
-  min-height: 210px;
+  min-height: 190px;
 }
 
 .home-flow-panel .home-format-stack {
@@ -7415,7 +7450,7 @@ body {
 }
 
 .home-flow-panel .home-format-stack button {
-  min-height: 128px;
+  min-height: 132px;
 }
 
 .flow-agent-layer-card,

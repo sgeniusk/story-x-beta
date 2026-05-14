@@ -53,7 +53,7 @@ describe('Story X page experience', () => {
     expect(app).toContain('Engineered for story integrity');
   });
 
-  it('keeps landing nav polished and turns post-start navigation into fullscreen steps', () => {
+  it('keeps landing nav polished and turns post-start navigation into focused scroll steps', () => {
     expect(app).toContain('<StoryXTopNav');
     expect(app).toContain('ariaLabel="Story X"');
     expect(app).toContain('href={`#${link.target}`}');
@@ -63,6 +63,7 @@ describe('Story X page experience', () => {
     expect(app).toContain('className="home-flow-track"');
     expect(app).toContain('translateX(-${homeFlowIndex * 100}%)');
     expect(app).toContain('flow-agent-layer-card');
+    expect(app).not.toContain('매체와 형식을 정하면 Story X가 필요한 작가진');
     expect(app).not.toContain("label: '창작 선택'");
     expect(app).not.toContain('nav-menu-trigger');
     expect(app).not.toContain('role="menu"');
@@ -71,10 +72,11 @@ describe('Story X page experience', () => {
     expect(css).toContain('.storyx-site-nav a.is-nav-link');
     expect(css).toContain('.liquid-glass-nav');
     expect(css).toContain('.storyx-home');
-    expect(css).toContain('height: 100dvh');
-    expect(css).toContain('overflow: hidden');
+    expect(css).toContain('min-height: 100vh');
+    expect(css).not.toContain('height: 100dvh;\n  min-height: 100dvh;\n  padding: 0;\n  overflow: hidden;');
     expect(css).toContain('.home-flow-panel');
     expect(css).toContain('flex: 0 0 100%');
+    expect(css).toContain('overflow: visible');
     expect(css).toContain('.flow-agent-layer-card');
     expect(app).not.toContain('<MediaBridgeSection compact />');
     expect(app).not.toContain('<FrontendAgentShowcase compact />');
