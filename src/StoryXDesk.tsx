@@ -46,6 +46,7 @@ import {
   agentReportsToRuns,
   buildAiCliRunPlan,
   buildMockAiCliReviewResult,
+  type AiCliProvider,
   type AiCliReviewResult,
   type AiCliScale
 } from './lib/aiCliHarness';
@@ -362,6 +363,7 @@ export function StoryXDesk({
   const [activeBibleSection, setActiveBibleSection] = useState<BibleSection>('overview');
   const [approvalDecisions, setApprovalDecisions] = useState<Record<string, ApprovalDecision>>({});
   const [reviewScale, setReviewScale] = useState<AiCliScale>('small');
+  const [reviewProvider, setReviewProvider] = useState<AiCliProvider>('mock');
   const [latestReviewResult, setLatestReviewResult] = useState<AiCliReviewResult | null>(null);
   const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AgentDialogSelection | null>(null);
@@ -377,12 +379,12 @@ export function StoryXDesk({
   const aiCliRunPlan = useMemo(
     () =>
       buildAiCliRunPlan({
-        provider: 'mock',
+        provider: reviewProvider,
         mode: 'review',
         scale: reviewScale,
         project
       }),
-    [project, reviewScale]
+    [project, reviewProvider, reviewScale]
   );
   const displayedAgentRuns = useMemo(
     () => (blueprint.nextWorkspace === 'visual-storyboard-studio' ? mergeAgentRuns(agentRuns, visualStoryAgentRuns) : agentRuns),
@@ -782,7 +784,9 @@ export function StoryXDesk({
           <AiCliHarnessCard
             plan={aiCliRunPlan}
             result={latestReviewResult}
+            reviewProvider={reviewProvider}
             reviewScale={reviewScale}
+            onSelectProvider={setReviewProvider}
             onSelectScale={setReviewScale}
             onRunReview={reviewDraft}
           />
@@ -1423,16 +1427,25 @@ function MemoryBankCard({ bank }: { bank: StoryMemoryBank }) {
 function AiCliHarnessCard({
   plan,
   result,
+  reviewProvider,
   reviewScale,
+  onSelectProvider,
   onSelectScale,
   onRunReview
 }: {
   plan: ReturnType<typeof buildAiCliRunPlan>;
   result: AiCliReviewResult | null;
+  reviewProvider: AiCliProvider;
   reviewScale: AiCliScale;
+  onSelectProvider: (provider: AiCliProvider) => void;
   onSelectScale: (scale: AiCliScale) => void;
   onRunReview: () => void;
 }) {
+  const providerOptions: Array<{ id: AiCliProvider; label: string; caption: string }> = [
+    { id: 'mock', label: 'Mock', caption: '무료 테스트' },
+    { id: 'claude', label: 'Claude', caption: 'CLI 실행' },
+    { id: 'codex', label: 'Codex', caption: 'CLI 실행' }
+  ];
   const scaleOptions: Array<{ id: AiCliScale; label: string; caption: string }> = [
     { id: 'small', label: 'Small', caption: '3 agents' },
     { id: 'standard', label: 'Standard', caption: '5 agents' },
@@ -1446,6 +1459,19 @@ function AiCliHarnessCard({
         <h2>AI CLI 하네스</h2>
       </div>
       <p>브라우저에서는 mock으로 안전하게 검토 흐름을 확인하고, CLI에서는 같은 계약으로 Claude/Codex를 실행합니다.</p>
+      <div className="sx-provider-row" aria-label="Provider">
+        {providerOptions.map((option) => (
+          <button
+            type="button"
+            key={option.id}
+            className={reviewProvider === option.id ? 'is-selected' : ''}
+            onClick={() => onSelectProvider(option.id)}
+          >
+            <strong>{option.label}</strong>
+            <span>{option.caption}</span>
+          </button>
+        ))}
+      </div>
       <div className="sx-review-scale-row" aria-label="검토 규모">
         {scaleOptions.map((option) => (
           <button
@@ -1464,9 +1490,14 @@ function AiCliHarnessCard({
         <code>{plan.commandPreview.slice(0, 4).join(' ')}</code>
         <small>{plan.selectedAgentIds.length} agents · approval required before sync</small>
       </div>
+      {reviewProvider !== 'mock' && (
+        <small className="sx-provider-handoff">
+          실제 {reviewProvider} 실행은 터미널에서 `npm run storyx -- review --provider {reviewProvider} --scale {reviewScale}`로 진행합니다.
+        </small>
+      )}
       <button type="button" className="sx-primary-button" onClick={onRunReview}>
         <ClipboardCheck size={16} />
-        하네스 검토 실행
+        {reviewProvider === 'mock' ? '하네스 검토 실행' : 'Mock으로 흐름 검증'}
       </button>
       {result && (
         <div className="sx-review-result-block">

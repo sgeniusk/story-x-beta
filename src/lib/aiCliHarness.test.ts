@@ -5,7 +5,8 @@ import {
   buildAiCliRunPlan,
   buildMockAiCliReviewResult,
   buildProviderCommand,
-  getProviderRuntimeChecks
+  getProviderRuntimeChecks,
+  normalizeProviderReviewOutput
 } from './aiCliHarness';
 import { createSeedProject } from './storyEngine';
 
@@ -80,5 +81,62 @@ describe('Story X AI CLI harness', () => {
     expect(result.approvalRequiredBeforeSync).toBe(true);
     expect(runs[0].agentId).toBe('showrunner');
     expect(runs[0].output).toContain('mock');
+  });
+
+  it('normalizes provider raw JSON into the same pending review contract', () => {
+    const raw = [
+      '```json',
+      JSON.stringify({
+        summary: 'Claude review completed.',
+        agentReports: [
+          {
+            agentId: 'showrunner',
+            status: 'pass',
+            note: '독자 약속은 선명하지만 마지막 질문을 더 빨리 배치하세요.',
+            evidence: ['hook']
+          }
+        ],
+        memoryCandidates: [
+          {
+            owner: 'plot',
+            status: 'pending',
+            statement: '1화 마지막 질문은 탑의 대가를 숨긴 인물에게 연결된다.',
+            sourceAgentId: 'showrunner',
+            targetPath: 'reviews/pending/plot-candidates.json',
+            rationale: '승인 전 canon에 넣지 않습니다.'
+          }
+        ],
+        nextActions: ['후크 강화안을 선택하세요.']
+      }),
+      '```'
+    ].join('\n');
+
+    const normalized = normalizeProviderReviewOutput(raw, {
+      provider: 'claude',
+      mode: 'review',
+      scale: 'small',
+      projectTitle: '샘플 작품'
+    });
+
+    expect(normalized.provider).toBe('claude');
+    expect(normalized.summary).toBe('Claude review completed.');
+    expect(normalized.agentReports[0].agentId).toBe('showrunner');
+    expect(normalized.memoryCandidates[0].targetPath).toBe('reviews/pending/plot-candidates.json');
+    expect(normalized.pendingReviewTarget).toBe('reviews/pending');
+    expect(normalized.approvalRequiredBeforeSync).toBe(true);
+  });
+
+  it('falls back safely when provider output is prose instead of JSON', () => {
+    const normalized = normalizeProviderReviewOutput('전체적으로 좋지만 캐논 후보는 별도로 확인해야 합니다.', {
+      provider: 'codex',
+      mode: 'review',
+      scale: 'small',
+      projectTitle: '샘플 작품'
+    });
+
+    expect(normalized.summary).toContain('전체적으로 좋지만');
+    expect(normalized.agentReports[0].agentId).toBe('continuity-editor');
+    expect(normalized.memoryCandidates).toEqual([]);
+    expect(normalized.nextActions[0]).toContain('구조화되지 않은 provider 출력');
   });
 });

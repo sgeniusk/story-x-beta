@@ -117,13 +117,17 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('buildMockAiCliReviewResult');
     expect(desk).toContain('agentReportsToRuns');
     expect(desk).toContain('const [reviewScale, setReviewScale]');
+    expect(desk).toContain('const [reviewProvider, setReviewProvider]');
     expect(desk).toContain('const [latestReviewResult, setLatestReviewResult]');
     expect(desk).toContain('function AiCliHarnessCard');
     expect(desk).toContain('AI CLI 하네스');
+    expect(desk).toContain('Provider');
     expect(desk).toContain('검토 규모');
+    expect(desk).toContain('onSelectProvider={setReviewProvider}');
     expect(desk).toContain('memoryCandidates');
     expect(desk).toContain('setLatestReviewResult(result)');
     expect(css).toContain('.sx-ai-harness-card');
+    expect(css).toContain('.sx-provider-row');
     expect(css).toContain('.sx-review-scale-row');
     expect(css).toContain('.sx-memory-candidate-list');
   });

@@ -3583,6 +3583,42 @@ body {
   gap: 7px;
 }
 
+.sx-provider-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.sx-provider-row button {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px;
+  border: 1px solid var(--sx-line);
+  border-radius: 12px;
+  background: var(--sx-paper);
+  color: var(--sx-ink);
+  text-align: left;
+}
+
+.sx-provider-row button.is-selected {
+  border-color: color-mix(in oklch, var(--sx-accent) 55%, var(--sx-line));
+  background: var(--sx-accent-soft);
+}
+
+.sx-provider-row strong {
+  font-size: 0.78rem;
+}
+
+.sx-provider-row span {
+  overflow: hidden;
+  color: var(--sx-muted);
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sx-review-scale-row button {
   display: grid;
   gap: 3px;
@@ -3634,6 +3670,12 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.74rem;
   line-height: 1.4;
+}
+
+.sx-provider-handoff {
+  color: var(--sx-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
 }
 
 .sx-review-result-block {

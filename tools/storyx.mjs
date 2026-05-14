@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const [, , command = 'help', ...args] = process.argv;
@@ -91,24 +91,22 @@ if (command === 'review') {
 
   if (!dryRun) {
     const providerResult = runProvider(commandPreview);
-    const payload = {
+    const rawOutput = providerResult.stdout || providerResult.stderr;
+    const payload = normalizeProviderOutput(rawOutput, {
       provider,
       scale,
       mode: 'review',
-      status: providerResult.status === 0 ? 'complete' : 'failed',
-      summary: providerResult.status === 0 ? 'Provider review completed.' : 'Provider review failed; raw output captured for diagnosis.',
-      stdout: providerResult.stdout,
-      stderr: providerResult.stderr,
-      exitCode: providerResult.status,
-      agentReports: [],
-      memoryCandidates: [],
-      nextActions:
-        providerResult.status === 0
-          ? ['결과를 읽고 승인할 memoryCandidates를 선택하세요.']
-          : ['provider stderr를 확인하고 doctor 또는 dry-run으로 명령을 점검하세요.']
-    };
+      projectTitle: 'Story X project'
+    });
+    payload.status = providerResult.status === 0 ? 'complete' : 'failed';
+    payload.exitCode = providerResult.status;
+    payload.stdout = providerResult.stdout;
+    payload.stderr = providerResult.stderr;
+    if (providerResult.status !== 0) {
+      payload.nextActions = ['provider stderr를 확인하고 doctor 또는 dry-run으로 명령을 점검하세요.', ...payload.nextActions];
+    }
     const pendingReviewPath = writePendingReviewFile(outDir, provider, scale, payload);
-    const rawProviderOutputPath = writeRawProviderFile(outDir, provider, scale, providerResult.stdout || providerResult.stderr);
+    const rawProviderOutputPath = writeRawProviderFile(outDir, provider, scale, rawOutput);
 
     printJson({
       ...payload,
@@ -131,12 +129,46 @@ if (command === 'review') {
   process.exit(0);
 }
 
+if (command === 'normalize-provider-output') {
+  const provider = readFlag(args, '--provider', 'claude');
+  const scale = readFlag(args, '--scale', 'small');
+  const mode = readFlag(args, '--mode', 'review');
+  const rawFile = readFlag(args, '--raw-file', '');
+  const outDir = readFlag(args, '--out-dir', join(process.cwd(), '.storyx-runs'));
+
+  if (!rawFile) {
+    printJson({
+      error: 'Missing --raw-file',
+      usage: 'npm run storyx -- normalize-provider-output --provider claude --scale small --raw-file ./raw.txt'
+    });
+    process.exit(1);
+  }
+
+  const rawOutput = readFileSync(rawFile, 'utf8');
+  const payload = normalizeProviderOutput(rawOutput, {
+    provider,
+    scale,
+    mode,
+    projectTitle: 'Story X project'
+  });
+  const pendingReviewPath = writePendingReviewFile(outDir, provider, scale, payload);
+  const rawProviderOutputPath = writeRawProviderFile(outDir, provider, scale, rawOutput);
+
+  printJson({
+    ...payload,
+    pendingReviewPath,
+    rawProviderOutputPath
+  });
+  process.exit(0);
+}
+
 printJson({
   usage: [
     'npm run storyx -- doctor',
     'npm run storyx -- review --provider mock --scale small --dry-run',
     'npm run storyx -- review --provider claude --scale small --dry-run',
-    'npm run storyx -- review --provider codex --scale small --dry-run'
+    'npm run storyx -- review --provider codex --scale small --dry-run',
+    'npm run storyx -- normalize-provider-output --provider claude --scale small --raw-file ./provider-output.txt'
   ]
 });
 
@@ -187,6 +219,192 @@ function writeRawProviderFile(outDir, provider, scale, content) {
   }
   writeFileSync(path, content || '');
   return path;
+}
+
+function normalizeProviderOutput(rawOutput, options) {
+  const parsed = parseProviderJson(rawOutput);
+  const summary = readString(parsed?.summary) || summarizeRawProviderOutput(rawOutput, options.projectTitle);
+
+  return {
+    provider: options.provider,
+    mode: options.mode,
+    scale: options.scale,
+    generatedAt: new Date().toISOString(),
+    summary,
+    agentReports: normalizeAgentReports(parsed?.agentReports),
+    memoryCandidates: normalizeMemoryCandidates(parsed?.memoryCandidates),
+    nextActions: normalizeStringList(parsed?.nextActions),
+    pendingReviewTarget: 'reviews/pending',
+    approvalRequiredBeforeSync: true
+  };
+}
+
+function parseProviderJson(rawOutput) {
+  const trimmed = rawOutput.trim();
+  const fencedJson = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim();
+  const candidates = [fencedJson, trimmed].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      const value = JSON.parse(candidate);
+      return isRecord(value) ? value : null;
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  return null;
+}
+
+function normalizeAgentReports(value) {
+  if (!Array.isArray(value)) {
+    return [
+      {
+        agentId: 'continuity-editor',
+        label: '연속성 감수자',
+        status: 'revise',
+        note: '구조화되지 않은 provider 출력을 원문 검토 대상으로 보류했습니다.',
+        evidence: ['provider-raw']
+      }
+    ];
+  }
+
+  return value.filter(isRecord).map((report, index) => {
+    const agentId = normalizeAgentId(readString(report.agentId) || readString(report.agent), index);
+
+    return {
+      agentId,
+      label: readString(report.label) || getAgentLabel(agentId),
+      status: normalizeReviewStatus(readString(report.status)),
+      note: readString(report.note) || readString(report.output) || 'provider 검토 의견이 비어 있습니다.',
+      evidence: normalizeStringList(report.evidence)
+    };
+  });
+}
+
+function normalizeMemoryCandidates(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(isRecord).map((candidate, index) => {
+    const owner = normalizeMemoryOwner(readString(candidate.owner));
+    const sourceAgentId = normalizeAgentId(readString(candidate.sourceAgentId) || readString(candidate.agentId), index);
+
+    return {
+      id: readString(candidate.id) || `provider-memory-${String(index + 1).padStart(2, '0')}`,
+      owner,
+      status: normalizeMemoryCandidateStatus(readString(candidate.status)),
+      statement: readString(candidate.statement) || readString(candidate.note) || '내용이 비어 있는 provider memory candidate',
+      sourceAgentId,
+      targetPath: readString(candidate.targetPath) || `reviews/pending/${owner}-candidates.json`,
+      rationale: readString(candidate.rationale) || 'provider가 제안한 후보이며 사용자 승인 전까지 sync하지 않습니다.'
+    };
+  });
+}
+
+function normalizeAgentId(value, index = 0) {
+  const knownAgentIds = [
+    'showrunner',
+    'character-custodian',
+    'world-keeper',
+    'genre-stylist',
+    'continuity-editor',
+    'essay-interviewer',
+    'voice-curator',
+    'audio-narration-director',
+    'education-video-architect',
+    'sound-music-agent',
+    'storyboard-agent',
+    'speech-bubble-agent',
+    'keyframe-art-director',
+    'da-vinci',
+    'frame-assembly-agent'
+  ];
+
+  return knownAgentIds.includes(value) ? value : knownAgentIds[index % knownAgentIds.length];
+}
+
+function normalizeReviewStatus(value) {
+  if (value === 'pass' || value === 'revise' || value === 'blocked') {
+    return value;
+  }
+
+  if (value === '수정' || value === 'revision') {
+    return 'revise';
+  }
+
+  if (value === '차단' || value === 'block') {
+    return 'blocked';
+  }
+
+  return 'pass';
+}
+
+function normalizeMemoryCandidateStatus(value) {
+  if (value === 'pending' || value === 'revision' || value === 'blocked' || value === 'reveal') {
+    return value;
+  }
+
+  if (value === '수정' || value === 'revise') {
+    return 'revision';
+  }
+
+  if (value === '차단' || value === 'block') {
+    return 'blocked';
+  }
+
+  return 'pending';
+}
+
+function normalizeMemoryOwner(value) {
+  return ['character', 'world', 'plot', 'voice', 'visual', 'audio'].includes(value) ? value : 'plot';
+}
+
+function normalizeStringList(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => readString(item)).filter(Boolean);
+  }
+
+  const single = readString(value);
+  return single ? [single] : [];
+}
+
+function summarizeRawProviderOutput(rawOutput, projectTitle) {
+  const normalized = rawOutput.replace(/\s+/g, ' ').trim();
+  const excerpt = normalized.slice(0, 220) || 'provider 출력이 비어 있습니다.';
+
+  return `${projectTitle} provider raw output: ${excerpt}`;
+}
+
+function getAgentLabel(agentId) {
+  const labels = {
+    showrunner: '쇼러너',
+    'character-custodian': '캐릭터 큐레이터',
+    'world-keeper': '배경 설계자',
+    'genre-stylist': '장르 스타일리스트',
+    'continuity-editor': '연속성 감수자',
+    'essay-interviewer': '에세이 인터뷰어',
+    'voice-curator': '문체 큐레이터',
+    'audio-narration-director': '오디오 연출가',
+    'education-video-architect': '교육영상 설계자',
+    'sound-music-agent': '사운드 뮤직 에이전트',
+    'storyboard-agent': '웹툰 연출가',
+    'speech-bubble-agent': '말풍선 연출가',
+    'keyframe-art-director': '원화/키프레임 감독',
+    'da-vinci': '다빈치',
+    'frame-assembly-agent': '프레임 조립가'
+  };
+
+  return labels[agentId] ?? agentId;
+}
+
+function readString(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function isRecord(value) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function timestamp() {

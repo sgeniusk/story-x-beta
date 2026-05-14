@@ -79,6 +79,13 @@ export interface AiCliReviewResult {
   approvalRequiredBeforeSync: true;
 }
 
+export interface NormalizeProviderReviewOutputOptions {
+  provider: Exclude<AiCliProvider, 'mock'>;
+  mode: AiCliMode;
+  scale: AiCliScale;
+  projectTitle: string;
+}
+
 const defaultAgentsByScale: Record<AiCliScale, ValidationAgentId[]> = {
   small: ['showrunner', 'continuity-editor', 'voice-curator'],
   standard: ['showrunner', 'character-custodian', 'world-keeper', 'genre-stylist', 'continuity-editor'],
@@ -198,6 +205,41 @@ export function agentReportsToRuns(result: AiCliReviewResult): AgentRun[] {
   }));
 }
 
+export function normalizeProviderReviewOutput(rawOutput: string, options: NormalizeProviderReviewOutputOptions): AiCliReviewResult {
+  const parsed = parseProviderJson(rawOutput);
+  const summary = readString(parsed?.summary) || summarizeRawProviderOutput(rawOutput, options.projectTitle);
+  const agentReports = normalizeAgentReports(parsed?.agentReports);
+  const memoryCandidates = normalizeMemoryCandidates(parsed?.memoryCandidates);
+  const nextActions = normalizeStringList(parsed?.nextActions);
+
+  return {
+    provider: options.provider,
+    mode: options.mode,
+    scale: options.scale,
+    generatedAt: new Date(0).toISOString(),
+    summary,
+    agentReports:
+      agentReports.length > 0
+        ? agentReports
+        : [
+            {
+              agentId: 'continuity-editor',
+              label: getAgentLabel('continuity-editor'),
+              status: 'revise',
+              note: '구조화되지 않은 provider 출력을 원문 검토 대상으로 보류했습니다.',
+              evidence: ['provider-raw']
+            }
+          ],
+    memoryCandidates,
+    nextActions:
+      nextActions.length > 0
+        ? nextActions
+        : ['구조화되지 않은 provider 출력은 reviews/provider-raw를 확인한 뒤 수동으로 memoryCandidates를 승인하세요.'],
+    pendingReviewTarget: 'reviews/pending',
+    approvalRequiredBeforeSync: true
+  };
+}
+
 function buildHarnessPrompt(options: AiCliRunOptions, selectedAgentIds: ValidationAgentId[]) {
   const packets = selectedAgentIds.map((agentId) => buildMemoryBankContextPacket(options.project, agentId));
   const packetText = packets.map((packet) => packet.content).join('\n\n---\n\n');
@@ -225,6 +267,148 @@ function buildHarnessPrompt(options: AiCliRunOptions, selectedAgentIds: Validati
     'Context Packet',
     packetText
   ].join('\n');
+}
+
+function parseProviderJson(rawOutput: string): Record<string, unknown> | null {
+  const trimmed = rawOutput.trim();
+  const fencedJson = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim();
+  const candidates = [fencedJson, trimmed].filter((candidate): candidate is string => Boolean(candidate));
+
+  for (const candidate of candidates) {
+    try {
+      const value = JSON.parse(candidate);
+      return isRecord(value) ? value : null;
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  return null;
+}
+
+function normalizeAgentReports(value: unknown): AiCliAgentReport[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(isRecord).map((report, index) => {
+    const agentId = normalizeAgentId(readString(report.agentId) || readString(report.agent), index);
+
+    return {
+      agentId,
+      label: readString(report.label) || getAgentLabel(agentId),
+      status: normalizeReviewStatus(readString(report.status)),
+      note: readString(report.note) || readString(report.output) || 'provider 검토 의견이 비어 있습니다.',
+      evidence: normalizeStringList(report.evidence)
+    };
+  });
+}
+
+function normalizeMemoryCandidates(value: unknown): AiCliMemoryCandidate[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(isRecord).map((candidate, index) => {
+    const owner = normalizeMemoryOwner(readString(candidate.owner));
+    const sourceAgentId = normalizeAgentId(readString(candidate.sourceAgentId) || readString(candidate.agentId), index);
+
+    return {
+      id: readString(candidate.id) || `provider-memory-${String(index + 1).padStart(2, '0')}`,
+      owner,
+      status: normalizeMemoryCandidateStatus(readString(candidate.status)),
+      statement: readString(candidate.statement) || readString(candidate.note) || '내용이 비어 있는 provider memory candidate',
+      sourceAgentId,
+      targetPath: readString(candidate.targetPath) || `reviews/pending/${owner}-candidates.json`,
+      rationale: readString(candidate.rationale) || 'provider가 제안한 후보이며 사용자 승인 전까지 sync하지 않습니다.'
+    };
+  });
+}
+
+function normalizeAgentId(value: string, index = 0): ValidationAgentId {
+  const knownAgentIds: ValidationAgentId[] = [
+    'showrunner',
+    'character-custodian',
+    'world-keeper',
+    'genre-stylist',
+    'continuity-editor',
+    'essay-interviewer',
+    'voice-curator',
+    'audio-narration-director',
+    'education-video-architect',
+    'sound-music-agent',
+    'storyboard-agent',
+    'speech-bubble-agent',
+    'keyframe-art-director',
+    'da-vinci',
+    'frame-assembly-agent'
+  ];
+
+  return knownAgentIds.includes(value as ValidationAgentId) ? (value as ValidationAgentId) : knownAgentIds[index % knownAgentIds.length];
+}
+
+function normalizeReviewStatus(value: string): AiCliReviewStatus {
+  if (value === 'pass' || value === 'revise' || value === 'blocked') {
+    return value;
+  }
+
+  if (value === '수정' || value === 'revision') {
+    return 'revise';
+  }
+
+  if (value === '차단' || value === 'block') {
+    return 'blocked';
+  }
+
+  return 'pass';
+}
+
+function normalizeMemoryCandidateStatus(value: string): AiCliMemoryCandidateStatus {
+  if (value === 'pending' || value === 'revision' || value === 'blocked' || value === 'reveal') {
+    return value;
+  }
+
+  if (value === '수정' || value === 'revise') {
+    return 'revision';
+  }
+
+  if (value === '차단' || value === 'block') {
+    return 'blocked';
+  }
+
+  return 'pending';
+}
+
+function normalizeMemoryOwner(value: string): AiCliMemoryCandidate['owner'] {
+  if (value === 'character' || value === 'world' || value === 'plot' || value === 'voice' || value === 'visual' || value === 'audio') {
+    return value;
+  }
+
+  return 'plot';
+}
+
+function normalizeStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => readString(item)).filter(Boolean);
+  }
+
+  const single = readString(value);
+  return single ? [single] : [];
+}
+
+function summarizeRawProviderOutput(rawOutput: string, projectTitle: string) {
+  const normalized = rawOutput.replace(/\s+/g, ' ').trim();
+  const excerpt = normalized.slice(0, 220) || 'provider 출력이 비어 있습니다.';
+
+  return `${projectTitle} provider raw output: ${excerpt}`;
+}
+
+function readString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function buildMockMemoryCandidates(project: SeriesProject, agentIds: ValidationAgentId[], excerpt: string): AiCliMemoryCandidate[] {
