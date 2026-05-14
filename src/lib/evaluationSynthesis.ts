@@ -8,6 +8,13 @@ export type EvaluationCapabilityId =
   | 'reference-dna-cards'
   | 'ai-output-autopsy';
 
+export type EvaluationFollowupId =
+  | 'one-project-vertical-slice'
+  | 'evidence-based-workflow'
+  | 'reference-safety-rewrite'
+  | 'beginner-pro-mode'
+  | 'production-provenance';
+
 export type QualityGateId = 'story' | 'voice' | 'continuity' | 'visual' | 'audio' | 'platform';
 
 export interface EvaluationCapability {
@@ -15,6 +22,14 @@ export interface EvaluationCapability {
   label: string;
   testerSignal: string;
   productMove: string;
+  guardrail: string;
+  ownerAgents: string[];
+}
+
+export interface EvaluationFollowup {
+  id: EvaluationFollowupId;
+  label: string;
+  proof: string;
   guardrail: string;
   ownerAgents: string[];
 }
@@ -97,14 +112,54 @@ export const p0EvaluationCapabilities: EvaluationCapability[] = [
   }
 ];
 
+export const p05EvaluationFollowups: EvaluationFollowup[] = [
+  {
+    id: 'one-project-vertical-slice',
+    label: 'One Project Vertical Slice',
+    proof: '하나의 짧은 원작을 웹소설 1화, 인스타툰 4컷, 오디오북 30초 샘플로 변환한다.',
+    guardrail: '기능을 늘리기 전에 같은 Story Contract와 Memory Bank가 세 매체를 버티는지 증명한다.',
+    ownerAgents: ['Showrunner', 'Editor UX Director', 'Publishing Distribution Manager']
+  },
+  {
+    id: 'evidence-based-workflow',
+    label: 'Evidence-Based Workflow',
+    proof: '각 단계는 설명 카드가 아니라 승인된 계약, 컷 목적, 첫 30초 proof, canon delta 같은 증거 산출물을 남긴다.',
+    guardrail: '보드가 늘어날수록 사용자는 다음 행동 하나와 남은 증거 하나만 보게 한다.',
+    ownerAgents: ['Onboarding Architect', 'Insights Analyst']
+  },
+  {
+    id: 'reference-safety-rewrite',
+    label: 'Reference Safety Rewrite',
+    proof: '위험한 레퍼런스 요청을 표면 모방이 아닌 구조, 압력, 감정 엔진 분석으로 바꾼다.',
+    guardrail: '유명 작가/작품/캐릭터의 문체나 외형 복제 요청은 안전한 설계어로 재작성한다.',
+    ownerAgents: ['Genre Stylist', 'Continuity Editor', 'Brand Homepage Director']
+  },
+  {
+    id: 'beginner-pro-mode',
+    label: 'Beginner/Pro Mode',
+    proof: '초보자에게는 이야기 약속, 다음 장면, 설정 충돌처럼 쉬운 말로 보여주고 고급 사용자는 canon delta와 context packet을 연다.',
+    guardrail: '첫 프로젝트에서는 전문 용어를 숨기고 5분 guided path와 한 가지 다음 행동을 우선한다.',
+    ownerAgents: ['Editor UX Director', 'Creative Coach', 'Onboarding Architect']
+  },
+  {
+    id: 'production-provenance',
+    label: 'Production Provenance',
+    proof: '이미지, 음악, 음성, 레퍼런스, AI 생성 결과의 출처와 승인 용도를 기록한다.',
+    guardrail: '승인되지 않은 생성물, rejected keyframe, 위험한 참조는 canon이나 visual/audio DNA로 새지 않게 한다.',
+    ownerAgents: ['Work Library Manager', 'Publishing Distribution Manager', 'Insights Analyst']
+  }
+];
+
 export const evaluationDrivenRoadmap = {
   now: [
-    'P0 최소 구조를 제작 패키지와 홈페이지에 노출',
-    'Story Contract, Workflow Board, Quality Gates, Refactor Impact Preview, AI Output Autopsy를 생성 결과에 포함',
-    '평가담당 에이전트의 공통 의견을 서비스 운영실 책임으로 매핑'
+    'One Project Vertical Slice',
+    'Memory Sync',
+    'Refactor Impact Preview'
   ],
   next: [
     'Creator Memory Bank UI 탭화',
+    'Reference Safety Rewrite',
+    'Beginner/Pro Mode',
     'Panel/Audio Line Alignment',
     'Platform Packaging Lab',
     'Creative Coach Mode'

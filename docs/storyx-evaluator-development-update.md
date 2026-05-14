@@ -1,8 +1,11 @@
 # Story X Evaluator Development Update
 
-Date: 2026-05-14
+Date: 2026-05-15
 
-Source: `docs/story-x-12-creator-tester-report.md`
+Sources:
+
+- `docs/story-x-12-creator-tester-report.md`
+- `docs/story-x-20-expert-retest-report.md`
 
 ## 요약
 
@@ -51,13 +54,34 @@ Source: `docs/story-x-12-creator-tester-report.md`
 - 홈의 워크플로우 설명은 포맷 목록이 아니라 소설, 만화, 에세이, 오디오북/영상별 제작 흐름과 platform proof를 보여준다.
 - UI/UX 개선은 창작실 에이전트와 충돌하지 않고, 사용자가 첫 프로젝트에서 첫 workflow board까지 끊기지 않게 이동하는 데 집중한다.
 
+## 20인 확장 전문가 재테스트 반영
+
+2026-05-15의 20인 확장 전문가 재테스트는 기존 P0 여섯 개를 유지하되, 다음 위험을 새로 확인했다.
+
+- 방향은 맞지만 개념이 많아졌다.
+- Story X는 더 많은 기능보다 한 작품의 완성 경험으로 증명해야 한다.
+- 보드는 설명이 아니라 증거 산출물을 남기는 작업 도구여야 한다.
+- Reference DNA는 커질수록 표면 모방, 권리, provenance 위험이 커진다.
+- 초보자에게는 전문 용어보다 다음 행동이 먼저다.
+
+따라서 P0를 늘리지 않고 P0.5 실행 원칙으로 압축한다.
+
+| P0.5 | 반영 방식 | 주의점 |
+| --- | --- | --- |
+| One Project Vertical Slice | 짧은 원작을 웹소설 1화, 인스타툰 4컷, 오디오북 30초 샘플로 끝까지 만든다. | 새 기능 추가보다 같은 story core와 memory bank가 버티는지 증명한다. |
+| Evidence-Based Workflow | 각 단계가 Story Contract 승인, 컷 목적, 첫 30초 proof, canon delta 같은 증거를 남긴다. | 보드는 설명 카드가 아니라 작업 결과를 만든다. |
+| Reference Safety Rewrite | 위험한 레퍼런스 요청을 구조, 압력, 감정 엔진 분석으로 바꾼다. | 특정 작가/작품/캐릭터의 표면 복제는 차단한다. |
+| Beginner/Pro Mode | 초보자에게는 이야기 약속, 문체 흔들림, 설정 충돌처럼 쉬운 말로 보여준다. | canon delta, context packet, output autopsy는 고급 모드에 둔다. |
+| Production Provenance | 이미지, 음악, 음성, 레퍼런스, AI 생성 결과의 출처와 승인 용도를 기록한다. | 승인되지 않은 생성물과 rejected keyframe은 canon으로 새지 않는다. |
+
 ## 향후 개발 진행
 
 ### Now
 
-- P0 최소 구조를 제작 패키지와 홈페이지에 노출.
-- Story Contract, Workflow Board, Quality Gates, Refactor Impact Preview, AI Output Autopsy를 생성 결과에 포함.
-- 평가담당 에이전트의 공통 의견을 서비스 운영실 책임으로 매핑.
+- One Project Vertical Slice: 하나의 짧은 원작을 웹소설 1화, 인스타툰 4컷, 오디오북 30초 샘플까지 같은 Story Contract와 Memory Bank로 제작한다.
+- Memory Sync: 승인 큐와 `memory-bank/` 파일을 실제로 연결해 Story X의 신뢰를 증명한다.
+- Refactor Impact Preview: 이름, 성별, 관계, 화자, visual/audio 참조 변경의 영향 범위를 먼저 보여준다.
+- P0 최소 구조는 유지하되 기능 설명보다 산출 증거를 우선한다.
 - 홈/온보딩에서 매체 전환 브릿지, 프론트엔드 제작팀, 워크플로우 라이브러리의 의미를 먼저 보여준다.
 - Creator Memory Bank UI를 작품 바이블 트랙으로 확장하고, story/character/world/canon/voice/visual/audio 기억을 편집 가능한 작업대로 노출한다.
 - AI CLI 하네스가 mock/Claude/Codex provider 계약, raw output 정규화, pending review 저장 모델을 공유한다.
@@ -68,6 +92,8 @@ Source: `docs/story-x-12-creator-tester-report.md`
 - `storyx init`, `storyx serve`, `storyx memory sync`를 구현해 현재 UI의 승인 큐가 실제 `memory-bank/` 파일과 연결되게 한다.
 - CLI가 만든 `reviews/pending` 파일을 웹 에디터가 읽어 승인 큐에 반영한다.
 - 직접 편집 diff를 변경 블록 단위로 만들고, 검토 에이전트가 diff와 필요한 기억 패킷만 읽게 한다.
+- Reference Safety Rewrite: 위험한 레퍼런스 요청을 표면 모방 대신 구조 분석 요청으로 바꾼다.
+- Beginner/Pro Mode: 첫 프로젝트는 쉬운 말과 5분 guided path로 열고, 고급 용어는 사용자가 확장할 때 보인다.
 - Panel/Audio Line Alignment: 만화는 beat -> panel -> bubble -> crop/export, 오디오는 paragraph -> speaker -> pronunciation -> pause -> music/SFX cue.
 - Platform Packaging Lab: 웹소설 첫 문장, 웹툰 첫 3컷, 인스타툰 저장 포인트, 오디오북 첫 30초.
 - Creative Coach Mode: 막힌 사용자에게 바로 대신 쓰기보다 2-3개의 선택 질문을 제공.
@@ -80,6 +106,7 @@ Source: `docs/story-x-12-creator-tester-report.md`
 - Market Signal Layer.
 - Multimodal Staleness Engine.
 - Reader/Listener Test Clips.
+- Production Provenance: 이미지, 음악, 음성, 레퍼런스, AI 생성 결과의 출처와 승인 용도를 export package에 포함한다.
 - 유료 검토/패키징: Standard/Deep 검토, 매체 변환 제안, 게시/다운로드 패키지, 크레딧 사용량 안내를 수익화 흐름으로 설계.
 
 ## 운영 규칙

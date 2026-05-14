@@ -5,6 +5,7 @@ import {
   buildTesterDrivenWorkflow,
   evaluationDrivenRoadmap,
   evaluationNorthStar,
+  p05EvaluationFollowups,
   p0EvaluationCapabilities
 } from './evaluationSynthesis';
 
@@ -44,8 +45,25 @@ describe('evaluation synthesis', () => {
   });
 
   it('updates the development roadmap from evaluator reports', () => {
-    expect(evaluationDrivenRoadmap.now).toContain('P0 최소 구조를 제작 패키지와 홈페이지에 노출');
+    expect(evaluationDrivenRoadmap.now).toContain('One Project Vertical Slice');
     expect(evaluationDrivenRoadmap.next).toContain('Creator Memory Bank UI 탭화');
+    expect(evaluationDrivenRoadmap.next).toContain('Reference Safety Rewrite');
     expect(evaluationDrivenRoadmap.later).toContain('Reader/Listener Test Clips');
+  });
+
+  it('adds the 20-expert retest as P0.5 execution guardrails without expanding the P0 room', () => {
+    expect(p05EvaluationFollowups.map((followup) => followup.id)).toEqual([
+      'one-project-vertical-slice',
+      'evidence-based-workflow',
+      'reference-safety-rewrite',
+      'beginner-pro-mode',
+      'production-provenance'
+    ]);
+    expect(p05EvaluationFollowups.find((followup) => followup.id === 'one-project-vertical-slice')?.proof).toContain(
+      '웹소설 1화'
+    );
+    expect(p05EvaluationFollowups.find((followup) => followup.id === 'beginner-pro-mode')?.guardrail).toContain(
+      '전문 용어'
+    );
   });
 });

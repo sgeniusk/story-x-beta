@@ -12,5 +12,9 @@ describe('Story X homepage roadmap update', () => {
     expect(roadmap).toContain('프론트엔드 제작팀');
     expect(roadmap).toContain('워크플로우 라이브러리 고도화');
     expect(roadmap).toContain('유료 검토/패키징');
+    expect(roadmap).toContain('20인 확장 전문가 재테스트 반영');
+    expect(roadmap).toContain('One Project Vertical Slice');
+    expect(roadmap).toContain('Beginner/Pro Mode');
+    expect(roadmap).toContain('Production Provenance');
   });
 });
