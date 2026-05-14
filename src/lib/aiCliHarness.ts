@@ -1,4 +1,5 @@
 import { buildMemoryBankContextPacket } from './memoryBank';
+import { getProjectLocalization } from './localization';
 import type { AgentId, AgentRun, SeriesProject } from './storyEngine';
 import type { ValidationAgentId } from './agentReviewProcess';
 
@@ -241,8 +242,13 @@ export function normalizeProviderReviewOutput(rawOutput: string, options: Normal
 }
 
 function buildHarnessPrompt(options: AiCliRunOptions, selectedAgentIds: ValidationAgentId[]) {
+  const localization = getProjectLocalization(options.project);
   const packets = selectedAgentIds.map((agentId) => buildMemoryBankContextPacket(options.project, agentId));
   const packetText = packets.map((packet) => packet.content).join('\n\n---\n\n');
+  const glossaryPreview = localization.glossary
+    .slice(0, 5)
+    .map((term) => `${term.source}${term.keepOriginal ? ' (keep original)' : ''}`)
+    .join(', ');
 
   return [
     '# Story X AI CLI Harness',
@@ -251,6 +257,15 @@ function buildHarnessPrompt(options: AiCliRunOptions, selectedAgentIds: Validati
     `Mode: ${options.mode}`,
     `Scale: ${options.scale}`,
     `Project: ${options.project.title}`,
+    '',
+    'Language policy:',
+    `- UI Locale: ${localization.uiLocale}`,
+    `- Work Language: ${localization.workLanguage}`,
+    `- Target Market: ${localization.targetMarket}`,
+    `- Honorific Policy: ${localization.honorificPolicy}`,
+    `- Name Policy: ${localization.namePolicy}`,
+    `- Translation Policy: ${localization.translationPolicy}`,
+    `- Glossary Preview: ${glossaryPreview || 'none'}`,
     '',
     'Rules:',
     '- 이야기가 먼저이고, 매체는 그 다음입니다.',

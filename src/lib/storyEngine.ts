@@ -1,3 +1,5 @@
+import { createDefaultLocalizationPolicy, type LocalizationPolicy } from './localization';
+
 export type AgentId =
   | 'showrunner'
   | 'character-custodian'
@@ -70,6 +72,7 @@ export interface SeriesProject {
   id: string;
   title: string;
   logline: string;
+  localization: LocalizationPolicy;
   genre: GenreId;
   tone: string;
   audiencePromise: string;
@@ -320,6 +323,7 @@ export function createSeedProject(): SeriesProject {
     id: 'sample-project',
     title: '샘플 작품',
     logline: '기억을 고치는 필사관이 사라진 오빠의 흔적을 따라, 이름을 대가로 움직이는 탑의 비밀을 연재마다 벗겨낸다.',
+    localization: createDefaultLocalizationPolicy(),
     genre: 'romance-fantasy',
     tone: '서늘한 궁정 미스터리와 느리게 타오르는 신뢰',
     audiencePromise: '매 회차마다 감정적 선택, 새로운 단서, 다음 편을 누르게 하는 반전을 제공한다.',

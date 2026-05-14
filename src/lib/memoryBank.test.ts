@@ -25,6 +25,9 @@ describe('Story X memory bank', () => {
     expect(paths).toContain('memory-bank/storyx/sample-project/characters/seo-yoon.json');
     expect(paths).toContain('memory-bank/storyx/sample-project/world/rules.md');
     expect(paths).toContain('memory-bank/storyx/sample-project/voice/author-voice-bible.md');
+    expect(paths).toContain('memory-bank/storyx/sample-project/voice/voice-by-language.json');
+    expect(paths).toContain('memory-bank/storyx/sample-project/localization/glossary.json');
+    expect(paths).toContain('memory-bank/storyx/sample-project/localization/name-policy.md');
     expect(paths).toContain('memory-bank/storyx/sample-project/visual/style-bible.md');
     expect(paths).toContain('memory-bank/storyx/sample-project/audio/narration-bible.md');
     expect(paths).toContain('memory-bank/storyx/sample-project/reviews/failure-log.md');
@@ -39,6 +42,23 @@ describe('Story X memory bank', () => {
     expect(privateFile?.syncPolicy).toBe('private-never-sync');
     expect(syncablePaths.some((path) => path.includes('/private/'))).toBe(false);
     expect(bank.syncableFiles.every((file) => file.syncPolicy === 'sync')).toBe(true);
+  });
+
+  it('stores language settings and glossary separately from canon facts', () => {
+    const bank = buildStoryMemoryBank(createSeedProject());
+    const manifest = JSON.parse(bank.files.find((file) => file.path.endsWith('manifest.json'))?.content ?? '{}');
+    const glossaryFile = bank.files.find((file) => file.path.endsWith('localization/glossary.json'));
+    const voiceLanguageFile = bank.files.find((file) => file.path.endsWith('voice/voice-by-language.json'));
+
+    expect(manifest.localization).toEqual({
+      uiLocale: 'ko',
+      workLanguage: 'ko',
+      targetMarket: 'kr'
+    });
+    expect(glossaryFile?.content).toContain('"source": "Story X"');
+    expect(glossaryFile?.content).toContain('"keepOriginal": true');
+    expect(voiceLanguageFile?.content).toContain('"ko"');
+    expect(voiceLanguageFile?.content).toContain('번역투');
   });
 
   it('builds a small context packet instead of loading the whole manuscript', () => {
@@ -124,6 +144,8 @@ describe('Story X memory bank', () => {
   it('documents the target folder template', () => {
     expect(memoryBankTemplate).toContain('memory-bank/storyx/{project_id}/');
     expect(memoryBankTemplate).toContain('context/continuity-ledger.md');
+    expect(memoryBankTemplate).toContain('localization/');
+    expect(memoryBankTemplate).toContain('glossary.json');
     expect(memoryBankTemplate).toContain('private/raw-sources/');
     expect(memoryBankTemplate).toContain('sync 금지');
   });

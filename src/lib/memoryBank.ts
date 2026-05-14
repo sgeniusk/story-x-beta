@@ -1,4 +1,5 @@
 import type { CanonFact, Chapter, SeriesProject } from './storyEngine';
+import { getProjectLocalization, type LocalizationPolicy } from './localization';
 
 export type MemoryBankSyncPolicy = 'sync' | 'private-never-sync';
 export type MemoryBankFileKind = 'json' | 'markdown' | 'placeholder';
@@ -121,6 +122,10 @@ export const memoryBankTemplate = `memory-bank/storyx/{project_id}/
   voice/
     author-voice-bible.md
     forbidden-phrases.md
+    voice-by-language.json
+  localization/
+    glossary.json
+    name-policy.md
   visual/
     style-bible.md
     character-appearance.json
@@ -150,6 +155,7 @@ const folderList = [
   'characters',
   'world',
   'voice',
+  'localization',
   'visual',
   'audio',
   'production',
@@ -177,6 +183,7 @@ const contextSectionsByAgent: Record<string, string[]> = {
 
 export function buildStoryMemoryBank(project: SeriesProject): StoryMemoryBank {
   const root = `memory-bank/storyx/${slugProjectId(project.id)}`;
+  const localization = getProjectLocalization(project);
   const files: MemoryBankFile[] = [];
 
   function addFile(relativePath: string, kind: MemoryBankFileKind, content: string, syncPolicy: MemoryBankSyncPolicy = 'sync') {
@@ -197,6 +204,11 @@ export function buildStoryMemoryBank(project: SeriesProject): StoryMemoryBank {
       title: project.title,
       genre: project.genre,
       currentEpisode: project.currentEpisode,
+      localization: {
+        uiLocale: localization.uiLocale,
+        workLanguage: localization.workLanguage,
+        targetMarket: localization.targetMarket
+      },
       memoryModel: 'storyx-structured-memory-bank',
       storagePolicy: {
         structuredFacts: 'sync',
@@ -223,6 +235,10 @@ export function buildStoryMemoryBank(project: SeriesProject): StoryMemoryBank {
 
   addFile('voice/author-voice-bible.md', 'markdown', renderVoiceBible(project));
   addFile('voice/forbidden-phrases.md', 'markdown', renderForbiddenPhrases(project));
+  addFile('voice/voice-by-language.json', 'json', stringifyJson(localization.voiceByLanguage));
+
+  addFile('localization/glossary.json', 'json', stringifyJson({ schemaVersion: 1, terms: localization.glossary }));
+  addFile('localization/name-policy.md', 'markdown', renderNamePolicy(localization));
 
   addFile('visual/style-bible.md', 'markdown', renderVisualStyleBible(project));
   addFile('visual/character-appearance.json', 'json', stringifyJson(buildCharacterAppearance(project)));
@@ -711,6 +727,21 @@ function renderForbiddenPhrases(project: SeriesProject) {
   ];
 
   return ['# Forbidden Claims And Phrases', '', ...toList(forbidden)].join('\n');
+}
+
+function renderNamePolicy(localization: LocalizationPolicy) {
+  return [
+    '# Name Policy',
+    '',
+    `- UI Locale: ${localization.uiLocale}`,
+    `- Work Language: ${localization.workLanguage}`,
+    `- Target Market: ${localization.targetMarket}`,
+    `- ${localization.namePolicy}`,
+    `- ${localization.translationPolicy}`,
+    '',
+    '## Glossary Rule',
+    '캐릭터 이름, 장소, 마법/기술 용어는 glossary.json에서 먼저 고정한 뒤 원고와 출간 문구에 반영합니다.'
+  ].join('\n');
 }
 
 function renderVisualStyleBible(project: SeriesProject) {

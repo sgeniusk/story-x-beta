@@ -28,6 +28,10 @@ describe('Story X AI CLI harness', () => {
     expect(plan.prompt).toContain('AGENTS.md');
     expect(plan.prompt).toContain('docs/codex-agent-manifest.md');
     expect(plan.prompt).toContain('Context Packet');
+    expect(plan.prompt).toContain('Language policy');
+    expect(plan.prompt).toContain('UI Locale: ko');
+    expect(plan.prompt).toContain('Work Language: ko');
+    expect(plan.prompt).toContain('Target Market: kr');
     expect(plan.prompt).toContain('사용자 승인 전에는 canon, character, world, voice memory에 반영하지 마세요');
     expect(plan.pendingWriteTargets).toContain('reviews/pending');
     expect(plan.approvalRequiredBeforeSync).toBe(true);

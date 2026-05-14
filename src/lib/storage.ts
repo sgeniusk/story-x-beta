@@ -1,4 +1,5 @@
 import { createSeedProject, type SeriesProject } from './storyEngine';
+import { getProjectLocalization } from './localization';
 
 const storageKey = 'serial-story-studio/project';
 
@@ -25,12 +26,17 @@ export function clearProject() {
 }
 
 function normalizeProject(project: SeriesProject): SeriesProject {
+  const normalizedProject = {
+    ...project,
+    localization: getProjectLocalization(project)
+  };
+
   if (project.title !== '달의 문서고' && project.id !== 'moon-archive') {
-    return project;
+    return normalizedProject;
   }
 
   return {
-    ...project,
+    ...normalizedProject,
     id: 'sample-project',
     title: '샘플 작품',
     chapters: project.chapters.map((chapter) => ({
