@@ -51,6 +51,11 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('const [editorText, setEditorText]');
     expect(desk).toContain('const [editedSinceReview, setEditedSinceReview]');
     expect(desk).toContain('function reviewDraft');
+    expect(desk).toContain('aria-label="편집기 주요 동작"');
+    expect(desk).toContain('className="sx-editor-command-strip"');
+    expect(desk).toContain('바이블 열기');
+    expect(desk).toContain('출간으로');
+    expect(desk).toContain('형식 변경');
     expect(desk).toContain('aria-label="주요 내용 입력"');
     expect(desk).toContain('aria-label="원고 편집기"');
     expect(desk).toContain('const [isFocusMode, setIsFocusMode]');
@@ -63,6 +68,8 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('작품 목차');
     expect(desk).toContain('검토');
     expect(css).toContain('.sx-manuscript-editor');
+    expect(css).toContain('.sx-editor-command-strip');
+    expect(css).toContain('position: sticky');
     expect(css).toContain('.sx-desk.is-focus-mode .sx-project-rail');
     expect(css).toContain('.sx-expand-editor-button');
     expect(css).toContain('.sx-manuscript-editor.is-edited');
@@ -93,6 +100,7 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('function setApprovalDecision');
     expect(desk).toContain('activeSection={activeBibleSection}');
     expect(desk).toContain('onSelectSection={setActiveBibleSection}');
+    expect(css).toContain('flex-wrap: wrap');
     expect(desk).toContain('승인됨');
     expect(desk).toContain('수정 요청됨');
     expect(desk).toContain('보류됨');
