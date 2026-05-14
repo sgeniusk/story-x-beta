@@ -128,6 +128,21 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-memory-safety-list');
   });
 
+  it('tracks bible edits through a canon refactor impact panel', () => {
+    expect(desk).toContain('buildCanonRefactorPlan');
+    expect(desk).toContain('createCanonChangeEntry');
+    expect(desk).toContain('const [canonChanges, setCanonChanges]');
+    expect(desk).toContain('function logCanonChange');
+    expect(desk).toContain('CanonRefactorPanel');
+    expect(desk).toContain('변경 로그');
+    expect(desk).toContain('영향 회차');
+    expect(desk).toContain('에이전트 검토 순서');
+    expect(desk).toContain('캐논 리팩터');
+    expect(css).toContain('.sx-canon-refactor-panel');
+    expect(css).toContain('.sx-change-log-list');
+    expect(css).toContain('.sx-refactor-review-order');
+  });
+
   it('connects the review button to the AI CLI harness preview and pending memory candidates', () => {
     expect(desk).toContain('buildAiCliRunPlan');
     expect(desk).toContain('buildMockAiCliReviewResult');

@@ -63,6 +63,13 @@ import {
 import { buildTesterDrivenWorkflow, type TesterDrivenWorkflow } from './lib/evaluationSynthesis';
 import { buildComicsVisualWorkflow } from './lib/visualProduction';
 import { buildPublishingPlan, type PublishingPlan } from './lib/publishing';
+import {
+  buildCanonRefactorPlan,
+  createCanonChangeEntry,
+  type CanonChangeEntry,
+  type CanonChangeEntryInput,
+  type CanonRefactorPlan
+} from './lib/canonRefactor';
 import { clearProject, loadProject, saveProject } from './lib/storage';
 
 type DeskTrack = 'draft' | 'bible' | 'publish';
@@ -372,6 +379,7 @@ export function StoryXDesk({
   const [latestReviewResult, setLatestReviewResult] = useState<AiCliReviewResult | null>(null);
   const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AgentDialogSelection | null>(null);
+  const [canonChanges, setCanonChanges] = useState<CanonChangeEntry[]>([]);
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [medium, format]);
   const editorWorkspace = useMemo(
@@ -392,6 +400,7 @@ export function StoryXDesk({
   );
   const evaluatorWorkflow = useMemo(() => buildTesterDrivenWorkflow(blueprint), [blueprint]);
   const publishingPlan = useMemo(() => buildPublishingPlan(project, blueprint), [blueprint, project]);
+  const canonRefactorPlan = useMemo(() => buildCanonRefactorPlan(project, canonChanges), [canonChanges, project]);
   const aiCliRunPlan = useMemo(
     () =>
       buildAiCliRunPlan({
@@ -435,11 +444,77 @@ export function StoryXDesk({
     setRequest((current) => ({ ...current, intent: value }));
   }
 
+  function logCanonChange(input: CanonChangeEntryInput) {
+    if (input.before === input.after) {
+      return;
+    }
+
+    setCanonChanges((current) => {
+      const existing = current.find(
+        (change) =>
+          change.kind === input.kind &&
+          change.targetLabel === input.targetLabel &&
+          change.fieldLabel === input.fieldLabel &&
+          change.origin === input.origin
+      );
+      const entry = createCanonChangeEntry({
+        ...input,
+        before: existing?.before ?? input.before
+      });
+
+      return [
+        entry,
+        ...current.filter(
+          (change) =>
+            !(
+              change.kind === input.kind &&
+              change.targetLabel === input.targetLabel &&
+              change.fieldLabel === input.fieldLabel &&
+              change.origin === input.origin
+            )
+        )
+      ].slice(0, 12);
+    });
+  }
+
   function updateProject(field: 'title' | 'logline' | 'audiencePromise' | 'tone', value: string) {
+    const labels = {
+      title: '작품 제목',
+      logline: '로그라인',
+      audiencePromise: '독자 약속',
+      tone: '문체 톤'
+    };
+
+    logCanonChange({
+      kind: field === 'tone' ? 'voice' : 'story-core',
+      targetLabel: project.title,
+      fieldLabel: labels[field],
+      before: project[field],
+      after: value,
+      origin: 'manual-bible-edit'
+    });
     setProject((current) => ({ ...current, [field]: value }));
   }
 
   function updateCharacterMemory(characterId: string, field: 'desire' | 'wound' | 'currentState', value: string) {
+    const character = project.characters.find((item) => item.id === characterId);
+    const labels = {
+      desire: '욕망',
+      wound: '상처',
+      currentState: '현재 상태'
+    };
+
+    if (character) {
+      logCanonChange({
+        kind: 'character',
+        targetLabel: character.name,
+        fieldLabel: labels[field],
+        before: character[field],
+        after: value,
+        origin: 'manual-bible-edit'
+      });
+    }
+
     setProject((current) => ({
       ...current,
       characters: current.characters.map((character) =>
@@ -449,6 +524,19 @@ export function StoryXDesk({
   }
 
   function updateWorldMemory(ruleId: string, value: string) {
+    const rule = project.worldRules.find((item) => item.id === ruleId);
+
+    if (rule) {
+      logCanonChange({
+        kind: 'world',
+        targetLabel: rule.title,
+        fieldLabel: '규칙과 비용',
+        before: rule.rule,
+        after: value,
+        origin: 'manual-bible-edit'
+      });
+    }
+
     setProject((current) => ({
       ...current,
       worldRules: current.worldRules.map((rule) => (rule.id === ruleId ? { ...rule, rule: value } : rule))
@@ -456,6 +544,19 @@ export function StoryXDesk({
   }
 
   function updateCanonMemory(canonId: string, value: string) {
+    const fact = project.canonFacts.find((item) => item.id === canonId);
+
+    if (fact) {
+      logCanonChange({
+        kind: 'canon',
+        targetLabel: `EP ${fact.episode} · ${fact.owner}`,
+        fieldLabel: '승인된 사실',
+        before: fact.statement,
+        after: value,
+        origin: 'manual-bible-edit'
+      });
+    }
+
     setProject((current) => ({
       ...current,
       canonFacts: current.canonFacts.map((fact) => (fact.id === canonId ? { ...fact, statement: value } : fact))
@@ -525,6 +626,7 @@ export function StoryXDesk({
     setApprovalStatementOverrides({});
     setLatestReviewResult(null);
     setIsMediaPanelOpen(false);
+    setCanonChanges([]);
   }
 
   return (
@@ -806,6 +908,9 @@ export function StoryXDesk({
               approvalDecisions={approvalDecisions}
               onSetApprovalDecision={setApprovalDecision}
               onUpdateApprovalStatement={updateApprovalStatement}
+              canonChanges={canonChanges}
+              canonRefactorPlan={canonRefactorPlan}
+              onClearCanonChanges={() => setCanonChanges([])}
             />
           ) : (
             <PublishingStudio
@@ -1152,7 +1257,10 @@ function MemoryBankStudio({
   approvalQueue,
   approvalDecisions,
   onSetApprovalDecision,
-  onUpdateApprovalStatement
+  onUpdateApprovalStatement,
+  canonChanges,
+  canonRefactorPlan,
+  onClearCanonChanges
 }: {
   project: SeriesProject;
   bank: StoryMemoryBank;
@@ -1167,6 +1275,9 @@ function MemoryBankStudio({
   approvalDecisions: Record<string, ApprovalDecision>;
   onSetApprovalDecision: (candidateId: string, decision: ApprovalDecision) => void;
   onUpdateApprovalStatement: (candidateId: string, value: string) => void;
+  canonChanges: CanonChangeEntry[];
+  canonRefactorPlan: CanonRefactorPlan;
+  onClearCanonChanges: () => void;
 }) {
   return (
     <section className="sx-bible-studio" aria-label="작품 바이블">
@@ -1204,6 +1315,12 @@ function MemoryBankStudio({
         workbench={workbench}
         activeSection={activeSection}
         onOpenRecordSection={onSelectSection}
+      />
+
+      <CanonRefactorPanel
+        changes={canonChanges}
+        plan={canonRefactorPlan}
+        onClearChanges={onClearCanonChanges}
       />
 
       {activeSection === 'overview' && (
@@ -1448,6 +1565,93 @@ function MemoryBankStudio({
           </article>
         </div>
       )}
+    </section>
+  );
+}
+
+function CanonRefactorPanel({
+  changes,
+  plan,
+  onClearChanges
+}: {
+  changes: CanonChangeEntry[];
+  plan: CanonRefactorPlan;
+  onClearChanges: () => void;
+}) {
+  return (
+    <section className={`sx-canon-refactor-panel is-${plan.status}`} aria-label="캐논 리팩터">
+      <header>
+        <div>
+          <p className="sx-eyebrow">Canon Refactor</p>
+          <h3>캐논 리팩터</h3>
+          <p>{plan.summary}</p>
+        </div>
+        <button type="button" className="sx-secondary-button" onClick={onClearChanges} disabled={changes.length === 0}>
+          변경 로그 비우기
+        </button>
+      </header>
+
+      <div className="sx-canon-refactor-grid">
+        <article className="sx-change-log-list">
+          <span>변경 로그</span>
+          {changes.length === 0 ? (
+            <p>캐릭터, 세계관, 캐논을 직접 수정하면 이곳에 최신 변경이 쌓입니다.</p>
+          ) : (
+            changes.map((change) => (
+              <div key={change.id}>
+                <strong>{change.targetLabel}</strong>
+                <small>{change.kind} · {change.fieldLabel}</small>
+                <p>{change.after || '비어 있음'}</p>
+              </div>
+            ))
+          )}
+        </article>
+
+        <article>
+          <span>영향 회차</span>
+          {plan.affectedChapters.length === 0 ? (
+            <p>아직 영향 받을 회차가 없습니다.</p>
+          ) : (
+            plan.affectedChapters.map((chapter) => (
+              <div key={chapter.id} className="sx-refactor-impact-row">
+                <strong>{chapter.episode}화 · {chapter.title}</strong>
+                <small>{chapter.reason}</small>
+              </div>
+            ))
+          )}
+        </article>
+
+        <article className="sx-refactor-review-order">
+          <span>에이전트 검토 순서</span>
+          {plan.reviewOrder.length === 0 ? (
+            <p>대기 중인 검토가 없습니다.</p>
+          ) : (
+            plan.reviewOrder.map((step, index) => (
+              <div key={step.agentId}>
+                <strong>{String(index + 1).padStart(2, '0')} · {step.label}</strong>
+                <small>{step.focus}</small>
+              </div>
+            ))
+          )}
+        </article>
+
+        <article>
+          <span>전개 조언</span>
+          <ul>
+            {plan.recommendations.map((recommendation) => (
+              <li key={recommendation}>{recommendation}</li>
+            ))}
+          </ul>
+          {plan.conflictWarnings.length > 0 && (
+            <div className="sx-refactor-warning-list">
+              {plan.conflictWarnings.map((warning) => (
+                <p key={warning}>{warning}</p>
+              ))}
+            </div>
+          )}
+          <small>{plan.releaseAdvice}</small>
+        </article>
+      </div>
     </section>
   );
 }
