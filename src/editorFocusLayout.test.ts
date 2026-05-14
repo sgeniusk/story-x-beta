@@ -143,6 +143,11 @@ describe('Story X focused editor layout', () => {
 
   it('turns the memory bank into a left-indexed central editing workspace', () => {
     expect(desk).toContain('className={`sx-bible-workbench is-${activeSection}`}');
+    expect(desk).toContain('BibleWorkbenchHeader');
+    expect(desk).toContain('buildBibleSectionState');
+    expect(desk).toContain('sectionState.reviewAgents.map');
+    expect(desk).toContain('변경 영향');
+    expect(desk).toContain('검토 순서');
     expect(desk).toContain("activeSection === 'characters'");
     expect(desk).toContain("activeSection === 'world'");
     expect(desk).toContain("activeSection === 'canon'");
@@ -155,6 +160,8 @@ describe('Story X focused editor layout', () => {
     expect(desk).not.toContain('className="sx-bible-section-tabs"');
     expect(desk).not.toContain('<MemoryWorkbenchPanel');
     expect(css).toContain('.sx-bible-workbench');
+    expect(css).toContain('.sx-bible-workbench-header');
+    expect(css).toContain('.sx-bible-impact-strip');
     expect(css).toContain('.sx-bible-card textarea');
   });
 

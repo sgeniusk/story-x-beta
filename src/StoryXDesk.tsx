@@ -111,6 +111,21 @@ interface AgentChatMessage {
   text: string;
 }
 
+interface BibleSectionState {
+  id: BibleSection;
+  label: string;
+  summary: string;
+  directive: string;
+  primaryMetric: string;
+  impactLabel: string;
+  impactScope: string;
+  syncTargets: string[];
+  reviewAgents: Array<{
+    label: string;
+    focus: string;
+  }>;
+}
+
 const agentPersonas: Record<string, AgentPersona> = {
   showrunner: {
     id: 'showrunner',
@@ -394,6 +409,113 @@ function buildBibleAssistantRuns(
       evidence: ['approval queue', 'user decision']
     }
   ];
+}
+
+function buildBibleSectionState({
+  activeSection,
+  project,
+  bank,
+  approvalQueue,
+  canonChanges,
+  canonRefactorPlan
+}: {
+  activeSection: BibleSection;
+  project: SeriesProject;
+  bank: StoryMemoryBank;
+  approvalQueue: MemoryApprovalQueue;
+  canonChanges: CanonChangeEntry[];
+  canonRefactorPlan: CanonRefactorPlan;
+}): BibleSectionState {
+  const section = bibleSections.find((item) => item.id === activeSection) ?? bibleSections[0];
+  const changedKindsBySection: Record<BibleSection, CanonChangeEntry['kind'][]> = {
+    overview: ['story-core'],
+    characters: ['character'],
+    world: ['world'],
+    canon: ['canon'],
+    voice: ['voice', 'visual', 'audio'],
+    approval: ['canon', 'story-core', 'character', 'world', 'voice', 'visual', 'audio']
+  };
+  const defaults: Record<BibleSection, Pick<BibleSectionState, 'directive' | 'primaryMetric' | 'syncTargets' | 'reviewAgents'>> = {
+    overview: {
+      directive: '작품의 한 문장 약속과 저장 정책을 고정합니다. 이 값이 바뀌면 이후 원고와 출간 패키지의 기준도 함께 움직입니다.',
+      primaryMetric: `${bank.syncableFiles.length}개 동기화 기억`,
+      syncTargets: ['story-core', 'manifest', 'context-packet'],
+      reviewAgents: [
+        { label: '쇼러너', focus: '독자 약속과 장기 전개 기준 확인' },
+        { label: '연속성 감수자', focus: '기존 캐논과 저장 정책 충돌 확인' }
+      ]
+    },
+    characters: {
+      directive: '캐릭터의 욕망, 상처, 현재 상태를 직접 고칩니다. 인물 변경은 다음 회차 행동과 대사 선택에 바로 영향을 줍니다.',
+      primaryMetric: `${project.characters.length}명 관리 중`,
+      syncTargets: ['characters', 'canon-anchors', 'relationship-state'],
+      reviewAgents: [
+        { label: '캐릭터 큐레이터', focus: '욕망, 상처, 말투, 관계 상태 변화 검토' },
+        { label: '연속성 감수자', focus: '이전 회차 행동과 승인된 캐논 충돌 확인' },
+        { label: '쇼러너', focus: '앞으로의 회차 약속 재정렬' }
+      ]
+    },
+    world: {
+      directive: '세계 규칙과 비용을 편집합니다. 세계관 변경은 사건 해결 난이도와 장면 설득력을 함께 바꿉니다.',
+      primaryMetric: `${project.worldRules.length}개 규칙`,
+      syncTargets: ['world', 'forbidden-contradictions', 'visual-context'],
+      reviewAgents: [
+        { label: '배경 설계자', focus: '세계 규칙, 비용, 예외가 싸지지 않았는지 확인' },
+        { label: '연속성 감수자', focus: '타임라인과 기존 사건 충돌 확인' },
+        { label: '장르 스타일리스트', focus: '장르적 압력과 재미 유지 확인' }
+      ]
+    },
+    canon: {
+      directive: '승인된 사실과 회차 흐름을 고칩니다. 이미 독자에게 보여준 사실은 reveal, revision, blocked 중 하나로 판정해야 합니다.',
+      primaryMetric: `${project.canonFacts.length}개 승인 사실`,
+      syncTargets: ['canon', 'timeline', 'release-impact'],
+      reviewAgents: [
+        { label: '연속성 감수자', focus: '승인된 사실의 대체/폐기/반전 여부 판정' },
+        { label: '쇼러너', focus: '복선 회수나 반전으로 쓸 수 있는지 판단' }
+      ]
+    },
+    voice: {
+      directive: '문체, 감각, 시각/오디오 앵커를 고정합니다. 매체가 바뀌어도 같은 작품처럼 느껴지는 기준을 만듭니다.',
+      primaryMetric: `${project.characters.flatMap((character) => character.voiceRules).length}개 문체 앵커`,
+      syncTargets: ['voice', 'visual', 'audio'],
+      reviewAgents: [
+        { label: '문체 큐레이터', focus: '문체 바이블과 한국어 자연스러움 재검토' },
+        { label: '다빈치', focus: '시각 프롬프트와 visual DNA 영향 범위 확인' },
+        { label: '오디오 연출가', focus: '낭독 톤, 쉼, 청취 리듬 영향 확인' }
+      ]
+    },
+    approval: {
+      directive: 'AI 검토나 새 회차에서 나온 기억 후보를 승인 전 편집합니다. 사용자가 승인하기 전에는 canon에 반영하지 않습니다.',
+      primaryMetric: `${approvalQueue.summary.total}개 후보`,
+      syncTargets: ['approval-queue', 'memory-candidates', 'change-log'],
+      reviewAgents: [
+        { label: '연속성 감수자', focus: '승인 가능한 사실과 보류할 후보 분리' },
+        { label: '문제 큐레이터', focus: '사용자 직접 편집 문장을 문체와 우선 증거로 확인' },
+        { label: '인사이트 분석가', focus: '반복 실패와 개선 포인트 기록' }
+      ]
+    }
+  };
+  const sectionChanges = canonChanges.filter((change) => changedKindsBySection[activeSection].includes(change.kind));
+  const reviewAgents =
+    sectionChanges.length > 0 && canonRefactorPlan.reviewOrder.length > 0
+      ? canonRefactorPlan.reviewOrder.map((step) => ({ label: step.label, focus: step.focus }))
+      : defaults[activeSection].reviewAgents;
+  const pendingCount = approvalQueue.items.filter((item) => item.status !== 'approved').length;
+
+  return {
+    id: activeSection,
+    label: section.label,
+    summary: section.summary,
+    directive: defaults[activeSection].directive,
+    primaryMetric: defaults[activeSection].primaryMetric,
+    impactLabel: sectionChanges.length > 0 ? `${sectionChanges.length}개 변경 로그` : activeSection === 'approval' ? `${pendingCount}개 승인 대기` : '대기 없음',
+    impactScope:
+      canonRefactorPlan.affectedChapters.length > 0
+        ? `${canonRefactorPlan.affectedChapters.length}개 회차 영향 가능`
+        : '아직 특정 회차 영향은 없습니다.',
+    syncTargets: defaults[activeSection].syncTargets,
+    reviewAgents
+  };
 }
 
 interface StoryXDeskProps {
@@ -1217,6 +1339,15 @@ function MemoryBankStudio({
   canonRefactorPlan: CanonRefactorPlan;
   onClearCanonChanges: () => void;
 }) {
+  const sectionState = buildBibleSectionState({
+    activeSection,
+    project,
+    bank,
+    approvalQueue,
+    canonChanges,
+    canonRefactorPlan
+  });
+
   return (
     <section className="sx-bible-studio" aria-label="작품 바이블">
       <header className="sx-bible-hero">
@@ -1236,6 +1367,8 @@ function MemoryBankStudio({
       </header>
 
       <div className={`sx-bible-workbench is-${activeSection}`}>
+        <BibleWorkbenchHeader sectionState={sectionState} />
+
         {activeSection === 'overview' && (
         <div className="sx-bible-grid">
           <article className="sx-bible-card is-wide sx-memory-packet-card">
@@ -1487,6 +1620,47 @@ function MemoryBankStudio({
         )}
       </div>
     </section>
+  );
+}
+
+function BibleWorkbenchHeader({ sectionState }: { sectionState: BibleSectionState }) {
+  return (
+    <header className="sx-bible-workbench-header" aria-label={`${sectionState.label} 작업 기준`}>
+      <div>
+        <p className="sx-eyebrow">Bible Workbench</p>
+        <h3>{sectionState.label}</h3>
+        <p>{sectionState.directive}</p>
+      </div>
+      <div className="sx-bible-impact-strip" aria-label="바이블 작업 영향 요약">
+        <article>
+          <span>작업 기준</span>
+          <strong>{sectionState.primaryMetric}</strong>
+          <small>{sectionState.summary}</small>
+        </article>
+        <article>
+          <span>변경 영향</span>
+          <strong>{sectionState.impactLabel}</strong>
+          <small>{sectionState.impactScope}</small>
+        </article>
+        <article>
+          <span>동기화 대상</span>
+          <div>
+            {sectionState.syncTargets.map((target) => (
+              <em key={`${sectionState.id}-${target}`}>{target}</em>
+            ))}
+          </div>
+        </article>
+      </div>
+      <aside className="sx-bible-review-route" aria-label="검토 순서">
+        <span>검토 순서</span>
+        {sectionState.reviewAgents.map((agent, index) => (
+          <p key={`${sectionState.id}-${agent.label}-${index}`}>
+            <strong>{String(index + 1).padStart(2, '0')} · {agent.label}</strong>
+            <small>{agent.focus}</small>
+          </p>
+        ))}
+      </aside>
+    </header>
   );
 }
 
