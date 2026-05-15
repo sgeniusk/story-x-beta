@@ -11,6 +11,7 @@ import {
   Layers,
   Library,
   ListChecks,
+  Lock,
   Maximize2,
   MessageCircle,
   Minimize2,
@@ -37,6 +38,7 @@ import {
   buildStoryEditorWorkspace,
   createSeedProject,
   getGenreProfiles,
+  lockChapter,
   produceNextChapter,
   type AgentRun,
   type Chapter,
@@ -1242,6 +1244,13 @@ export function StoryXDesk({
                 setActiveBibleSection('approval');
               }}
               onReviewDraft={reviewDraft}
+              onConfirmChapterLock={(chapterId) => {
+                setProject((current) => {
+                  const locked = lockChapter(current, chapterId);
+                  saveProject(locked);
+                  return locked;
+                });
+              }}
             />
           ) : activeTrack === 'draft' ? (
             <>
@@ -1587,10 +1596,14 @@ function ChapterTreeCard({
             <button
               key={chapter.id}
               type="button"
-              className={chapter.id === selectedChapterId ? 'is-selected' : ''}
+              className={`${chapter.id === selectedChapterId ? 'is-selected' : ''}${chapter.locked ? ' is-locked' : ''}`}
+              aria-label={chapter.locked ? `${chapter.episode}화 ${chapter.title} (출간 확정, 잠김)` : `${chapter.episode}화 ${chapter.title}`}
               onClick={() => onSelectChapter(chapter)}
             >
-              <span>{chapter.episode}화</span>
+              <span>
+                {chapter.episode}화
+                {chapter.locked && <Lock size={11} aria-hidden="true" />}
+              </span>
               <strong>{chapter.title}</strong>
               <small>{chapter.hook}</small>
             </button>
@@ -1670,7 +1683,8 @@ function PublishingStudio({
   plan,
   onBackToEditor,
   onOpenBible,
-  onReviewDraft
+  onReviewDraft,
+  onConfirmChapterLock
 }: {
   project: SeriesProject;
   blueprint: CreativeBlueprint;
@@ -1678,8 +1692,10 @@ function PublishingStudio({
   onBackToEditor: () => void;
   onOpenBible: () => void;
   onReviewDraft: () => void;
+  onConfirmChapterLock: (chapterId: string) => void;
 }) {
   const latestChapter = project.chapters[project.chapters.length - 1] ?? null;
+  const isLatestLocked = latestChapter?.locked === true;
 
   return (
     <section className="sx-publishing-studio" aria-label="출간 준비">
@@ -1696,6 +1712,18 @@ function PublishingStudio({
           <span>게시 위치</span>
           <strong>{blueprint.mediumLabel} · {blueprint.formatLabel}</strong>
           <small>{latestChapter ? `${latestChapter.episode}화 기준` : '초안 생성 후 출간 스냅샷 생성'}</small>
+          {latestChapter && (
+            <button
+              type="button"
+              className="sx-primary-button"
+              disabled={isLatestLocked}
+              aria-label={isLatestLocked ? `${latestChapter.episode}화는 이미 출간 확정됨` : `${latestChapter.episode}화 출간 확정`}
+              onClick={() => onConfirmChapterLock(latestChapter.id)}
+            >
+              <Lock size={15} />
+              {isLatestLocked ? '출간 확정됨' : `${latestChapter.episode}화 출간 확정`}
+            </button>
+          )}
           <button type="button" className="sx-secondary-button" onClick={onBackToEditor}>
             편집으로 돌아가기
           </button>

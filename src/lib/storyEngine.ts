@@ -66,6 +66,25 @@ export interface Chapter {
   prose: string;
   memoryAnchors: string[];
   newCanonFacts: CanonFact[];
+  locked?: boolean;
+}
+
+export function lockChapter(project: SeriesProject, chapterId: string): SeriesProject {
+  return {
+    ...project,
+    chapters: project.chapters.map((chapter) =>
+      chapter.id === chapterId ? { ...chapter, locked: true } : chapter
+    )
+  };
+}
+
+export function unlockChapter(project: SeriesProject, chapterId: string): SeriesProject {
+  return {
+    ...project,
+    chapters: project.chapters.map((chapter) =>
+      chapter.id === chapterId ? { ...chapter, locked: false } : chapter
+    )
+  };
 }
 
 export interface SeriesProject {

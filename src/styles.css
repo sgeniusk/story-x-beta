@@ -3658,6 +3658,22 @@ body {
   vertical-align: middle;
 }
 
+.sx-chapter-tree-list button.is-locked {
+  background: rgba(13, 83, 88, 0.05);
+  border-color: rgba(13, 83, 88, 0.16);
+}
+
+.sx-chapter-tree-list button.is-locked span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(13, 83, 88, 0.78);
+}
+
+.sx-chapter-tree-list button.is-locked strong {
+  color: rgba(32, 32, 30, 0.78);
+}
+
 .sx-agent-status {
   position: absolute;
   top: 12px;

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   buildStoryEditorWorkspace,
   createSeedProject,
+  lockChapter,
   produceNextChapter,
+  unlockChapter,
   validateContinuity
 } from './storyEngine';
 
@@ -33,6 +35,30 @@ describe('storyEngine', () => {
     ]);
     expect(result.updatedProject.canonFacts).toHaveLength(project.canonFacts.length + 2);
     expect(result.continuityIssues.filter((issue) => issue.severity === 'error')).toHaveLength(0);
+  });
+
+  it('locks a single chapter without touching the others, and unlock reverses it', () => {
+    const seed = createSeedProject();
+    const first = produceNextChapter(seed, {
+      genre: 'romance-fantasy',
+      intent: '주인공이 금지된 탑에서 첫 단서를 발견한다',
+      pressure: '낮은 감정선에서 시작해 마지막에 큰 반전을 둔다'
+    });
+    const second = produceNextChapter(first.updatedProject, {
+      genre: 'romance-fantasy',
+      intent: '서윤이 동맹의 배신 가능성을 살핀다',
+      pressure: '단서가 한 줄 늘어날 때마다 위험도 따라 오른다'
+    });
+
+    const targetId = second.updatedProject.chapters[0].id;
+    const otherId = second.updatedProject.chapters[1].id;
+
+    const locked = lockChapter(second.updatedProject, targetId);
+    expect(locked.chapters.find((chapter) => chapter.id === targetId)?.locked).toBe(true);
+    expect(locked.chapters.find((chapter) => chapter.id === otherId)?.locked).toBeFalsy();
+
+    const reopened = unlockChapter(locked, targetId);
+    expect(reopened.chapters.find((chapter) => chapter.id === targetId)?.locked).toBe(false);
   });
 
   it('flags draft claims that contradict established character canon', () => {
