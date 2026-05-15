@@ -26,18 +26,32 @@ export interface StoryXVersionLogEntry {
 
 export const STORYX_VERSION: StoryXVersionInfo = {
   product: 'Story X',
-  version: '0.7.0',
+  version: '0.7.1',
   channel: 'alpha',
-  label: 'Alpha v0.7.0',
-  codename: 'Command Room',
+  label: 'Alpha v0.7.1',
+  codename: 'Editor Rail Fix',
   releasedAt: '2026-05-15',
-  latestCommit: '9691421',
-  testProof: '106 tests passing',
+  latestCommit: '5919973',
+  testProof: '111 tests passing',
   buildProof: 'Vite production build passing',
-  summary: '원고, 작품 바이블, 출간 준비를 빠르게 오가는 명령 팔레트를 포함한 알파 기준선입니다.'
+  summary: '회차 탭이 원고 행으로 늘어나는 에디터 레이아웃 문제를 고친 알파 핫픽스입니다.'
 };
 
 export const storyxVersionLog: StoryXVersionLogEntry[] = [
+  {
+    version: '0.7.1',
+    label: 'Alpha v0.7.1',
+    date: '2026-05-15',
+    title: '에디터 회차 탭 레이아웃 핫픽스',
+    commit: '5919973',
+    changes: [
+      '원고 화면의 작업대 행 구조를 원고 모드 전용 4행 레이아웃으로 분리했습니다.',
+      '회차 탭이 620px 원고 행을 차지하며 세로 막대로 늘어나는 문제를 막았습니다.',
+      '작품 바이블과 출간 준비 화면은 불필요한 빈 grid row를 만들지 않도록 별도 모드 클래스를 사용합니다.'
+    ],
+    verification: ['npm test: 24 files / 111 tests', 'npm run build: pass'],
+    next: '에디터 상단 액션 밀도와 원고 본문 폭을 계속 다듬는다.'
+  },
   {
     version: '0.7.0',
     label: 'Alpha v0.7.0',

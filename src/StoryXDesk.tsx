@@ -1207,7 +1207,10 @@ export function StoryXDesk({
           )}
         </aside>
 
-        <section className="sx-workbench" aria-label="Story X 작업대">
+        <section
+          className={`sx-workbench ${isPublishingMode ? 'is-publishing' : activeTrack === 'bible' ? 'is-bible' : 'is-draft'}`}
+          aria-label="Story X 작업대"
+        >
           {isPublishingMode ? (
             <PublishingStudio
               project={project}

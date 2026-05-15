@@ -3779,13 +3779,21 @@ body {
 
 .sx-workbench {
   display: grid;
-  grid-template-rows: auto auto minmax(620px, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   gap: 14px;
   min-width: 0;
   height: 100%;
   max-height: calc(100vh - 112px);
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.sx-workbench.is-draft {
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+
+.sx-workbench.is-draft .sx-creative-stage {
+  min-height: 620px;
 }
 
 .sx-desk.is-focus-mode .sx-project-rail,
@@ -4616,6 +4624,8 @@ body {
 
 .sx-episode-tabs {
   display: flex;
+  align-items: center;
+  flex: 0 0 auto;
   gap: 8px;
   min-width: 0;
   overflow-x: auto;
@@ -4641,6 +4651,7 @@ body {
 }
 
 .sx-episode-tabs button {
+  flex: 0 0 auto;
   padding: 0 14px;
   border: 1px solid var(--sx-line);
   background: var(--sx-card);

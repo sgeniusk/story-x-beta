@@ -23,7 +23,7 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-writing-surface');
     expect(css).toContain('.sx-canvas-surface');
     expect(css).toContain('.sx-storyboard-surface');
-    expect(css).toContain('grid-template-rows: auto auto minmax(620px, 1fr)');
+    expect(css).toContain('grid-template-rows: auto auto auto minmax(0, 1fr)');
     expect(css).toContain('height: 100%');
     expect(css).toContain('--sx-paper: var(--framer-canvas)');
     expect(css).toContain('.sx-workbench {\n    order: 1;');
@@ -84,6 +84,16 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-manuscript-editor.is-edited');
     expect(css).toContain('.sx-episode-tabs');
     expect(css).toContain('.sx-chapter-tree');
+  });
+
+  it('keeps episode tabs compact instead of stretching into the manuscript row', () => {
+    expect(desk).toContain("className={`sx-workbench ${isPublishingMode ? 'is-publishing' : activeTrack === 'bible' ? 'is-bible' : 'is-draft'}`}");
+    expect(css).toContain('.sx-workbench.is-draft');
+    expect(css).toContain('grid-template-rows: auto auto auto minmax(0, 1fr)');
+    expect(css).toContain('.sx-workbench.is-draft .sx-creative-stage');
+    expect(css).toContain('.sx-episode-tabs {\n  display: flex;\n  align-items: center;');
+    expect(css).toContain('flex: 0 0 auto;');
+    expect(css).toContain('.sx-episode-tabs button {\n  flex: 0 0 auto;');
   });
 
   it('adds a command palette for quick navigation and editor actions', () => {
