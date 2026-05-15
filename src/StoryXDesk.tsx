@@ -1195,7 +1195,17 @@ export function StoryXDesk({
 
       <section className="sx-desk-grid">
         <aside className="sx-project-rail" aria-label="프로젝트 대시보드">
-          <ProjectStateCard project={project} canonHealth={canonHealth} />
+          <ProjectStateCard
+            project={project}
+            canonHealth={canonHealth}
+            pendingApprovals={approvalQueue.items.filter((item) => item.status !== 'approved').length}
+            onJumpToBible={(section) => {
+              setActiveTrack('bible');
+              setActiveBibleSection(section);
+              setIsPublishingMode(false);
+              setIsMediaPanelOpen(false);
+            }}
+          />
 
           {isPublishingMode ? (
             <PublishingIndexCard plan={publishingPlan} />
@@ -2228,7 +2238,25 @@ function CanonRefactorPanel({
   );
 }
 
-function ProjectStateCard({ project, canonHealth }: { project: SeriesProject; canonHealth: number }) {
+function ProjectStateCard({
+  project,
+  canonHealth,
+  pendingApprovals,
+  onJumpToBible
+}: {
+  project: SeriesProject;
+  canonHealth: number;
+  pendingApprovals: number;
+  onJumpToBible: (section: BibleSection) => void;
+}) {
+  const handleJump = (section: BibleSection) => (event: React.MouseEvent | React.KeyboardEvent) => {
+    if ('key' in event && event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+    event.preventDefault();
+    onJumpToBible(section);
+  };
+
   return (
     <section className="sx-project-card">
       <p className="sx-eyebrow">프로젝트 상태</p>
@@ -2245,12 +2273,33 @@ function ProjectStateCard({ project, canonHealth }: { project: SeriesProject; ca
           <dt>회차</dt>
           <dd>{project.currentEpisode}</dd>
         </div>
-        <div>
+        <div
+          role="button"
+          tabIndex={0}
+          className="sx-project-card-link"
+          aria-label="바이블 캐논으로 이동"
+          onClick={handleJump('canon')}
+          onKeyDown={handleJump('canon')}
+        >
           <dt>캐논</dt>
           <dd>{project.canonFacts.length}</dd>
         </div>
-        <div>
-          <dt>질문</dt>
+        <div
+          role="button"
+          tabIndex={0}
+          className="sx-project-card-link"
+          aria-label={
+            pendingApprovals > 0
+              ? `바이블 승인 대기로 이동, ${pendingApprovals}개 대기`
+              : '바이블 승인 대기로 이동'
+          }
+          onClick={handleJump('approval')}
+          onKeyDown={handleJump('approval')}
+        >
+          <dt>
+            질문
+            {pendingApprovals > 0 && <span className="sx-pending-dot" aria-hidden="true" />}
+          </dt>
           <dd>{project.openThreads.length}</dd>
         </div>
       </dl>

@@ -3637,6 +3637,27 @@ body {
   padding-right: 24px;
 }
 
+.sx-project-card-link {
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 150ms ease;
+}
+
+.sx-project-card-link:hover,
+.sx-project-card-link:focus-visible {
+  background: rgba(13, 83, 88, 0.07);
+}
+
+.sx-pending-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: #d97706;
+  vertical-align: middle;
+}
+
 .sx-agent-status {
   position: absolute;
   top: 12px;
@@ -3663,10 +3684,37 @@ body {
 
 .sx-agent-status--revise {
   background: #d97706;
+  animation: sx-agent-pulse-amber 1.6s ease-in-out infinite;
 }
 
 .sx-agent-status--block {
   background: #c0473d;
+  animation: sx-agent-pulse-rust 1.4s ease-in-out infinite;
+}
+
+@keyframes sx-agent-pulse-amber {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7), 0 0 0 7px rgba(217, 119, 6, 0.32);
+  }
+}
+
+@keyframes sx-agent-pulse-rust {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7), 0 0 0 8px rgba(192, 71, 61, 0.38);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sx-agent-status--revise,
+  .sx-agent-status--block {
+    animation: none;
+  }
 }
 
 .sx-agent-card--block {
