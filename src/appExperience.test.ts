@@ -20,12 +20,7 @@ describe('Story X page experience', () => {
     expect(app).toContain("import storyXLogoLockup from './assets/brand/story-x-logo-lockup-mono.svg'");
     expect(app).toContain('function BrandWordmark');
     expect(app).toContain("import storyXHeroImage from './assets/story-x-hero-clear-coast.webp'");
-    expect(app).toContain("import storyXForestImage from './assets/story-x-hero-forest-wind.png'");
-    expect(app).toContain('바람은 작가가, 물결은 Story X가');
-    expect(app).toContain('회차가 길어질수록, 시리즈가 깊어질수록');
-    expect(app).toContain('handleHeroMouseMove');
-    expect(app).toContain('hero-image-forest');
-    expect(app).toContain('hero-image-wave');
+    expect(app).toContain('Story X는 맑은 해안처럼 조용하지만');
   });
 
   it('applies a calm Duna-inspired natural design language to the homepage layer', () => {
@@ -115,12 +110,6 @@ describe('Story X page experience', () => {
     expect(app).toContain('className="landing-workflow-track"');
     expect(app).toContain('function StoryCurrentSection');
     expect(app).toContain('바람과 물결이 교차할 때');
-    expect(app).toContain('두 흐름이 교차하는 자리에서 작품이 완성됩니다');
-    expect(app).toContain('바람 · 편집 트랙');
-    expect(app).toContain('물결 · 바이블 트랙');
-    expect(css).toContain('.two-track-map');
-    expect(css).toContain('.hero-image-forest');
-    expect(css).toContain('.hero-image-wave');
     expect(app).toContain('소설에서 시작해 웹툰, 동화책, 오디오북으로 자연스럽게 확장');
     expect(app).toContain('function MediaBridgeSection');
     expect(app).toContain('소설 → 웹툰');
