@@ -2515,9 +2515,11 @@ function AgentSidebar({
               aria-label={`${persona.title} ${agentStatusLabel(run.status)} 상태, 자세한 지시사항 열기`}
               onClick={() => onSelectAgent(run, persona)}
             >
-              <span className={`sx-agent-status sx-agent-status--${run.status}`} aria-hidden="true">
-                {agentStatusLabel(run.status)}
-              </span>
+              <span
+                className={`sx-agent-status sx-agent-status--${run.status}`}
+                role="status"
+                aria-label={`상태 ${agentStatusLabel(run.status)}`}
+              />
               <AgentPixelPortrait persona={persona} />
               <div>
                 <span>{persona.subtitle}</span>
@@ -2566,9 +2568,11 @@ function BibleAssistantSidebar({
               aria-label={`${persona.title} ${agentStatusLabel(run.status)} 상태, 자세한 지시사항 열기`}
               onClick={() => onSelectAgent(run, persona)}
             >
-              <span className={`sx-agent-status sx-agent-status--${run.status}`} aria-hidden="true">
-                {agentStatusLabel(run.status)}
-              </span>
+              <span
+                className={`sx-agent-status sx-agent-status--${run.status}`}
+                role="status"
+                aria-label={`상태 ${agentStatusLabel(run.status)}`}
+              />
               <AgentPixelPortrait persona={persona} />
               <div>
                 <span>{run.title}</span>
