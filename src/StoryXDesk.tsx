@@ -297,35 +297,35 @@ const defaultRuns: AgentRun[] = [
   {
     agentId: 'showrunner',
     title: '쇼러너',
-    status: 'complete',
+    status: 'idle',
     output: '이번 회차의 약속, 압력, 마지막 질문을 한 줄로 잠글 준비가 되어 있습니다.',
     evidence: ['독자 약속', '클리프행어']
   },
   {
     agentId: 'character-custodian',
     title: '캐릭터',
-    status: 'complete',
+    status: 'idle',
     output: '욕망, 상처, 관계 상태가 초안에서 흔들리지 않는지 확인합니다.',
     evidence: ['desire', 'wound']
   },
   {
     agentId: 'world-keeper',
     title: '월드',
-    status: 'complete',
+    status: 'idle',
     output: '세계 규칙과 비용이 장면마다 같은 방식으로 작동하는지 봅니다.',
     evidence: ['rules', 'cost']
   },
   {
     agentId: 'genre-stylist',
     title: '장르',
-    status: 'complete',
+    status: 'idle',
     output: '장르 리듬과 문체 질감을 회차 목적에 맞게 조정합니다.',
     evidence: ['beat', 'texture']
   },
   {
     agentId: 'continuity-editor',
     title: '연속성',
-    status: 'complete',
+    status: 'idle',
     output: '모순은 숨기지 않고 충돌로 표시하고, 승인된 사실만 canon에 넣습니다.',
     evidence: ['canon', 'conflict']
   }
@@ -335,35 +335,35 @@ const visualStoryAgentRuns: AgentRun[] = [
   {
     agentId: 'storyboard-agent',
     title: '웹툰 연출',
-    status: 'complete',
+    status: 'idle',
     output: '장면을 컷 기능, 스크롤 템포, 넘김 후크로 분해합니다.',
     evidence: ['panel-plan', 'scroll-rhythm']
   },
   {
     agentId: 'speech-bubble-agent',
     title: '말풍선',
-    status: 'complete',
+    status: 'idle',
     output: '말풍선 위치와 대사 밀도가 표정, 손동작, 핵심 소품을 가리지 않는지 봅니다.',
     evidence: ['bubble-map', 'dialogue-density']
   },
   {
     agentId: 'keyframe-art-director',
     title: '원화',
-    status: 'complete',
+    status: 'idle',
     output: 'Midjourney 원화 후보 중 사용자가 선택한 컷만 visual DNA로 잠급니다.',
     evidence: ['midjourney-keyframe', 'visual-dna']
   },
   {
     agentId: 'da-vinci',
     title: '다빈치',
-    status: 'complete',
+    status: 'idle',
     output: '승인된 원화와 캐릭터 시트를 컷별 이미지 프롬프트로 변환합니다.',
     evidence: ['image-prompt', 'negative-prompt']
   },
   {
     agentId: 'frame-assembly-agent',
     title: '프레임',
-    status: 'complete',
+    status: 'idle',
     output: '정사각형, 세로 스크롤, 페이지 시퀀스에 맞춰 컷 순서와 export 묶음을 확인합니다.',
     evidence: ['frame-order', 'export-package']
   }
@@ -377,12 +377,14 @@ function buildBibleAssistantRuns(
 ): AgentRun[] {
   const pendingCount = approvalQueue.items.filter((item) => item.status !== 'approved').length;
   const reviewCount = latestReviewResult?.agentReports.length ?? 0;
+  const hasChapters = project.chapters.length > 0;
+  const baseStatus: AgentRun['status'] = hasChapters ? 'pass' : 'idle';
 
   return [
     {
       agentId: 'continuity-editor',
       title: '캐논 리팩터',
-      status: 'complete',
+      status: canonRefactorPlan.status === 'blocked' ? 'block' : baseStatus,
       output:
         canonRefactorPlan.status === 'blocked'
           ? `${canonRefactorPlan.conflictWarnings.length}개 충돌이 있어 승인 전 영향 회차를 먼저 정리해야 합니다.`
@@ -392,28 +394,28 @@ function buildBibleAssistantRuns(
     {
       agentId: 'character-custodian',
       title: '캐릭터 편집 조수',
-      status: 'complete',
+      status: baseStatus,
       output: `${project.characters.length}명의 욕망, 상처, 현재 상태를 다음 원고 기준으로 편집 가능하게 관리합니다.`,
       evidence: ['desire', 'wound', 'relationship-state']
     },
     {
       agentId: 'world-keeper',
       title: '세계관 편집 조수',
-      status: 'complete',
+      status: baseStatus,
       output: `${project.worldRules.length}개 세계 규칙의 비용, 예외, 금지 충돌을 한곳에서 고정합니다.`,
       evidence: ['world rules', 'cost', 'forbidden contradiction']
     },
     {
       agentId: 'voice-curator',
       title: '문체 조수',
-      status: 'complete',
+      status: baseStatus,
       output: '문체, 감각, 시각/오디오 앵커를 매체 전환용 기억 패킷으로 정리합니다.',
       evidence: ['voice bible', 'visual anchor', 'audio rhythm']
     },
     {
       agentId: 'essay-interviewer',
       title: '승인 대기 조수',
-      status: 'complete',
+      status: pendingCount > 0 ? 'revise' : reviewCount > 0 ? 'pass' : 'idle',
       output:
         pendingCount > 0
           ? `${pendingCount}개 기억 후보가 승인 대기 중입니다. 사용자가 승인하기 전에는 canon에 반영하지 않습니다.`
@@ -423,6 +425,20 @@ function buildBibleAssistantRuns(
       evidence: ['approval queue', 'user decision']
     }
   ];
+}
+
+function agentStatusLabel(status: AgentRun['status']): string {
+  switch (status) {
+    case 'idle':
+      return '대기';
+    case 'pass':
+    case 'complete':
+      return '양호';
+    case 'revise':
+      return '주의';
+    case 'block':
+      return '경고';
+  }
 }
 
 function buildBibleSectionState({
@@ -2495,10 +2511,13 @@ function AgentSidebar({
             <button
               key={`${run.agentId}-${run.title}`}
               type="button"
-              className="sx-agent-card"
-              aria-label={`${persona.title} 자세한 지시사항 열기`}
+              className={`sx-agent-card sx-agent-card--${run.status}`}
+              aria-label={`${persona.title} ${agentStatusLabel(run.status)} 상태, 자세한 지시사항 열기`}
               onClick={() => onSelectAgent(run, persona)}
             >
+              <span className={`sx-agent-status sx-agent-status--${run.status}`} aria-hidden="true">
+                {agentStatusLabel(run.status)}
+              </span>
               <AgentPixelPortrait persona={persona} />
               <div>
                 <span>{persona.subtitle}</span>
@@ -2543,10 +2562,13 @@ function BibleAssistantSidebar({
             <button
               key={`${run.agentId}-${run.title}`}
               type="button"
-              className="sx-agent-card"
-              aria-label={`${persona.title} 자세한 지시사항 열기`}
+              className={`sx-agent-card sx-agent-card--${run.status}`}
+              aria-label={`${persona.title} ${agentStatusLabel(run.status)} 상태, 자세한 지시사항 열기`}
               onClick={() => onSelectAgent(run, persona)}
             >
+              <span className={`sx-agent-status sx-agent-status--${run.status}`} aria-hidden="true">
+                {agentStatusLabel(run.status)}
+              </span>
               <AgentPixelPortrait persona={persona} />
               <div>
                 <span>{run.title}</span>

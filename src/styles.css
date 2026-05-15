@@ -3636,6 +3636,64 @@ body {
   background: var(--sx-ink);
 }
 
+.sx-agent-card {
+  position: relative;
+}
+
+.sx-agent-status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 18px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  pointer-events: none;
+}
+
+.sx-agent-status::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: currentColor;
+  box-shadow: 0 0 0 2px color-mix(in oklch, currentColor 20%, transparent);
+}
+
+.sx-agent-status--idle {
+  color: rgba(60, 60, 58, 0.62);
+  background: rgba(120, 120, 116, 0.12);
+}
+
+.sx-agent-status--pass,
+.sx-agent-status--complete {
+  color: #2f7a4e;
+  background: rgba(91, 180, 122, 0.16);
+}
+
+.sx-agent-status--revise {
+  color: #9a5a00;
+  background: rgba(217, 119, 6, 0.18);
+}
+
+.sx-agent-status--block {
+  color: #a02c25;
+  background: rgba(192, 71, 61, 0.16);
+}
+
+.sx-agent-card--block {
+  outline: 1px solid color-mix(in oklch, #c0473d 28%, transparent);
+}
+
 .sx-bible-alert-badge {
   display: inline-grid;
   place-items: center;
