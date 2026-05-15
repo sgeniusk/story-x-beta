@@ -3108,7 +3108,7 @@ body {
   --sx-accent-soft: color-mix(in oklch, var(--sx-accent) 12%, var(--sx-paper));
   --sx-warn: #ff9d2e;
   --sx-good: #5cff9d;
-  --sx-shadow: 0 18px 46px rgba(0, 0, 0, 0.28);
+  --sx-shadow: var(--sx-shadow-card);
   --button-bg: var(--framer-primary);
   --button-bg-hover: #e2e2e2;
   min-height: 100vh;
