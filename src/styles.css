@@ -1458,7 +1458,7 @@ button {
   --sx-paper-2: var(--surface-muted);
   --sx-card: var(--card);
   --sx-r: var(--card-radius);
-  --sx-r-sm: var(--control-radius);
+  --sx-r-sm: var(--sx-radius-sm);
   --sx-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --persona-practitioner-from: oklch(82% 0.1 230);
   --persona-practitioner-to: oklch(58% 0.18 250);
@@ -7955,11 +7955,11 @@ body {
   --framer-surface-2: #efede6;
   --framer-primary: #160f0b;
   --framer-on-primary: #ffffff;
-  --framer-ink: #20201e;
-  --framer-ink-muted: #6f6a62;
-  --framer-hairline: rgba(32, 32, 30, 0.14);
-  --framer-hairline-soft: rgba(32, 32, 30, 0.09);
-  --framer-accent-blue: #4f8f9d;
+  --framer-ink: var(--sx-ink-strong);
+  --framer-ink-muted: var(--sx-ink-muted);
+  --framer-hairline: var(--sx-line-warm);
+  --framer-hairline-soft: var(--sx-line-soft);
+  --framer-accent-blue: var(--sx-accent);
   --framer-gradient-magenta: linear-gradient(135deg, #f4c8ad 0%, #9cc9b1 54%, #f8f4ea 100%);
   --framer-gradient-violet: radial-gradient(circle at 20% 20%, #b8d3ee 0%, #f0c3a6 44%, #f8f4ea 100%);
   --framer-gradient-orange: linear-gradient(135deg, #f7c986 0%, #e79c82 48%, #f8f4ea 100%);
