@@ -1069,6 +1069,33 @@ export function StoryXDesk({
             {!isPublishingMode && <em>{chapterCrumb}</em>}
           </nav>
         </div>
+        <nav className="sx-track-tabs" aria-label="작업 트랙">
+          <button
+            type="button"
+            className={activeTrack === 'draft' && !isPublishingMode ? 'is-active' : ''}
+            onClick={() => {
+              setActiveTrack('draft');
+              setIsPublishingMode(false);
+              setIsMediaPanelOpen(false);
+            }}
+          >
+            <PenLine size={16} />
+            편집
+          </button>
+          <button
+            type="button"
+            className={activeTrack === 'bible' && !isPublishingMode ? 'is-active' : ''}
+            onClick={() => {
+              setActiveTrack('bible');
+              setIsPublishingMode(false);
+              setIsMediaPanelOpen(false);
+            }}
+          >
+            <Database size={16} />
+            바이블
+            {bibleAlertCount > 0 && <span className="sx-bible-alert-badge">{bibleAlertCount}</span>}
+          </button>
+        </nav>
         <div className="sx-topbar-actions">
           {onOpenProjects && (
             <div className="sx-app-nav-links" aria-label="앱 이동">
@@ -1087,35 +1114,6 @@ export function StoryXDesk({
           <span className="sx-user-avatar" aria-label="사용자 프로필">
             TX
           </span>
-          <span className="sx-topbar-divider" aria-hidden="true" />
-          <nav className="sx-track-tabs" aria-label="작업 트랙">
-            <button
-              type="button"
-              className={activeTrack === 'draft' && !isPublishingMode ? 'is-active' : ''}
-              onClick={() => {
-                setActiveTrack('draft');
-                setIsPublishingMode(false);
-                setIsMediaPanelOpen(false);
-              }}
-            >
-              <PenLine size={16} />
-              편집
-            </button>
-            <button
-              type="button"
-              className={activeTrack === 'bible' && !isPublishingMode ? 'is-active' : ''}
-              onClick={() => {
-                setActiveTrack('bible');
-                setIsPublishingMode(false);
-                setIsMediaPanelOpen(false);
-              }}
-            >
-              <Database size={16} />
-              바이블
-              {bibleAlertCount > 0 && <span className="sx-bible-alert-badge">{bibleAlertCount}</span>}
-            </button>
-          </nav>
-          <span className="sx-topbar-divider" aria-hidden="true" />
           <button
             type="button"
             className="sx-publish-button"

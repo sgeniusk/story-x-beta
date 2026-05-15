@@ -3124,7 +3124,7 @@ body {
 
 .sx-topbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 18px;
   align-items: center;
   max-width: 1540px;
@@ -3239,12 +3239,11 @@ body {
 
 .sx-topbar-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
   min-width: 0;
-  max-width: min(100%, 760px);
 }
 
 .sx-app-nav-links {
@@ -3635,6 +3634,7 @@ body {
 
 .sx-agent-card {
   position: relative;
+  padding-right: 24px;
 }
 
 .sx-agent-status {
@@ -6174,7 +6174,7 @@ body {
   gap: 12px;
   width: 100%;
   min-width: 0;
-  padding: 10px;
+  padding: 10px 24px 10px 10px;
   border: 1px solid var(--sx-line);
   border-radius: var(--framer-rounded-xl);
   background: color-mix(in srgb, var(--sx-card) 68%, var(--sx-paper));

@@ -184,7 +184,21 @@ type StoryXNavLink = {
 };
 
 function App() {
-  const [stage, setStage] = useState<AppStage>('landing');
+  const initialStage = useMemo<AppStage>(() => {
+    if (typeof window === 'undefined') return 'landing';
+    const stageParam = new URLSearchParams(window.location.search).get('stage');
+    if (
+      stageParam === 'editor' ||
+      stageParam === 'home' ||
+      stageParam === 'projects' ||
+      stageParam === 'login' ||
+      stageParam === 'landing'
+    ) {
+      return stageParam;
+    }
+    return 'landing';
+  }, []);
+  const [stage, setStage] = useState<AppStage>(initialStage);
   const [medium, setMedium] = useState<CreativeMedium>('novel');
   const [format, setFormat] = useState<CreativeFormat>('long-novel');
 
