@@ -105,7 +105,7 @@ describe('Story X page experience', () => {
     expect(app).toContain('phase.outcome');
     expect(app).toContain('className="workflow-quality-strip"');
     expect(css).toContain('.home-builder-grid .gradient-spotlight-card');
-    expect(css).toContain('color: #20201e');
+    expect(css).toContain('color: var(--sx-ink-strong)');
   });
 
   it('explains Story X as a cross-media creative operating system on the homepage', () => {
