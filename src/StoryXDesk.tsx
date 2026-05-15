@@ -63,6 +63,7 @@ import {
 } from './lib/memoryBank';
 import { buildTesterDrivenWorkflow, type TesterDrivenWorkflow } from './lib/evaluationSynthesis';
 import { buildComicsVisualWorkflow } from './lib/visualProduction';
+import { getCreativeActionLabels } from './lib/projectBlueprint';
 import { buildPublishingPlan, type PublishingPlan } from './lib/publishing';
 import { buildAlphaReadinessReport, type AlphaReadinessReport } from './lib/alphaReadiness';
 import { buildOneProjectVerticalSlice, type OneProjectVerticalSlice } from './lib/verticalSlice';
@@ -671,15 +672,16 @@ export function StoryXDesk({
   const chapterCrumb = latestChapter ? `${latestChapter.episode}화` : '새 초안';
   const saveLabel = editedSinceReview ? '수정 중' : '저장됨';
   const isLatestLocked = latestChapter?.locked === true;
+  const actionLabels = getCreativeActionLabels(blueprint.medium);
   const mainActionLabel = !latestChapter
-    ? '초안 생성'
+    ? actionLabels.draft
     : isLatestLocked
-      ? `${latestChapter.episode + 1}화 만들기`
-      : '흐름 검증';
+      ? actionLabels.nextDraft
+      : actionLabels.review;
   const mainActionRun = !latestChapter || isLatestLocked ? produceEpisode : reviewDraft;
   const MainActionIcon = !latestChapter || isLatestLocked ? WandSparkles : ClipboardCheck;
   const draftPromptPlaceholder = isLatestLocked
-    ? '잠긴 회차 다음 화에 담을 사건을 적어주세요.'
+    ? `잠긴 ${blueprint.medium === 'essay' ? '글' : '회차'} 다음에 담을 내용을 적어주세요.`
     : '예: 용사랑 외계인이 싸우는 장면으로 시작한다.';
   const commandItems = useMemo<DeskCommand[]>(
     () => [
@@ -1735,18 +1737,21 @@ function PublishingStudio({
           <span>게시 위치</span>
           <strong>{blueprint.mediumLabel} · {blueprint.formatLabel}</strong>
           <small>{latestChapter ? `${latestChapter.episode}화 기준` : '초안 생성 후 출간 스냅샷 생성'}</small>
-          {latestChapter && (
-            <button
-              type="button"
-              className="sx-primary-button"
-              disabled={isLatestLocked}
-              aria-label={isLatestLocked ? `${latestChapter.episode}화는 이미 출간 확정됨` : `${latestChapter.episode}화 출간 확정`}
-              onClick={() => onConfirmChapterLock(latestChapter.id)}
-            >
-              <Lock size={15} />
-              {isLatestLocked ? '출간 확정됨' : `${latestChapter.episode}화 출간 확정`}
-            </button>
-          )}
+          {latestChapter && (() => {
+            const labels = getCreativeActionLabels(blueprint.medium);
+            return (
+              <button
+                type="button"
+                className="sx-primary-button"
+                disabled={isLatestLocked}
+                aria-label={isLatestLocked ? `${latestChapter.episode}화는 이미 ${labels.lock}됨` : `${latestChapter.episode}화 ${labels.lock}`}
+                onClick={() => onConfirmChapterLock(latestChapter.id)}
+              >
+                <Lock size={15} />
+                {isLatestLocked ? labels.lockedChip : `${latestChapter.episode}화 ${labels.lock}`}
+              </button>
+            );
+          })()}
           <button type="button" className="sx-secondary-button" onClick={onBackToEditor}>
             편집으로 돌아가기
           </button>

@@ -1,5 +1,51 @@
 export type CreativeMedium = 'novel' | 'essay' | 'audiobook' | 'comics';
 
+export interface CreativeActionLabels {
+  draft: string;
+  review: string;
+  lock: string;
+  lockedChip: string;
+  nextDraft: string;
+}
+
+export function getCreativeActionLabels(medium: CreativeMedium): CreativeActionLabels {
+  switch (medium) {
+    case 'essay':
+      return {
+        draft: '초안 쓰기',
+        review: '결 점검',
+        lock: '원고 잠금',
+        lockedChip: '원고 잠금됨',
+        nextDraft: '다음 편 쓰기'
+      };
+    case 'audiobook':
+      return {
+        draft: '낭독 초안',
+        review: '낭독 흐름 점검',
+        lock: '마스터링 잠금',
+        lockedChip: '마스터링 잠금됨',
+        nextDraft: '다음 회차 낭독'
+      };
+    case 'comics':
+      return {
+        draft: '콘티 시작',
+        review: '컷 리듬 검토',
+        lock: '발행 확정',
+        lockedChip: '발행 확정됨',
+        nextDraft: '다음 컷 콘티'
+      };
+    case 'novel':
+    default:
+      return {
+        draft: '초안 생성',
+        review: '흐름 검증',
+        lock: '출간 확정',
+        lockedChip: '출간 확정됨',
+        nextDraft: '다음 회차 만들기'
+      };
+  }
+}
+
 export type CreativeFormat =
   | 'long-novel'
   | 'medium-novel'
