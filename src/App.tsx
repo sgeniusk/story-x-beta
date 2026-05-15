@@ -16,6 +16,7 @@ import {
   History,
   Layers,
   Library,
+  Lock,
   Map,
   PanelsTopLeft,
   PenTool,
@@ -900,10 +901,22 @@ function StoryXHome({
                   aria-label="자유 서술 입력"
                   value={freewriteText}
                   onChange={(event) => setFreewriteText(event.target.value)}
-                  placeholder="예: 오빠가 사라진 그날 새벽, 한 소녀가 달의 탑 아래에서 마르지 않은 잉크 자국을 찾는다."
+                  placeholder={
+                    blueprint.medium === 'essay'
+                      ? '예: 엄마가 돌아가신 뒤 1년 동안 부엌을 못 들어갔다. 1년 후 처음 들어갔을 때 냉장고에 메모를 발견했다.'
+                      : '예: 오빠가 사라진 그날 새벽, 한 소녀가 달의 탑 아래에서 마르지 않은 잉크 자국을 찾는다.'
+                  }
                   rows={10}
                 />
                 <p className="home-freewrite-meter">{freewriteText.trim().length}자</p>
+                {blueprint.medium === 'essay' && (
+                  <p className="home-fact-protection-note">
+                    <Lock size={13} aria-hidden="true" />
+                    <span>
+                      <strong>사실 보호 모드</strong> 에세이/회고 매체에서는 자유 서술에 적지 않은 디테일(인물의 직업·나이·장소 등)을 AI가 발명하지 않습니다. 빈 곳은 빈 곳으로 남고, 채우는 건 작가의 몫입니다.
+                    </span>
+                  </p>
+                )}
               </section>
             </div>
             <aside className="home-flow-side">

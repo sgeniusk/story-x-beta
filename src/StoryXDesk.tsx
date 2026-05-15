@@ -2612,10 +2612,17 @@ function AgentSidebar({
               onClick={() => onSelectAgent(run, persona)}
             >
               <span
-                className={`sx-agent-status sx-agent-status--${run.status}`}
+                className="sx-agent-status-cluster"
                 role="status"
                 aria-label={`상태 ${agentStatusLabel(run.status)}`}
-              />
+              >
+                <span className={`sx-agent-status sx-agent-status--${run.status}`} aria-hidden="true" />
+                {(run.status === 'revise' || run.status === 'block') && (
+                  <span className={`sx-agent-status-label sx-agent-status-label--${run.status}`}>
+                    {agentStatusLabel(run.status)}
+                  </span>
+                )}
+              </span>
               <AgentPixelPortrait persona={persona} />
               <div>
                 <span>{persona.subtitle}</span>
@@ -2665,10 +2672,17 @@ function BibleAssistantSidebar({
               onClick={() => onSelectAgent(run, persona)}
             >
               <span
-                className={`sx-agent-status sx-agent-status--${run.status}`}
+                className="sx-agent-status-cluster"
                 role="status"
                 aria-label={`상태 ${agentStatusLabel(run.status)}`}
-              />
+              >
+                <span className={`sx-agent-status sx-agent-status--${run.status}`} aria-hidden="true" />
+                {(run.status === 'revise' || run.status === 'block') && (
+                  <span className={`sx-agent-status-label sx-agent-status-label--${run.status}`}>
+                    {agentStatusLabel(run.status)}
+                  </span>
+                )}
+              </span>
               <AgentPixelPortrait persona={persona} />
               <div>
                 <span>{run.title}</span>
