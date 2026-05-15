@@ -5416,14 +5416,10 @@ body {
   grid-template-columns: minmax(0, 1fr) minmax(220px, 0.34fr);
   gap: var(--sx-space-5);
   align-items: end;
-  padding: clamp(22px, 4vw, 44px);
+  padding: clamp(16px, 2.4vw, 26px);
   border: 1px solid var(--sx-line);
-  border-radius: var(--framer-rounded-xxl);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.52)),
-    radial-gradient(circle at 90% 0%, color-mix(in oklch, var(--sx-accent) 18%, transparent), transparent 28rem),
-    var(--sx-card);
-  box-shadow: var(--sx-shadow);
+  border-radius: var(--framer-rounded-xl);
+  background: color-mix(in srgb, var(--sx-card) 82%, transparent);
 }
 
 .sx-bible-hero h2 {
@@ -6385,10 +6381,10 @@ body {
 }
 
 .sx-bible-assistant-sidebar > p {
-  margin: -2px 0 12px;
-  color: var(--sx-ink-2);
-  font-size: 0.86rem;
-  line-height: 1.55;
+  margin: -2px 0 8px;
+  color: var(--sx-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 
 .sx-bible-assistant-sidebar .sx-panel-heading h2::after {
