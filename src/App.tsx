@@ -299,19 +299,19 @@ function MarketingLanding({
   ];
   const integrityRows = [
     {
-      eyebrow: 'Creative infrastructure',
+      eyebrow: '창작 인프라',
       title: '작품의 신뢰성은 보이지 않는 구조에서 시작됩니다.',
       body: 'Story X는 캐릭터 계약, 세계 규칙, 장면 기능, 음성 캐스팅, 이미지 레퍼런스를 연결해 창작자가 자유롭게 바꿔도 작품이 무너지지 않도록 돕습니다.',
       metric: 'Canon'
     },
     {
-      eyebrow: 'Quality gates',
+      eyebrow: '품질 게이트',
       title: '좋아 보이는 결과보다, 다시 쓸 수 있는 결과를 남깁니다.',
       body: '문체, 컷 밀도, 말풍선, 발음, 음악 분위기, 플랫폼 패키징을 포맷별로 따로 점검합니다. 막힌 부분은 숨기지 않고 다음 행동으로 보여줍니다.',
       metric: 'Gates'
     },
     {
-      eyebrow: 'Reference DNA',
+      eyebrow: '레퍼런스 구조',
       title: '햄릿 같은 압력, 인터스텔라 같은 상상력을 구조로 다룹니다.',
       body: '작품 레퍼런스는 표면을 베끼기 위한 것이 아니라, 감정 엔진과 구조 엔진을 이해해 새로운 창작에 적용하기 위한 데이터입니다.',
       metric: 'DNA'
@@ -451,7 +451,7 @@ function MarketingLanding({
         </div>
         <div className="hero-copy">
           <button type="button" className="news-pill" onClick={onOpenHome}>
-            Story workflows v0.2
+            데모 둘러보기
             <ChevronRight size={14} />
           </button>
           <h1 id="landing-title">조용하게 이야기를 만드는 방법.</h1>
@@ -467,34 +467,8 @@ function MarketingLanding({
 
       <StoryCurrentSection />
 
-      <section className="duna-marquee" aria-label="creative formats">
-        {['Novel', 'Webtoon', 'Insta-toon', 'Audiobook', 'Audio drama', 'Reference DNA', 'Story refactor'].map((item) => (
-          <span key={item}>{item}</span>
-        ))}
-      </section>
-
-      <section className="duna-metrics" id="product" aria-label="Story X product pillars">
-        <div className="duna-section-head">
-          <h2>Designed for creation. Built for continuity.</h2>
-          <p>
-            좋은 AI 창작 서비스는 더 많은 버튼을 보여주는 게 아니라, 창작자가 지금 무엇을 해야 하는지
-            조용히 알려줘야 합니다.
-          </p>
-        </div>
-        <div className="duna-pillar-grid">
-          {creationPillars.map((pillar) => (
-            <article key={pillar.label}>
-              <span>{pillar.label}</span>
-              <h3>{pillar.title}</h3>
-              <p>{pillar.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
       <section className="duna-integrity-hero" id="integrity">
-        <p className="trust-pill">Trust</p>
-        <h2>Engineered for story integrity</h2>
+        <h2>이야기는 무너지지 않습니다.</h2>
         <p>
           창작자는 자유롭게 바꿀 수 있어야 합니다. 시스템은 조용히 영향 범위를 추적하고,
           모순과 품질 저하를 드러내야 합니다.
@@ -546,11 +520,9 @@ function MarketingLanding({
       </section>
 
       <MediaBridgeSection />
-      <FrontendAgentShowcase />
-      <HomepageRoadmapSection />
 
       <section className="duna-closing" id="resources">
-        <h2>Start with a story that can survive every form.</h2>
+        <h2>어떤 형태로 바뀌어도 살아남는 이야기로 시작하세요.</h2>
         <button type="button" className="button-primary" onClick={onOpenLogin}>
           창작 시작
         </button>
@@ -563,7 +535,6 @@ function StoryCurrentSection() {
   return (
     <section className="story-current-section" aria-label="Story X brand concept">
       <div>
-        <p className="framer-eyebrow">Brand Current</p>
         <h2>바람과 물결이 교차할 때, 나의 이야기가 완성됩니다.</h2>
         <p>
           바람은 작가가 던지는 선택, 수정, 충동입니다. 물결은 메모리 뱅크와 에이전트 검토가 남기는

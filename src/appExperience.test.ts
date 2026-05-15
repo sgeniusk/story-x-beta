@@ -50,7 +50,7 @@ describe('Story X page experience', () => {
     expect(app).toContain('className="framer-top-nav storyx-site-nav"');
     expect(app).toContain('창작 시작');
     expect(app).toContain('onClick={onOpenLogin}');
-    expect(app).toContain('Engineered for story integrity');
+    expect(app).toContain('이야기는 무너지지 않습니다');
   });
 
   it('keeps landing nav polished and turns post-start navigation into focused scroll steps', () => {
