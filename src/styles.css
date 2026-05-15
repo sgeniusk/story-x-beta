@@ -1454,7 +1454,7 @@ button {
   --sx-ink-4: var(--wds-semantic-color-label-assistive);
   --sx-line: var(--line);
   --sx-line-2: var(--line-2);
-  --sx-paper: var(--surface);
+  --sx-paper: var(--sx-paper-warm);
   --sx-paper-2: var(--surface-muted);
   --sx-card: var(--card);
   --sx-r: var(--card-radius);
@@ -3020,7 +3020,7 @@ body {
   --sx-ink-4: #a8a8a8;
   --sx-line: var(--line);
   --sx-line-2: var(--line-2);
-  --sx-paper: var(--paper);
+  --sx-paper: var(--sx-paper-warm);
   --sx-paper-2: var(--paper-2);
   --sx-card: var(--card);
   background:
