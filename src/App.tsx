@@ -781,6 +781,7 @@ function StoryXHome({
   const focusedScope = useMemo(() => getFocusedServiceScope(), []);
   const flowAgentMap = useMemo(() => buildFlowAgentMap(), []);
   const [intakeAnswers, setIntakeAnswers] = useState<Record<string, string>>({});
+  const [intakeOtherAnswers, setIntakeOtherAnswers] = useState<Record<string, string>>({});
   const [interviewNote, setInterviewNote] = useState('');
   const [freewriteText, setFreewriteText] = useState('');
   const [intakeQuestionIndex, setIntakeQuestionIndex] = useState(0);
@@ -1001,7 +1002,30 @@ function StoryXHome({
                               <small>{option.impact}</small>
                             </button>
                           ))}
+                          <button
+                            type="button"
+                            className={selectedOption === '_other' ? 'is-selected is-other' : 'is-other'}
+                            onClick={() => setIntakeAnswers((current) => ({ ...current, [question.id]: '_other' }))}
+                          >
+                            <strong>기타 (직접 입력)</strong>
+                            <small>객관식으로 안 맞는 답을 이쪽에 직접 적습니다.</small>
+                          </button>
                         </div>
+                        {selectedOption === '_other' && (
+                          <textarea
+                            className="intake-other-input"
+                            aria-label={`${question.question} 기타 답변`}
+                            placeholder="이 질문에 대한 답을 한두 문장으로 적어주세요."
+                            value={intakeOtherAnswers[question.id] ?? ''}
+                            onChange={(event) =>
+                              setIntakeOtherAnswers((current) => ({
+                                ...current,
+                                [question.id]: event.target.value
+                              }))
+                            }
+                            rows={3}
+                          />
+                        )}
                       </article>
                     );
                   })()}
