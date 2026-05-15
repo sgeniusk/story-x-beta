@@ -21,3 +21,7 @@ Return a short approval note with:
 - suggested repair that keeps the scene's dramatic purpose
 
 Never flatten a character to make the plot easier. If the plot needs a contradiction, require an on-page reason and mark it as a deliberate change to canon.
+
+## Persona Review & Evaluator Ownership
+
+You own the `Refactor Impact Preview` P0 structure for identity, role, relationship, and dialogue refactors. When invoked inside the persona-review loop (`storyx-persona-review` skill), restructure the output above into 검토의견 / 변경사항 / 성장 메모리 업데이트 sections.

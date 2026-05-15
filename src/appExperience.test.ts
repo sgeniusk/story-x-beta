@@ -50,14 +50,17 @@ describe('Story X page experience', () => {
     expect(app).toContain('className="framer-top-nav storyx-site-nav"');
     expect(app).toContain('창작 시작');
     expect(app).toContain('onClick={onOpenLogin}');
-    expect(app).toContain('Engineered for story integrity');
+    expect(app).toContain('이야기는 무너지지 않습니다');
   });
 
   it('keeps landing nav polished and turns post-start navigation into focused scroll steps', () => {
     expect(app).toContain('<StoryXTopNav');
     expect(app).toContain('ariaLabel="Story X"');
     expect(app).toContain('href={`#${link.target}`}');
-    expect(app).toContain("type HomeFlowStep = 'medium' | 'intake'");
+    expect(app).toContain("type HomeFlowStep = 'medium' | 'freewrite' | 'intake'");
+    expect(app).toContain('자유 서술로 계속');
+    expect(app).toContain('인터뷰로 계속');
+    expect(app).toContain('home-freewrite-input');
     expect(app).toContain('const [homeFlowStep, setHomeFlowStep]');
     expect(app).toContain('className="storyx-fullscreen-flow"');
     expect(app).toContain('className="home-flow-track"');
@@ -102,7 +105,7 @@ describe('Story X page experience', () => {
     expect(app).toContain('phase.outcome');
     expect(app).toContain('className="workflow-quality-strip"');
     expect(css).toContain('.home-builder-grid .gradient-spotlight-card');
-    expect(css).toContain('color: #20201e');
+    expect(css).toContain('color: var(--sx-ink-strong)');
   });
 
   it('explains Story X as a cross-media creative operating system on the homepage', () => {

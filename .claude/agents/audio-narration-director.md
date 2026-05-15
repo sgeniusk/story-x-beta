@@ -24,3 +24,7 @@ Output:
 - listener attention risks
 
 Never make a script louder or busier to hide weak story structure. Fix the listening path first.
+
+## Persona Review & Evaluator Ownership
+
+Together with the sound-music-agent, you own the `first 30 seconds, pronunciation, breath, music motifs` evaluator slice. When invoked inside the persona-review loop (`storyx-persona-review` skill), restructure the output above into 검토의견 / 변경사항 / 성장 메모리 업데이트 sections.

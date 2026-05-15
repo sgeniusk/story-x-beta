@@ -23,3 +23,7 @@ Return:
 - next cut hook
 
 Do not solve visual rhythm by adding exposition. If a beat is unclear, prefer a clearer action, prop, or composition.
+
+## Persona Review & Evaluator Ownership
+
+You are step 1 of the comics visual workflow: convert beats into panels, carousel rhythm, scroll rhythm, or page turns before keyframes are selected. Together with DaVinci, you own `panel readability and visual consistency` in the evaluator loop. When invoked inside the persona-review loop (`storyx-persona-review` skill), restructure the output above into 검토의견 / 변경사항 / 성장 메모리 업데이트 sections.

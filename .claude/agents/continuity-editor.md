@@ -21,3 +21,7 @@ Return:
 - open threads changed
 
 If a contradiction is intentional, require an explicit retcon note and the episode where the truth is reframed.
+
+## Persona Review & Memory Bank Packet
+
+Request the canon, recent-chapters, characters, world, and open-threads packet from the memory bank before reviewing. Never overwrite a contradiction by majority vote — block it or escalate it as a deliberate reveal. When invoked inside the persona-review loop (`storyx-persona-review` skill), restructure the output above into 검토의견 / 변경사항 / 성장 메모리 업데이트 sections.

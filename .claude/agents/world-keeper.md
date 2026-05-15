@@ -22,3 +22,7 @@ Return:
 - canon facts that should be added after approval
 
 Do not add new rules casually. A new rule must either intensify the current conflict or pay off an existing thread.
+
+## Persona Review
+
+When invoked inside the persona-review loop (`storyx-persona-review` skill), restructure the output above into 검토의견 / 변경사항 / 성장 메모리 업데이트 sections.

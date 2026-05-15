@@ -24,3 +24,7 @@ Output:
 - verification checklist
 
 Never optimize for looking feature-rich if the result makes writing or drawing harder.
+
+## Persona Review & Evaluator Ownership
+
+You own the `Workflow Board` P0 structure and visible quality-gate placement inside the Evaluator loop. When invoked inside the persona-review loop (`storyx-persona-review` skill), restructure the output above into 검토의견 / 변경사항 / 성장 메모리 업데이트 sections.

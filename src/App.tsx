@@ -16,6 +16,7 @@ import {
   History,
   Layers,
   Library,
+  Lock,
   Map,
   PanelsTopLeft,
   PenTool,
@@ -177,14 +178,28 @@ const homepageRoadmapItems = [
 
 type ActivePane = 'chapter' | 'canon';
 type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor';
-type HomeFlowStep = 'medium' | 'intake';
+type HomeFlowStep = 'medium' | 'freewrite' | 'intake';
 type StoryXNavLink = {
   label: string;
   target: string;
 };
 
 function App() {
-  const [stage, setStage] = useState<AppStage>('landing');
+  const initialStage = useMemo<AppStage>(() => {
+    if (typeof window === 'undefined') return 'landing';
+    const stageParam = new URLSearchParams(window.location.search).get('stage');
+    if (
+      stageParam === 'editor' ||
+      stageParam === 'home' ||
+      stageParam === 'projects' ||
+      stageParam === 'login' ||
+      stageParam === 'landing'
+    ) {
+      return stageParam;
+    }
+    return 'landing';
+  }, []);
+  const [stage, setStage] = useState<AppStage>(initialStage);
   const [medium, setMedium] = useState<CreativeMedium>('novel');
   const [format, setFormat] = useState<CreativeFormat>('long-novel');
 
@@ -299,19 +314,19 @@ function MarketingLanding({
   ];
   const integrityRows = [
     {
-      eyebrow: 'Creative infrastructure',
+      eyebrow: '창작 인프라',
       title: '작품의 신뢰성은 보이지 않는 구조에서 시작됩니다.',
       body: 'Story X는 캐릭터 계약, 세계 규칙, 장면 기능, 음성 캐스팅, 이미지 레퍼런스를 연결해 창작자가 자유롭게 바꿔도 작품이 무너지지 않도록 돕습니다.',
       metric: 'Canon'
     },
     {
-      eyebrow: 'Quality gates',
+      eyebrow: '품질 게이트',
       title: '좋아 보이는 결과보다, 다시 쓸 수 있는 결과를 남깁니다.',
       body: '문체, 컷 밀도, 말풍선, 발음, 음악 분위기, 플랫폼 패키징을 포맷별로 따로 점검합니다. 막힌 부분은 숨기지 않고 다음 행동으로 보여줍니다.',
       metric: 'Gates'
     },
     {
-      eyebrow: 'Reference DNA',
+      eyebrow: '레퍼런스 구조',
       title: '햄릿 같은 압력, 인터스텔라 같은 상상력을 구조로 다룹니다.',
       body: '작품 레퍼런스는 표면을 베끼기 위한 것이 아니라, 감정 엔진과 구조 엔진을 이해해 새로운 창작에 적용하기 위한 데이터입니다.',
       metric: 'DNA'
@@ -451,50 +466,24 @@ function MarketingLanding({
         </div>
         <div className="hero-copy">
           <button type="button" className="news-pill" onClick={onOpenHome}>
-            Story workflows v0.2
+            데모 둘러보기
             <ChevronRight size={14} />
           </button>
-          <h1 id="landing-title">The calm way to make stories.</h1>
+          <h1 id="landing-title">조용하게 이야기를 만드는 방법.</h1>
           <p>
             Story X는 맑은 해안처럼 조용하지만, 안쪽에는 캐릭터, 세계관, 이미지, 음악, 오디오북까지
             이어지는 정밀한 AI 제작 시스템을 품고 있습니다.
           </p>
           <button type="button" className="button-primary hero-start-button" onClick={onOpenLogin}>
-            Get started
+            창작 시작
           </button>
         </div>
       </section>
 
       <StoryCurrentSection />
 
-      <section className="duna-marquee" aria-label="creative formats">
-        {['Novel', 'Webtoon', 'Insta-toon', 'Audiobook', 'Audio drama', 'Reference DNA', 'Story refactor'].map((item) => (
-          <span key={item}>{item}</span>
-        ))}
-      </section>
-
-      <section className="duna-metrics" id="product" aria-label="Story X product pillars">
-        <div className="duna-section-head">
-          <h2>Designed for creation. Built for continuity.</h2>
-          <p>
-            좋은 AI 창작 서비스는 더 많은 버튼을 보여주는 게 아니라, 창작자가 지금 무엇을 해야 하는지
-            조용히 알려줘야 합니다.
-          </p>
-        </div>
-        <div className="duna-pillar-grid">
-          {creationPillars.map((pillar) => (
-            <article key={pillar.label}>
-              <span>{pillar.label}</span>
-              <h3>{pillar.title}</h3>
-              <p>{pillar.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
       <section className="duna-integrity-hero" id="integrity">
-        <p className="trust-pill">Trust</p>
-        <h2>Engineered for story integrity</h2>
+        <h2>이야기는 무너지지 않습니다.</h2>
         <p>
           창작자는 자유롭게 바꿀 수 있어야 합니다. 시스템은 조용히 영향 범위를 추적하고,
           모순과 품질 저하를 드러내야 합니다.
@@ -546,11 +535,9 @@ function MarketingLanding({
       </section>
 
       <MediaBridgeSection />
-      <FrontendAgentShowcase />
-      <HomepageRoadmapSection />
 
       <section className="duna-closing" id="resources">
-        <h2>Start with a story that can survive every form.</h2>
+        <h2>어떤 형태로 바뀌어도 살아남는 이야기로 시작하세요.</h2>
         <button type="button" className="button-primary" onClick={onOpenLogin}>
           창작 시작
         </button>
@@ -563,7 +550,6 @@ function StoryCurrentSection() {
   return (
     <section className="story-current-section" aria-label="Story X brand concept">
       <div>
-        <p className="framer-eyebrow">Brand Current</p>
         <h2>바람과 물결이 교차할 때, 나의 이야기가 완성됩니다.</h2>
         <p>
           바람은 작가가 던지는 선택, 수정, 충동입니다. 물결은 메모리 뱅크와 에이전트 검토가 남기는
@@ -795,10 +781,13 @@ function StoryXHome({
   const focusedScope = useMemo(() => getFocusedServiceScope(), []);
   const flowAgentMap = useMemo(() => buildFlowAgentMap(), []);
   const [intakeAnswers, setIntakeAnswers] = useState<Record<string, string>>({});
+  const [interviewNote, setInterviewNote] = useState('');
+  const [freewriteText, setFreewriteText] = useState('');
   const [homeFlowStep, setHomeFlowStep] = useState<HomeFlowStep>('medium');
   const homeFlowSteps: Array<{ id: HomeFlowStep; label: string; caption: string }> = [
     { id: 'medium', label: '매체 선택', caption: '무엇을 만들지 정합니다.' },
-    { id: 'intake', label: '성향 질문', caption: '에이전트가 작품 기준을 묻습니다.' }
+    { id: 'freewrite', label: '자유 서술', caption: '쓰고 싶은 이야기를 흘려 적습니다.' },
+    { id: 'intake', label: '작가 인터뷰', caption: '에이전트가 맞춤 질문을 합니다.' }
   ];
   const homeFlowIndex = homeFlowSteps.findIndex((step) => step.id === homeFlowStep);
 
@@ -885,9 +874,75 @@ function StoryXHome({
                 </div>
                 <p className="workflow-proof">{workflowBoard.platformProof}</p>
               </article>
-              <button type="button" className="button-primary home-next-button" onClick={() => setHomeFlowStep('intake')}>
-                질문으로 계속
+              <button type="button" className="button-primary home-next-button" onClick={() => setHomeFlowStep('freewrite')}>
+                자유 서술로 계속
               </button>
+            </aside>
+          </section>
+
+          <section className="home-flow-panel is-freewrite" id="freewrite" aria-label="자유 서술 단계">
+            <div className="home-flow-main">
+              <section className="home-freewrite-stage">
+                <div className="home-intake-head">
+                  <div>
+                    <p className="framer-eyebrow">02 · 자유 서술</p>
+                    <h2>쓰고 싶은 이야기를 자유롭게 적어주세요.</h2>
+                    <p>
+                      구조, 인물 이름, 사건 순서는 신경 쓰지 않아도 됩니다. 떠오르는 대로 한 문단 정도면
+                      충분합니다. 다음 단계에서 작가진이 이 글을 읽고 맞춤 질문을 드립니다.
+                    </p>
+                  </div>
+                  <aside>
+                    <span>{blueprint.mediumLabel} · {blueprint.formatLabel}</span>
+                    <p>이 자유 서술은 인터뷰 + 첫 회차 초안의 기준이 됩니다. 비워두고 진행해도 인터뷰는 작동하지만, 한두 줄이라도 적으면 질문이 훨씬 정확해집니다.</p>
+                  </aside>
+                </div>
+                <textarea
+                  className="home-freewrite-input"
+                  aria-label="자유 서술 입력"
+                  value={freewriteText}
+                  onChange={(event) => setFreewriteText(event.target.value)}
+                  placeholder={
+                    blueprint.medium === 'essay'
+                      ? '예: 엄마가 돌아가신 뒤 1년 동안 부엌을 못 들어갔다. 1년 후 처음 들어갔을 때 냉장고에 메모를 발견했다.'
+                      : '예: 오빠가 사라진 그날 새벽, 한 소녀가 달의 탑 아래에서 마르지 않은 잉크 자국을 찾는다.'
+                  }
+                  rows={10}
+                />
+                <p className="home-freewrite-meter">
+                  {freewriteText.trim().length}자
+                  {blueprint.medium === 'audiobook' && (() => {
+                    const charCount = freewriteText.trim().length;
+                    const minutes = Math.floor(charCount / 280);
+                    const seconds = Math.round((charCount % 280) / 280 * 60);
+                    return ` · 예상 낭독 ${minutes}분 ${seconds}초`;
+                  })()}
+                </p>
+                {blueprint.medium === 'essay' && (
+                  <p className="home-fact-protection-note">
+                    <Lock size={13} aria-hidden="true" />
+                    <span>
+                      <strong>사실 보호 모드</strong> 에세이/회고 매체에서는 자유 서술에 적지 않은 디테일(인물의 직업·나이·장소 등)을 AI가 발명하지 않습니다. 빈 곳은 빈 곳으로 남고, 채우는 건 작가의 몫입니다.
+                    </span>
+                  </p>
+                )}
+              </section>
+            </div>
+            <aside className="home-flow-side">
+              <FlowAgentLayerCard assignment={flowAgentMap.intake} />
+              <article className="home-summary-card">
+                <span>다음 단계</span>
+                <strong>작가 인터뷰</strong>
+                <p>자유 서술을 기준으로 에이전트들이 인물·세계·문체·연속성을 묻습니다.</p>
+              </article>
+              <div className="home-flow-actions">
+                <button type="button" className="button-secondary" onClick={() => setHomeFlowStep('medium')}>
+                  이전
+                </button>
+                <button type="button" className="button-primary" onClick={() => setHomeFlowStep('intake')}>
+                  인터뷰로 계속
+                </button>
+              </div>
             </aside>
           </section>
 
@@ -942,6 +997,18 @@ function StoryXHome({
                     );
                   })}
                 </div>
+                <article className="intake-open-note">
+                  <span>+ 추가 메모 (선택)</span>
+                  <h3>객관식으로 안 들어가는 결정이 있나요?</h3>
+                  <p>세계관 설정·복선 한 줄·금기 같은 *주관식 답*을 자유롭게 적으시면 작가진이 인터뷰 답변과 함께 읽습니다.</p>
+                  <textarea
+                    aria-label="추가 메모 (주관식)"
+                    value={interviewNote}
+                    onChange={(event) => setInterviewNote(event.target.value)}
+                    placeholder="예: 1부는 인간 시점, 2부는 토착 종족 시점으로 같은 사건을 다시 본다. 시간선이 두 개라 회차 번호 옆에 표시 필요."
+                    rows={4}
+                  />
+                </article>
               </section>
             </div>
             <aside className="home-flow-side">
@@ -959,7 +1026,7 @@ function StoryXHome({
                 </div>
               </article>
               <div className="home-flow-actions">
-                <button type="button" className="button-secondary" onClick={() => setHomeFlowStep('medium')}>
+                <button type="button" className="button-secondary" onClick={() => setHomeFlowStep('freewrite')}>
                   이전
                 </button>
                 <button type="button" className="button-primary" onClick={onOpenEditor}>

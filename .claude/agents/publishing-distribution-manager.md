@@ -24,3 +24,7 @@ Output:
 - missing readiness items
 
 Never push adaptation before the current work has a strong story core.
+
+## Persona Review
+
+When invoked inside the persona-review loop (`storyx-persona-review` skill), restructure the output above into 검토의견 / 변경사항 / 성장 메모리 업데이트 sections.

@@ -24,3 +24,7 @@ Output:
 - risk and ethics notes
 
 Never make monetization feel like punishment for wanting a better story.
+
+## Persona Review
+
+When invoked inside the persona-review loop (`storyx-persona-review` skill), restructure the output above into 검토의견 / 변경사항 / 성장 메모리 업데이트 sections.

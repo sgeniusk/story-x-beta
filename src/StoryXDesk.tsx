@@ -11,6 +11,7 @@ import {
   Layers,
   Library,
   ListChecks,
+  Lock,
   Maximize2,
   MessageCircle,
   Minimize2,
@@ -37,6 +38,7 @@ import {
   buildStoryEditorWorkspace,
   createSeedProject,
   getGenreProfiles,
+  lockChapter,
   produceNextChapter,
   type AgentRun,
   type Chapter,
@@ -61,6 +63,7 @@ import {
 } from './lib/memoryBank';
 import { buildTesterDrivenWorkflow, type TesterDrivenWorkflow } from './lib/evaluationSynthesis';
 import { buildComicsVisualWorkflow } from './lib/visualProduction';
+import { getCreativeActionLabels } from './lib/projectBlueprint';
 import { buildPublishingPlan, type PublishingPlan } from './lib/publishing';
 import { buildAlphaReadinessReport, type AlphaReadinessReport } from './lib/alphaReadiness';
 import { buildOneProjectVerticalSlice, type OneProjectVerticalSlice } from './lib/verticalSlice';
@@ -287,6 +290,38 @@ function getAgentPersona(run: AgentRun) {
   return agentPersonas[run.agentId] ?? fallbackAgentPersona;
 }
 
+function getMediumChampionRun(medium: CreativeMedium): AgentRun | null {
+  switch (medium) {
+    case 'essay':
+      return {
+        agentId: 'essay-interviewer',
+        title: '에세이 인터뷰어',
+        status: 'idle',
+        output: '자유 서술에 적은 경험을 기반으로 질문을 만들고, 사실 보호 모드 안에서 AI가 새 디테일을 발명하지 않게 지킵니다.',
+        evidence: ['lived material', 'fact protection']
+      };
+    case 'audiobook':
+      return {
+        agentId: 'audio-narration-director',
+        title: '낭독 연출가',
+        status: 'idle',
+        output: '낭독 톤, 쉼, 호흡, 청취 피로를 책임집니다. 첫 30초 proof와 회차 분당 낭독 시간을 봅니다.',
+        evidence: ['narration tone', 'pause map']
+      };
+    case 'comics':
+      return {
+        agentId: 'storyboard-agent',
+        title: '스토리보드 작가',
+        status: 'idle',
+        output: '컷 리듬, 말풍선 위치, 스크롤 후크, 캐릭터 외관 일관성을 책임집니다.',
+        evidence: ['panel rhythm', 'visual continuity']
+      };
+    case 'novel':
+    default:
+      return null;
+  }
+}
+
 function mergeAgentRuns(primaryRuns: AgentRun[], extraRuns: AgentRun[]) {
   const seen = new Set(primaryRuns.map((run) => run.agentId));
 
@@ -297,35 +332,35 @@ const defaultRuns: AgentRun[] = [
   {
     agentId: 'showrunner',
     title: '쇼러너',
-    status: 'complete',
+    status: 'idle',
     output: '이번 회차의 약속, 압력, 마지막 질문을 한 줄로 잠글 준비가 되어 있습니다.',
     evidence: ['독자 약속', '클리프행어']
   },
   {
     agentId: 'character-custodian',
     title: '캐릭터',
-    status: 'complete',
+    status: 'idle',
     output: '욕망, 상처, 관계 상태가 초안에서 흔들리지 않는지 확인합니다.',
     evidence: ['desire', 'wound']
   },
   {
     agentId: 'world-keeper',
     title: '월드',
-    status: 'complete',
+    status: 'idle',
     output: '세계 규칙과 비용이 장면마다 같은 방식으로 작동하는지 봅니다.',
     evidence: ['rules', 'cost']
   },
   {
     agentId: 'genre-stylist',
     title: '장르',
-    status: 'complete',
+    status: 'idle',
     output: '장르 리듬과 문체 질감을 회차 목적에 맞게 조정합니다.',
     evidence: ['beat', 'texture']
   },
   {
     agentId: 'continuity-editor',
     title: '연속성',
-    status: 'complete',
+    status: 'idle',
     output: '모순은 숨기지 않고 충돌로 표시하고, 승인된 사실만 canon에 넣습니다.',
     evidence: ['canon', 'conflict']
   }
@@ -335,35 +370,35 @@ const visualStoryAgentRuns: AgentRun[] = [
   {
     agentId: 'storyboard-agent',
     title: '웹툰 연출',
-    status: 'complete',
+    status: 'idle',
     output: '장면을 컷 기능, 스크롤 템포, 넘김 후크로 분해합니다.',
     evidence: ['panel-plan', 'scroll-rhythm']
   },
   {
     agentId: 'speech-bubble-agent',
     title: '말풍선',
-    status: 'complete',
+    status: 'idle',
     output: '말풍선 위치와 대사 밀도가 표정, 손동작, 핵심 소품을 가리지 않는지 봅니다.',
     evidence: ['bubble-map', 'dialogue-density']
   },
   {
     agentId: 'keyframe-art-director',
     title: '원화',
-    status: 'complete',
+    status: 'idle',
     output: 'Midjourney 원화 후보 중 사용자가 선택한 컷만 visual DNA로 잠급니다.',
     evidence: ['midjourney-keyframe', 'visual-dna']
   },
   {
     agentId: 'da-vinci',
     title: '다빈치',
-    status: 'complete',
+    status: 'idle',
     output: '승인된 원화와 캐릭터 시트를 컷별 이미지 프롬프트로 변환합니다.',
     evidence: ['image-prompt', 'negative-prompt']
   },
   {
     agentId: 'frame-assembly-agent',
     title: '프레임',
-    status: 'complete',
+    status: 'idle',
     output: '정사각형, 세로 스크롤, 페이지 시퀀스에 맞춰 컷 순서와 export 묶음을 확인합니다.',
     evidence: ['frame-order', 'export-package']
   }
@@ -377,12 +412,14 @@ function buildBibleAssistantRuns(
 ): AgentRun[] {
   const pendingCount = approvalQueue.items.filter((item) => item.status !== 'approved').length;
   const reviewCount = latestReviewResult?.agentReports.length ?? 0;
+  const hasChapters = project.chapters.length > 0;
+  const baseStatus: AgentRun['status'] = hasChapters ? 'pass' : 'idle';
 
   return [
     {
       agentId: 'continuity-editor',
       title: '캐논 리팩터',
-      status: 'complete',
+      status: canonRefactorPlan.status === 'blocked' ? 'block' : baseStatus,
       output:
         canonRefactorPlan.status === 'blocked'
           ? `${canonRefactorPlan.conflictWarnings.length}개 충돌이 있어 승인 전 영향 회차를 먼저 정리해야 합니다.`
@@ -392,28 +429,28 @@ function buildBibleAssistantRuns(
     {
       agentId: 'character-custodian',
       title: '캐릭터 편집 조수',
-      status: 'complete',
+      status: baseStatus,
       output: `${project.characters.length}명의 욕망, 상처, 현재 상태를 다음 원고 기준으로 편집 가능하게 관리합니다.`,
       evidence: ['desire', 'wound', 'relationship-state']
     },
     {
       agentId: 'world-keeper',
       title: '세계관 편집 조수',
-      status: 'complete',
+      status: baseStatus,
       output: `${project.worldRules.length}개 세계 규칙의 비용, 예외, 금지 충돌을 한곳에서 고정합니다.`,
       evidence: ['world rules', 'cost', 'forbidden contradiction']
     },
     {
       agentId: 'voice-curator',
       title: '문체 조수',
-      status: 'complete',
+      status: baseStatus,
       output: '문체, 감각, 시각/오디오 앵커를 매체 전환용 기억 패킷으로 정리합니다.',
       evidence: ['voice bible', 'visual anchor', 'audio rhythm']
     },
     {
       agentId: 'essay-interviewer',
       title: '승인 대기 조수',
-      status: 'complete',
+      status: pendingCount > 0 ? 'revise' : reviewCount > 0 ? 'pass' : 'idle',
       output:
         pendingCount > 0
           ? `${pendingCount}개 기억 후보가 승인 대기 중입니다. 사용자가 승인하기 전에는 canon에 반영하지 않습니다.`
@@ -423,6 +460,20 @@ function buildBibleAssistantRuns(
       evidence: ['approval queue', 'user decision']
     }
   ];
+}
+
+function agentStatusLabel(status: AgentRun['status']): string {
+  switch (status) {
+    case 'idle':
+      return '대기';
+    case 'pass':
+    case 'complete':
+      return '양호';
+    case 'revise':
+      return '주의';
+    case 'block':
+      return '경고';
+  }
 }
 
 function buildBibleSectionState({
@@ -635,8 +686,16 @@ export function StoryXDesk({
     [project, reviewProvider, reviewScale]
   );
   const displayedAgentRuns = useMemo(
-    () => (blueprint.nextWorkspace === 'visual-storyboard-studio' ? mergeAgentRuns(agentRuns, visualStoryAgentRuns) : agentRuns),
-    [agentRuns, blueprint.nextWorkspace]
+    () => {
+      const baseRuns = blueprint.nextWorkspace === 'visual-storyboard-studio'
+        ? mergeAgentRuns(agentRuns, visualStoryAgentRuns)
+        : agentRuns;
+      const champion = getMediumChampionRun(blueprint.medium);
+      if (!champion) return baseRuns;
+      if (baseRuns.some((run) => run.agentId === champion.agentId)) return baseRuns;
+      return [...baseRuns, champion];
+    },
+    [agentRuns, blueprint.medium, blueprint.nextWorkspace]
   );
   const bibleAssistantRuns = useMemo(
     () => buildBibleAssistantRuns(project, approvalQueue, canonRefactorPlan, latestReviewResult),
@@ -652,15 +711,31 @@ export function StoryXDesk({
   const activeModeLabel = isPublishingMode ? '출간 준비' : activeTrack === 'bible' ? '작품 바이블' : '원고';
   const chapterCrumb = latestChapter ? `${latestChapter.episode}화` : '새 초안';
   const saveLabel = editedSinceReview ? '수정 중' : '저장됨';
+  const isLatestLocked = latestChapter?.locked === true;
+  const actionLabels = getCreativeActionLabels(blueprint.medium);
+  const mainActionLabel = !latestChapter
+    ? actionLabels.draft
+    : isLatestLocked
+      ? actionLabels.nextDraft
+      : actionLabels.review;
+  const mainActionRun = !latestChapter || isLatestLocked ? produceEpisode : reviewDraft;
+  const MainActionIcon = !latestChapter || isLatestLocked ? WandSparkles : ClipboardCheck;
+  const draftPromptPlaceholder = isLatestLocked
+    ? `잠긴 ${blueprint.medium === 'essay' ? '글' : '회차'} 다음에 담을 내용을 적어주세요.`
+    : '예: 용사랑 외계인이 싸우는 장면으로 시작한다.';
   const commandItems = useMemo<DeskCommand[]>(
     () => [
       {
         id: 'draft-main-action',
-        label: latestChapter ? '흐름 검증' : '초안 생성',
+        label: mainActionLabel,
         section: '원고',
-        description: latestChapter ? '현재 원고를 작가진이 다시 검토합니다.' : '입력한 주요 내용으로 첫 회차 초안을 만듭니다.',
-        shortcut: latestChapter ? 'Review' : 'Draft',
-        run: latestChapter ? reviewDraft : produceEpisode
+        description: isLatestLocked
+          ? '잠긴 회차는 그대로 두고 다음 회차를 새로 만듭니다.'
+          : latestChapter
+            ? '현재 원고를 작가진이 다시 검토합니다.'
+            : '입력한 주요 내용으로 첫 회차 초안을 만듭니다.',
+        shortcut: isLatestLocked ? 'NextEp' : latestChapter ? 'Review' : 'Draft',
+        run: mainActionRun
       },
       {
         id: 'open-draft',
@@ -1053,19 +1128,39 @@ export function StoryXDesk({
             {!isPublishingMode && <em>{chapterCrumb}</em>}
           </nav>
         </div>
+        <nav className="sx-track-tabs" aria-label="작업 트랙">
+          <button
+            type="button"
+            className={activeTrack === 'draft' && !isPublishingMode ? 'is-active' : ''}
+            onClick={() => {
+              setActiveTrack('draft');
+              setIsPublishingMode(false);
+              setIsMediaPanelOpen(false);
+            }}
+          >
+            <PenLine size={16} />
+            편집
+          </button>
+          <button
+            type="button"
+            className={activeTrack === 'bible' && !isPublishingMode ? 'is-active' : ''}
+            onClick={() => {
+              setActiveTrack('bible');
+              setIsPublishingMode(false);
+              setIsMediaPanelOpen(false);
+            }}
+          >
+            <Database size={16} />
+            바이블
+            {bibleAlertCount > 0 && <span className="sx-bible-alert-badge">{bibleAlertCount}</span>}
+          </button>
+        </nav>
         <div className="sx-topbar-actions">
-          {(onOpenProjects || onOpenLanding) && (
+          {onOpenProjects && (
             <div className="sx-app-nav-links" aria-label="앱 이동">
-              {onOpenProjects && (
-                <button type="button" aria-label="프로젝트로 이동" onClick={onOpenProjects}>
-                  <Home size={14} />
-                </button>
-              )}
-              {onOpenLanding && (
-                <button type="button" aria-label="소개로 이동" onClick={onOpenLanding}>
-                  Story X
-                </button>
-              )}
+              <button type="button" aria-label="프로젝트로 이동" onClick={onOpenProjects}>
+                <Home size={14} />
+              </button>
             </div>
           )}
           <button type="button" className="sx-command-k" aria-label="명령 팔레트 열기" onClick={() => setIsCommandPaletteOpen(true)}>
@@ -1078,33 +1173,6 @@ export function StoryXDesk({
           <span className="sx-user-avatar" aria-label="사용자 프로필">
             TX
           </span>
-          <nav className="sx-track-tabs" aria-label="작업 트랙">
-            <button
-              type="button"
-              className={activeTrack === 'draft' ? 'is-active' : ''}
-              onClick={() => {
-                setActiveTrack('draft');
-                setIsPublishingMode(false);
-                setIsMediaPanelOpen(false);
-              }}
-            >
-              <PenLine size={16} />
-              원고 편집
-            </button>
-            <button
-              type="button"
-              className={activeTrack === 'bible' ? 'is-active' : ''}
-              onClick={() => {
-                setActiveTrack('bible');
-                setIsPublishingMode(false);
-                setIsMediaPanelOpen(false);
-              }}
-            >
-              <Database size={16} />
-              작품 바이블
-              {bibleAlertCount > 0 && <span className="sx-bible-alert-badge">{bibleAlertCount}</span>}
-            </button>
-          </nav>
           <button
             type="button"
             className="sx-publish-button"
@@ -1115,17 +1183,17 @@ export function StoryXDesk({
             }}
           >
             <FileText size={16} />
-            출간 준비
+            출간
           </button>
           <button
             type="button"
             className="sx-media-change-button"
             aria-expanded={isMediaPanelOpen}
+            aria-label={`매체 변경 — 현재 ${blueprint.mediumLabel} ${blueprint.formatLabel}`}
             onClick={() => setIsMediaPanelOpen((current) => !current)}
           >
             <Layers size={16} />
-            매체 변경
-            <span>{blueprint.mediumLabel} · {blueprint.formatLabel}</span>
+            <span>매체</span>
           </button>
         </div>
       </header>
@@ -1186,7 +1254,17 @@ export function StoryXDesk({
 
       <section className="sx-desk-grid">
         <aside className="sx-project-rail" aria-label="프로젝트 대시보드">
-          <ProjectStateCard project={project} canonHealth={canonHealth} />
+          <ProjectStateCard
+            project={project}
+            canonHealth={canonHealth}
+            pendingApprovals={approvalQueue.items.filter((item) => item.status !== 'approved').length}
+            onJumpToBible={(section) => {
+              setActiveTrack('bible');
+              setActiveBibleSection(section);
+              setIsPublishingMode(false);
+              setIsMediaPanelOpen(false);
+            }}
+          />
 
           {isPublishingMode ? (
             <PublishingIndexCard plan={publishingPlan} />
@@ -1223,6 +1301,13 @@ export function StoryXDesk({
                 setActiveBibleSection('approval');
               }}
               onReviewDraft={reviewDraft}
+              onConfirmChapterLock={(chapterId) => {
+                setProject((current) => {
+                  const locked = lockChapter(current, chapterId);
+                  saveProject(locked);
+                  return locked;
+                });
+              }}
             />
           ) : activeTrack === 'draft' ? (
             <>
@@ -1244,52 +1329,26 @@ export function StoryXDesk({
                     name="draft-prompt"
                     value={draftPrompt}
                     onChange={(event) => updateDraftPrompt(event.target.value)}
-                    placeholder="예: 용사랑 외계인이 싸우는 장면으로 시작한다."
+                    placeholder={draftPromptPlaceholder}
                     rows={3}
                   />
+                  {isLatestLocked && latestChapter && (
+                    <p className="sx-lock-chip">
+                      <Lock size={12} aria-hidden="true" />
+                      <span>
+                        {latestChapter.episode}화는 출간 확정됨. 수정 대신 다음 회차로 진행합니다.
+                      </span>
+                    </p>
+                  )}
                 </div>
                 <div className="sx-editor-titlebar-actions">
                   <span>{blueprint.projectRoomTitle}</span>
-                  <button type="button" className="sx-primary-button" onClick={latestChapter ? reviewDraft : produceEpisode}>
-                    {latestChapter ? <ClipboardCheck size={16} /> : <WandSparkles size={17} />}
-                    {latestChapter ? '흐름 검증' : '초안 생성'}
+                  <button type="button" className="sx-primary-button" onClick={mainActionRun}>
+                    <MainActionIcon size={isLatestLocked || !latestChapter ? 17 : 16} />
+                    {mainActionLabel}
                   </button>
                 </div>
               </section>
-
-              <nav className="sx-editor-command-strip" aria-label="편집기 주요 동작">
-                <button type="button" className="sx-primary-button" onClick={latestChapter ? reviewDraft : produceEpisode}>
-                  {latestChapter ? <ClipboardCheck size={16} /> : <WandSparkles size={17} />}
-                  {latestChapter ? '흐름 검증' : '초안 생성'}
-                </button>
-                <button
-                  type="button"
-                  className="sx-secondary-button"
-                  onClick={() => {
-                    setActiveTrack('bible');
-                    setIsPublishingMode(false);
-                    setIsMediaPanelOpen(false);
-                  }}
-                >
-                  <Database size={15} />
-                  바이블 열기
-                </button>
-                <button
-                  type="button"
-                  className="sx-secondary-button"
-                  onClick={() => {
-                    setIsPublishingMode(true);
-                    setIsMediaPanelOpen(false);
-                  }}
-                >
-                  <FileText size={15} />
-                  출간으로
-                </button>
-                <button type="button" className="sx-secondary-button" onClick={() => setIsMediaPanelOpen((current) => !current)}>
-                  <Layers size={15} />
-                  형식 변경
-                </button>
-              </nav>
 
               <ChapterNavigator
                 chapters={project.chapters}
@@ -1568,10 +1627,14 @@ function ChapterTreeCard({
             <button
               key={chapter.id}
               type="button"
-              className={chapter.id === selectedChapterId ? 'is-selected' : ''}
+              className={`${chapter.id === selectedChapterId ? 'is-selected' : ''}${chapter.locked ? ' is-locked' : ''}`}
+              aria-label={chapter.locked ? `${chapter.episode}화 ${chapter.title} (출간 확정, 잠김)` : `${chapter.episode}화 ${chapter.title}`}
               onClick={() => onSelectChapter(chapter)}
             >
-              <span>{chapter.episode}화</span>
+              <span>
+                {chapter.episode}화
+                {chapter.locked && <Lock size={11} aria-hidden="true" />}
+              </span>
               <strong>{chapter.title}</strong>
               <small>{chapter.hook}</small>
             </button>
@@ -1651,7 +1714,8 @@ function PublishingStudio({
   plan,
   onBackToEditor,
   onOpenBible,
-  onReviewDraft
+  onReviewDraft,
+  onConfirmChapterLock
 }: {
   project: SeriesProject;
   blueprint: CreativeBlueprint;
@@ -1659,8 +1723,10 @@ function PublishingStudio({
   onBackToEditor: () => void;
   onOpenBible: () => void;
   onReviewDraft: () => void;
+  onConfirmChapterLock: (chapterId: string) => void;
 }) {
   const latestChapter = project.chapters[project.chapters.length - 1] ?? null;
+  const isLatestLocked = latestChapter?.locked === true;
 
   return (
     <section className="sx-publishing-studio" aria-label="출간 준비">
@@ -1677,6 +1743,21 @@ function PublishingStudio({
           <span>게시 위치</span>
           <strong>{blueprint.mediumLabel} · {blueprint.formatLabel}</strong>
           <small>{latestChapter ? `${latestChapter.episode}화 기준` : '초안 생성 후 출간 스냅샷 생성'}</small>
+          {latestChapter && (() => {
+            const labels = getCreativeActionLabels(blueprint.medium);
+            return (
+              <button
+                type="button"
+                className="sx-primary-button"
+                disabled={isLatestLocked}
+                aria-label={isLatestLocked ? `${latestChapter.episode}화는 이미 ${labels.lock}됨` : `${latestChapter.episode}화 ${labels.lock}`}
+                onClick={() => onConfirmChapterLock(latestChapter.id)}
+              >
+                <Lock size={15} />
+                {isLatestLocked ? labels.lockedChip : `${latestChapter.episode}화 ${labels.lock}`}
+              </button>
+            );
+          })()}
           <button type="button" className="sx-secondary-button" onClick={onBackToEditor}>
             편집으로 돌아가기
           </button>
@@ -2219,7 +2300,25 @@ function CanonRefactorPanel({
   );
 }
 
-function ProjectStateCard({ project, canonHealth }: { project: SeriesProject; canonHealth: number }) {
+function ProjectStateCard({
+  project,
+  canonHealth,
+  pendingApprovals,
+  onJumpToBible
+}: {
+  project: SeriesProject;
+  canonHealth: number;
+  pendingApprovals: number;
+  onJumpToBible: (section: BibleSection) => void;
+}) {
+  const handleJump = (section: BibleSection) => (event: React.MouseEvent | React.KeyboardEvent) => {
+    if ('key' in event && event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+    event.preventDefault();
+    onJumpToBible(section);
+  };
+
   return (
     <section className="sx-project-card">
       <p className="sx-eyebrow">프로젝트 상태</p>
@@ -2236,12 +2335,33 @@ function ProjectStateCard({ project, canonHealth }: { project: SeriesProject; ca
           <dt>회차</dt>
           <dd>{project.currentEpisode}</dd>
         </div>
-        <div>
+        <div
+          role="button"
+          tabIndex={0}
+          className="sx-project-card-link"
+          aria-label="바이블 캐논으로 이동"
+          onClick={handleJump('canon')}
+          onKeyDown={handleJump('canon')}
+        >
           <dt>캐논</dt>
           <dd>{project.canonFacts.length}</dd>
         </div>
-        <div>
-          <dt>질문</dt>
+        <div
+          role="button"
+          tabIndex={0}
+          className="sx-project-card-link"
+          aria-label={
+            pendingApprovals > 0
+              ? `바이블 승인 대기로 이동, ${pendingApprovals}개 대기`
+              : '바이블 승인 대기로 이동'
+          }
+          onClick={handleJump('approval')}
+          onKeyDown={handleJump('approval')}
+        >
+          <dt>
+            질문
+            {pendingApprovals > 0 && <span className="sx-pending-dot" aria-hidden="true" />}
+          </dt>
           <dd>{project.openThreads.length}</dd>
         </div>
       </dl>
@@ -2493,10 +2613,22 @@ function AgentSidebar({
             <button
               key={`${run.agentId}-${run.title}`}
               type="button"
-              className="sx-agent-card"
-              aria-label={`${persona.title} 자세한 지시사항 열기`}
+              className={`sx-agent-card sx-agent-card--${run.status}`}
+              aria-label={`${persona.title} ${agentStatusLabel(run.status)} 상태, 자세한 지시사항 열기`}
               onClick={() => onSelectAgent(run, persona)}
             >
+              <span
+                className="sx-agent-status-cluster"
+                role="status"
+                aria-label={`상태 ${agentStatusLabel(run.status)}`}
+              >
+                <span className={`sx-agent-status sx-agent-status--${run.status}`} aria-hidden="true" />
+                {(run.status === 'revise' || run.status === 'block') && (
+                  <span className={`sx-agent-status-label sx-agent-status-label--${run.status}`}>
+                    {agentStatusLabel(run.status)}
+                  </span>
+                )}
+              </span>
               <AgentPixelPortrait persona={persona} />
               <div>
                 <span>{persona.subtitle}</span>
@@ -2541,10 +2673,22 @@ function BibleAssistantSidebar({
             <button
               key={`${run.agentId}-${run.title}`}
               type="button"
-              className="sx-agent-card"
-              aria-label={`${persona.title} 자세한 지시사항 열기`}
+              className={`sx-agent-card sx-agent-card--${run.status}`}
+              aria-label={`${persona.title} ${agentStatusLabel(run.status)} 상태, 자세한 지시사항 열기`}
               onClick={() => onSelectAgent(run, persona)}
             >
+              <span
+                className="sx-agent-status-cluster"
+                role="status"
+                aria-label={`상태 ${agentStatusLabel(run.status)}`}
+              >
+                <span className={`sx-agent-status sx-agent-status--${run.status}`} aria-hidden="true" />
+                {(run.status === 'revise' || run.status === 'block') && (
+                  <span className={`sx-agent-status-label sx-agent-status-label--${run.status}`}>
+                    {agentStatusLabel(run.status)}
+                  </span>
+                )}
+              </span>
               <AgentPixelPortrait persona={persona} />
               <div>
                 <span>{run.title}</span>
@@ -2888,7 +3032,6 @@ function CreativeStage({
               주요 내용을 적고 초안 생성을 누르면, 원고와 후크가 이 영역에 크게 배치됩니다. 열린 질문은
               오른쪽 레일에 남겨 장면을 쓰는 동안 시야를 빼앗지 않게 했습니다.
             </p>
-            {project.openThreads.length > 0 && <small>열린 질문 {project.openThreads.length}개가 대기 중입니다.</small>}
           </article>
         )}
         {verticalSlicePanel}
