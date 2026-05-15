@@ -8461,7 +8461,7 @@ body {
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.48)),
     rgba(247, 245, 239, 0.82);
-  box-shadow: 0 18px 48px rgba(45, 38, 30, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  box-shadow: var(--sx-shadow-card);
 }
 
 .flow-agent-layer-card {
@@ -9266,7 +9266,7 @@ body {
   border: 1px solid var(--framer-hairline-soft);
   border-radius: var(--sx-radius-lg);
   background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 24px 70px rgba(45, 38, 30, 0.12);
+  box-shadow: var(--sx-shadow-elevated);
 }
 
 .auth-card h1,
@@ -9741,7 +9741,7 @@ body {
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.48)),
     rgba(247, 245, 239, 0.84);
-  box-shadow: 0 18px 48px rgba(45, 38, 30, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.66);
+  box-shadow: var(--sx-shadow-card);
 }
 
 .home-intake-head aside span {
