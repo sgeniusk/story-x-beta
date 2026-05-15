@@ -31,7 +31,7 @@ export const STORYX_VERSION: StoryXVersionInfo = {
   label: 'Alpha v0.7.1',
   codename: 'Editor Rail Fix',
   releasedAt: '2026-05-15',
-  latestCommit: '5919973',
+  latestCommit: '43b60ac',
   testProof: '111 tests passing',
   buildProof: 'Vite production build passing',
   summary: '회차 탭이 원고 행으로 늘어나는 에디터 레이아웃 문제를 고친 알파 핫픽스입니다.'
@@ -43,7 +43,7 @@ export const storyxVersionLog: StoryXVersionLogEntry[] = [
     label: 'Alpha v0.7.1',
     date: '2026-05-15',
     title: '에디터 회차 탭 레이아웃 핫픽스',
-    commit: '5919973',
+    commit: '43b60ac',
     changes: [
       '원고 화면의 작업대 행 구조를 원고 모드 전용 4행 레이아웃으로 분리했습니다.',
       '회차 탭이 620px 원고 행을 차지하며 세로 막대로 늘어나는 문제를 막았습니다.',
