@@ -3753,6 +3753,54 @@ body {
   line-height: 1.5;
 }
 
+.intake-open-note {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 18px 20px;
+  border: 1px dashed rgba(32, 32, 30, 0.16);
+  border-radius: var(--sx-radius-md, 14px);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.intake-open-note > span {
+  color: rgba(13, 83, 88, 0.78);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.intake-open-note h3 {
+  margin: 0;
+  color: var(--framer-ink, #20201e);
+  font-size: 1.02rem;
+  font-weight: 600;
+}
+
+.intake-open-note > p {
+  margin: 0;
+  color: rgba(32, 32, 30, 0.62);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.intake-open-note textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(32, 32, 30, 0.12);
+  border-radius: var(--sx-radius-sm, 10px);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--framer-ink, #20201e);
+  font-family: inherit;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.intake-open-note textarea:focus-visible {
+  outline: 2px solid rgba(13, 83, 88, 0.4);
+  outline-offset: 1px;
+}
+
 .home-fact-protection-note svg {
   flex: 0 0 auto;
   margin-top: 2px;

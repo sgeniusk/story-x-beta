@@ -781,6 +781,7 @@ function StoryXHome({
   const focusedScope = useMemo(() => getFocusedServiceScope(), []);
   const flowAgentMap = useMemo(() => buildFlowAgentMap(), []);
   const [intakeAnswers, setIntakeAnswers] = useState<Record<string, string>>({});
+  const [interviewNote, setInterviewNote] = useState('');
   const [freewriteText, setFreewriteText] = useState('');
   const [homeFlowStep, setHomeFlowStep] = useState<HomeFlowStep>('medium');
   const homeFlowSteps: Array<{ id: HomeFlowStep; label: string; caption: string }> = [
@@ -908,7 +909,15 @@ function StoryXHome({
                   }
                   rows={10}
                 />
-                <p className="home-freewrite-meter">{freewriteText.trim().length}자</p>
+                <p className="home-freewrite-meter">
+                  {freewriteText.trim().length}자
+                  {blueprint.medium === 'audiobook' && (() => {
+                    const charCount = freewriteText.trim().length;
+                    const minutes = Math.floor(charCount / 280);
+                    const seconds = Math.round((charCount % 280) / 280 * 60);
+                    return ` · 예상 낭독 ${minutes}분 ${seconds}초`;
+                  })()}
+                </p>
                 {blueprint.medium === 'essay' && (
                   <p className="home-fact-protection-note">
                     <Lock size={13} aria-hidden="true" />
@@ -988,6 +997,18 @@ function StoryXHome({
                     );
                   })}
                 </div>
+                <article className="intake-open-note">
+                  <span>+ 추가 메모 (선택)</span>
+                  <h3>객관식으로 안 들어가는 결정이 있나요?</h3>
+                  <p>세계관 설정·복선 한 줄·금기 같은 *주관식 답*을 자유롭게 적으시면 작가진이 인터뷰 답변과 함께 읽습니다.</p>
+                  <textarea
+                    aria-label="추가 메모 (주관식)"
+                    value={interviewNote}
+                    onChange={(event) => setInterviewNote(event.target.value)}
+                    placeholder="예: 1부는 인간 시점, 2부는 토착 종족 시점으로 같은 사건을 다시 본다. 시간선이 두 개라 회차 번호 옆에 표시 필요."
+                    rows={4}
+                  />
+                </article>
               </section>
             </div>
             <aside className="home-flow-side">
