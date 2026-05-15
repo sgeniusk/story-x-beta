@@ -783,6 +783,7 @@ function StoryXHome({
   const [intakeAnswers, setIntakeAnswers] = useState<Record<string, string>>({});
   const [interviewNote, setInterviewNote] = useState('');
   const [freewriteText, setFreewriteText] = useState('');
+  const [intakeQuestionIndex, setIntakeQuestionIndex] = useState(0);
   const [homeFlowStep, setHomeFlowStep] = useState<HomeFlowStep>('medium');
   const homeFlowSteps: Array<{ id: HomeFlowStep; label: string; caption: string }> = [
     { id: 'medium', label: '매체 선택', caption: '무엇을 만들지 정합니다.' },
@@ -970,14 +971,22 @@ function StoryXHome({
                   ))}
                   <em>후속: {focusedScope.later.join(' · ')}. 만화의 완성 이미지 생성은 후속 단계입니다.</em>
                 </div>
-                <div className="intake-question-grid">
-                  {intakePlan.questions.map((question, index) => {
+                <div className="intake-question-stepper">
+                  <div className="intake-progress" aria-label="질문 진행도">
+                    <span>{intakeQuestionIndex + 1} / {intakePlan.questions.length}</span>
+                    <div className="intake-progress-bar" aria-hidden="true">
+                      <i style={{ width: `${((intakeQuestionIndex + 1) / intakePlan.questions.length) * 100}%` }} />
+                    </div>
+                  </div>
+                  {(() => {
+                    const question = intakePlan.questions[intakeQuestionIndex];
+                    if (!question) return null;
                     const selectedOption = intakeAnswers[question.id] ?? question.recommendedOptionId;
 
                     return (
-                      <article className="intake-question-card" key={question.id}>
+                      <article className="intake-question-card is-active" key={question.id}>
                         <span>
-                          {String(index + 1).padStart(2, '0')} · {question.agentLabel}
+                          {String(intakeQuestionIndex + 1).padStart(2, '0')} · {question.agentLabel}
                         </span>
                         <h3>{question.question}</h3>
                         <div>
@@ -995,7 +1004,25 @@ function StoryXHome({
                         </div>
                       </article>
                     );
-                  })}
+                  })()}
+                  <div className="intake-question-nav">
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      disabled={intakeQuestionIndex === 0}
+                      onClick={() => setIntakeQuestionIndex((current) => Math.max(0, current - 1))}
+                    >
+                      이전 질문
+                    </button>
+                    <button
+                      type="button"
+                      className="button-primary"
+                      disabled={intakeQuestionIndex >= intakePlan.questions.length - 1}
+                      onClick={() => setIntakeQuestionIndex((current) => Math.min(intakePlan.questions.length - 1, current + 1))}
+                    >
+                      다음 질문
+                    </button>
+                  </div>
                 </div>
                 <article className="intake-open-note">
                   <span>+ 추가 메모 (선택)</span>

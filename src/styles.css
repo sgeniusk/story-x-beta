@@ -3753,6 +3753,57 @@ body {
   line-height: 1.5;
 }
 
+.intake-question-stepper {
+  display: grid;
+  gap: 16px;
+}
+
+.intake-progress {
+  display: grid;
+  gap: 6px;
+}
+
+.intake-progress span {
+  color: rgba(13, 83, 88, 0.78);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.intake-progress-bar {
+  position: relative;
+  height: 4px;
+  border-radius: var(--sx-radius-pill);
+  background: rgba(13, 83, 88, 0.1);
+  overflow: hidden;
+}
+
+.intake-progress-bar i {
+  display: block;
+  height: 100%;
+  background: rgba(13, 83, 88, 0.72);
+  border-radius: inherit;
+  transition: width 240ms ease-out;
+}
+
+.intake-question-card.is-active {
+  border-color: rgba(13, 83, 88, 0.2);
+}
+
+.intake-question-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.intake-question-nav button {
+  min-width: 120px;
+}
+
+.intake-question-nav button[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .intake-open-note {
   display: grid;
   gap: 8px;
