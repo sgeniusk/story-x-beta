@@ -7964,12 +7964,12 @@ body {
   --framer-gradient-violet: radial-gradient(circle at 20% 20%, #b8d3ee 0%, #f0c3a6 44%, #f8f4ea 100%);
   --framer-gradient-orange: linear-gradient(135deg, #f7c986 0%, #e79c82 48%, #f8f4ea 100%);
   --framer-gradient-coral: linear-gradient(135deg, #f6b8a4 0%, #f2dac4 46%, #eff1df 100%);
-  --framer-rounded-xs: 4px;
-  --framer-rounded-md: 10px;
-  --framer-rounded-lg: 15px;
-  --framer-rounded-xl: 20px;
-  --framer-rounded-xxl: 30px;
-  --framer-rounded-pill: 100px;
+  --framer-rounded-xs: var(--sx-radius-xs);
+  --framer-rounded-md: var(--sx-radius-sm);
+  --framer-rounded-lg: var(--sx-radius-md);
+  --framer-rounded-xl: var(--sx-radius-lg);
+  --framer-rounded-xxl: var(--sx-radius-lg);
+  --framer-rounded-pill: var(--sx-radius-pill);
   --framer-display-line-height: 1.08;
   --framer-max: 1199px;
 }
