@@ -1070,18 +1070,11 @@ export function StoryXDesk({
           </nav>
         </div>
         <div className="sx-topbar-actions">
-          {(onOpenProjects || onOpenLanding) && (
+          {onOpenProjects && (
             <div className="sx-app-nav-links" aria-label="앱 이동">
-              {onOpenProjects && (
-                <button type="button" aria-label="프로젝트로 이동" onClick={onOpenProjects}>
-                  <Home size={14} />
-                </button>
-              )}
-              {onOpenLanding && (
-                <button type="button" aria-label="소개로 이동" onClick={onOpenLanding}>
-                  Story X
-                </button>
-              )}
+              <button type="button" aria-label="프로젝트로 이동" onClick={onOpenProjects}>
+                <Home size={14} />
+              </button>
             </div>
           )}
           <button type="button" className="sx-command-k" aria-label="명령 팔레트 열기" onClick={() => setIsCommandPaletteOpen(true)}>
@@ -1133,17 +1126,17 @@ export function StoryXDesk({
             }}
           >
             <FileText size={16} />
-            출간 준비
+            출간
           </button>
           <button
             type="button"
             className="sx-media-change-button"
             aria-expanded={isMediaPanelOpen}
+            aria-label={`매체 변경 — 현재 ${blueprint.mediumLabel} ${blueprint.formatLabel}`}
             onClick={() => setIsMediaPanelOpen((current) => !current)}
           >
             <Layers size={16} />
-            매체 변경
-            <span>{blueprint.mediumLabel} · {blueprint.formatLabel}</span>
+            <span>매체</span>
           </button>
         </div>
       </header>
