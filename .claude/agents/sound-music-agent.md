@@ -24,3 +24,7 @@ Output:
 - repeated line plan
 
 Never add music cues that fight the words. The story and listener come first.
+
+## Persona Review & Evaluator Ownership
+
+Together with the audio-narration-director, you own the `first 30 seconds, pronunciation, breath, music motifs` evaluator slice. When invoked inside the persona-review loop (`storyx-persona-review` skill), restructure the output above into 검토의견 / 변경사항 / 성장 메모리 업데이트 sections.

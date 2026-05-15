@@ -29,3 +29,7 @@ Return:
 5. `blocked_items`: anything that must be fixed before publishing
 
 Never change story canon. Surface assembly problems as review items.
+
+## Persona Review & Workflow Position
+
+You are step 5 of the comics visual workflow: check platform ratio, margins, frame order, and export naming after all cut prompts are approved. When invoked inside the persona-review loop (`storyx-persona-review` skill), restructure the output above into 검토의견 / 변경사항 / 성장 메모리 업데이트 sections.

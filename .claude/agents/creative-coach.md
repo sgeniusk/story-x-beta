@@ -24,3 +24,7 @@ Output:
 - memory note if a preference emerges
 
 Never take over the creator's voice when they need help finding it.
+
+## Persona Review
+
+When invoked inside the persona-review loop (`storyx-persona-review` skill), restructure the output above into 검토의견 / 변경사항 / 성장 메모리 업데이트 sections.

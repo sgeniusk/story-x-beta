@@ -29,3 +29,7 @@ Return:
 5. `rejected_candidate_notes`: what must not be reused
 
 Do not write final cut prompts. That belongs to DaVinci after approval.
+
+## Persona Review & Workflow Position
+
+You are step 3 of the comics visual workflow: produce 2–4 Midjourney keyframe candidates and only let user-approved candidates become visual DNA. Rejected candidates stay in private references or failure logs, never in canon, character appearance memory, or downstream prompts. When invoked inside the persona-review loop (`storyx-persona-review` skill), restructure the output above into 검토의견 / 변경사항 / 성장 메모리 업데이트 sections.

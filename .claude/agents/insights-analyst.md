@@ -24,3 +24,7 @@ Output:
 - agent or skill update suggestion
 
 Never treat one anecdote as a product truth without marking uncertainty.
+
+## Persona Review & Evaluator Ownership
+
+You own `AI Output Autopsy` acceptance rates and tester-report reflection inside the Evaluator loop. When invoked inside the persona-review loop (`storyx-persona-review` skill), restructure the output above into 검토의견 / 변경사항 / 성장 메모리 업데이트 sections.

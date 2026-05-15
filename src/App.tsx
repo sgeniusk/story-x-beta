@@ -25,7 +25,7 @@ import {
   UserRound,
   WandSparkles
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
 import {
   buildCreativeBlueprint,
   getFormatOptions,
@@ -70,6 +70,7 @@ import { StoryXDesk } from './StoryXDesk';
 import { StoryXTestPage } from './StoryXTestPage';
 import storyXLogoLockup from './assets/brand/story-x-logo-lockup-mono.svg';
 import storyXHeroImage from './assets/story-x-hero-clear-coast.webp';
+import storyXForestImage from './assets/story-x-hero-forest-wind.png';
 
 const genreProfiles = getGenreProfiles();
 const mediumOptions = getMediumOptions();
@@ -280,6 +281,23 @@ function MarketingLanding({
   onOpenHome: () => void;
   onOpenLogin: () => void;
 }) {
+  const [heroMix, setHeroMix] = useState(0.5);
+  const prefersReducedMotion = useMemo(
+    () =>
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    []
+  );
+  const handleHeroMouseMove = (event: MouseEvent<HTMLElement>) => {
+    if (prefersReducedMotion) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const ratio = (event.clientX - rect.left) / rect.width;
+    setHeroMix(Math.max(0, Math.min(1, ratio)));
+  };
+  const handleHeroMouseLeave = () => {
+    setHeroMix(0.5);
+  };
   const creationPillars = [
     {
       label: 'Story core',
@@ -444,23 +462,38 @@ function MarketingLanding({
         onCtaClick={onOpenLogin}
       />
 
-      <section className="landing-hero" aria-labelledby="landing-title">
+      <section
+        className="landing-hero"
+        aria-labelledby="landing-title"
+        onMouseMove={handleHeroMouseMove}
+        onMouseLeave={handleHeroMouseLeave}
+        style={{ '--hero-mix': heroMix.toFixed(3) } as CSSProperties}
+      >
         <div className="hero-image-slot" aria-hidden="true">
           <div className="hero-image-fallback" />
-          <img src={storyXHeroImage} alt="" />
+          <img className="hero-image hero-image-forest" src={storyXForestImage} alt="" />
+          <img className="hero-image hero-image-wave" src={storyXHeroImage} alt="" />
         </div>
         <div className="hero-copy">
           <button type="button" className="news-pill" onClick={onOpenHome}>
-            Story workflows v0.2
+            Story X · 사람의 끌림과 AI의 일관성
             <ChevronRight size={14} />
           </button>
-          <h1 id="landing-title">The calm way to make stories.</h1>
+          <h1 id="landing-title">
+            바람은 작가가, 물결은 Story X가.
+            <br />
+            그 둘이 만나는 자리에서 무너지지 않는 이야기가 자랍니다.
+          </h1>
           <p>
-            Story X는 맑은 해안처럼 조용하지만, 안쪽에는 캐릭터, 세계관, 이미지, 음악, 오디오북까지
-            이어지는 정밀한 AI 제작 시스템을 품고 있습니다.
+            AI의 진짜 약점은 일관성입니다. 사람의 약점은 100화까지 지치지 않는 것입니다.
+            Story X는 그 둘을 뒤집어 배치합니다. 작가가 끌림과 충동을 만들고, 23명의 검토 에이전트와
+            메모리 뱅크가 캐릭터·세계·문체·흐름을 끝까지 지킵니다.
+          </p>
+          <p className="hero-longform-promise">
+            회차가 길어질수록, 시리즈가 깊어질수록 Story X는 더 단단해집니다.
           </p>
           <button type="button" className="button-primary hero-start-button" onClick={onOpenLogin}>
-            Get started
+            창작 시작
           </button>
         </div>
       </section>
@@ -566,9 +599,34 @@ function StoryCurrentSection() {
         <p className="framer-eyebrow">Brand Current</p>
         <h2>바람과 물결이 교차할 때, 나의 이야기가 완성됩니다.</h2>
         <p>
-          바람은 작가가 던지는 선택, 수정, 충동입니다. 물결은 메모리 뱅크와 에이전트 검토가 남기는
-          흐름입니다. Story X는 둘이 만나는 지점에서 회차, 문체, 인물, 세계관을 다시 정렬합니다.
+          바람은 작가가 던지는 선택, 수정, 충동입니다. 물결은 메모리 뱅크와 23명의 검토 에이전트가
+          남기는 흐름입니다. 두 흐름이 교차하는 자리에서 작품이 완성됩니다.
         </p>
+      </div>
+      <div className="two-track-map">
+        <article className="track-card track-wind">
+          <p className="track-eyebrow">바람 · 편집 트랙</p>
+          <h3>작가가 만드는 것</h3>
+          <ul>
+            <li>충동, 선택, 한 문장의 직관</li>
+            <li>회차 초안과 문장</li>
+            <li>장면 평가와 수정</li>
+            <li>Output Autopsy 승인 결정</li>
+          </ul>
+        </article>
+        <div className="track-confluence" aria-hidden="true">
+          <span>나의 이야기</span>
+        </div>
+        <article className="track-card track-wave">
+          <p className="track-eyebrow">물결 · 바이블 트랙</p>
+          <h3>Story X가 지키는 것</h3>
+          <ul>
+            <li>캐논 · 타임라인</li>
+            <li>캐릭터 욕망 / 상처 / 말투</li>
+            <li>세계 규칙 · 비용</li>
+            <li>문체 · 시각 · 오디오 앵커</li>
+          </ul>
+        </article>
       </div>
       <div className="current-wave-map" aria-hidden="true">
         <span>wind</span>
