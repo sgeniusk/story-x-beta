@@ -1350,40 +1350,6 @@ export function StoryXDesk({
                 </div>
               </section>
 
-              <nav className="sx-editor-command-strip" aria-label="편집기 주요 동작">
-                <button type="button" className="sx-primary-button" onClick={mainActionRun}>
-                  <MainActionIcon size={isLatestLocked || !latestChapter ? 17 : 16} />
-                  {mainActionLabel}
-                </button>
-                <button
-                  type="button"
-                  className="sx-secondary-button"
-                  onClick={() => {
-                    setActiveTrack('bible');
-                    setIsPublishingMode(false);
-                    setIsMediaPanelOpen(false);
-                  }}
-                >
-                  <Database size={15} />
-                  바이블 열기
-                </button>
-                <button
-                  type="button"
-                  className="sx-secondary-button"
-                  onClick={() => {
-                    setIsPublishingMode(true);
-                    setIsMediaPanelOpen(false);
-                  }}
-                >
-                  <FileText size={15} />
-                  출간으로
-                </button>
-                <button type="button" className="sx-secondary-button" onClick={() => setIsMediaPanelOpen((current) => !current)}>
-                  <Layers size={15} />
-                  형식 변경
-                </button>
-              </nav>
-
               <ChapterNavigator
                 chapters={project.chapters}
                 selectedChapterId={latestChapter?.id ?? null}
@@ -3066,7 +3032,6 @@ function CreativeStage({
               주요 내용을 적고 초안 생성을 누르면, 원고와 후크가 이 영역에 크게 배치됩니다. 열린 질문은
               오른쪽 레일에 남겨 장면을 쓰는 동안 시야를 빼앗지 않게 했습니다.
             </p>
-            {project.openThreads.length > 0 && <small>열린 질문 {project.openThreads.length}개가 대기 중입니다.</small>}
           </article>
         )}
         {verticalSlicePanel}
