@@ -64,6 +64,8 @@ import { buildComicsVisualWorkflow } from './lib/visualProduction';
 import { buildPublishingPlan, type PublishingPlan } from './lib/publishing';
 import { buildAlphaReadinessReport, type AlphaReadinessReport } from './lib/alphaReadiness';
 import { buildOneProjectVerticalSlice, type OneProjectVerticalSlice } from './lib/verticalSlice';
+import { STORYX_VERSION, storyxVersionLog } from './lib/version';
+import type { StoryXVersionInfo, StoryXVersionLogEntry } from './lib/version';
 import {
   buildCanonRefactorPlan,
   createCanonChangeEntry,
@@ -571,6 +573,7 @@ export function StoryXDesk({
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
+  const [isVersionLogOpen, setIsVersionLogOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AgentDialogSelection | null>(null);
   const [canonChanges, setCanonChanges] = useState<CanonChangeEntry[]>([]);
 
@@ -736,6 +739,13 @@ export function StoryXDesk({
           setIsPublishingMode(true);
           setIsMediaPanelOpen(false);
         }
+      },
+      {
+        id: 'open-version-log',
+        label: '변경 로그 보기',
+        section: '제품',
+        description: `${STORYX_VERSION.label} · ${STORYX_VERSION.summary}`,
+        run: () => setIsVersionLogOpen(true)
       },
       {
         id: 'reset-project',
@@ -1343,13 +1353,26 @@ export function StoryXDesk({
           )}
         </aside>
       </section>
-      <StoryXStatusBar alphaReport={alphaReport} project={project} editedSinceReview={editedSinceReview} />
+      <StoryXStatusBar
+        alphaReport={alphaReport}
+        project={project}
+        editedSinceReview={editedSinceReview}
+        version={STORYX_VERSION}
+        onOpenVersionLog={() => setIsVersionLogOpen(true)}
+      />
       {selectedAgent && (
         <AgentProfileDialog
           run={selectedAgent.run}
           persona={selectedAgent.persona}
           projectTitle={project.title}
           onClose={() => setSelectedAgent(null)}
+        />
+      )}
+      {isVersionLogOpen && (
+        <VersionLogDialog
+          version={STORYX_VERSION}
+          entries={storyxVersionLog}
+          onClose={() => setIsVersionLogOpen(false)}
         />
       )}
     </main>
@@ -1427,6 +1450,59 @@ function CommandPalette({
               </button>
             ))
           )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function VersionLogDialog({
+  version,
+  entries,
+  onClose
+}: {
+  version: StoryXVersionInfo;
+  entries: StoryXVersionLogEntry[];
+  onClose: () => void;
+}) {
+  return (
+    <div className="sx-version-log-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className="sx-version-log-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Story X 변경 로그"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <p className="sx-eyebrow">Story X Version Log</p>
+            <h2>{version.label}</h2>
+            <span>
+              {version.codename} · {version.testProof} · commit {version.latestCommit}
+            </span>
+          </div>
+          <button type="button" aria-label="변경 로그 닫기" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </header>
+        <p>{version.summary}</p>
+        <div className="sx-version-log-list">
+          {entries.map((entry) => (
+            <article key={entry.version}>
+              <span>{entry.label}</span>
+              <h3>{entry.title}</h3>
+              <small>
+                {entry.date} · commit {entry.commit}
+              </small>
+              <ul>
+                {entry.changes.map((change) => (
+                  <li key={change}>{change}</li>
+                ))}
+              </ul>
+              <em>Next: {entry.next}</em>
+            </article>
+          ))}
         </div>
       </section>
     </div>
@@ -2344,11 +2420,15 @@ function EvaluatorQualityCard({ workflow }: { workflow: TesterDrivenWorkflow }) 
 function StoryXStatusBar({
   alphaReport: report,
   project,
-  editedSinceReview
+  editedSinceReview,
+  version,
+  onOpenVersionLog
 }: {
   alphaReport: AlphaReadinessReport;
   project: SeriesProject;
   editedSinceReview: boolean;
+  version: StoryXVersionInfo;
+  onOpenVersionLog: () => void;
 }) {
   const statusLabels: Record<AlphaReadinessReport['status'], string> = {
     ready: '출시 가능',
@@ -2362,6 +2442,9 @@ function StoryXStatusBar({
         <ClipboardCheck size={16} />
         알파 셀프체크 {report.score}% · {statusLabels[report.status]}
       </span>
+      <button type="button" className="sx-statusbar-version" onClick={onOpenVersionLog}>
+        {version.label}
+      </button>
       <span>{report.nextActions[0]}</span>
       <span>{project.chapters.length} episodes · {project.canonFacts.length} canon</span>
       <span>{editedSinceReview ? '수정 미검토' : 'synced'}</span>

@@ -42,7 +42,8 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('className="sx-command-k"');
     expect(desk).toContain('className="sx-save-chip"');
     expect(desk).toContain('function StoryXStatusBar');
-    expect(desk).toContain('<StoryXStatusBar alphaReport={alphaReport}');
+    expect(desk).toContain('<StoryXStatusBar');
+    expect(desk).toContain('alphaReport={alphaReport}');
     expect(desk).not.toContain('AI 작가진과 함께, 흔들림 없는 세계관을 만듭니다.');
     expect(desk).not.toContain('<AlphaSelfCheckCard alphaReport={alphaReport} />');
     expect(css).toContain('.sx-statusbar');
