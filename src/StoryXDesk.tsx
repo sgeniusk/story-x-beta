@@ -1078,10 +1078,11 @@ export function StoryXDesk({
           <span className="sx-user-avatar" aria-label="사용자 프로필">
             TX
           </span>
+          <span className="sx-topbar-divider" aria-hidden="true" />
           <nav className="sx-track-tabs" aria-label="작업 트랙">
             <button
               type="button"
-              className={activeTrack === 'draft' ? 'is-active' : ''}
+              className={activeTrack === 'draft' && !isPublishingMode ? 'is-active' : ''}
               onClick={() => {
                 setActiveTrack('draft');
                 setIsPublishingMode(false);
@@ -1089,11 +1090,11 @@ export function StoryXDesk({
               }}
             >
               <PenLine size={16} />
-              원고 편집
+              편집
             </button>
             <button
               type="button"
-              className={activeTrack === 'bible' ? 'is-active' : ''}
+              className={activeTrack === 'bible' && !isPublishingMode ? 'is-active' : ''}
               onClick={() => {
                 setActiveTrack('bible');
                 setIsPublishingMode(false);
@@ -1101,10 +1102,11 @@ export function StoryXDesk({
               }}
             >
               <Database size={16} />
-              작품 바이블
+              바이블
               {bibleAlertCount > 0 && <span className="sx-bible-alert-badge">{bibleAlertCount}</span>}
             </button>
           </nav>
+          <span className="sx-topbar-divider" aria-hidden="true" />
           <button
             type="button"
             className="sx-publish-button"
