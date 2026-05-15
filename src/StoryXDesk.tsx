@@ -1891,18 +1891,13 @@ function MemoryBankStudio({
     <section className="sx-bible-studio" aria-label="작품 바이블">
       <header className="sx-bible-hero">
         <div>
-          <p className="sx-eyebrow">Memory Bank Studio</p>
-          <h2>작품 바이블</h2>
+          <p className="sx-eyebrow">작품 바이블</p>
+          <h2>{project.title}</h2>
           <p>
             캐릭터와 배경은 생성 폼이 아니라 계속 자라는 기억 카드입니다. 여기서 직접 고친 내용만 다음 원고와
             에이전트 검토의 기준이 됩니다.
           </p>
         </div>
-        <aside>
-          <span>{bank.root}</span>
-          <strong>{bank.syncableFiles.length} sync files</strong>
-          <small>private/raw-sources는 기본 컨텍스트에 포함하지 않습니다.</small>
-        </aside>
       </header>
 
       <div className={`sx-bible-workbench is-${activeSection}`}>
