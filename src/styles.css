@@ -5471,6 +5471,49 @@ body {
   font-weight: 760;
 }
 
+.sx-release-lock-panel {
+  align-items: center;
+  grid-template-columns: minmax(0, 0.7fr) minmax(220px, auto);
+}
+
+.sx-release-lock-panel > span,
+.sx-release-lock-panel h3,
+.sx-release-lock-panel p {
+  grid-column: 1;
+}
+
+.sx-release-lock-panel > div {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sx-release-lock-panel em {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(176, 88, 159, 0.12);
+  color: #80316f;
+  font-size: 0.74rem;
+  font-style: normal;
+  font-weight: 780;
+}
+
+.sx-release-lock-panel button {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  justify-self: end;
+}
+
+.sx-release-lock-panel button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.sx-release-lock-panel.is-ready {
+  border-color: rgba(94, 138, 78, 0.26);
+}
+
 .sx-memory-packet-card {
   background:
     linear-gradient(135deg, color-mix(in oklch, var(--sx-accent) 10%, transparent), transparent 48%),
@@ -6539,6 +6582,7 @@ body {
   .sx-bible-workbench-header,
   .sx-bible-impact-strip,
   .sx-canon-refactor-grid,
+  .sx-release-lock-panel,
   .sx-codex-rail {
     grid-template-columns: 1fr;
   }
@@ -6549,6 +6593,12 @@ body {
 
   .sx-topbar-actions {
     justify-content: flex-start;
+  }
+
+  .sx-release-lock-panel button {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: stretch;
   }
 
   .sx-project-rail,

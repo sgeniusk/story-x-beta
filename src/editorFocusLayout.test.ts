@@ -158,6 +158,8 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('onBackToEditor');
     expect(desk).toContain('출간 스냅샷');
     expect(desk).toContain('변경 로그 검토');
+    expect(desk).toContain('plan.releaseLock');
+    expect(desk).toContain('출간 스냅샷 잠그기');
     expect(desk).toContain('첫 300자');
     expect(desk).toContain('게시 위치');
     expect(desk).toContain('memory-approval');
@@ -165,6 +167,7 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-publishing-studio');
     expect(css).toContain('.sx-release-checklist');
     expect(css).toContain('.sx-release-gate-state');
+    expect(css).toContain('.sx-release-lock-panel');
     expect(css).toContain('.sx-platform-proof-card');
   });
 

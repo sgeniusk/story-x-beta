@@ -12,6 +12,13 @@ export interface PublishingChecklistItem {
   detail: string;
 }
 
+export interface PublishingReleaseLock {
+  canLock: boolean;
+  label: string;
+  blockerIds: string[];
+  notice: string;
+}
+
 export interface PublishingPlan {
   mode: PublishingMode;
   title: string;
@@ -22,6 +29,7 @@ export interface PublishingPlan {
   snapshotItems: string[];
   changeLogReview: string[];
   packageItems: string[];
+  releaseLock: PublishingReleaseLock;
 }
 
 export interface BuildPublishingPlanOptions {
@@ -37,6 +45,7 @@ export function buildPublishingPlan(
   const proofText = (latestChapter?.prose ?? project.logline).replace(/\s+/g, ' ').trim();
   const excerpt = proofText.length > 300 ? `${proofText.slice(0, 300)}...` : proofText;
   const releaseTarget = latestChapter ? `${latestChapter.episode}화 · ${latestChapter.title}` : '초안 없음';
+  const approvalsAreClear = isApprovalQueueClear(options.approvalQueue);
   let plan: PublishingPlan;
 
   if (blueprint.medium === 'essay') {
@@ -68,10 +77,11 @@ export function buildPublishingPlan(
       ],
       snapshotItems: ['출간본 스냅샷', '문체 샘플', '익명화 메모'],
       changeLogReview: ['변경 로그 검토', '실제 인물 보호 영향 범위', '문체 리팩터 영향 범위'],
-      packageItems: ['본문 원고', '소개 문구', '낭독 전환 후보']
+      packageItems: ['본문 원고', '소개 문구', '낭독 전환 후보'],
+      releaseLock: createReleaseLock([])
     };
 
-    return withMemoryApprovalGate(plan, options.approvalQueue);
+    return finalizePublishingPlan(plan, options.approvalQueue);
   }
 
   if (blueprint.medium === 'comics') {
@@ -103,10 +113,11 @@ export function buildPublishingPlan(
       ],
       snapshotItems: ['스토리보드 스냅샷', '컷 기능표', '말풍선 검토 메모'],
       changeLogReview: ['변경 로그 검토', '캐릭터 외형 후보 영향 범위', '컷 순서 영향 범위'],
-      packageItems: ['첫 3컷 스토리보드', '말풍선 밀도표', '컷별 연출 메모', '이미지 프롬프트 후속 후보']
+      packageItems: ['첫 3컷 스토리보드', '말풍선 밀도표', '컷별 연출 메모', '이미지 프롬프트 후속 후보'],
+      releaseLock: createReleaseLock([])
     };
 
-    return withMemoryApprovalGate(plan, options.approvalQueue);
+    return finalizePublishingPlan(plan, options.approvalQueue);
   }
 
   if (blueprint.medium === 'audiobook') {
@@ -126,10 +137,11 @@ export function buildPublishingPlan(
       ],
       snapshotItems: ['낭독 스냅샷', '자막 흐름', '음악 큐'],
       changeLogReview: ['변경 로그 검토', '문체/낭독 영향 범위'],
-      packageItems: ['내레이션 원고', '첫 30초 증거', '음악 큐 후보']
+      packageItems: ['내레이션 원고', '첫 30초 증거', '음악 큐 후보'],
+      releaseLock: createReleaseLock([])
     };
 
-    return withMemoryApprovalGate(plan, options.approvalQueue);
+    return finalizePublishingPlan(plan, options.approvalQueue);
   }
 
   plan = {
@@ -148,8 +160,10 @@ export function buildPublishingPlan(
       {
         id: 'canon',
         label: '캐논 충돌',
-        status: 'review',
-        detail: '출간본 기준으로 인물, 세계 규칙, 타임라인 충돌을 다시 봅니다.'
+        status: approvalsAreClear ? 'ready' : 'review',
+        detail: approvalsAreClear
+          ? '승인된 기억 후보 기준으로 인물, 세계 규칙, 타임라인 충돌을 잠정 통과했습니다.'
+          : '출간본 기준으로 인물, 세계 규칙, 타임라인 충돌을 다시 봅니다.'
       },
       {
         id: 'next-hook',
@@ -160,10 +174,15 @@ export function buildPublishingPlan(
     ],
     snapshotItems: ['회차 출간 스냅샷', '첫 300자', '새 캐논 후보', '다음 화 질문'],
     changeLogReview: ['변경 로그 검토', '캐논 리팩터 영향 범위', '기존 회차 충돌', '앞으로 전개 조언'],
-    packageItems: ['본문 원고', '플랫폼 소개 문구', '웹툰/동화책 전환 후보', '오디오북 제안']
+    packageItems: ['본문 원고', '플랫폼 소개 문구', '웹툰/동화책 전환 후보', '오디오북 제안'],
+    releaseLock: createReleaseLock([])
   };
 
-  return withMemoryApprovalGate(plan, options.approvalQueue);
+  return finalizePublishingPlan(plan, options.approvalQueue);
+}
+
+function finalizePublishingPlan(plan: PublishingPlan, approvalQueue?: MemoryApprovalQueue): PublishingPlan {
+  return withReleaseLock(withMemoryApprovalGate(plan, approvalQueue));
 }
 
 function withMemoryApprovalGate(plan: PublishingPlan, approvalQueue?: MemoryApprovalQueue): PublishingPlan {
@@ -195,4 +214,41 @@ function withMemoryApprovalGate(plan: PublishingPlan, approvalQueue?: MemoryAppr
         : `승인 대기 ${approvalQueue.summary.undecided}개 메모리 후보`
     ]
   };
+}
+
+function withReleaseLock(plan: PublishingPlan): PublishingPlan {
+  return {
+    ...plan,
+    releaseLock: createReleaseLock(plan.checklist)
+  };
+}
+
+function createReleaseLock(checklist: PublishingChecklistItem[]): PublishingReleaseLock {
+  const blockerIds = checklist.filter((item) => item.status !== 'ready').map((item) => item.id);
+
+  if (blockerIds.length === 0) {
+    return {
+      canLock: true,
+      label: '출간 스냅샷 잠그기',
+      blockerIds,
+      notice: '모든 release gate가 ready입니다. 현재 원고와 승인된 기억 후보로 출간 스냅샷을 잠글 수 있습니다.'
+    };
+  }
+
+  return {
+    canLock: false,
+    label: '게이트 검토 필요',
+    blockerIds,
+    notice: `${blockerIds.length}개 release gate 검토가 남아 있어 출간 스냅샷을 아직 잠글 수 없습니다.`
+  };
+}
+
+function isApprovalQueueClear(approvalQueue?: MemoryApprovalQueue) {
+  return Boolean(
+    approvalQueue &&
+      approvalQueue.summary.total > 0 &&
+      approvalQueue.summary.undecided === 0 &&
+      approvalQueue.summary.revision === 0 &&
+      approvalQueue.summary.hold === 0
+  );
 }

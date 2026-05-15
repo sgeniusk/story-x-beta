@@ -94,4 +94,38 @@ describe('Story X publishing plan', () => {
     expect(memoryGate?.detail).toContain('동기화 가능');
     expect(plan.snapshotItems).toContain('승인된 메모리 후보');
   });
+
+  it('blocks the release snapshot lock while any release gate needs review', () => {
+    const plan = buildPublishingPlan(
+      projectWithChapter(),
+      buildCreativeBlueprint({ medium: 'novel', format: 'long-novel' })
+    );
+
+    expect(plan.releaseLock.canLock).toBe(false);
+    expect(plan.releaseLock.blockerIds).toContain('canon');
+    expect(plan.releaseLock.notice).toContain('검토');
+  });
+
+  it('opens the release snapshot lock when every release gate is ready', () => {
+    const project = projectWithChapter();
+    const verticalSlice = buildOneProjectVerticalSlice();
+    const pendingQueue = buildMemoryApprovalQueue({
+      project,
+      reviewCandidates: verticalSlice.memoryCandidates
+    });
+    const approvalQueue = buildMemoryApprovalQueue({
+      project,
+      reviewCandidates: verticalSlice.memoryCandidates,
+      decisions: Object.fromEntries(pendingQueue.items.map((item) => [item.id, 'approved']))
+    });
+    const plan = buildPublishingPlan(
+      project,
+      buildCreativeBlueprint({ medium: 'novel', format: 'long-novel' }),
+      { approvalQueue }
+    );
+
+    expect(plan.releaseLock.canLock).toBe(true);
+    expect(plan.releaseLock.blockerIds).toEqual([]);
+    expect(plan.releaseLock.notice).toContain('잠글 수 있습니다');
+  });
 });

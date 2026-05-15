@@ -1410,6 +1410,23 @@ function PublishingStudio({
             출간 전 검토 실행
           </button>
         </article>
+
+        <article className={`sx-release-lock-panel is-${plan.releaseLock.canLock ? 'ready' : 'blocked'} is-wide`}>
+          <span>Release Lock</span>
+          <h3>출간 스냅샷 잠그기</h3>
+          <p>{plan.releaseLock.notice}</p>
+          {plan.releaseLock.blockerIds.length > 0 && (
+            <div>
+              {plan.releaseLock.blockerIds.map((id) => (
+                <em key={id}>{id}</em>
+              ))}
+            </div>
+          )}
+          <button type="button" className="sx-primary-button" disabled={!plan.releaseLock.canLock}>
+            <Save size={16} />
+            {plan.releaseLock.label}
+          </button>
+        </article>
       </div>
     </section>
   );
