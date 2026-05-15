@@ -290,6 +290,38 @@ function getAgentPersona(run: AgentRun) {
   return agentPersonas[run.agentId] ?? fallbackAgentPersona;
 }
 
+function getMediumChampionRun(medium: CreativeMedium): AgentRun | null {
+  switch (medium) {
+    case 'essay':
+      return {
+        agentId: 'essay-interviewer',
+        title: '에세이 인터뷰어',
+        status: 'idle',
+        output: '자유 서술에 적은 경험을 기반으로 질문을 만들고, 사실 보호 모드 안에서 AI가 새 디테일을 발명하지 않게 지킵니다.',
+        evidence: ['lived material', 'fact protection']
+      };
+    case 'audiobook':
+      return {
+        agentId: 'audio-narration-director',
+        title: '낭독 연출가',
+        status: 'idle',
+        output: '낭독 톤, 쉼, 호흡, 청취 피로를 책임집니다. 첫 30초 proof와 회차 분당 낭독 시간을 봅니다.',
+        evidence: ['narration tone', 'pause map']
+      };
+    case 'comics':
+      return {
+        agentId: 'storyboard-agent',
+        title: '스토리보드 작가',
+        status: 'idle',
+        output: '컷 리듬, 말풍선 위치, 스크롤 후크, 캐릭터 외관 일관성을 책임집니다.',
+        evidence: ['panel rhythm', 'visual continuity']
+      };
+    case 'novel':
+    default:
+      return null;
+  }
+}
+
 function mergeAgentRuns(primaryRuns: AgentRun[], extraRuns: AgentRun[]) {
   const seen = new Set(primaryRuns.map((run) => run.agentId));
 
@@ -654,8 +686,16 @@ export function StoryXDesk({
     [project, reviewProvider, reviewScale]
   );
   const displayedAgentRuns = useMemo(
-    () => (blueprint.nextWorkspace === 'visual-storyboard-studio' ? mergeAgentRuns(agentRuns, visualStoryAgentRuns) : agentRuns),
-    [agentRuns, blueprint.nextWorkspace]
+    () => {
+      const baseRuns = blueprint.nextWorkspace === 'visual-storyboard-studio'
+        ? mergeAgentRuns(agentRuns, visualStoryAgentRuns)
+        : agentRuns;
+      const champion = getMediumChampionRun(blueprint.medium);
+      if (!champion) return baseRuns;
+      if (baseRuns.some((run) => run.agentId === champion.agentId)) return baseRuns;
+      return [...baseRuns, champion];
+    },
+    [agentRuns, blueprint.medium, blueprint.nextWorkspace]
   );
   const bibleAssistantRuns = useMemo(
     () => buildBibleAssistantRuns(project, approvalQueue, canonRefactorPlan, latestReviewResult),
