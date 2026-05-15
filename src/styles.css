@@ -3280,6 +3280,194 @@ body {
   font-size: 0.78rem;
 }
 
+.sx-command-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: start center;
+  padding: min(14vh, 110px) 20px 40px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.82), transparent 42%),
+    rgba(22, 20, 17, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+.sx-command-palette {
+  width: min(640px, 100%);
+  overflow: hidden;
+  border: 1px solid rgba(32, 32, 30, 0.12);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.62)),
+    var(--sx-card);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 30px 80px rgba(22, 20, 17, 0.24);
+}
+
+.sx-command-palette header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--sx-line);
+}
+
+.sx-command-palette h2 {
+  margin: 2px 0 0;
+  color: var(--sx-ink);
+  font-size: 1.45rem;
+  line-height: 1.2;
+}
+
+.sx-command-palette header button {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--sx-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--sx-ink-2);
+}
+
+.sx-command-palette form {
+  padding: 14px 20px 12px;
+}
+
+.sx-command-palette label {
+  display: grid;
+  gap: 8px;
+}
+
+.sx-command-palette label span {
+  color: var(--sx-muted);
+  font-size: 0.78rem;
+  font-weight: 720;
+}
+
+.sx-command-palette input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--sx-line);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--sx-ink);
+  font: inherit;
+  font-size: 0.96rem;
+  outline: none;
+}
+
+.sx-command-palette input:focus {
+  border-color: color-mix(in oklch, var(--sx-accent) 52%, var(--sx-line));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--sx-accent) 15%, transparent);
+}
+
+.sx-command-list {
+  display: grid;
+  max-height: min(58vh, 520px);
+  overflow: auto;
+  gap: 8px;
+  padding: 0 12px 14px;
+}
+
+.sx-command-list > p {
+  margin: 0;
+  padding: 18px;
+  color: var(--sx-muted);
+  text-align: center;
+}
+
+.sx-command-list button {
+  position: relative;
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) auto;
+  gap: 3px 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  background: transparent;
+  color: var(--sx-ink);
+  text-align: left;
+}
+
+.sx-command-list button:hover,
+.sx-command-list button:focus-visible {
+  border-color: var(--sx-line);
+  background: rgba(255, 255, 255, 0.64);
+  outline: none;
+}
+
+.sx-command-list button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.sx-command-list span {
+  grid-row: span 2;
+  color: color-mix(in oklch, var(--sx-accent) 74%, var(--sx-ink));
+  font-size: 0.74rem;
+  font-weight: 780;
+}
+
+.sx-command-list strong {
+  overflow: hidden;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sx-command-list small {
+  overflow: hidden;
+  color: var(--sx-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sx-command-list em {
+  grid-row: span 2;
+  padding: 5px 8px;
+  border: 1px solid var(--sx-line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--sx-ink-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  font-style: normal;
+}
+
+@media (max-width: 640px) {
+  .sx-command-palette-backdrop {
+    padding: 12px;
+    place-items: start stretch;
+  }
+
+  .sx-command-palette {
+    border-radius: 18px;
+  }
+
+  .sx-command-list button {
+    grid-template-columns: 1fr auto;
+  }
+
+  .sx-command-list span {
+    grid-row: auto;
+    grid-column: 1 / -1;
+  }
+
+  .sx-command-list small {
+    grid-column: 1 / -1;
+    white-space: normal;
+  }
+}
+
 .sx-save-chip {
   border-color: var(--sx-line);
   background: rgba(255, 255, 255, 0.52);

@@ -85,6 +85,22 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-chapter-tree');
   });
 
+  it('adds a command palette for quick navigation and editor actions', () => {
+    expect(desk).toContain('const [isCommandPaletteOpen, setIsCommandPaletteOpen]');
+    expect(desk).toContain('const [commandQuery, setCommandQuery]');
+    expect(desk).toContain('const commandItems = useMemo<DeskCommand[]>');
+    expect(desk).toContain('function CommandPalette');
+    expect(desk).toContain('aria-label="명령 팔레트 열기"');
+    expect(desk).toContain('onClick={() => setIsCommandPaletteOpen(true)}');
+    expect(desk).toContain("event.key.toLowerCase() === 'k'");
+    expect(desk).toContain('명령 또는 화면 검색');
+    expect(desk).toContain('승인 대기 열기');
+    expect(desk).toContain('집중 모드 토글');
+    expect(css).toContain('.sx-command-palette-backdrop');
+    expect(css).toContain('.sx-command-palette');
+    expect(css).toContain('.sx-command-list');
+  });
+
   it('uses a two-track editor with publishing moved to a separate action', () => {
     expect(desk).toContain("type DeskTrack = 'draft' | 'bible'");
     expect(desk).toContain("type BibleSection = 'overview' | 'characters' | 'world' | 'canon' | 'voice' | 'approval'");

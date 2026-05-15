@@ -128,6 +128,16 @@ interface BibleSectionState {
   }>;
 }
 
+interface DeskCommand {
+  id: string;
+  label: string;
+  section: string;
+  description: string;
+  shortcut?: string;
+  disabled?: boolean;
+  run: () => void;
+}
+
 const agentPersonas: Record<string, AgentPersona> = {
   showrunner: {
     id: 'showrunner',
@@ -559,6 +569,8 @@ export function StoryXDesk({
   const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(false);
   const [isPublishingMode, setIsPublishingMode] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState('');
   const [selectedAgent, setSelectedAgent] = useState<AgentDialogSelection | null>(null);
   const [canonChanges, setCanonChanges] = useState<CanonChangeEntry[]>([]);
 
@@ -637,10 +649,160 @@ export function StoryXDesk({
   const activeModeLabel = isPublishingMode ? '출간 준비' : activeTrack === 'bible' ? '작품 바이블' : '원고';
   const chapterCrumb = latestChapter ? `${latestChapter.episode}화` : '새 초안';
   const saveLabel = editedSinceReview ? '수정 중' : '저장됨';
+  const commandItems = useMemo<DeskCommand[]>(
+    () => [
+      {
+        id: 'draft-main-action',
+        label: latestChapter ? '흐름 검증' : '초안 생성',
+        section: '원고',
+        description: latestChapter ? '현재 원고를 작가진이 다시 검토합니다.' : '입력한 주요 내용으로 첫 회차 초안을 만듭니다.',
+        shortcut: latestChapter ? 'Review' : 'Draft',
+        run: latestChapter ? reviewDraft : produceEpisode
+      },
+      {
+        id: 'open-draft',
+        label: '원고 편집 열기',
+        section: '이동',
+        description: '중앙 작업장을 원고 편집 화면으로 전환합니다.',
+        run: () => {
+          setActiveTrack('draft');
+          setIsPublishingMode(false);
+          setIsMediaPanelOpen(false);
+        }
+      },
+      {
+        id: 'open-bible',
+        label: '작품 바이블 열기',
+        section: '이동',
+        description: '캐릭터, 세계관, 캐논, 문체를 편집하는 작업장으로 이동합니다.',
+        run: () => {
+          setActiveTrack('bible');
+          setActiveBibleSection('overview');
+          setIsPublishingMode(false);
+          setIsMediaPanelOpen(false);
+        }
+      },
+      {
+        id: 'open-approval',
+        label: '승인 대기 열기',
+        section: '메모리',
+        description: `${approvalQueue.summary.total}개 기억 후보를 확인하고 canon 반영 여부를 결정합니다.`,
+        run: () => {
+          setActiveTrack('bible');
+          setActiveBibleSection('approval');
+          setIsPublishingMode(false);
+          setIsMediaPanelOpen(false);
+        }
+      },
+      {
+        id: 'request-bible-review',
+        label: '바이블 변경 검토',
+        section: '메모리',
+        description: '변경 로그와 승인 대기 후보를 기준으로 조수진 검토를 실행합니다.',
+        run: requestBibleReview
+      },
+      {
+        id: 'open-publishing',
+        label: '출간 준비 열기',
+        section: '출간',
+        description: '릴리즈 게이트와 출간 스냅샷 잠금 상태를 확인합니다.',
+        run: () => {
+          setIsPublishingMode(true);
+          setIsMediaPanelOpen(false);
+        }
+      },
+      {
+        id: 'open-media-change',
+        label: '매체 변경',
+        section: '설정',
+        description: `${blueprint.mediumLabel} · ${blueprint.formatLabel}에서 다른 형식으로 전환합니다.`,
+        run: () => setIsMediaPanelOpen(true)
+      },
+      {
+        id: 'toggle-focus',
+        label: '집중 모드 토글',
+        section: '보기',
+        description: isFocusMode ? '좌우 레일을 다시 표시합니다.' : '좌우 레일을 숨기고 원고 영역을 넓힙니다.',
+        shortcut: '⌘.',
+        run: () => setIsFocusMode((current) => !current)
+      },
+      {
+        id: 'release-lock-check',
+        label: publishingPlan.releaseLock.canLock ? '출간 스냅샷 잠금 가능' : '출간 게이트 확인',
+        section: '출간',
+        description: publishingPlan.releaseLock.notice,
+        disabled: false,
+        run: () => {
+          setIsPublishingMode(true);
+          setIsMediaPanelOpen(false);
+        }
+      },
+      {
+        id: 'reset-project',
+        label: '로컬 샘플 초기화',
+        section: '관리',
+        description: '현재 로컬 프로젝트를 초기 샘플 상태로 되돌립니다.',
+        run: resetProject
+      }
+    ],
+    [
+      approvalQueue.summary.total,
+      blueprint.formatLabel,
+      blueprint.mediumLabel,
+      canonChanges,
+      canonRefactorPlan.summary,
+      draftPrompt,
+      editorText,
+      isFocusMode,
+      latestChapter,
+      publishingPlan.releaseLock.canLock,
+      publishingPlan.releaseLock.notice,
+      project,
+      request,
+      reviewScale
+    ]
+  );
+  const filteredCommandItems = useMemo(() => {
+    const normalizedQuery = commandQuery.trim().toLocaleLowerCase();
+
+    if (!normalizedQuery) {
+      return commandItems;
+    }
+
+    return commandItems.filter((command) =>
+      [command.label, command.section, command.description].join(' ').toLocaleLowerCase().includes(normalizedQuery)
+    );
+  }, [commandItems, commandQuery]);
 
   useEffect(() => {
     saveProject(project);
   }, [project]);
+
+  useEffect(() => {
+    function handleGlobalShortcut(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setCommandQuery('');
+        setIsCommandPaletteOpen((current) => !current);
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key === '.') {
+        event.preventDefault();
+        setIsFocusMode((current) => !current);
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        setIsCommandPaletteOpen(false);
+        setIsMediaPanelOpen(false);
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalShortcut);
+
+    return () => window.removeEventListener('keydown', handleGlobalShortcut);
+  }, []);
 
   useEffect(() => {
     if (!latestChapter) {
@@ -896,7 +1058,7 @@ export function StoryXDesk({
               )}
             </div>
           )}
-          <button type="button" className="sx-command-k" aria-label="명령 팔레트 열기">
+          <button type="button" className="sx-command-k" aria-label="명령 팔레트 열기" onClick={() => setIsCommandPaletteOpen(true)}>
             ⌘K
           </button>
           <span className="sx-save-chip" data-state={editedSinceReview ? 'dirty' : 'synced'}>
@@ -996,6 +1158,20 @@ export function StoryXDesk({
             </div>
           </div>
         </section>
+      )}
+
+      {isCommandPaletteOpen && (
+        <CommandPalette
+          query={commandQuery}
+          commands={filteredCommandItems}
+          onQueryChange={setCommandQuery}
+          onClose={() => setIsCommandPaletteOpen(false)}
+          onRunCommand={(command) => {
+            command.run();
+            setIsCommandPaletteOpen(false);
+            setCommandQuery('');
+          }}
+        />
       )}
 
       <section className="sx-desk-grid">
@@ -1177,6 +1353,83 @@ export function StoryXDesk({
         />
       )}
     </main>
+  );
+}
+
+function CommandPalette({
+  query,
+  commands,
+  onQueryChange,
+  onClose,
+  onRunCommand
+}: {
+  query: string;
+  commands: DeskCommand[];
+  onQueryChange: (value: string) => void;
+  onClose: () => void;
+  onRunCommand: (command: DeskCommand) => void;
+}) {
+  const firstRunnableCommand = commands.find((command) => !command.disabled);
+
+  function submitFirstCommand(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (firstRunnableCommand) {
+      onRunCommand(firstRunnableCommand);
+    }
+  }
+
+  return (
+    <div className="sx-command-palette-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className="sx-command-palette"
+        role="dialog"
+        aria-modal="true"
+        aria-label="명령 팔레트"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <span className="sx-eyebrow">Command Center</span>
+            <h2>무엇을 할까요?</h2>
+          </div>
+          <button type="button" aria-label="명령 팔레트 닫기" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </header>
+        <form onSubmit={submitFirstCommand}>
+          <label>
+            <span>명령 또는 화면 검색</span>
+            <input
+              value={query}
+              onChange={(event) => onQueryChange(event.target.value)}
+              placeholder="예: 승인 대기, 출간, 집중 모드"
+              autoFocus
+            />
+          </label>
+        </form>
+        <div className="sx-command-list" role="listbox" aria-label="실행 가능한 명령">
+          {commands.length === 0 ? (
+            <p>검색 결과가 없습니다.</p>
+          ) : (
+            commands.map((command) => (
+              <button
+                key={command.id}
+                type="button"
+                disabled={command.disabled}
+                onClick={() => onRunCommand(command)}
+                role="option"
+              >
+                <span>{command.section}</span>
+                <strong>{command.label}</strong>
+                <small>{command.description}</small>
+                {command.shortcut && <em>{command.shortcut}</em>}
+              </button>
+            ))
+          )}
+        </div>
+      </section>
+    </div>
   );
 }
 
