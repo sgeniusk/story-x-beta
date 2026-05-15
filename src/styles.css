@@ -5568,15 +5568,13 @@ body {
 
 .sx-bible-workbench-header {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(220px, 0.62fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(200px, 0.56fr);
   gap: var(--sx-space-3);
   align-items: stretch;
-  padding: var(--sx-space-4);
-  border: 1px solid rgba(255, 255, 255, 0.64);
+  padding: var(--sx-space-3);
+  border: 1px solid var(--sx-line);
   border-radius: var(--framer-rounded-xl);
-  background:
-    radial-gradient(circle at 0% 0%, rgba(176, 88, 159, 0.12), transparent 18rem),
-    rgba(255, 255, 255, 0.58);
+  background: color-mix(in srgb, var(--sx-card) 82%, transparent);
 }
 
 .sx-bible-workbench-header > div:first-child {
@@ -5628,7 +5626,7 @@ body {
 .sx-bible-impact-strip article,
 .sx-bible-review-route {
   min-width: 0;
-  padding: var(--sx-space-3);
+  padding: var(--sx-space-2);
   border: 1px solid var(--sx-line);
   border-radius: var(--sx-radius-md);
   background: color-mix(in srgb, var(--sx-paper) 76%, white);
@@ -5644,9 +5642,9 @@ body {
 
 .sx-bible-impact-strip strong {
   display: block;
-  margin-top: 6px;
+  margin-top: 5px;
   color: var(--sx-ink);
-  font-size: 0.98rem;
+  font-size: 0.88rem;
   line-height: 1.25;
 }
 
