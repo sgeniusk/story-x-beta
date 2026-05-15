@@ -5429,9 +5429,9 @@ body {
 .sx-bible-hero h2 {
   margin: 6px 0 0;
   color: var(--sx-ink);
-  font-size: clamp(2rem, 4vw, 4.3rem);
+  font-size: clamp(1.8rem, 3vw, 3rem);
   font-weight: var(--sx-weight-semibold);
-  line-height: 1.05;
+  line-height: 1.08;
   letter-spacing: 0;
 }
 
