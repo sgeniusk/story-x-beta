@@ -670,15 +670,30 @@ export function StoryXDesk({
   const activeModeLabel = isPublishingMode ? '출간 준비' : activeTrack === 'bible' ? '작품 바이블' : '원고';
   const chapterCrumb = latestChapter ? `${latestChapter.episode}화` : '새 초안';
   const saveLabel = editedSinceReview ? '수정 중' : '저장됨';
+  const isLatestLocked = latestChapter?.locked === true;
+  const mainActionLabel = !latestChapter
+    ? '초안 생성'
+    : isLatestLocked
+      ? `${latestChapter.episode + 1}화 만들기`
+      : '흐름 검증';
+  const mainActionRun = !latestChapter || isLatestLocked ? produceEpisode : reviewDraft;
+  const MainActionIcon = !latestChapter || isLatestLocked ? WandSparkles : ClipboardCheck;
+  const draftPromptPlaceholder = isLatestLocked
+    ? '잠긴 회차 다음 화에 담을 사건을 적어주세요.'
+    : '예: 용사랑 외계인이 싸우는 장면으로 시작한다.';
   const commandItems = useMemo<DeskCommand[]>(
     () => [
       {
         id: 'draft-main-action',
-        label: latestChapter ? '흐름 검증' : '초안 생성',
+        label: mainActionLabel,
         section: '원고',
-        description: latestChapter ? '현재 원고를 작가진이 다시 검토합니다.' : '입력한 주요 내용으로 첫 회차 초안을 만듭니다.',
-        shortcut: latestChapter ? 'Review' : 'Draft',
-        run: latestChapter ? reviewDraft : produceEpisode
+        description: isLatestLocked
+          ? '잠긴 회차는 그대로 두고 다음 회차를 새로 만듭니다.'
+          : latestChapter
+            ? '현재 원고를 작가진이 다시 검토합니다.'
+            : '입력한 주요 내용으로 첫 회차 초안을 만듭니다.',
+        shortcut: isLatestLocked ? 'NextEp' : latestChapter ? 'Review' : 'Draft',
+        run: mainActionRun
       },
       {
         id: 'open-draft',
@@ -1272,23 +1287,31 @@ export function StoryXDesk({
                     name="draft-prompt"
                     value={draftPrompt}
                     onChange={(event) => updateDraftPrompt(event.target.value)}
-                    placeholder="예: 용사랑 외계인이 싸우는 장면으로 시작한다."
+                    placeholder={draftPromptPlaceholder}
                     rows={3}
                   />
+                  {isLatestLocked && latestChapter && (
+                    <p className="sx-lock-chip">
+                      <Lock size={12} aria-hidden="true" />
+                      <span>
+                        {latestChapter.episode}화는 출간 확정됨. 수정 대신 다음 회차로 진행합니다.
+                      </span>
+                    </p>
+                  )}
                 </div>
                 <div className="sx-editor-titlebar-actions">
                   <span>{blueprint.projectRoomTitle}</span>
-                  <button type="button" className="sx-primary-button" onClick={latestChapter ? reviewDraft : produceEpisode}>
-                    {latestChapter ? <ClipboardCheck size={16} /> : <WandSparkles size={17} />}
-                    {latestChapter ? '흐름 검증' : '초안 생성'}
+                  <button type="button" className="sx-primary-button" onClick={mainActionRun}>
+                    <MainActionIcon size={isLatestLocked || !latestChapter ? 17 : 16} />
+                    {mainActionLabel}
                   </button>
                 </div>
               </section>
 
               <nav className="sx-editor-command-strip" aria-label="편집기 주요 동작">
-                <button type="button" className="sx-primary-button" onClick={latestChapter ? reviewDraft : produceEpisode}>
-                  {latestChapter ? <ClipboardCheck size={16} /> : <WandSparkles size={17} />}
-                  {latestChapter ? '흐름 검증' : '초안 생성'}
+                <button type="button" className="sx-primary-button" onClick={mainActionRun}>
+                  <MainActionIcon size={isLatestLocked || !latestChapter ? 17 : 16} />
+                  {mainActionLabel}
                 </button>
                 <button
                   type="button"

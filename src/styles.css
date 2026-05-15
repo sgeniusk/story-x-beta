@@ -3663,6 +3663,19 @@ body {
   border-color: rgba(13, 83, 88, 0.16);
 }
 
+.sx-lock-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(13, 83, 88, 0.08);
+  color: rgba(13, 83, 88, 0.82);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 .sx-chapter-tree-list button.is-locked span {
   display: inline-flex;
   align-items: center;
