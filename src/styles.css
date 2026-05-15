@@ -3123,6 +3123,9 @@ body {
 }
 
 .sx-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 18px;
@@ -3134,12 +3137,12 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.62);
   border-radius: 999px;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.28)),
-    rgba(248, 246, 239, 0.45);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(252, 250, 244, 0.94)),
+    var(--sx-paper);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.78),
     inset 0 -1px 0 rgba(255, 255, 255, 0.22),
-    0 20px 48px rgba(45, 38, 30, 0.12);
+    0 20px 48px rgba(45, 38, 30, 0.16);
   backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
 }
