@@ -177,7 +177,7 @@ const homepageRoadmapItems = [
 
 type ActivePane = 'chapter' | 'canon';
 type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor';
-type HomeFlowStep = 'medium' | 'intake';
+type HomeFlowStep = 'medium' | 'freewrite' | 'intake';
 type StoryXNavLink = {
   label: string;
   target: string;
@@ -780,10 +780,12 @@ function StoryXHome({
   const focusedScope = useMemo(() => getFocusedServiceScope(), []);
   const flowAgentMap = useMemo(() => buildFlowAgentMap(), []);
   const [intakeAnswers, setIntakeAnswers] = useState<Record<string, string>>({});
+  const [freewriteText, setFreewriteText] = useState('');
   const [homeFlowStep, setHomeFlowStep] = useState<HomeFlowStep>('medium');
   const homeFlowSteps: Array<{ id: HomeFlowStep; label: string; caption: string }> = [
     { id: 'medium', label: '매체 선택', caption: '무엇을 만들지 정합니다.' },
-    { id: 'intake', label: '성향 질문', caption: '에이전트가 작품 기준을 묻습니다.' }
+    { id: 'freewrite', label: '자유 서술', caption: '쓰고 싶은 이야기를 흘려 적습니다.' },
+    { id: 'intake', label: '작가 인터뷰', caption: '에이전트가 맞춤 질문을 합니다.' }
   ];
   const homeFlowIndex = homeFlowSteps.findIndex((step) => step.id === homeFlowStep);
 
@@ -870,9 +872,55 @@ function StoryXHome({
                 </div>
                 <p className="workflow-proof">{workflowBoard.platformProof}</p>
               </article>
-              <button type="button" className="button-primary home-next-button" onClick={() => setHomeFlowStep('intake')}>
-                질문으로 계속
+              <button type="button" className="button-primary home-next-button" onClick={() => setHomeFlowStep('freewrite')}>
+                자유 서술로 계속
               </button>
+            </aside>
+          </section>
+
+          <section className="home-flow-panel is-freewrite" id="freewrite" aria-label="자유 서술 단계">
+            <div className="home-flow-main">
+              <section className="home-freewrite-stage">
+                <div className="home-intake-head">
+                  <div>
+                    <p className="framer-eyebrow">02 · 자유 서술</p>
+                    <h2>쓰고 싶은 이야기를 자유롭게 적어주세요.</h2>
+                    <p>
+                      구조, 인물 이름, 사건 순서는 신경 쓰지 않아도 됩니다. 떠오르는 대로 한 문단 정도면
+                      충분합니다. 다음 단계에서 작가진이 이 글을 읽고 맞춤 질문을 드립니다.
+                    </p>
+                  </div>
+                  <aside>
+                    <span>{blueprint.mediumLabel} · {blueprint.formatLabel}</span>
+                    <p>이 자유 서술은 인터뷰 + 첫 회차 초안의 기준이 됩니다. 비워두고 진행해도 인터뷰는 작동하지만, 한두 줄이라도 적으면 질문이 훨씬 정확해집니다.</p>
+                  </aside>
+                </div>
+                <textarea
+                  className="home-freewrite-input"
+                  aria-label="자유 서술 입력"
+                  value={freewriteText}
+                  onChange={(event) => setFreewriteText(event.target.value)}
+                  placeholder="예: 오빠가 사라진 그날 새벽, 한 소녀가 달의 탑 아래에서 마르지 않은 잉크 자국을 찾는다."
+                  rows={10}
+                />
+                <p className="home-freewrite-meter">{freewriteText.trim().length}자</p>
+              </section>
+            </div>
+            <aside className="home-flow-side">
+              <FlowAgentLayerCard assignment={flowAgentMap.intake} />
+              <article className="home-summary-card">
+                <span>다음 단계</span>
+                <strong>작가 인터뷰</strong>
+                <p>자유 서술을 기준으로 에이전트들이 인물·세계·문체·연속성을 묻습니다.</p>
+              </article>
+              <div className="home-flow-actions">
+                <button type="button" className="button-secondary" onClick={() => setHomeFlowStep('medium')}>
+                  이전
+                </button>
+                <button type="button" className="button-primary" onClick={() => setHomeFlowStep('intake')}>
+                  인터뷰로 계속
+                </button>
+              </div>
             </aside>
           </section>
 
@@ -944,7 +992,7 @@ function StoryXHome({
                 </div>
               </article>
               <div className="home-flow-actions">
-                <button type="button" className="button-secondary" onClick={() => setHomeFlowStep('medium')}>
+                <button type="button" className="button-secondary" onClick={() => setHomeFlowStep('freewrite')}>
                   이전
                 </button>
                 <button type="button" className="button-primary" onClick={onOpenEditor}>

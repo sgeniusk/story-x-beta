@@ -57,7 +57,10 @@ describe('Story X page experience', () => {
     expect(app).toContain('<StoryXTopNav');
     expect(app).toContain('ariaLabel="Story X"');
     expect(app).toContain('href={`#${link.target}`}');
-    expect(app).toContain("type HomeFlowStep = 'medium' | 'intake'");
+    expect(app).toContain("type HomeFlowStep = 'medium' | 'freewrite' | 'intake'");
+    expect(app).toContain('자유 서술로 계속');
+    expect(app).toContain('인터뷰로 계속');
+    expect(app).toContain('home-freewrite-input');
     expect(app).toContain('const [homeFlowStep, setHomeFlowStep]');
     expect(app).toContain('className="storyx-fullscreen-flow"');
     expect(app).toContain('className="home-flow-track"');

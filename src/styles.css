@@ -3676,6 +3676,37 @@ body {
   font-weight: 600;
 }
 
+.home-freewrite-stage {
+  display: grid;
+  gap: 14px;
+}
+
+.home-freewrite-input {
+  width: 100%;
+  min-height: 220px;
+  padding: 18px 20px;
+  border: 1px solid rgba(32, 32, 30, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--framer-ink);
+  font-family: inherit;
+  font-size: 1.02rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.home-freewrite-input:focus-visible {
+  outline: 2px solid rgba(13, 83, 88, 0.45);
+  outline-offset: 1px;
+}
+
+.home-freewrite-meter {
+  margin: 0;
+  color: rgba(32, 32, 30, 0.5);
+  font-size: 0.82rem;
+  text-align: right;
+}
+
 .sx-chapter-tree-list button.is-locked span {
   display: inline-flex;
   align-items: center;
