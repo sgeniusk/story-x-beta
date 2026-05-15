@@ -2335,6 +2335,7 @@ function ProjectStateCard({
           tabIndex={0}
           className="sx-project-card-link"
           aria-label="바이블 캐논으로 이동"
+          title="캐논 — 작품에서 확정된 사실. 모든 회차가 이 기준을 따릅니다."
           onClick={handleJump('canon')}
           onKeyDown={handleJump('canon')}
         >
