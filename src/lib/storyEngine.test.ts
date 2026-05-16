@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildStoryEditorWorkspace,
+  chapterFromDraftPayload,
   createSeedProject,
   lockChapter,
   produceNextChapter,
@@ -59,6 +60,42 @@ describe('storyEngine', () => {
 
     const reopened = unlockChapter(locked, targetId);
     expect(reopened.chapters.find((chapter) => chapter.id === targetId)?.locked).toBe(false);
+  });
+
+  it('commits an LLM draft payload as a chapter and normalizes its canon facts', () => {
+    const project = createSeedProject();
+
+    const result = chapterFromDraftPayload(
+      project,
+      {
+        title: '1화 — 팔리지 않는 기억',
+        hook: '거래소 주인은 그녀가 팔러 온 기억을 이미 샀다고 말했다.',
+        outline: ['도주가 거래소 문을 연다.', '거래 규칙이 드러난다.', '   '],
+        prose: '골목은 막다른 곳에서 한 번 더 꺾였다.\n\n그 자리에 문이 있었다.',
+        newCanonFacts: [
+          { owner: 'world', statement: '기억은 판 순간 매도인에게서 사라진다.' },
+          { owner: 'plot', statement: '도주의 기억은 이미 그녀 이름으로 매도돼 있다.' },
+          { owner: '엉뚱한값', statement: 'owner가 비정상이면 plot으로 정규화한다.' }
+        ]
+      },
+      {
+        genre: 'romance-fantasy',
+        intent: '주인공이 기억 거래소에 들어선다',
+        pressure: '낮은 감정선에서 시작해 마지막에 큰 반전을 둔다'
+      }
+    );
+
+    expect(result.chapter.episode).toBe(project.currentEpisode + 1);
+    expect(result.chapter.title).toBe('1화 — 팔리지 않는 기억');
+    expect(result.chapter.prose).toContain('막다른 곳');
+    expect(result.chapter.outline).toHaveLength(2);
+    expect(result.chapter.newCanonFacts).toHaveLength(3);
+    expect(result.chapter.newCanonFacts[0].owner).toBe('world');
+    expect(result.chapter.newCanonFacts[2].owner).toBe('plot');
+    expect(result.chapter.newCanonFacts.every((fact) => fact.episode === project.currentEpisode + 1)).toBe(true);
+    expect(result.updatedProject.canonFacts).toHaveLength(project.canonFacts.length + 3);
+    expect(result.updatedProject.chapters.at(-1)?.id).toBe(result.chapter.id);
+    expect(result.agentRuns.map((run) => run.agentId)).toContain('showrunner');
   });
 
   it('flags draft claims that contradict established character canon', () => {

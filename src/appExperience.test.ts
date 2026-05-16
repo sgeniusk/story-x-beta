@@ -8,7 +8,8 @@ const css = readFileSync(resolve(__dirname, 'styles.css'), 'utf8');
 describe('Story X page experience', () => {
   it('separates the product into landing, login, projects, new-project, and editor stages', () => {
     expect(app).toContain("type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor'");
-    expect(app).toContain("useState<AppStage>('landing')");
+    expect(app).toContain('useState<AppStage>(initialStage)');
+    expect(app).toContain("return 'landing';");
     expect(app).toContain('className="marketing-landing"');
     expect(app).toContain('className="auth-shell"');
     expect(app).toContain('className="project-hub"');

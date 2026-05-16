@@ -133,6 +133,19 @@ export interface ProductionResult {
   updatedProject: SeriesProject;
 }
 
+export interface DraftChapterPayloadCanonFact {
+  owner: string;
+  statement: string;
+}
+
+export interface DraftChapterPayload {
+  title: string;
+  hook: string;
+  outline: string[];
+  prose: string;
+  newCanonFacts: DraftChapterPayloadCanonFact[];
+}
+
 export type EditorViewModeId = 'binder' | 'corkboard' | 'outliner' | 'scrivenings';
 
 export interface EditorViewMode {
@@ -450,6 +463,50 @@ export function produceNextChapter(project: SeriesProject, request: ProductionRe
     continuityIssues: continuityIssues.filter((issue) => issue.severity !== 'warning'),
     updatedProject
   };
+}
+
+// LLM 브리지가 만든 회차 초안 payload를 캐논 정규화·에이전트 검토와 함께 정식 Chapter로 커밋한다
+export function chapterFromDraftPayload(
+  project: SeriesProject,
+  payload: DraftChapterPayload,
+  request: ProductionRequest
+): ProductionResult {
+  const episode = project.currentEpisode + 1;
+  const memoryAnchors = project.canonFacts.slice(0, 4).map((fact) => fact.statement);
+  const continuityIssues = validateContinuity(project, [request.intent, request.pressure]);
+  const newCanonFacts: CanonFact[] = (payload.newCanonFacts ?? [])
+    .filter((fact) => typeof fact?.statement === 'string' && fact.statement.trim().length > 0)
+    .map((fact, index) => ({
+      id: `canon-${episode.toString().padStart(3, '0')}-llm-${String(index + 1).padStart(2, '0')}`,
+      episode,
+      owner: normalizeCanonOwner(fact.owner),
+      statement: fact.statement.trim()
+    }));
+  const chapter: Chapter = {
+    id: `episode-${episode}`,
+    episode,
+    title: payload.title?.trim() || `${episode}화`,
+    hook: payload.hook?.trim() ?? '',
+    outline: (payload.outline ?? []).filter(
+      (line): line is string => typeof line === 'string' && line.trim().length > 0
+    ),
+    prose: payload.prose ?? '',
+    memoryAnchors,
+    newCanonFacts
+  };
+  const agentRuns = buildAgentRuns(project, request, chapter, continuityIssues);
+  const updatedProject = commitChapter(project, chapter);
+
+  return {
+    chapter,
+    agentRuns,
+    continuityIssues: continuityIssues.filter((issue) => issue.severity !== 'warning'),
+    updatedProject
+  };
+}
+
+function normalizeCanonOwner(owner: string): CanonFact['owner'] {
+  return owner === 'character' || owner === 'world' || owner === 'plot' ? owner : 'plot';
 }
 
 export function commitChapter(project: SeriesProject, chapter: Chapter): SeriesProject {

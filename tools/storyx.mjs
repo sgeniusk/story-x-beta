@@ -86,7 +86,7 @@ if (command === 'review') {
 
   const commandPreview =
     provider === 'claude'
-      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', '--max-budget-usd', '0.25', prompt]
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', prompt]
       : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
 
   if (!dryRun) {
@@ -136,7 +136,6 @@ if (command === 'draft') {
   const freewrite = readFlag(args, '--freewrite', '');
   const title = readFlag(args, '--title', '');
   const outDir = readFlag(args, '--out-dir', join(process.cwd(), '.storyx-runs'));
-  const budget = readFlag(args, '--max-budget-usd', '0.5');
   const dryRun = args.includes('--dry-run');
   const prompt = buildDraftPrompt({ medium, format, freewrite, title });
 
@@ -161,7 +160,7 @@ if (command === 'draft') {
 
   const commandPreview =
     provider === 'claude'
-      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', '--max-budget-usd', budget, prompt]
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', prompt]
       : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
 
   if (!dryRun) {
@@ -341,8 +340,8 @@ function runProvider(commandParts) {
   const [binary, ...providerArgs] = commandParts;
   return spawnSync(binary, providerArgs, {
     encoding: 'utf8',
-    timeout: 180000,
-    maxBuffer: 1024 * 1024 * 4
+    timeout: 300000,
+    maxBuffer: 1024 * 1024 * 8
   });
 }
 

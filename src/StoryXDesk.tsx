@@ -36,6 +36,7 @@ import {
 } from './lib/projectBlueprint';
 import {
   buildStoryEditorWorkspace,
+  chapterFromDraftPayload,
   createSeedProject,
   getGenreProfiles,
   lockChapter,
@@ -44,8 +45,10 @@ import {
   type Chapter,
   type GenreId,
   type ProductionRequest,
+  type ProductionResult,
   type SeriesProject
 } from './lib/storyEngine';
+import { requestLlmDraft } from './lib/draftClient';
 import {
   agentReportsToRuns,
   buildAiCliRunPlan,
@@ -627,6 +630,8 @@ export function StoryXDesk({
   const [isVersionLogOpen, setIsVersionLogOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AgentDialogSelection | null>(null);
   const [canonChanges, setCanonChanges] = useState<CanonChangeEntry[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationNote, setGenerationNote] = useState<string | null>(null);
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [medium, format]);
   const editorWorkspace = useMemo(
@@ -1035,13 +1040,51 @@ export function StoryXDesk({
     setApprovalStatementOverrides((current) => ({ ...current, [candidateId]: value }));
   }
 
-  function produceEpisode() {
-    const result = produceNextChapter(project, { ...request, intent: draftPrompt || request.intent });
+  function applyProductionResult(result: ProductionResult) {
     setProject(result.updatedProject);
     setAgentRuns(result.agentRuns);
     setLatestChapter(result.chapter);
     setActiveTrack('draft');
     setIsPublishingMode(false);
+  }
+
+  // LLM 브리지(claude 구독) 우선, 실패하면 deterministic 생성으로 폴백한다
+  async function produceEpisode() {
+    if (isGenerating) {
+      return;
+    }
+
+    const effectiveRequest: ProductionRequest = {
+      ...request,
+      intent: draftPrompt || request.intent
+    };
+
+    setIsGenerating(true);
+    setGenerationNote(null);
+
+    try {
+      const llm = await requestLlmDraft({
+        medium: blueprint.medium,
+        format: blueprint.format,
+        freewrite: draftPrompt || request.intent,
+        title: project.title
+      });
+
+      if (llm.ok && llm.payload) {
+        applyProductionResult(chapterFromDraftPayload(project, llm.payload, effectiveRequest));
+        setGenerationNote('Claude 구독으로 생성한 초안입니다.');
+        return;
+      }
+
+      applyProductionResult(produceNextChapter(project, effectiveRequest));
+      setGenerationNote(
+        llm.reason
+          ? `LLM 브리지를 쓰지 못해 기본 생성으로 대체했습니다. (${llm.reason})`
+          : '기본 생성으로 초안을 만들었습니다.'
+      );
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   function runAiReview(reviewTarget: string) {
@@ -1324,14 +1367,18 @@ export function StoryXDesk({
                     onChange={(event) => updateProject('title', event.target.value)}
                     autoComplete="off"
                   />
-                  <textarea
-                    aria-label="주요 내용 입력"
-                    name="draft-prompt"
-                    value={draftPrompt}
-                    onChange={(event) => updateDraftPrompt(event.target.value)}
-                    placeholder={draftPromptPlaceholder}
-                    rows={3}
-                  />
+                  <label className="sx-draft-prompt-field">
+                    <span className="sx-eyebrow">
+                      {latestChapter ? '다음 회차에 담을 주요 내용' : '이번 회차에 담을 주요 내용'}
+                    </span>
+                    <textarea
+                      name="draft-prompt"
+                      value={draftPrompt}
+                      onChange={(event) => updateDraftPrompt(event.target.value)}
+                      placeholder={draftPromptPlaceholder}
+                      rows={3}
+                    />
+                  </label>
                   {isLatestLocked && latestChapter && (
                     <p className="sx-lock-chip">
                       <Lock size={12} aria-hidden="true" />
@@ -1340,12 +1387,22 @@ export function StoryXDesk({
                       </span>
                     </p>
                   )}
+                  {generationNote && (
+                    <p className="sx-generation-note" role="status">
+                      {generationNote}
+                    </p>
+                  )}
                 </div>
                 <div className="sx-editor-titlebar-actions">
                   <span>{blueprint.projectRoomTitle}</span>
-                  <button type="button" className="sx-primary-button" onClick={mainActionRun}>
+                  <button
+                    type="button"
+                    className="sx-primary-button"
+                    onClick={mainActionRun}
+                    disabled={isGenerating}
+                  >
                     <MainActionIcon size={isLatestLocked || !latestChapter ? 17 : 16} />
-                    {mainActionLabel}
+                    {isGenerating ? '생성 중…' : mainActionLabel}
                   </button>
                 </div>
               </section>

@@ -1030,22 +1030,29 @@ function StoryXHome({
                     );
                   })()}
                   <div className="intake-question-nav">
-                    <button
-                      type="button"
-                      className="button-secondary"
-                      disabled={intakeQuestionIndex === 0}
-                      onClick={() => setIntakeQuestionIndex((current) => Math.max(0, current - 1))}
-                    >
-                      이전 질문
-                    </button>
-                    <button
-                      type="button"
-                      className="button-primary"
-                      disabled={intakeQuestionIndex >= intakePlan.questions.length - 1}
-                      onClick={() => setIntakeQuestionIndex((current) => Math.min(intakePlan.questions.length - 1, current + 1))}
-                    >
-                      다음 질문
-                    </button>
+                    {intakeQuestionIndex > 0 && (
+                      <button
+                        type="button"
+                        className="button-secondary"
+                        onClick={() => setIntakeQuestionIndex((current) => Math.max(0, current - 1))}
+                      >
+                        이전 질문
+                      </button>
+                    )}
+                    {intakeQuestionIndex < intakePlan.questions.length - 1 && (
+                      <button
+                        type="button"
+                        className="button-primary"
+                        style={{ marginLeft: 'auto' }}
+                        onClick={() =>
+                          setIntakeQuestionIndex((current) =>
+                            Math.min(intakePlan.questions.length - 1, current + 1)
+                          )
+                        }
+                      >
+                        다음 질문
+                      </button>
+                    )}
                   </div>
                 </div>
                 <article className="intake-open-note">
