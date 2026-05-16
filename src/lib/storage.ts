@@ -102,7 +102,8 @@ function normalizeProject(project: SeriesProject): SeriesProject {
     ...project,
     localization: getProjectLocalization(project),
     deepQuestion: typeof project.deepQuestion === 'string' ? project.deepQuestion : '',
-    creativeWeight: project.creativeWeight ?? 'balanced'
+    creativeWeight: project.creativeWeight ?? 'balanced',
+    formIntent: typeof project.formIntent === 'string' ? project.formIntent : ''
   };
 
   if (project.title !== '달의 문서고' && project.id !== 'moon-archive') {

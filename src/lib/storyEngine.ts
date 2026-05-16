@@ -114,6 +114,8 @@ export interface SeriesProject {
   deepQuestion: string;
   /** 작품 무게중심 — 대중성/작품성 비중 */
   creativeWeight: CreativeWeight;
+  /** 형식·구조 의도 — 시점·시제·구성이 주제를 어떻게 수행하는가 */
+  formIntent: string;
   currentEpisode: number;
   characters: CharacterProfile[];
   worldRules: WorldRule[];
@@ -382,6 +384,7 @@ export function createSeedProject(): SeriesProject {
     audiencePromise: '매 회차마다 감정적 선택, 새로운 단서, 다음 편을 누르게 하는 반전을 제공한다.',
     deepQuestion: '기록을 고친다는 것은 사람을 구하는 일인가, 또 다른 거짓을 쌓는 일인가?',
     creativeWeight: 'balanced',
+    formIntent: '서윤에게 밀착한 3인칭 제한 시점, 과거형. 회차마다 한 장소·한 장면에 머물러 긴장을 모은다.',
     currentEpisode: 0,
     characters,
     worldRules,
@@ -546,6 +549,9 @@ export function buildProjectContextDigest(project: SeriesProject): string {
   }
   if (project.deepQuestion) {
     lines.push(`- 심층 질문(작품이 진짜 묻는 것): ${project.deepQuestion}`);
+  }
+  if (project.formIntent) {
+    lines.push(`- 형식·구조(시점·시제·구성 의도): ${project.formIntent}`);
   }
   lines.push(`- 무게중심: ${describeCreativeWeight(project.creativeWeight ?? 'balanced')}`);
 

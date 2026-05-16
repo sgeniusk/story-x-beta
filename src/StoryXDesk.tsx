@@ -979,7 +979,7 @@ export function StoryXDesk({
   }
 
   function updateProject(
-    field: 'title' | 'logline' | 'audiencePromise' | 'deepQuestion' | 'tone',
+    field: 'title' | 'logline' | 'audiencePromise' | 'deepQuestion' | 'formIntent' | 'tone',
     value: string
   ) {
     const labels = {
@@ -987,6 +987,7 @@ export function StoryXDesk({
       logline: '로그라인',
       audiencePromise: '표면 약속',
       deepQuestion: '심층 질문',
+      formIntent: '형식·구조',
       tone: '문체 톤'
     };
 
@@ -2122,7 +2123,7 @@ function MemoryBankStudio({
   onUpdateWorldRule: (ruleId: string, value: string) => void;
   onUpdateCanon: (canonId: string, value: string) => void;
   onUpdateProject: (
-    field: 'title' | 'logline' | 'audiencePromise' | 'deepQuestion' | 'tone',
+    field: 'title' | 'logline' | 'audiencePromise' | 'deepQuestion' | 'formIntent' | 'tone',
     value: string
   ) => void;
   onUpdateCreativeWeight: (weight: CreativeWeight) => void;
@@ -2186,6 +2187,14 @@ function MemoryBankStudio({
               <textarea
                 value={project.deepQuestion}
                 onChange={(event) => onUpdateProject('deepQuestion', event.target.value)}
+                rows={2}
+              />
+            </label>
+            <label>
+              <small>형식·구조 — 시점·시제·구성이 주제를 어떻게 수행하는가</small>
+              <textarea
+                value={project.formIntent}
+                onChange={(event) => onUpdateProject('formIntent', event.target.value)}
                 rows={2}
               />
             </label>
