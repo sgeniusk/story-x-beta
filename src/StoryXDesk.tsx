@@ -83,7 +83,15 @@ import {
   type CanonChangeEntryInput,
   type CanonRefactorPlan
 } from './lib/canonRefactor';
-import { clearProject, loadProject, saveProject } from './lib/storage';
+import {
+  clearProject,
+  clearProjectSnapshots,
+  loadProject,
+  loadProjectSnapshots,
+  pushProjectSnapshot,
+  saveProject,
+  type ProjectSnapshot
+} from './lib/storage';
 
 type DeskTrack = 'draft' | 'bible';
 type BibleSection = 'overview' | 'characters' | 'world' | 'canon' | 'voice' | 'approval';
@@ -638,6 +646,8 @@ export function StoryXDesk({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
   const [generationNote, setGenerationNote] = useState<string | null>(null);
+  const [projectSnapshots, setProjectSnapshots] = useState<ProjectSnapshot[]>(() => loadProjectSnapshots());
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [medium, format]);
   const editorWorkspace = useMemo(
@@ -838,6 +848,13 @@ export function StoryXDesk({
         section: '제품',
         description: `${STORYX_VERSION.label} · ${STORYX_VERSION.summary}`,
         run: () => setIsVersionLogOpen(true)
+      },
+      {
+        id: 'open-project-history',
+        label: '작품 버전 기록 / 복원',
+        section: '관리',
+        description: `${projectSnapshots.length}개 저장 시점에서 이전 작품 상태로 되돌립니다.`,
+        run: () => setIsHistoryOpen(true)
       },
       {
         id: 'reset-project',
@@ -1065,12 +1082,29 @@ export function StoryXDesk({
       statement: item.editableStatement
     }));
 
-    setProject((current) => {
-      const updated = applyApprovedMemory(current, approved);
-      saveProject(updated);
-      return updated;
-    });
+    const updated = applyApprovedMemory(project, approved);
+    setProject(updated);
+    setProjectSnapshots(pushProjectSnapshot(updated, `캐논 반영 ${approved.length}건`));
     setSyncedCandidateIds((current) => [...current, ...syncable.map((item) => item.id)]);
+  }
+
+  // 저장된 버전 스냅샷으로 작품 상태를 되돌린다
+  function restoreProjectVersion(snapshot: ProjectSnapshot) {
+    if (
+      !window.confirm(
+        `"${snapshot.label}" 시점으로 되돌릴까요? 현재 작품 상태가 이 버전으로 교체됩니다.`
+      )
+    ) {
+      return;
+    }
+
+    const chapters = snapshot.project.chapters;
+    setProject(snapshot.project);
+    setLatestChapter(chapters.length > 0 ? chapters[chapters.length - 1] : null);
+    setLatestReviewResult(null);
+    setAgentRuns(defaultRuns);
+    setEditedSinceReview(false);
+    setIsHistoryOpen(false);
   }
 
   function applyProductionResult(result: ProductionResult) {
@@ -1105,12 +1139,16 @@ export function StoryXDesk({
       });
 
       if (llm.ok && llm.payload) {
-        applyProductionResult(chapterFromDraftPayload(project, llm.payload, effectiveRequest));
+        const result = chapterFromDraftPayload(project, llm.payload, effectiveRequest);
+        applyProductionResult(result);
+        setProjectSnapshots(pushProjectSnapshot(result.updatedProject, `${result.chapter.episode}화 생성`));
         setGenerationNote('Claude 구독으로 생성한 초안입니다.');
         return;
       }
 
-      applyProductionResult(produceNextChapter(project, effectiveRequest));
+      const fallback = produceNextChapter(project, effectiveRequest);
+      applyProductionResult(fallback);
+      setProjectSnapshots(pushProjectSnapshot(fallback.updatedProject, `${fallback.chapter.episode}화 생성`));
       setGenerationNote(
         llm.reason
           ? `LLM 브리지를 쓰지 못해 기본 생성으로 대체했습니다. (${llm.reason})`
@@ -1204,6 +1242,9 @@ export function StoryXDesk({
     setApprovalDecisions({});
     setApprovalStatementOverrides({});
     setSyncedCandidateIds([]);
+    clearProjectSnapshots();
+    setProjectSnapshots([]);
+    setIsHistoryOpen(false);
     setLatestReviewResult(null);
     setIsMediaPanelOpen(false);
     setIsPublishingMode(false);
@@ -1557,7 +1598,68 @@ export function StoryXDesk({
           onClose={() => setIsVersionLogOpen(false)}
         />
       )}
+
+      {isHistoryOpen && (
+        <ProjectHistoryDialog
+          snapshots={projectSnapshots}
+          onRestore={restoreProjectVersion}
+          onClose={() => setIsHistoryOpen(false)}
+        />
+      )}
     </main>
+  );
+}
+
+function ProjectHistoryDialog({
+  snapshots,
+  onRestore,
+  onClose
+}: {
+  snapshots: ProjectSnapshot[];
+  onRestore: (snapshot: ProjectSnapshot) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="sx-version-log-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className="sx-version-log-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="작품 버전 기록"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <p className="sx-eyebrow">작품 버전 기록</p>
+            <h2>{snapshots.length}개 저장 시점</h2>
+            <span>회차 생성과 캐논 반영 때마다 자동으로 저장됩니다. 원하는 시점으로 되돌릴 수 있습니다.</span>
+          </div>
+          <button type="button" aria-label="버전 기록 닫기" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </header>
+        {snapshots.length > 0 ? (
+          <div className="sx-version-log-list">
+            {snapshots.map((snapshot) => (
+              <article key={snapshot.id}>
+                <span>{snapshot.label}</span>
+                <h3>
+                  {snapshot.episode}화 · 캐논 {snapshot.canonCount}개
+                </h3>
+                <small>{new Date(snapshot.savedAt).toLocaleString('ko-KR')}</small>
+                <div>
+                  <button type="button" className="sx-secondary-button" onClick={() => onRestore(snapshot)}>
+                    이 시점으로 되돌리기
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p>아직 저장된 버전이 없습니다. 회차를 생성하면 이곳에 시점이 쌓입니다.</p>
+        )}
+      </section>
+    </div>
   );
 }
 
