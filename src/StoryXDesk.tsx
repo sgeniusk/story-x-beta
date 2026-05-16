@@ -82,6 +82,38 @@ import {
 } from './lib/canonRefactor';
 import { clearProject, loadProject, saveProject } from './lib/storage';
 
+// 2화 이상 생성 시 LLM에 넘길 연속성 컨텍스트 — 확정 캐논·인물·세계·열린 떡밥을 요약한다
+function buildProjectContextDigest(project: SeriesProject): string {
+  if (project.chapters.length === 0) {
+    return '';
+  }
+
+  const lines: string[] = [`지금까지 ${project.currentEpisode}화까지 진행됨.`];
+
+  if (project.canonFacts.length > 0) {
+    lines.push('', '확정 캐논 (절대 위반 금지):');
+    project.canonFacts.forEach((fact) => lines.push(`- [${fact.owner}] ${fact.statement}`));
+  }
+  if (project.characters.length > 0) {
+    lines.push('', '인물:');
+    project.characters.forEach((character) =>
+      lines.push(
+        `- ${character.name} (${character.role}) — 욕망: ${character.desire} / 상처: ${character.wound} / 현재: ${character.currentState}`
+      )
+    );
+  }
+  if (project.worldRules.length > 0) {
+    lines.push('', '세계 규칙:');
+    project.worldRules.forEach((rule) => lines.push(`- ${rule.title}: ${rule.rule}`));
+  }
+  if (project.openThreads.length > 0) {
+    lines.push('', '열린 떡밥:');
+    project.openThreads.forEach((thread) => lines.push(`- ${thread}`));
+  }
+
+  return lines.join('\n');
+}
+
 type DeskTrack = 'draft' | 'bible';
 type BibleSection = 'overview' | 'characters' | 'world' | 'canon' | 'voice' | 'approval';
 type ApprovalDecision = MemoryApprovalDecision;
@@ -1069,7 +1101,8 @@ export function StoryXDesk({
         medium: blueprint.medium,
         format: blueprint.format,
         freewrite: draftPrompt || request.intent,
-        title: project.title
+        title: project.title,
+        context: buildProjectContextDigest(project)
       });
 
       if (llm.ok && llm.payload) {

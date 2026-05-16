@@ -6,6 +6,8 @@ export interface DraftRequestInput {
   format: string;
   freewrite: string;
   title?: string;
+  /** 기존 캐논·인물·세계를 담은 연속성 컨텍스트. 2화 이상에서 채워진다. */
+  context?: string;
 }
 
 export interface LlmDraftResult {

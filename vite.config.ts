@@ -113,7 +113,9 @@ export default defineConfig({
       '--freewrite',
       String(input.freewrite ?? ''),
       '--title',
-      String(input.title ?? '')
+      String(input.title ?? ''),
+      '--context',
+      String(input.context ?? '')
     ]),
     storyxBridge('/api/review', (input) => [
       'tools/storyx.mjs',

@@ -136,9 +136,10 @@ if (command === 'draft') {
   const format = readFlag(args, '--format', 'long-novel');
   const freewrite = readFlag(args, '--freewrite', '');
   const title = readFlag(args, '--title', '');
+  const context = readFlag(args, '--context', '');
   const outDir = readFlag(args, '--out-dir', join(process.cwd(), '.storyx-runs'));
   const dryRun = args.includes('--dry-run');
-  const prompt = buildDraftPrompt({ medium, format, freewrite, title });
+  const prompt = buildDraftPrompt({ medium, format, freewrite, title, context });
 
   if (provider === 'mock') {
     const result = {
@@ -277,11 +278,16 @@ function buildReviewPrompt(scale, target) {
   ].join('\n');
 }
 
-function buildDraftPrompt({ medium, format, freewrite, title }) {
+function buildDraftPrompt({ medium, format, freewrite, title, context }) {
   return [
     'Story X 회차 초안 생성 요청.',
     `매체: ${medium} / 포맷: ${format}`,
     title ? `작품 제목: ${title}` : '작품 제목: 미정',
+    '',
+    '## 기존 작품 맥락 (이미 확정된 캐논·인물·세계)',
+    context
+      ? context
+      : '(이전 회차 없음 — 이번이 1화입니다.)',
     '',
     '## 작가 자유 서술 (작가가 직접 적은, 쓰고 싶은 이야기)',
     freewrite || '(자유 서술 없음 — 매체와 포맷만으로 1화의 출발점을 제안하세요.)',
@@ -291,6 +297,7 @@ function buildDraftPrompt({ medium, format, freewrite, title }) {
     '',
     '## 규칙',
     '- 한국어로 작성하고, 작가 자유 서술의 어휘와 의도를 존중합니다.',
+    '- 기존 작품 맥락이 있으면 그 캐논·인물·세계 규칙을 절대 어기지 말고, 이번 회차는 그 다음 회차로 자연스럽게 이어집니다.',
     '- essay 매체이면 작가가 자유 서술에 적지 않은 사실(인물의 직업·나이·장소 등)을 발명하지 마세요. 빈 곳은 비워 둡니다.',
     '- 한 회차는 하나의 질문에 답하고 더 날카로운 질문을 엽니다.',
     '- prose는 1500~3000자 분량의 실제 본문입니다.',
