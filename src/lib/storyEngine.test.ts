@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyApprovedMemory,
   buildStoryEditorWorkspace,
   chapterFromDraftPayload,
   createSeedProject,
@@ -96,6 +97,30 @@ describe('storyEngine', () => {
     expect(result.updatedProject.canonFacts).toHaveLength(project.canonFacts.length + 3);
     expect(result.updatedProject.chapters.at(-1)?.id).toBe(result.chapter.id);
     expect(result.agentRuns.map((run) => run.agentId)).toContain('showrunner');
+  });
+
+  it('applies approved memory candidates as new canon facts', () => {
+    const project = createSeedProject();
+    const before = project.canonFacts.length;
+
+    const updated = applyApprovedMemory(project, [
+      { id: 'cand-1', owner: 'world', statement: '회랑의 시계는 모두 거꾸로 돈다.' },
+      { id: 'cand-2', owner: '엉뚱한값', statement: 'owner가 비정상이면 plot으로 정규화한다.' },
+      { id: 'cand-3', owner: 'plot', statement: '   ' }
+    ]);
+
+    expect(updated.canonFacts).toHaveLength(before + 2);
+    const added = updated.canonFacts.slice(before);
+    expect(added[0].id).toBe('canon-approved-cand-1');
+    expect(added[0].owner).toBe('world');
+    expect(added[1].owner).toBe('plot');
+    expect(added.every((fact) => fact.episode === project.currentEpisode)).toBe(true);
+    expect(updated.canonFacts.some((fact) => fact.id === 'canon-approved-cand-3')).toBe(false);
+  });
+
+  it('returns the same project when there is nothing approved to apply', () => {
+    const project = createSeedProject();
+    expect(applyApprovedMemory(project, [])).toBe(project);
   });
 
   it('flags draft claims that contradict established character canon', () => {

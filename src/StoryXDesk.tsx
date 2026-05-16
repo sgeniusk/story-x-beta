@@ -35,6 +35,7 @@ import {
   type CreativeMedium
 } from './lib/projectBlueprint';
 import {
+  applyApprovedMemory,
   buildStoryEditorWorkspace,
   chapterFromDraftPayload,
   createSeedProject,
@@ -652,6 +653,7 @@ export function StoryXDesk({
   const [activeBibleSection, setActiveBibleSection] = useState<BibleSection>('overview');
   const [approvalDecisions, setApprovalDecisions] = useState<Record<string, ApprovalDecision>>({});
   const [approvalStatementOverrides, setApprovalStatementOverrides] = useState<Record<string, string>>({});
+  const [syncedCandidateIds, setSyncedCandidateIds] = useState<string[]>([]);
   const [reviewScale, setReviewScale] = useState<AiCliScale>('small');
   const [reviewProvider, setReviewProvider] = useState<AiCliProvider>('mock');
   const [latestReviewResult, setLatestReviewResult] = useState<AiCliReviewResult | null>(null);
@@ -689,11 +691,13 @@ export function StoryXDesk({
     () =>
       buildMemoryApprovalQueue({
         project,
-        reviewCandidates: [...(latestReviewResult?.memoryCandidates ?? []), ...verticalSlice.memoryCandidates],
+        reviewCandidates: [...(latestReviewResult?.memoryCandidates ?? []), ...verticalSlice.memoryCandidates].filter(
+          (candidate) => !syncedCandidateIds.includes(candidate.id)
+        ),
         decisions: approvalDecisions,
         statementOverrides: approvalStatementOverrides
       }),
-    [approvalDecisions, approvalStatementOverrides, latestReviewResult, project, verticalSlice]
+    [approvalDecisions, approvalStatementOverrides, latestReviewResult, project, syncedCandidateIds, verticalSlice]
   );
   const evaluatorWorkflow = useMemo(() => buildTesterDrivenWorkflow(blueprint), [blueprint]);
   const publishingPlan = useMemo(
@@ -1074,6 +1078,27 @@ export function StoryXDesk({
     setApprovalStatementOverrides((current) => ({ ...current, [candidateId]: value }));
   }
 
+  // 승인된 AI 검토 후보를 실제 작품 캐논으로 반영한다 — 생성-검토-승인 루프를 닫는 지점
+  function syncApprovedMemory() {
+    const syncable = approvalQueue.items.filter((item) => item.source === 'ai-review' && item.canSync);
+    if (syncable.length === 0) {
+      return;
+    }
+
+    const approved = syncable.map((item) => ({
+      id: item.id,
+      owner: item.owner,
+      statement: item.editableStatement
+    }));
+
+    setProject((current) => {
+      const updated = applyApprovedMemory(current, approved);
+      saveProject(updated);
+      return updated;
+    });
+    setSyncedCandidateIds((current) => [...current, ...syncable.map((item) => item.id)]);
+  }
+
   function applyProductionResult(result: ProductionResult) {
     setProject(result.updatedProject);
     setAgentRuns(result.agentRuns);
@@ -1204,6 +1229,7 @@ export function StoryXDesk({
     setActiveBibleSection('overview');
     setApprovalDecisions({});
     setApprovalStatementOverrides({});
+    setSyncedCandidateIds([]);
     setLatestReviewResult(null);
     setIsMediaPanelOpen(false);
     setIsPublishingMode(false);
@@ -1500,6 +1526,7 @@ export function StoryXDesk({
               approvalDecisions={approvalDecisions}
               onSetApprovalDecision={setApprovalDecision}
               onUpdateApprovalStatement={updateApprovalStatement}
+              onSyncApprovedMemory={syncApprovedMemory}
               onRequestReview={requestBibleReview}
               canonChanges={canonChanges}
               canonRefactorPlan={canonRefactorPlan}
@@ -1970,6 +1997,7 @@ function MemoryBankStudio({
   approvalDecisions,
   onSetApprovalDecision,
   onUpdateApprovalStatement,
+  onSyncApprovedMemory,
   onRequestReview,
   canonChanges,
   canonRefactorPlan,
@@ -1986,6 +2014,7 @@ function MemoryBankStudio({
   approvalDecisions: Record<string, ApprovalDecision>;
   onSetApprovalDecision: (candidateId: string, decision: ApprovalDecision) => void;
   onUpdateApprovalStatement: (candidateId: string, value: string) => void;
+  onSyncApprovedMemory: () => void;
   onRequestReview: () => void;
   canonChanges: CanonChangeEntry[];
   canonRefactorPlan: CanonRefactorPlan;
@@ -1999,6 +2028,9 @@ function MemoryBankStudio({
     canonChanges,
     canonRefactorPlan
   });
+  const syncableMemoryCount = approvalQueue.items.filter(
+    (item) => item.source === 'ai-review' && item.canSync
+  ).length;
 
   return (
     <section className="sx-bible-studio" aria-label="작품 바이블">
@@ -2203,6 +2235,20 @@ function MemoryBankStudio({
               <span>승인됨</span>
               <strong>{approvalQueue.summary.canSync}</strong>
               <span>동기화 가능</span>
+            </div>
+            <div className="sx-approval-sync">
+              <button
+                type="button"
+                className="sx-primary-button"
+                onClick={onSyncApprovedMemory}
+                disabled={syncableMemoryCount === 0}
+              >
+                승인한 AI 검토 후보 {syncableMemoryCount > 0 ? `${syncableMemoryCount}개 ` : ''}작품 캐논에 반영
+              </button>
+              <small>
+                반영하면 승인한 후보가 작품 캐논에 추가되고, 다음 회차 생성이 이 사실을 지킵니다. 반영 후 목록에서
+                사라집니다.
+              </small>
             </div>
           {approvalQueue.items.length > 0 ? (
             <div className="sx-approval-list">

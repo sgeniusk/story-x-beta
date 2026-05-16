@@ -509,6 +509,33 @@ function normalizeCanonOwner(owner: string): CanonFact['owner'] {
   return owner === 'character' || owner === 'world' || owner === 'plot' ? owner : 'plot';
 }
 
+export interface ApprovedMemoryInput {
+  id: string;
+  owner: string;
+  statement: string;
+}
+
+// 승인된 검토 기억 후보를 실제 작품 캐논으로 반영한다 — 생성-검토-승인 루프를 닫는 지점
+export function applyApprovedMemory(project: SeriesProject, approved: ApprovedMemoryInput[]): SeriesProject {
+  const newFacts: CanonFact[] = approved
+    .filter((item) => typeof item.statement === 'string' && item.statement.trim().length > 0)
+    .map((item) => ({
+      id: `canon-approved-${item.id}`,
+      episode: project.currentEpisode,
+      owner: normalizeCanonOwner(item.owner),
+      statement: item.statement.trim()
+    }));
+
+  if (newFacts.length === 0) {
+    return project;
+  }
+
+  return {
+    ...project,
+    canonFacts: [...project.canonFacts, ...newFacts]
+  };
+}
+
 export function commitChapter(project: SeriesProject, chapter: Chapter): SeriesProject {
   return {
     ...project,

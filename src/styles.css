@@ -6329,6 +6329,18 @@ body {
   background: var(--sx-paper);
 }
 
+.sx-approval-sync {
+  display: grid;
+  gap: var(--sx-space-2);
+  margin-top: var(--sx-space-3);
+}
+
+.sx-approval-sync small {
+  color: var(--sx-muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
 .sx-approval-summary strong {
   color: var(--sx-ink);
   font-size: 1.2rem;
