@@ -10126,6 +10126,25 @@ body {
   text-transform: uppercase;
 }
 
+.intake-question-card > .intake-question-interviewer {
+  display: grid;
+  gap: 3px;
+}
+
+.intake-question-interviewer b {
+  color: var(--sx-ink-strong);
+  font-size: 1.18rem;
+  font-weight: var(--sx-weight-bold);
+  line-height: 1.2;
+}
+
+.intake-question-interviewer em {
+  color: #9a948b;
+  font-size: 0.8rem;
+  font-style: normal;
+  font-weight: var(--sx-weight-medium);
+}
+
 .intake-question-card h3 {
   margin: 0;
   color: var(--sx-ink-strong);

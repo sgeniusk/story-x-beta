@@ -48,6 +48,28 @@ export function getFocusedServiceScope(): FocusedServiceScope {
   };
 }
 
+// 작품 인터뷰어 페르소나 — 유명 작가를 살짝 비튼 캐릭터가 자기 전문 시선으로 묻는다
+export interface IntakePersona {
+  name: string;
+  blurb: string;
+}
+
+const intakePersonas: Record<IntakeAgentId, IntakePersona> = {
+  showrunner: { name: '아가타 크리스', blurb: '첫 장면에 수수께끼를 거는 플롯의 장인' },
+  'character-custodian': { name: '도스토옙', blurb: '인물의 모순과 죄의식을 끝까지 파고드는 사람' },
+  'world-keeper': { name: '르 권', blurb: '세계의 규칙과 그 대가를 묻는 설계자' },
+  'voice-curator': { name: '무라카메', blurb: '문장의 호흡과 거리를 듣는 문체가' },
+  'essay-interviewer': { name: '버지니아 울브', blurb: '사적 경험과 의식의 흐름을 따라가는 에세이스트' },
+  'continuity-editor': { name: '맥스 퍼킨', blurb: '앞 회차와 어긋나는 곳을 끝까지 보는 편집자' },
+  'storyboard-agent': { name: '데즈카 오사', blurb: '칸과 호흡으로 장면을 짜는 연출가' },
+  'speech-bubble-agent': { name: '윌 아이스', blurb: '말풍선과 침묵의 위치를 보는 연출가' },
+  'creative-coach': { name: '스티브 킨', blurb: '막힌 작가에게 다음 한 줄을 묻는 코치' }
+};
+
+export function getIntakePersona(agentId: IntakeAgentId): IntakePersona {
+  return intakePersonas[agentId];
+}
+
 export function buildProjectIntakePlan(blueprint: CreativeBlueprint): ProjectIntakePlan {
   if (blueprint.medium === 'essay') {
     return {

@@ -35,7 +35,7 @@ import {
   type CreativeFormat,
   type CreativeMedium
 } from './lib/projectBlueprint';
-import { buildProjectIntakePlan, getFocusedServiceScope } from './lib/projectIntake';
+import { buildProjectIntakePlan, getFocusedServiceScope, getIntakePersona } from './lib/projectIntake';
 import { buildFlowAgentMap, type FlowAgentAssignment } from './lib/agentOrchestration';
 import {
   createDefaultDevelopmentInput,
@@ -983,12 +983,16 @@ function StoryXHome({
                     const question = intakePlan.questions[intakeQuestionIndex];
                     if (!question) return null;
                     const selectedOption = intakeAnswers[question.id] ?? question.recommendedOptionId;
+                    const persona = getIntakePersona(question.agentId);
 
                     return (
                       <article className="intake-question-card is-active" key={question.id}>
-                        <span>
-                          {String(intakeQuestionIndex + 1).padStart(2, '0')} · {question.agentLabel}
-                        </span>
+                        <div className="intake-question-interviewer">
+                          <b>{persona.name}</b>
+                          <em>
+                            {String(intakeQuestionIndex + 1).padStart(2, '0')} · {persona.blurb}
+                          </em>
+                        </div>
                         <h3>{question.question}</h3>
                         <div>
                           {question.options.map((option) => (
