@@ -87,6 +87,20 @@ export function unlockChapter(project: SeriesProject, chapterId: string): Series
   };
 }
 
+// 작품 무게중심 — 대중성/작품성 중 어디에 비중을 두는지. 생성·검토 강조점을 가른다.
+export type CreativeWeight = 'popular' | 'balanced' | 'literary';
+
+export function describeCreativeWeight(weight: CreativeWeight): string {
+  switch (weight) {
+    case 'popular':
+      return '대중성 우선 — 사건·후크·보상 리듬을 빠르고 선명하게';
+    case 'literary':
+      return '작품성 우선 — 여백·주제 층위·고유한 목소리를 깊게';
+    default:
+      return '균형 — 표면 사건은 명료하게, 심층 주제는 깊게';
+  }
+}
+
 export interface SeriesProject {
   id: string;
   title: string;
@@ -94,7 +108,12 @@ export interface SeriesProject {
   localization: LocalizationPolicy;
   genre: GenreId;
   tone: string;
+  /** 표면 약속 — 독자에게 거는, 플롯·사건 차원의 약속 */
   audiencePromise: string;
+  /** 심층 질문 — 표면 사건 아래에서 작품이 진짜 묻는 것 */
+  deepQuestion: string;
+  /** 작품 무게중심 — 대중성/작품성 비중 */
+  creativeWeight: CreativeWeight;
   currentEpisode: number;
   characters: CharacterProfile[];
   worldRules: WorldRule[];
@@ -361,6 +380,8 @@ export function createSeedProject(): SeriesProject {
     genre: 'romance-fantasy',
     tone: '서늘한 궁정 미스터리와 느리게 타오르는 신뢰',
     audiencePromise: '매 회차마다 감정적 선택, 새로운 단서, 다음 편을 누르게 하는 반전을 제공한다.',
+    deepQuestion: '기록을 고친다는 것은 사람을 구하는 일인가, 또 다른 거짓을 쌓는 일인가?',
+    creativeWeight: 'balanced',
     currentEpisode: 0,
     characters,
     worldRules,
@@ -516,11 +537,21 @@ const CONTEXT_THREAD_LIMIT = 8;
 // 2화 이상 생성 시 LLM에 넘길 연속성 컨텍스트를 만든다.
 // 장편에서 캐논이 쌓여도 프롬프트가 무한정 커지지 않도록 초반 정착 캐논 + 최근 캐논으로 예산을 제한한다.
 export function buildProjectContextDigest(project: SeriesProject): string {
-  if (project.chapters.length === 0) {
-    return '';
-  }
+  const lines: string[] = [];
 
-  const lines: string[] = [`지금까지 ${project.currentEpisode}화까지 진행됨.`];
+  // 작품 계약 — 1화부터 모든 생성이 따라야 하는 약속. 회차가 없어도 항상 넘긴다.
+  lines.push('작품 계약:');
+  if (project.audiencePromise) {
+    lines.push(`- 표면 약속(독자에게 거는 약속): ${project.audiencePromise}`);
+  }
+  if (project.deepQuestion) {
+    lines.push(`- 심층 질문(작품이 진짜 묻는 것): ${project.deepQuestion}`);
+  }
+  lines.push(`- 무게중심: ${describeCreativeWeight(project.creativeWeight ?? 'balanced')}`);
+
+  if (project.chapters.length > 0) {
+    lines.push('', `지금까지 ${project.currentEpisode}화까지 진행됨.`);
+  }
 
   if (project.canonFacts.length > 0) {
     lines.push('', '확정 캐논 (절대 위반 금지):');

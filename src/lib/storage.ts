@@ -97,9 +97,12 @@ export function clearProjectSnapshots() {
 }
 
 function normalizeProject(project: SeriesProject): SeriesProject {
+  // 표면 약속/심층 질문/무게중심 도입 이전에 저장된 프로젝트를 위한 백필
   const normalizedProject = {
     ...project,
-    localization: getProjectLocalization(project)
+    localization: getProjectLocalization(project),
+    deepQuestion: typeof project.deepQuestion === 'string' ? project.deepQuestion : '',
+    creativeWeight: project.creativeWeight ?? 'balanced'
   };
 
   if (project.title !== '달의 문서고' && project.id !== 'moon-archive') {

@@ -40,11 +40,13 @@ import {
   buildStoryEditorWorkspace,
   chapterFromDraftPayload,
   createSeedProject,
+  describeCreativeWeight,
   getGenreProfiles,
   lockChapter,
   produceNextChapter,
   type AgentRun,
   type Chapter,
+  type CreativeWeight,
   type GenreId,
   type ProductionRequest,
   type ProductionResult,
@@ -976,11 +978,15 @@ export function StoryXDesk({
     });
   }
 
-  function updateProject(field: 'title' | 'logline' | 'audiencePromise' | 'tone', value: string) {
+  function updateProject(
+    field: 'title' | 'logline' | 'audiencePromise' | 'deepQuestion' | 'tone',
+    value: string
+  ) {
     const labels = {
       title: '작품 제목',
       logline: '로그라인',
-      audiencePromise: '독자 약속',
+      audiencePromise: '표면 약속',
+      deepQuestion: '심층 질문',
       tone: '문체 톤'
     };
 
@@ -993,6 +999,18 @@ export function StoryXDesk({
       origin: 'manual-bible-edit'
     });
     setProject((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateCreativeWeight(weight: CreativeWeight) {
+    logCanonChange({
+      kind: 'story-core',
+      targetLabel: project.title,
+      fieldLabel: '작품 무게중심',
+      before: project.creativeWeight,
+      after: weight,
+      origin: 'manual-bible-edit'
+    });
+    setProject((current) => ({ ...current, creativeWeight: weight }));
   }
 
   function updateCharacterMemory(characterId: string, field: 'desire' | 'wound' | 'currentState', value: string) {
@@ -1548,6 +1566,7 @@ export function StoryXDesk({
               onUpdateWorldRule={updateWorldMemory}
               onUpdateCanon={updateCanonMemory}
               onUpdateProject={updateProject}
+              onUpdateCreativeWeight={updateCreativeWeight}
               approvalQueue={approvalQueue}
               approvalDecisions={approvalDecisions}
               onSetApprovalDecision={setApprovalDecision}
@@ -2080,6 +2099,7 @@ function MemoryBankStudio({
   onUpdateWorldRule,
   onUpdateCanon,
   onUpdateProject,
+  onUpdateCreativeWeight,
   approvalQueue,
   approvalDecisions,
   onSetApprovalDecision,
@@ -2096,7 +2116,11 @@ function MemoryBankStudio({
   onUpdateCharacter: (characterId: string, field: 'desire' | 'wound' | 'currentState', value: string) => void;
   onUpdateWorldRule: (ruleId: string, value: string) => void;
   onUpdateCanon: (canonId: string, value: string) => void;
-  onUpdateProject: (field: 'title' | 'logline' | 'audiencePromise' | 'tone', value: string) => void;
+  onUpdateProject: (
+    field: 'title' | 'logline' | 'audiencePromise' | 'deepQuestion' | 'tone',
+    value: string
+  ) => void;
+  onUpdateCreativeWeight: (weight: CreativeWeight) => void;
   approvalQueue: MemoryApprovalQueue;
   approvalDecisions: Record<string, ApprovalDecision>;
   onSetApprovalDecision: (candidateId: string, decision: ApprovalDecision) => void;
@@ -2138,20 +2162,44 @@ function MemoryBankStudio({
         {activeSection === 'overview' && (
         <div className="sx-bible-grid">
           <article className="sx-bible-card is-wide sx-memory-packet-card">
-            <span>Story Core</span>
+            <span>Story Contract</span>
             <h3>{project.title}</h3>
             <label>
               <small>로그라인</small>
-              <textarea value={project.logline} onChange={(event) => onUpdateProject('logline', event.target.value)} rows={3} />
+              <textarea value={project.logline} onChange={(event) => onUpdateProject('logline', event.target.value)} rows={2} />
             </label>
             <label>
-              <small>독자 약속</small>
+              <small>표면 약속 — 독자에게 거는 플롯·사건 차원의 약속</small>
               <textarea
                 value={project.audiencePromise}
                 onChange={(event) => onUpdateProject('audiencePromise', event.target.value)}
-                rows={3}
+                rows={2}
               />
             </label>
+            <label>
+              <small>심층 질문 — 표면 사건 아래에서 작품이 진짜 묻는 것</small>
+              <textarea
+                value={project.deepQuestion}
+                onChange={(event) => onUpdateProject('deepQuestion', event.target.value)}
+                rows={2}
+              />
+            </label>
+            <div className="sx-creative-weight">
+              <small>작품 무게중심</small>
+              <div className="sx-creative-weight-options" role="group" aria-label="작품 무게중심">
+                {(['popular', 'balanced', 'literary'] as CreativeWeight[]).map((weight) => (
+                  <button
+                    key={weight}
+                    type="button"
+                    className={project.creativeWeight === weight ? 'is-active' : ''}
+                    onClick={() => onUpdateCreativeWeight(weight)}
+                  >
+                    {weight === 'popular' ? '대중성' : weight === 'literary' ? '작품성' : '균형'}
+                  </button>
+                ))}
+              </div>
+              <p>{describeCreativeWeight(project.creativeWeight)}</p>
+            </div>
           </article>
           <article className="sx-bible-card">
             <span>Context Packet</span>
@@ -2283,7 +2331,7 @@ function MemoryBankStudio({
             <textarea value={project.tone} onChange={(event) => onUpdateProject('tone', event.target.value)} rows={2} />
           </label>
           <label>
-            <small>독자 약속</small>
+            <small>표면 약속 — 개요의 Story Contract와 같이 반영됩니다</small>
             <textarea
               value={project.audiencePromise}
               onChange={(event) => onUpdateProject('audiencePromise', event.target.value)}

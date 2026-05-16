@@ -51,7 +51,11 @@ describe('longform continuity', () => {
     expect(digest).toContain(lastFact.statement);
   });
 
-  it('returns an empty digest before any chapter exists', () => {
-    expect(buildProjectContextDigest(createSeedProject())).toBe('');
+  it('always carries the story contract, even before any chapter exists', () => {
+    const digest = buildProjectContextDigest(createSeedProject());
+    expect(digest).toContain('작품 계약');
+    expect(digest).toContain('심층 질문');
+    expect(digest).toContain('무게중심');
+    expect(digest).not.toContain('지금까지');
   });
 });

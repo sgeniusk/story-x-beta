@@ -3744,6 +3744,44 @@ body {
   color: rgba(132, 38, 38, 0.92);
 }
 
+.sx-creative-weight {
+  display: grid;
+  gap: 8px;
+}
+
+.sx-creative-weight-options {
+  display: inline-flex;
+  width: fit-content;
+  padding: var(--sx-space-1);
+  border: 1px solid var(--sx-line);
+  border-radius: var(--sx-radius-pill);
+  background: var(--sx-paper);
+}
+
+.sx-creative-weight-options button {
+  padding: 6px 16px;
+  border: 0;
+  border-radius: var(--sx-radius-pill);
+  background: transparent;
+  color: var(--sx-muted);
+  font-size: 0.85rem;
+  font-weight: var(--sx-weight-semibold);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.sx-creative-weight-options button.is-active {
+  background: var(--sx-ink);
+  color: var(--sx-card);
+}
+
+.sx-creative-weight > p {
+  margin: 0;
+  color: var(--sx-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
 .sx-draft-prompt-field {
   display: grid;
   gap: 4px;
