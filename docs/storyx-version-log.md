@@ -4,7 +4,7 @@
 기준 날짜: 2026-05-16
 공개 URL: `https://story-x-alpha.vercel.app`
 
-커밋은 개발 기록이고, 이 문서는 사용자가 이해할 수 있는 제품 변화 기록이다. 앞으로의 계획은 `docs/storyx-release-roadmap.md`를 본다.
+커밋은 개발 기록이고, 이 문서는 사용자가 이해할 수 있는 제품 변화 기록이다. 앞으로의 계획은 `docs/storyx-launch-plan.md`를 본다.
 
 ## 버전 규칙
 

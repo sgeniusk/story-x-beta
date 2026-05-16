@@ -1,5 +1,7 @@
 # Creative Agent Workflow Plan
 
+> 참고 — 현행 계획은 `docs/storyx-launch-plan.md`를 본다. 이 문서는 에이전트 아키텍처 배경 자료다.
+
 ## Purpose
 
 This document defines how the service should grow from a format router into a multi-agent creative operating system for novels, essays, audiobooks, comics, webtoons, insta-toons, short comics, and later comic subtypes such as four-cut insta-toons, storybooks, and graphic novels.

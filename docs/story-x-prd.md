@@ -1,5 +1,7 @@
 # Story X PRD v0.2
 
+> 참고 — 현행 계획은 `docs/storyx-launch-plan.md`(단일 마스터 계획)를 본다. 이 PRD는 2026-05-12 시점의 배경 자료다.
+
 Date: 2026-05-12
 
 ## 0. 2026-05-14 Evaluator Update
