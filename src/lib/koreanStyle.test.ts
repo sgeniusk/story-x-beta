@@ -32,6 +32,16 @@ describe('koreanStyle', () => {
     expect(kinds).toContain('comma-heavy');
   });
 
+  it('flags abstract emotion words and over-explanation', () => {
+    const report = evaluateKoreanProse(
+      '그는 너무 슬펐다. 외로웠다. 그제서야 모든 것이 끝났다는 것을 깨달았다. 그것은 그가 떠났기 때문이었다.'
+    );
+    const kinds = report.issues.map((issue) => issue.kind);
+    expect(kinds).toContain('abstract-emotion');
+    expect(kinds).toContain('over-explanation');
+    expect(report.score).toBeLessThan(100);
+  });
+
   it('returns a perfect score for empty text', () => {
     const report = evaluateKoreanProse('');
     expect(report.score).toBe(100);
