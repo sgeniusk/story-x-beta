@@ -195,6 +195,39 @@ if (command === 'draft') {
   process.exit(0);
 }
 
+if (command === 'interview') {
+  const provider = readFlag(args, '--provider', 'mock');
+  const medium = readFlag(args, '--medium', 'novel');
+  const freewrite = readFlag(args, '--freewrite', '');
+  const prompt = buildInterviewPrompt({ medium, freewrite });
+
+  if (provider === 'mock') {
+    printJson({ provider, medium, mode: 'interview', status: 'complete', questions: [] });
+    process.exit(0);
+  }
+
+  const commandPreview =
+    provider === 'claude'
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', prompt]
+      : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
+
+  const providerResult = runProvider(commandPreview);
+  const rawOutput = providerResult.stdout || providerResult.stderr;
+  const parsed = parseProviderJson(rawOutput);
+  const questions = Array.isArray(parsed?.questions) ? parsed.questions : [];
+
+  printJson({
+    provider,
+    medium,
+    mode: 'interview',
+    status: providerResult.status === 0 ? 'complete' : 'failed',
+    exitCode: providerResult.status,
+    questions,
+    warning: providerResult.status === 0 ? undefined : 'provider 호출이 실패했습니다.'
+  });
+  process.exit(providerResult.status === 0 ? 0 : 1);
+}
+
 if (command === 'normalize-provider-output') {
   const provider = readFlag(args, '--provider', 'claude');
   const scale = readFlag(args, '--scale', 'small');
@@ -316,6 +349,49 @@ function buildReviewPrompt(scale, target, medium, context) {
     '    { "owner": "character|world|plot|voice", "status": "pending", "statement": "새 기억 후보", "sourceAgentId": "continuity-editor", "rationale": "후보로 둔 이유" }',
     '  ],',
     '  "nextActions": ["사용자가 다음에 할 행동"]',
+    '}'
+  ].join('\n');
+}
+
+function buildInterviewPrompt({ medium, freewrite }) {
+  const isEssay = medium === 'essay';
+
+  return [
+    'Story X 작가 인터뷰 질문 생성 요청.',
+    `매체: ${medium}`,
+    '',
+    '## 작가가 쓴 자유 서술',
+    freewrite || '(자유 서술 없음 — 매체만으로 일반적인 세팅 질문 3개를 만드세요.)',
+    '',
+    '## 역할',
+    '당신은 Story X의 작가 인터뷰 설계자입니다. 위 자유 서술을 읽고, 이 작가가 작품을 시작하기 전에 스스로 정해야 할 핵심 결정 3가지를 객관식 질문으로 만듭니다.',
+    '',
+    '## 인터뷰어 — 각 질문을 누가 묻는지 agentId로 지정',
+    '- showrunner: 후크와 연재 구조',
+    '- character-custodian: 인물의 욕망과 모순',
+    '- world-keeper: 세계 규칙과 그 대가',
+    '- voice-curator: 문체와 목소리',
+    '- essay-interviewer: 에세이의 실제 경험과 거리',
+    '- continuity-editor: 연속성과 캐논',
+    '',
+    '## 규칙',
+    '- 자유 서술에 실제로 나온 소재·인물·설정을 근거로, 이 작품에만 맞는 구체적 질문을 만듭니다. 일반론 금지.',
+    '- 각 질문은 객관식 선택지 3개와, 각 선택지가 작품에 미치는 영향(impact)을 함께 답니다.',
+    isEssay
+      ? '- 에세이이므로 essay-interviewer를 반드시 포함하고, 작가가 적지 않은 사실을 지어내는 선택지는 만들지 않습니다.'
+      : '- 매체와 자유 서술에 맞는 인터뷰어를 고릅니다.',
+    '- 한국어로 자연스럽게 씁니다.',
+    '',
+    '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
+    '{',
+    '  "questions": [',
+    '    {',
+    '      "agentId": "showrunner|character-custodian|world-keeper|voice-curator|essay-interviewer|continuity-editor",',
+    '      "question": "이 작품에 대한 구체적인 질문",',
+    '      "options": [{ "label": "선택지", "impact": "이 선택이 작품에 미치는 영향" }],',
+    '      "recommendedOptionLabel": "추천 선택지의 label"',
+    '    }',
+    '  ]',
     '}'
   ].join('\n');
 }

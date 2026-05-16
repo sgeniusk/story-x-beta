@@ -35,7 +35,13 @@ import {
   type CreativeFormat,
   type CreativeMedium
 } from './lib/projectBlueprint';
-import { buildProjectIntakePlan, getFocusedServiceScope, getIntakePersona } from './lib/projectIntake';
+import {
+  buildProjectIntakePlan,
+  getFocusedServiceScope,
+  getIntakePersona,
+  type ProjectIntakeQuestion
+} from './lib/projectIntake';
+import { requestLlmInterview } from './lib/interviewClient';
 import { buildFlowAgentMap, type FlowAgentAssignment } from './lib/agentOrchestration';
 import {
   createDefaultDevelopmentInput,
@@ -786,6 +792,33 @@ function StoryXHome({
   const [freewriteText, setFreewriteText] = useState('');
   const [intakeQuestionIndex, setIntakeQuestionIndex] = useState(0);
   const [homeFlowStep, setHomeFlowStep] = useState<HomeFlowStep>('medium');
+  const [llmIntakeQuestions, setLlmIntakeQuestions] = useState<ProjectIntakeQuestion[] | null>(null);
+  const [isInterviewLoading, setIsInterviewLoading] = useState(false);
+  const effectiveIntakeQuestions = llmIntakeQuestions ?? intakePlan.questions;
+
+  // 자유 서술이나 매체가 바뀌면 LLM 인터뷰 질문 캐시를 비워 다음 진입 때 새로 생성한다
+  useEffect(() => {
+    setLlmIntakeQuestions(null);
+  }, [freewriteText, blueprint.medium]);
+
+  // 인터뷰 단계로 진입 — 자유 서술이 있으면 그 작품에 맞는 질문을 LLM에 요청한다
+  async function goToIntake() {
+    setHomeFlowStep('intake');
+    setIntakeQuestionIndex(0);
+    if (llmIntakeQuestions || isInterviewLoading || !freewriteText.trim()) {
+      return;
+    }
+    setIsInterviewLoading(true);
+    try {
+      const result = await requestLlmInterview({ medium: blueprint.medium, freewrite: freewriteText });
+      if (result.ok && result.questions) {
+        setLlmIntakeQuestions(result.questions);
+        setIntakeQuestionIndex(0);
+      }
+    } finally {
+      setIsInterviewLoading(false);
+    }
+  }
   const homeFlowSteps: Array<{ id: HomeFlowStep; label: string; caption: string }> = [
     { id: 'medium', label: '매체 선택', caption: '무엇을 만들지 정합니다.' },
     { id: 'freewrite', label: '자유 서술', caption: '쓰고 싶은 이야기를 흘려 적습니다.' },
@@ -941,7 +974,7 @@ function StoryXHome({
                 <button type="button" className="button-secondary" onClick={() => setHomeFlowStep('medium')}>
                   이전
                 </button>
-                <button type="button" className="button-primary" onClick={() => setHomeFlowStep('intake')}>
+                <button type="button" className="button-primary" onClick={goToIntake}>
                   인터뷰로 계속
                 </button>
               </div>
@@ -974,13 +1007,24 @@ function StoryXHome({
                 </div>
                 <div className="intake-question-stepper">
                   <div className="intake-progress" aria-label="질문 진행도">
-                    <span>{intakeQuestionIndex + 1} / {intakePlan.questions.length}</span>
+                    <span>{intakeQuestionIndex + 1} / {effectiveIntakeQuestions.length}</span>
                     <div className="intake-progress-bar" aria-hidden="true">
-                      <i style={{ width: `${((intakeQuestionIndex + 1) / intakePlan.questions.length) * 100}%` }} />
+                      <i style={{ width: `${((intakeQuestionIndex + 1) / effectiveIntakeQuestions.length) * 100}%` }} />
                     </div>
                   </div>
                   {(() => {
-                    const question = intakePlan.questions[intakeQuestionIndex];
+                    if (isInterviewLoading) {
+                      return (
+                        <article className="intake-question-card is-active">
+                          <div className="intake-question-interviewer">
+                            <b>인터뷰어들이 원고를 읽고 있습니다…</b>
+                            <em>당신이 쓴 자유 서술에 맞는 질문을 준비하는 중입니다.</em>
+                          </div>
+                        </article>
+                      );
+                    }
+
+                    const question = effectiveIntakeQuestions[intakeQuestionIndex];
                     if (!question) return null;
                     const selectedOption = intakeAnswers[question.id] ?? question.recommendedOptionId;
                     const persona = getIntakePersona(question.agentId);
@@ -1043,14 +1087,14 @@ function StoryXHome({
                         이전 질문
                       </button>
                     )}
-                    {intakeQuestionIndex < intakePlan.questions.length - 1 && (
+                    {!isInterviewLoading && intakeQuestionIndex < effectiveIntakeQuestions.length - 1 && (
                       <button
                         type="button"
                         className="button-primary"
                         style={{ marginLeft: 'auto' }}
                         onClick={() =>
                           setIntakeQuestionIndex((current) =>
-                            Math.min(intakePlan.questions.length - 1, current + 1)
+                            Math.min(effectiveIntakeQuestions.length - 1, current + 1)
                           )
                         }
                       >

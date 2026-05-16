@@ -130,6 +130,16 @@ export default defineConfig({
       String(input.medium ?? 'novel'),
       '--context',
       String(input.context ?? '')
+    ]),
+    storyxBridge('/api/interview', (input) => [
+      'tools/storyx.mjs',
+      'interview',
+      '--provider',
+      'claude',
+      '--medium',
+      String(input.medium ?? 'novel'),
+      '--freewrite',
+      String(input.freewrite ?? '')
     ])
   ]
 });
