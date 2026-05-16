@@ -6,6 +6,7 @@ export type IntakeAgentId =
   | 'world-keeper'
   | 'voice-curator'
   | 'essay-interviewer'
+  | 'essay-thesis'
   | 'continuity-editor'
   | 'creative-coach'
   | 'storyboard-agent'
@@ -60,6 +61,7 @@ const intakePersonas: Record<IntakeAgentId, IntakePersona> = {
   'world-keeper': { name: '르 권', blurb: '세계의 규칙과 그 대가를 묻는 설계자' },
   'voice-curator': { name: '무라카메', blurb: '문장의 호흡과 거리를 듣는 문체가' },
   'essay-interviewer': { name: '버지니아 울브', blurb: '사적 경험과 의식의 흐름을 따라가는 에세이스트' },
+  'essay-thesis': { name: '유발 하리', blurb: '큰 그림과 논증의 뼈대를 묻는 사상가' },
   'continuity-editor': { name: '맥스 퍼킨', blurb: '앞 회차와 어긋나는 곳을 끝까지 보는 편집자' },
   'storyboard-agent': { name: '데즈카 오사', blurb: '칸과 호흡으로 장면을 짜는 연출가' },
   'speech-bubble-agent': { name: '윌 아이스', blurb: '말풍선과 침묵의 위치를 보는 연출가' },

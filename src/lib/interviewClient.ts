@@ -8,6 +8,7 @@ const KNOWN_AGENT_IDS: IntakeAgentId[] = [
   'world-keeper',
   'voice-curator',
   'essay-interviewer',
+  'essay-thesis',
   'continuity-editor',
   'creative-coach',
   'storyboard-agent',
