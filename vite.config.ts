@@ -127,7 +127,9 @@ export default defineConfig({
       '--target',
       String(input.target ?? ''),
       '--medium',
-      String(input.medium ?? 'novel')
+      String(input.medium ?? 'novel'),
+      '--context',
+      String(input.context ?? '')
     ])
   ]
 });

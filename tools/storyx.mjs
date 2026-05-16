@@ -35,9 +35,10 @@ if (command === 'review') {
   const scale = readFlag(args, '--scale', 'small');
   const target = readFlag(args, '--target', '');
   const medium = readFlag(args, '--medium', 'novel');
+  const context = readFlag(args, '--context', '');
   const outDir = readFlag(args, '--out-dir', join(process.cwd(), '.storyx-runs'));
   const dryRun = args.includes('--dry-run');
-  const prompt = buildReviewPrompt(scale, target, medium);
+  const prompt = buildReviewPrompt(scale, target, medium, context);
 
   if (provider === 'mock') {
     const result = {
@@ -248,7 +249,7 @@ function findCommand(commandName) {
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
-function buildReviewPrompt(scale, target, medium) {
+function buildReviewPrompt(scale, target, medium, context) {
   const isEssay = medium === 'essay';
 
   const role = isEssay
@@ -263,9 +264,30 @@ function buildReviewPrompt(scale, target, medium) {
     ? '- 작가가 적지 않은 사실을 지어내 채우라고 요구하지 말고, 더 물어볼 질문으로 남깁니다. 실제 인물의 식별 위험을 발견하면 blocked로 판정합니다.'
     : '- 캐논 충돌은 다수결로 통과시키지 않습니다.';
 
+  // craft 검토 기준 — 대중성·작품성 리서치에서 도출
+  const craftCriteria = isEssay
+    ? [
+        '- 표면/심층: 구체적 경험에서 출발해 작품 계약의 심층 질문으로 넓히는가, 경험만 나열하는가.',
+        '- 정직함: 화자가 자기를 정직하게 보는가, 자기연민에 빠지지 않는가.',
+        '- 사유의 이동: 글의 처음과 끝에서 화자의 시선이 달라져 있는가.',
+        '- 여백: 교훈을 강요하지 않고 질문으로 열어 두는가.',
+        '- 실제 인물: 주변 인물의 식별 위험이나 일방적 비난이 없는가.'
+      ]
+    : [
+        '- 표면 약속: 이 회차가 작품 계약의 표면 약속(사건·후크)을 지키는가.',
+        '- 심층 질문: 표면 사건 아래에서 작품의 심층 질문을 건드리는가, 표면만 소비하는가.',
+        '- 무게중심: 작품 계약의 무게중심(대중성/균형/작품성)에 맞는 밀도와 리듬인가.',
+        '- 여백: 감정과 의미를 과잉 설명하지 않고 독자가 채울 자리를 남겼는가.',
+        '- 구체적 감각: 추상 감정어 대신 사물·동작·감각으로 보여주는가.',
+        '- 윤리적 복잡성: 인물에게 쉬운 심판을 내리지 않고, 악인에게도 그 나름의 논리를 주는가.'
+      ];
+
   return [
     isEssay ? 'Story X 에세이 검토 요청.' : 'Story X 회차 검토 요청.',
     `검토 규모: ${scale}`,
+    '',
+    '## 작품 계약과 맥락 (검토 기준)',
+    context ? context : '(작품 계약 정보가 전달되지 않았습니다.)',
     '',
     '## 검토 대상 원고',
     target ? target : '(원고 본문이 전달되지 않았습니다 — 검토할 수 없음을 summary에 명시하세요.)',
@@ -278,6 +300,9 @@ function buildReviewPrompt(scale, target, medium) {
     '- 사용자 승인 전에는 어떤 사실도 canon으로 확정하지 않습니다. 새 사실은 memoryCandidates에만 둡니다.',
     '- 각 에이전트는 원고의 구체적 문장을 근거(evidence)로 들어 pass / revise / blocked 중 하나로 판정합니다.',
     extraRule,
+    '',
+    '## 검토 기준 — 각 에이전트가 반드시 짚을 것',
+    ...craftCriteria,
     '',
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',

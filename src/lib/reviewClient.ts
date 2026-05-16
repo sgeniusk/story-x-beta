@@ -6,6 +6,8 @@ export interface ReviewRequestInput {
   target: string;
   /** 매체별 검토 — novel은 쇼러너 등 서사 에이전트, essay는 인터뷰어·문체·연속성 */
   medium: string;
+  /** 작품 계약(표면 약속·심층 질문·무게중심)과 캐논 맥락 — 검토 기준 */
+  context: string;
 }
 
 export interface LlmReviewResult {

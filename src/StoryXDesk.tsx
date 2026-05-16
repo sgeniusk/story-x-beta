@@ -1195,7 +1195,12 @@ export function StoryXDesk({
 
     try {
       const llm = await requestLlmReview(
-        { scale: reviewScale, target: reviewTarget, medium: blueprint.medium },
+        {
+          scale: reviewScale,
+          target: reviewTarget,
+          medium: blueprint.medium,
+          context: buildProjectContextDigest(project)
+        },
         project.title
       );
 
