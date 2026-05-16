@@ -129,6 +129,69 @@ if (command === 'review') {
   process.exit(0);
 }
 
+if (command === 'draft') {
+  const provider = readFlag(args, '--provider', 'mock');
+  const medium = readFlag(args, '--medium', 'novel');
+  const format = readFlag(args, '--format', 'long-novel');
+  const freewrite = readFlag(args, '--freewrite', '');
+  const title = readFlag(args, '--title', '');
+  const outDir = readFlag(args, '--out-dir', join(process.cwd(), '.storyx-runs'));
+  const budget = readFlag(args, '--max-budget-usd', '0.5');
+  const dryRun = args.includes('--dry-run');
+  const prompt = buildDraftPrompt({ medium, format, freewrite, title });
+
+  if (provider === 'mock') {
+    const result = {
+      provider,
+      medium,
+      format,
+      mode: 'draft',
+      generatedAt: new Date().toISOString(),
+      title: title || '샘플 1화',
+      hook: 'mock 후크 — 실제 생성은 --provider claude로 실행하세요.',
+      outline: ['mock 장면 비트 1', 'mock 장면 비트 2'],
+      prose: 'mock 초안입니다. 실제 claude 호출 없이 만든 자리표시 텍스트라 작품 평가에는 쓰지 마세요.',
+      newCanonFacts: [],
+      approvalRequiredBeforeSync: true
+    };
+    const draftPath = writeDraftFile(outDir, provider, result);
+    printJson({ ...result, draftPath });
+    process.exit(0);
+  }
+
+  const commandPreview =
+    provider === 'claude'
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', '--max-budget-usd', budget, prompt]
+      : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
+
+  if (!dryRun) {
+    const providerResult = runProvider(commandPreview);
+    const rawOutput = providerResult.stdout || providerResult.stderr;
+    const payload = normalizeDraftOutput(rawOutput, { provider, medium, format, title });
+    payload.status = providerResult.status === 0 ? 'complete' : 'failed';
+    payload.exitCode = providerResult.status;
+    if (providerResult.status !== 0) {
+      payload.warning = 'provider 호출이 실패했습니다. doctor 또는 dry-run으로 명령을 점검하세요.';
+    }
+    const draftPath = writeDraftFile(outDir, provider, payload);
+    const rawProviderOutputPath = writeRawDraftFile(outDir, provider, rawOutput);
+    printJson({ ...payload, draftPath, rawProviderOutputPath, approvalRequiredBeforeSync: true });
+    process.exit(providerResult.status === 0 ? 0 : 1);
+  }
+
+  printJson({
+    provider,
+    medium,
+    format,
+    dryRun,
+    commandPreview,
+    draftTarget: join(outDir, 'drafts'),
+    approvalRequiredBeforeSync: true,
+    warning: 'Actual Claude/Codex runs spend tokens. Remove --dry-run only after confirming medium, format, and freewrite.'
+  });
+  process.exit(0);
+}
+
 if (command === 'normalize-provider-output') {
   const provider = readFlag(args, '--provider', 'claude');
   const scale = readFlag(args, '--scale', 'small');
@@ -165,9 +228,10 @@ if (command === 'normalize-provider-output') {
 printJson({
   usage: [
     'npm run storyx -- doctor',
+    'npm run storyx -- draft --provider mock --medium novel --format long-novel --dry-run',
+    'npm run storyx -- draft --provider claude --medium novel --format long-novel --freewrite "쓰고 싶은 이야기" --dry-run',
     'npm run storyx -- review --provider mock --scale small --dry-run',
     'npm run storyx -- review --provider claude --scale small --dry-run',
-    'npm run storyx -- review --provider codex --scale small --dry-run',
     'npm run storyx -- normalize-provider-output --provider claude --scale small --raw-file ./provider-output.txt'
   ]
 });
@@ -190,6 +254,87 @@ function buildReviewPrompt(scale) {
     'Do not sync canon or memory without user approval.',
     'Return summary, agentReports, memoryCandidates, nextActions.'
   ].join('\n');
+}
+
+function buildDraftPrompt({ medium, format, freewrite, title }) {
+  return [
+    'Story X 회차 초안 생성 요청.',
+    `매체: ${medium} / 포맷: ${format}`,
+    title ? `작품 제목: ${title}` : '작품 제목: 미정',
+    '',
+    '## 작가 자유 서술 (작가가 직접 적은, 쓰고 싶은 이야기)',
+    freewrite || '(자유 서술 없음 — 매체와 포맷만으로 1화의 출발점을 제안하세요.)',
+    '',
+    '## 역할',
+    '당신은 Story X의 작품 생성 엔진입니다. 쇼러너(회차 약속과 클리프행어), 캐릭터 큐레이터(욕망·상처·말투·관계), 배경 설계자(세계 규칙과 비용), 연속성 감수자(캐논 일관성)의 시선을 모두 적용해 1화 초안을 만듭니다.',
+    '',
+    '## 규칙',
+    '- 한국어로 작성하고, 작가 자유 서술의 어휘와 의도를 존중합니다.',
+    '- essay 매체이면 작가가 자유 서술에 적지 않은 사실(인물의 직업·나이·장소 등)을 발명하지 마세요. 빈 곳은 비워 둡니다.',
+    '- 한 회차는 하나의 질문에 답하고 더 날카로운 질문을 엽니다.',
+    '- prose는 1500~3000자 분량의 실제 본문입니다.',
+    '',
+    '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
+    '{',
+    '  "title": "회차 제목",',
+    '  "hook": "다음 회차로 이어지는 한 줄 후크",',
+    '  "outline": ["장면 비트 1", "장면 비트 2", "장면 비트 3"],',
+    '  "prose": "회차 본문",',
+    '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 회차에서 확정된 새 사실" }]',
+    '}'
+  ].join('\n');
+}
+
+function normalizeDraftOutput(rawOutput, options) {
+  const parsed = parseProviderJson(rawOutput);
+
+  return {
+    provider: options.provider,
+    medium: options.medium,
+    format: options.format,
+    mode: 'draft',
+    generatedAt: new Date().toISOString(),
+    title: readString(parsed?.title) || options.title || '제목 미정 1화',
+    hook: readString(parsed?.hook) || '',
+    outline: normalizeStringList(parsed?.outline),
+    prose: readString(parsed?.prose) || summarizeRawProviderOutput(rawOutput, options.title || 'Story X draft'),
+    newCanonFacts: normalizeDraftCanonFacts(parsed?.newCanonFacts),
+    approvalRequiredBeforeSync: true
+  };
+}
+
+function normalizeDraftCanonFacts(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(isRecord)
+    .map((fact) => ({
+      owner: normalizeMemoryOwner(readString(fact.owner)),
+      statement: readString(fact.statement) || readString(fact.note)
+    }))
+    .filter((fact) => fact.statement);
+}
+
+function writeDraftFile(outDir, provider, payload) {
+  const dir = join(outDir, 'drafts');
+  const path = join(dir, `${timestamp()}-${provider}-draft.json`);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  writeFileSync(path, JSON.stringify(payload, null, 2));
+  return path;
+}
+
+function writeRawDraftFile(outDir, provider, content) {
+  const dir = join(outDir, 'drafts', 'provider-raw');
+  const path = join(dir, `${timestamp()}-${provider}-draft.txt`);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  writeFileSync(path, content || '');
+  return path;
 }
 
 function runProvider(commandParts) {
