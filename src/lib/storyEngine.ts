@@ -509,6 +509,53 @@ function normalizeCanonOwner(owner: string): CanonFact['owner'] {
   return owner === 'character' || owner === 'world' || owner === 'plot' ? owner : 'plot';
 }
 
+const CONTEXT_CANON_LIMIT = 40;
+const CONTEXT_CANON_HEAD = 6;
+const CONTEXT_THREAD_LIMIT = 8;
+
+// 2화 이상 생성 시 LLM에 넘길 연속성 컨텍스트를 만든다.
+// 장편에서 캐논이 쌓여도 프롬프트가 무한정 커지지 않도록 초반 정착 캐논 + 최근 캐논으로 예산을 제한한다.
+export function buildProjectContextDigest(project: SeriesProject): string {
+  if (project.chapters.length === 0) {
+    return '';
+  }
+
+  const lines: string[] = [`지금까지 ${project.currentEpisode}화까지 진행됨.`];
+
+  if (project.canonFacts.length > 0) {
+    lines.push('', '확정 캐논 (절대 위반 금지):');
+    const facts = project.canonFacts;
+    const printFact = (fact: CanonFact) => lines.push(`- [${fact.owner}] ${fact.statement}`);
+
+    if (facts.length <= CONTEXT_CANON_LIMIT) {
+      facts.forEach(printFact);
+    } else {
+      const tailCount = CONTEXT_CANON_LIMIT - CONTEXT_CANON_HEAD;
+      facts.slice(0, CONTEXT_CANON_HEAD).forEach(printFact);
+      lines.push(`- … 초반 캐논 ${facts.length - CONTEXT_CANON_LIMIT}개 생략, 최근 캐논 우선 …`);
+      facts.slice(facts.length - tailCount).forEach(printFact);
+    }
+  }
+  if (project.characters.length > 0) {
+    lines.push('', '인물:');
+    project.characters.forEach((character) =>
+      lines.push(
+        `- ${character.name} (${character.role}) — 욕망: ${character.desire} / 상처: ${character.wound} / 현재: ${character.currentState}`
+      )
+    );
+  }
+  if (project.worldRules.length > 0) {
+    lines.push('', '세계 규칙:');
+    project.worldRules.forEach((rule) => lines.push(`- ${rule.title}: ${rule.rule}`));
+  }
+  if (project.openThreads.length > 0) {
+    lines.push('', '열린 떡밥:');
+    project.openThreads.slice(-CONTEXT_THREAD_LIMIT).forEach((thread) => lines.push(`- ${thread}`));
+  }
+
+  return lines.join('\n');
+}
+
 export interface ApprovedMemoryInput {
   id: string;
   owner: string;
