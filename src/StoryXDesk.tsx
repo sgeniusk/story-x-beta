@@ -52,6 +52,7 @@ import {
 } from './lib/storyEngine';
 import { requestLlmDraft } from './lib/draftClient';
 import { requestLlmReview } from './lib/reviewClient';
+import { describeKoreanStyleLevel, evaluateKoreanProse } from './lib/koreanStyle';
 import {
   agentReportsToRuns,
   buildAiCliRunPlan,
@@ -667,6 +668,10 @@ export function StoryXDesk({
         statementOverrides: approvalStatementOverrides
       }),
     [approvalDecisions, approvalStatementOverrides, latestReviewResult, project, syncedCandidateIds, verticalSlice]
+  );
+  const styleReport = useMemo(
+    () => evaluateKoreanProse(editorText || latestChapter?.prose || ''),
+    [editorText, latestChapter]
   );
   const evaluatorWorkflow = useMemo(() => buildTesterDrivenWorkflow(blueprint), [blueprint]);
   const publishingPlan = useMemo(
@@ -1440,6 +1445,13 @@ export function StoryXDesk({
                   {generationNote && (
                     <p className="sx-generation-note" role="status">
                       {generationNote}
+                    </p>
+                  )}
+                  {(editorText || latestChapter) && (
+                    <p className={`sx-style-chip is-${styleReport.level}`} role="status">
+                      문체 {describeKoreanStyleLevel(styleReport.level)} · {styleReport.score}점
+                      {styleReport.issues.length > 0 &&
+                        ` · ${styleReport.issues[0].label} ${styleReport.issues[0].count}`}
                     </p>
                   )}
                 </div>

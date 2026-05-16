@@ -3721,6 +3721,29 @@ body {
   font-weight: var(--sx-weight-medium);
 }
 
+.sx-style-chip {
+  margin: 8px 0 0;
+  padding: 5px 12px;
+  border-radius: var(--sx-radius-pill);
+  font-size: 0.8rem;
+  font-weight: var(--sx-weight-medium);
+}
+
+.sx-style-chip.is-clean {
+  background: rgba(13, 83, 88, 0.08);
+  color: rgba(13, 83, 88, 0.82);
+}
+
+.sx-style-chip.is-review {
+  background: rgba(176, 122, 12, 0.12);
+  color: rgba(126, 86, 8, 0.92);
+}
+
+.sx-style-chip.is-rework {
+  background: rgba(168, 52, 52, 0.12);
+  color: rgba(132, 38, 38, 0.92);
+}
+
 .sx-draft-prompt-field {
   display: grid;
   gap: 4px;
