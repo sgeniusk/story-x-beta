@@ -34,9 +34,10 @@ if (command === 'review') {
   const provider = readFlag(args, '--provider', 'mock');
   const scale = readFlag(args, '--scale', 'small');
   const target = readFlag(args, '--target', '');
+  const medium = readFlag(args, '--medium', 'novel');
   const outDir = readFlag(args, '--out-dir', join(process.cwd(), '.storyx-runs'));
   const dryRun = args.includes('--dry-run');
-  const prompt = buildReviewPrompt(scale, target);
+  const prompt = buildReviewPrompt(scale, target, medium);
 
   if (provider === 'mock') {
     const result = {
@@ -247,31 +248,45 @@ function findCommand(commandName) {
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
-function buildReviewPrompt(scale, target) {
+function buildReviewPrompt(scale, target, medium) {
+  const isEssay = medium === 'essay';
+
+  const role = isEssay
+    ? '당신은 Story X 에세이 작가진입니다. 에세이 인터뷰어(작가의 실제 경험에서 더 물어야 할 빈칸), 문체 큐레이터(담담하고 선명한 한국어, 번역투·AI투 점검), 실제 인물 보호(주변 인물 익명성과 감정 거리), 연속성 감수자(앞 편과의 사실 일관성)의 시선으로 위 원고를 검토합니다.'
+    : '당신은 Story X 작가진입니다. 쇼러너(독자 약속·후크), 캐릭터 큐레이터(욕망·상처·말투·관계), 배경 설계자(세계 규칙과 비용), 장르 스타일리스트(장르 리듬), 연속성 감수자(캐논 일관성)의 시선으로 위 원고를 검토합니다.';
+
+  const agentIdEnum = isEssay
+    ? 'essay-interviewer|voice-curator|continuity-editor'
+    : 'showrunner|character-custodian|world-keeper|genre-stylist|continuity-editor';
+
+  const extraRule = isEssay
+    ? '- 작가가 적지 않은 사실을 지어내 채우라고 요구하지 말고, 더 물어볼 질문으로 남깁니다. 실제 인물의 식별 위험을 발견하면 blocked로 판정합니다.'
+    : '- 캐논 충돌은 다수결로 통과시키지 않습니다.';
+
   return [
-    'Story X 회차 검토 요청.',
+    isEssay ? 'Story X 에세이 검토 요청.' : 'Story X 회차 검토 요청.',
     `검토 규모: ${scale}`,
     '',
     '## 검토 대상 원고',
     target ? target : '(원고 본문이 전달되지 않았습니다 — 검토할 수 없음을 summary에 명시하세요.)',
     '',
     '## 역할',
-    '당신은 Story X 작가진입니다. 쇼러너(독자 약속·후크), 캐릭터 큐레이터(욕망·상처·말투·관계), 배경 설계자(세계 규칙과 비용), 장르 스타일리스트(장르 리듬), 연속성 감수자(캐논 일관성)의 시선으로 위 원고를 검토합니다.',
+    role,
     '',
     '## 규칙',
     '- 한국어로 작성하고, 번역투와 과한 AI식 설명을 피합니다.',
     '- 사용자 승인 전에는 어떤 사실도 canon으로 확정하지 않습니다. 새 사실은 memoryCandidates에만 둡니다.',
     '- 각 에이전트는 원고의 구체적 문장을 근거(evidence)로 들어 pass / revise / blocked 중 하나로 판정합니다.',
-    '- 캐논 충돌은 다수결로 통과시키지 않습니다.',
+    extraRule,
     '',
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',
     '  "summary": "검토 총평 한 단락",',
     '  "agentReports": [',
-    '    { "agentId": "showrunner|character-custodian|world-keeper|genre-stylist|continuity-editor", "status": "pass|revise|blocked", "note": "검토 의견", "evidence": ["원고 근거"] }',
+    `    { "agentId": "${agentIdEnum}", "status": "pass|revise|blocked", "note": "검토 의견", "evidence": ["원고 근거"] }`,
     '  ],',
     '  "memoryCandidates": [',
-    '    { "owner": "character|world|plot|voice", "status": "pending", "statement": "새 기억 후보", "sourceAgentId": "showrunner", "rationale": "후보로 둔 이유" }',
+    '    { "owner": "character|world|plot|voice", "status": "pending", "statement": "새 기억 후보", "sourceAgentId": "continuity-editor", "rationale": "후보로 둔 이유" }',
     '  ],',
     '  "nextActions": ["사용자가 다음에 할 행동"]',
     '}'
@@ -279,36 +294,54 @@ function buildReviewPrompt(scale, target) {
 }
 
 function buildDraftPrompt({ medium, format, freewrite, title, context }) {
+  const isEssay = medium === 'essay';
+
+  const role = isEssay
+    ? '당신은 Story X의 에세이 집필 동반자입니다. 에세이 인터뷰어(작가의 실제 경험을 더 깊이 묻기), 문체 큐레이터(담담하고 선명한 한국어), 실제 인물 보호(주변 인물 익명화와 감정 거리), 연속성 감수자의 시선으로, 작가가 자유 서술에 적은 경험만으로 에세이 한 편을 씁니다.'
+    : '당신은 Story X의 소설 생성 엔진입니다. 쇼러너(회차 약속과 클리프행어), 캐릭터 큐레이터(욕망·상처·말투·관계), 배경 설계자(세계 규칙과 비용), 연속성 감수자(캐논 일관성)의 시선을 모두 적용해 회차 초안을 만듭니다.';
+
+  const rules = isEssay
+    ? [
+        '- 한국어로 작성하고, 작가 자유 서술의 어휘와 의도를 존중합니다.',
+        '- 작가가 자유 서술에 적지 않은 사실(인물의 직업·나이·장소·사건)을 절대 발명하지 않습니다. 모르는 곳은 비워 둡니다.',
+        '- 실제 주변 인물은 식별 정보를 흐리고, 비난이 아니라 감정의 거리를 둔 시선으로 다룹니다.',
+        '- 고백이 아니라 해석을 씁니다 — 그때의 사실, 그때의 감정, 지금의 시선을 분리합니다.',
+        '- 기존 작품 맥락이 있으면 앞 편에서 다룬 사실·인물과 어긋나지 않게 이어 씁니다.',
+        '- prose는 1500~3000자 분량의 실제 본문입니다.'
+      ]
+    : [
+        '- 한국어로 작성하고, 작가 자유 서술의 어휘와 의도를 존중합니다.',
+        '- 기존 작품 맥락이 있으면 그 캐논·인물·세계 규칙을 절대 어기지 말고, 이번 회차는 그 다음 회차로 자연스럽게 이어집니다.',
+        '- 한 회차는 하나의 질문에 답하고 더 날카로운 질문을 엽니다.',
+        '- prose는 1500~3000자 분량의 실제 본문입니다.'
+      ];
+
   return [
-    'Story X 회차 초안 생성 요청.',
+    isEssay ? 'Story X 에세이 초안 생성 요청.' : 'Story X 회차 초안 생성 요청.',
     `매체: ${medium} / 포맷: ${format}`,
     title ? `작품 제목: ${title}` : '작품 제목: 미정',
     '',
-    '## 기존 작품 맥락 (이미 확정된 캐논·인물·세계)',
-    context
-      ? context
-      : '(이전 회차 없음 — 이번이 1화입니다.)',
+    '## 기존 작품 맥락 (이미 확정된 사실·인물·설정)',
+    context ? context : '(이전 편 없음 — 이번이 첫 편입니다.)',
     '',
     '## 작가 자유 서술 (작가가 직접 적은, 쓰고 싶은 이야기)',
-    freewrite || '(자유 서술 없음 — 매체와 포맷만으로 1화의 출발점을 제안하세요.)',
+    freewrite || '(자유 서술 없음 — 매체와 포맷만으로 첫 편의 출발점을 제안하세요.)',
     '',
     '## 역할',
-    '당신은 Story X의 작품 생성 엔진입니다. 쇼러너(회차 약속과 클리프행어), 캐릭터 큐레이터(욕망·상처·말투·관계), 배경 설계자(세계 규칙과 비용), 연속성 감수자(캐논 일관성)의 시선을 모두 적용해 1화 초안을 만듭니다.',
+    role,
     '',
     '## 규칙',
-    '- 한국어로 작성하고, 작가 자유 서술의 어휘와 의도를 존중합니다.',
-    '- 기존 작품 맥락이 있으면 그 캐논·인물·세계 규칙을 절대 어기지 말고, 이번 회차는 그 다음 회차로 자연스럽게 이어집니다.',
-    '- essay 매체이면 작가가 자유 서술에 적지 않은 사실(인물의 직업·나이·장소 등)을 발명하지 마세요. 빈 곳은 비워 둡니다.',
-    '- 한 회차는 하나의 질문에 답하고 더 날카로운 질문을 엽니다.',
-    '- prose는 1500~3000자 분량의 실제 본문입니다.',
+    ...rules,
     '',
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',
-    '  "title": "회차 제목",',
-    '  "hook": "다음 회차로 이어지는 한 줄 후크",',
-    '  "outline": ["장면 비트 1", "장면 비트 2", "장면 비트 3"],',
-    '  "prose": "회차 본문",',
-    '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 회차에서 확정된 새 사실" }]',
+    '  "title": "제목",',
+    isEssay ? '  "hook": "글을 닫는 한 줄 — 독자에게 남는 울림",' : '  "hook": "다음 회차로 이어지는 한 줄 후크",',
+    '  "outline": ["장면/단락 비트 1", "비트 2", "비트 3"],',
+    '  "prose": "본문",',
+    isEssay
+      ? '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 글에서 확정된 사실 — 작가가 말한 경험만" }]'
+      : '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 회차에서 확정된 새 사실" }]',
     '}'
   ].join('\n');
 }

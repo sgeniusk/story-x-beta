@@ -4,6 +4,8 @@ import { normalizeProviderReviewOutput, type AiCliReviewResult, type AiCliScale 
 export interface ReviewRequestInput {
   scale: AiCliScale;
   target: string;
+  /** 매체별 검토 — novel은 쇼러너 등 서사 에이전트, essay는 인터뷰어·문체·연속성 */
+  medium: string;
 }
 
 export interface LlmReviewResult {

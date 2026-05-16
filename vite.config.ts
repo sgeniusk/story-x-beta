@@ -125,7 +125,9 @@ export default defineConfig({
       '--scale',
       String(input.scale ?? 'small'),
       '--target',
-      String(input.target ?? '')
+      String(input.target ?? ''),
+      '--medium',
+      String(input.medium ?? 'novel')
     ])
   ]
 });

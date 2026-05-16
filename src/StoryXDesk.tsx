@@ -1175,7 +1175,10 @@ export function StoryXDesk({
     setGenerationNote(null);
 
     try {
-      const llm = await requestLlmReview({ scale: reviewScale, target: reviewTarget }, project.title);
+      const llm = await requestLlmReview(
+        { scale: reviewScale, target: reviewTarget, medium: blueprint.medium },
+        project.title
+      );
 
       if (llm.ok && llm.result) {
         applyReviewResult(llm.result);
