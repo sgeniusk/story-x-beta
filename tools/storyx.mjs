@@ -33,9 +33,10 @@ if (command === 'doctor') {
 if (command === 'review') {
   const provider = readFlag(args, '--provider', 'mock');
   const scale = readFlag(args, '--scale', 'small');
+  const target = readFlag(args, '--target', '');
   const outDir = readFlag(args, '--out-dir', join(process.cwd(), '.storyx-runs'));
   const dryRun = args.includes('--dry-run');
-  const prompt = buildReviewPrompt(scale);
+  const prompt = buildReviewPrompt(scale, target);
 
   if (provider === 'mock') {
     const result = {
@@ -245,13 +246,34 @@ function findCommand(commandName) {
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
-function buildReviewPrompt(scale) {
+function buildReviewPrompt(scale, target) {
   return [
-    'Story X review request',
-    `scale: ${scale}`,
-    'Read AGENTS.md and docs/codex-agent-manifest.md.',
-    'Do not sync canon or memory without user approval.',
-    'Return summary, agentReports, memoryCandidates, nextActions.'
+    'Story X 회차 검토 요청.',
+    `검토 규모: ${scale}`,
+    '',
+    '## 검토 대상 원고',
+    target ? target : '(원고 본문이 전달되지 않았습니다 — 검토할 수 없음을 summary에 명시하세요.)',
+    '',
+    '## 역할',
+    '당신은 Story X 작가진입니다. 쇼러너(독자 약속·후크), 캐릭터 큐레이터(욕망·상처·말투·관계), 배경 설계자(세계 규칙과 비용), 장르 스타일리스트(장르 리듬), 연속성 감수자(캐논 일관성)의 시선으로 위 원고를 검토합니다.',
+    '',
+    '## 규칙',
+    '- 한국어로 작성하고, 번역투와 과한 AI식 설명을 피합니다.',
+    '- 사용자 승인 전에는 어떤 사실도 canon으로 확정하지 않습니다. 새 사실은 memoryCandidates에만 둡니다.',
+    '- 각 에이전트는 원고의 구체적 문장을 근거(evidence)로 들어 pass / revise / blocked 중 하나로 판정합니다.',
+    '- 캐논 충돌은 다수결로 통과시키지 않습니다.',
+    '',
+    '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
+    '{',
+    '  "summary": "검토 총평 한 단락",',
+    '  "agentReports": [',
+    '    { "agentId": "showrunner|character-custodian|world-keeper|genre-stylist|continuity-editor", "status": "pass|revise|blocked", "note": "검토 의견", "evidence": ["원고 근거"] }',
+    '  ],',
+    '  "memoryCandidates": [',
+    '    { "owner": "character|world|plot|voice", "status": "pending", "statement": "새 기억 후보", "sourceAgentId": "showrunner", "rationale": "후보로 둔 이유" }',
+    '  ],',
+    '  "nextActions": ["사용자가 다음에 할 행동"]',
+    '}'
   ].join('\n');
 }
 

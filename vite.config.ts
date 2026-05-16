@@ -1,80 +1,70 @@
 import { spawn } from 'node:child_process';
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, type Connect, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// 로컬 dev 서버에서만 /api/draft 요청을 받아 storyx draft(claude provider)를 실행하는 브리지.
-// 배포본(Vercel 정적 호스팅)에는 이 미들웨어가 존재하지 않으므로 프런트엔드가 deterministic 생성으로 폴백한다.
-function storyxDraftBridge(): Plugin {
-  return {
-    name: 'storyx-draft-bridge',
-    configureServer(server) {
-      server.middlewares.use('/api/draft', (req, res) => {
-        if (req.method !== 'POST') {
-          res.statusCode = 405;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ status: 'failed', warning: 'POST 요청만 지원합니다.' }));
-          return;
-        }
+// 로컬 dev 서버에서만 storyx CLI(claude provider)를 실행하는 브리지.
+// 배포본(Vercel 정적 호스팅)에는 이 미들웨어가 없으므로 프런트엔드가 deterministic 생성/검토로 폴백한다.
+function storyxBridge(
+  route: string,
+  buildArgs: (input: Record<string, unknown>) => string[]
+): Plugin {
+  const handler: Connect.SimpleHandleFunction = (req, res) => {
+    if (req.method !== 'POST') {
+      res.statusCode = 405;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ status: 'failed', warning: 'POST 요청만 지원합니다.' }));
+      return;
+    }
 
-        let body = '';
-        req.on('data', (chunk) => {
-          body += chunk;
-        });
-        req.on('end', () => {
-          let input: Record<string, unknown> = {};
-          try {
-            input = body ? (JSON.parse(body) as Record<string, unknown>) : {};
-          } catch {
-            input = {};
-          }
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk;
+    });
+    req.on('end', () => {
+      let input: Record<string, unknown> = {};
+      try {
+        input = body ? (JSON.parse(body) as Record<string, unknown>) : {};
+      } catch {
+        input = {};
+      }
 
-          const args = [
-            'tools/storyx.mjs',
-            'draft',
-            '--provider',
-            'claude',
-            '--medium',
-            String(input.medium ?? 'novel'),
-            '--format',
-            String(input.format ?? 'long-novel'),
-            '--freewrite',
-            String(input.freewrite ?? ''),
-            '--title',
-            String(input.title ?? '')
-          ];
-
-          const child = spawn(process.execPath, args, { cwd: process.cwd() });
-          let stdout = '';
-          let stderr = '';
-          child.stdout.on('data', (chunk) => {
-            stdout += chunk;
-          });
-          child.stderr.on('data', (chunk) => {
-            stderr += chunk;
-          });
-          child.on('error', (error) => {
-            res.statusCode = 500;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ status: 'failed', warning: `브리지 실행 실패: ${error.message}` }));
-          });
-          child.on('close', () => {
-            res.setHeader('Content-Type', 'application/json');
-            const json = extractJsonObject(stdout);
-            if (json) {
-              res.end(json);
-            } else {
-              res.statusCode = 502;
-              res.end(
-                JSON.stringify({
-                  status: 'failed',
-                  warning: 'storyx 출력에서 JSON을 찾지 못했습니다.',
-                  stderr: stderr.slice(0, 500)
-                })
-              );
-            }
-          });
-        });
+      const child = spawn(process.execPath, buildArgs(input), { cwd: process.cwd() });
+      let stdout = '';
+      let stderr = '';
+      child.stdout.on('data', (chunk) => {
+        stdout += chunk;
       });
+      child.stderr.on('data', (chunk) => {
+        stderr += chunk;
+      });
+      child.on('error', (error) => {
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ status: 'failed', warning: `브리지 실행 실패: ${error.message}` }));
+      });
+      child.on('close', () => {
+        res.setHeader('Content-Type', 'application/json');
+        const json = extractJsonObject(stdout);
+        if (json) {
+          res.end(json);
+        } else {
+          res.statusCode = 502;
+          res.end(
+            JSON.stringify({
+              status: 'failed',
+              warning: 'storyx 출력에서 JSON을 찾지 못했습니다.',
+              stderr: stderr.slice(0, 500)
+            })
+          );
+        }
+      });
+    });
+  };
+
+  return {
+    name: `storyx-bridge${route.replace(/\//g, '-')}`,
+    configureServer(server) {
+      server.middlewares.use(route, handler);
     }
   };
 }
@@ -109,5 +99,31 @@ function extractJsonObject(raw: string): string | null {
 }
 
 export default defineConfig({
-  plugins: [react(), storyxDraftBridge()]
+  plugins: [
+    react(),
+    storyxBridge('/api/draft', (input) => [
+      'tools/storyx.mjs',
+      'draft',
+      '--provider',
+      'claude',
+      '--medium',
+      String(input.medium ?? 'novel'),
+      '--format',
+      String(input.format ?? 'long-novel'),
+      '--freewrite',
+      String(input.freewrite ?? ''),
+      '--title',
+      String(input.title ?? '')
+    ]),
+    storyxBridge('/api/review', (input) => [
+      'tools/storyx.mjs',
+      'review',
+      '--provider',
+      'claude',
+      '--scale',
+      String(input.scale ?? 'small'),
+      '--target',
+      String(input.target ?? '')
+    ])
+  ]
 });

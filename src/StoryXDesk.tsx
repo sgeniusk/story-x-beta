@@ -49,6 +49,7 @@ import {
   type SeriesProject
 } from './lib/storyEngine';
 import { requestLlmDraft } from './lib/draftClient';
+import { requestLlmReview } from './lib/reviewClient';
 import {
   agentReportsToRuns,
   buildAiCliRunPlan,
@@ -631,6 +632,7 @@ export function StoryXDesk({
   const [selectedAgent, setSelectedAgent] = useState<AgentDialogSelection | null>(null);
   const [canonChanges, setCanonChanges] = useState<CanonChangeEntry[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isReviewing, setIsReviewing] = useState(false);
   const [generationNote, setGenerationNote] = useState<string | null>(null);
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [medium, format]);
@@ -1050,7 +1052,7 @@ export function StoryXDesk({
 
   // LLM 브리지(claude 구독) 우선, 실패하면 deterministic 생성으로 폴백한다
   async function produceEpisode() {
-    if (isGenerating) {
+    if (isGenerating || isReviewing) {
       return;
     }
 
@@ -1087,21 +1089,41 @@ export function StoryXDesk({
     }
   }
 
-  function runAiReview(reviewTarget: string) {
-    const result = buildMockAiCliReviewResult(
-      {
-        provider: 'mock',
-        mode: 'review',
-        scale: reviewScale,
-        project
-      },
-      reviewTarget
-    );
-    const reviewRuns = agentReportsToRuns(result);
-
-    setAgentRuns(reviewRuns);
+  function applyReviewResult(result: AiCliReviewResult) {
+    setAgentRuns(agentReportsToRuns(result));
     setLatestReviewResult(result);
     setEditedSinceReview(false);
+  }
+
+  // LLM 브리지(claude 구독)로 작가진 검토 실행, 실패 시 mock 검토로 폴백한다
+  async function runAiReview(reviewTarget: string) {
+    if (isReviewing || isGenerating) {
+      return;
+    }
+
+    setIsReviewing(true);
+    setGenerationNote(null);
+
+    try {
+      const llm = await requestLlmReview({ scale: reviewScale, target: reviewTarget }, project.title);
+
+      if (llm.ok && llm.result) {
+        applyReviewResult(llm.result);
+        setGenerationNote('Claude 구독으로 작가진이 검토했습니다.');
+        return;
+      }
+
+      applyReviewResult(
+        buildMockAiCliReviewResult({ provider: 'mock', mode: 'review', scale: reviewScale, project }, reviewTarget)
+      );
+      setGenerationNote(
+        llm.reason
+          ? `검토 브리지를 쓰지 못해 기본 검토로 대체했습니다. (${llm.reason})`
+          : '기본 검토를 실행했습니다.'
+      );
+    } finally {
+      setIsReviewing(false);
+    }
   }
 
   function reviewDraft() {
@@ -1399,10 +1421,10 @@ export function StoryXDesk({
                     type="button"
                     className="sx-primary-button"
                     onClick={mainActionRun}
-                    disabled={isGenerating}
+                    disabled={isGenerating || isReviewing}
                   >
                     <MainActionIcon size={isLatestLocked || !latestChapter ? 17 : 16} />
-                    {isGenerating ? '생성 중…' : mainActionLabel}
+                    {isGenerating ? '생성 중…' : isReviewing ? '검토 중…' : mainActionLabel}
                   </button>
                 </div>
               </section>
