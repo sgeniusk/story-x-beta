@@ -26,18 +26,32 @@ export interface StoryXVersionLogEntry {
 
 export const STORYX_VERSION: StoryXVersionInfo = {
   product: 'Story X',
-  version: '0.7.1',
+  version: '0.8.0',
   channel: 'alpha',
-  label: 'Alpha v0.7.1',
-  codename: 'Editor Rail Fix',
-  releasedAt: '2026-05-15',
-  latestCommit: '43b60ac',
-  testProof: '111 tests passing',
+  label: 'Alpha v0.8.0',
+  codename: 'Real LLM Writing Loop',
+  releasedAt: '2026-05-16',
+  latestCommit: '3e548b7',
+  testProof: '113 tests passing',
   buildProof: 'Vite production build passing',
-  summary: '회차 탭이 원고 행으로 늘어나는 에디터 레이아웃 문제를 고친 알파 핫픽스입니다.'
+  summary: '초안 생성과 작가진 검토가 실제 Claude 구독 호출로 동작하는 알파 마일스톤입니다.'
 };
 
 export const storyxVersionLog: StoryXVersionLogEntry[] = [
+  {
+    version: '0.8.0',
+    label: 'Alpha v0.8.0',
+    date: '2026-05-16',
+    title: '실제 LLM 글쓰기 루프',
+    commit: '3e548b7',
+    changes: [
+      '편집기의 초안 생성이 로컬 브리지를 거쳐 실제 Claude 구독 호출로 회차를 만듭니다.',
+      '흐름 검증·결 점검이 쇼러너·캐릭터·배경·장르·연속성 에이전트의 실제 검토를 받습니다.',
+      '2화 이상 생성 시 확정 캐논·인물·세계 규칙을 함께 넘겨 회차 연속성을 지킵니다.'
+    ],
+    verification: ['npm test: 24 files / 113 tests', 'npm run build: pass'],
+    next: '검토에서 승인한 기억 후보가 실제 작품 캐논·바이블로 반영되는 루프를 닫는다.'
+  },
   {
     version: '0.7.1',
     label: 'Alpha v0.7.1',
