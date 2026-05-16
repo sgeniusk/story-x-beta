@@ -5193,6 +5193,65 @@ body {
   resize: vertical;
 }
 
+.sx-manuscript-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sx-space-3);
+}
+
+.sx-diff-toggle {
+  flex: 0 0 auto;
+  padding: 4px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--sx-radius-pill);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(247, 243, 234, 0.86);
+  font-size: 0.74rem;
+  font-weight: var(--sx-weight-semibold);
+  cursor: pointer;
+}
+
+.sx-diff-toggle:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.sx-prose-diff {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  min-height: 440px;
+  padding: clamp(18px, 3vw, 30px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--sx-radius-lg);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 20px 58px rgba(0, 0, 0, 0.28);
+}
+
+.sx-diff-block {
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-family: 'Noto Serif KR', serif;
+  font-size: 1.02rem;
+  line-height: 1.9;
+}
+
+.sx-diff-block.is-same {
+  color: rgba(37, 33, 29, 0.6);
+}
+
+.sx-diff-block.is-added {
+  background: rgba(31, 122, 76, 0.12);
+  color: #1c5f3c;
+}
+
+.sx-diff-block.is-removed {
+  background: rgba(168, 52, 52, 0.1);
+  color: rgba(132, 38, 38, 0.7);
+  text-decoration: line-through;
+}
+
 .sx-manuscript-editor:focus-visible {
   border-color: color-mix(in oklch, var(--sx-accent) 58%, #ffffff);
   box-shadow: 0 0 0 4px color-mix(in oklch, var(--sx-accent) 18%, transparent), 0 20px 58px rgba(0, 0, 0, 0.28);

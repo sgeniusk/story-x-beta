@@ -53,6 +53,7 @@ import {
 import { requestLlmDraft } from './lib/draftClient';
 import { requestLlmReview } from './lib/reviewClient';
 import { describeKoreanStyleLevel, evaluateKoreanProse } from './lib/koreanStyle';
+import { diffProseBlocks } from './lib/proseDiff';
 import {
   agentReportsToRuns,
   buildAiCliRunPlan,
@@ -3140,6 +3141,16 @@ function CreativeStage({
   onOpenApprovalQueue: () => void;
   onToggleFocusMode: () => void;
 }) {
+  const [showDiff, setShowDiff] = useState(false);
+  const proseDiff = useMemo(
+    () => diffProseBlocks(chapter?.prose ?? '', editableText),
+    [chapter, editableText]
+  );
+
+  useEffect(() => {
+    setShowDiff(false);
+  }, [chapter?.id]);
+
   const expandButton = (
     <button type="button" className="sx-expand-editor-button" onClick={onToggleFocusMode}>
       {isFocusMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
@@ -3246,14 +3257,37 @@ function CreativeStage({
               ))}
             </div>
             <label className="sx-manuscript-editor-wrap">
-              <span>직접 편집 원고</span>
-              <textarea
-                className={`sx-manuscript-editor ${editedSinceReview ? 'is-edited' : ''}`}
-                aria-label="원고 편집기"
-                value={editableText}
-                onChange={(event) => onEditableTextChange(event.target.value)}
-                rows={16}
-              />
+              <span className="sx-manuscript-editor-head">
+                직접 편집 원고
+                {proseDiff.changed && (
+                  <button
+                    type="button"
+                    className="sx-diff-toggle"
+                    onClick={() => setShowDiff((current) => !current)}
+                  >
+                    {showDiff
+                      ? '편집으로 돌아가기'
+                      : `내 수정 보기 (+${proseDiff.addedBlocks} / −${proseDiff.removedBlocks})`}
+                  </button>
+                )}
+              </span>
+              {showDiff ? (
+                <div className="sx-prose-diff" aria-label="AI 초안 대비 내 수정">
+                  {proseDiff.blocks.map((block, index) => (
+                    <p key={`${block.kind}-${index}`} className={`sx-diff-block is-${block.kind}`}>
+                      {block.text}
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <textarea
+                  className={`sx-manuscript-editor ${editedSinceReview ? 'is-edited' : ''}`}
+                  aria-label="원고 편집기"
+                  value={editableText}
+                  onChange={(event) => onEditableTextChange(event.target.value)}
+                  rows={16}
+                />
+              )}
             </label>
             <div className={`sx-edit-state ${editedSinceReview ? 'is-dirty' : ''}`}>
               <strong>{editedSinceReview ? '수정됨' : '검토 기준과 동기화됨'}</strong>
