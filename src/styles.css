@@ -34,6 +34,8 @@
 
 html {
   scroll-behavior: smooth;
+  /* 트랙(편집/바이블) 전환 시 페이지 높이가 달라져도 스크롤바 칸을 항상 확보해 가로 흔들림을 막는다 */
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -4200,6 +4202,7 @@ body {
   max-height: calc(100vh - 112px);
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .sx-workbench.is-draft {
