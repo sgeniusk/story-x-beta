@@ -26,18 +26,34 @@ export interface StoryXVersionLogEntry {
 
 export const STORYX_VERSION: StoryXVersionInfo = {
   product: 'Story X',
-  version: '0.8.0',
+  version: '0.9.0',
   channel: 'alpha',
-  label: 'Alpha v0.8.0',
-  codename: 'Real LLM Writing Loop',
-  releasedAt: '2026-05-16',
-  latestCommit: '3e548b7',
-  testProof: '113 tests passing',
+  label: 'Alpha v0.9.0',
+  codename: 'Closed Craft Loop',
+  releasedAt: '2026-05-17',
+  latestCommit: '35fdc55',
+  testProof: '130 tests passing',
   buildProof: 'Vite production build passing',
-  summary: '초안 생성과 작가진 검토가 실제 Claude 구독 호출로 동작하는 알파 마일스톤입니다.'
+  summary: '생성·검토·인터뷰가 작가가 쓴 내용을 기준으로 한 루프로 돌고, 대중성·작품성 craft 원리가 그 안에서 작동하는 알파 마일스톤입니다.'
 };
 
 export const storyxVersionLog: StoryXVersionLogEntry[] = [
+  {
+    version: '0.9.0',
+    label: 'Alpha v0.9.0',
+    date: '2026-05-17',
+    title: '닫힌 창작 루프와 craft 적용',
+    commit: '35fdc55',
+    changes: [
+      '검토에서 승인한 기억 후보가 실제 작품 캐논으로 반영되어 생성-검토-승인 루프가 닫혔습니다.',
+      '작가 인터뷰가 매체별 고정 질문 대신 작가가 쓴 자유 서술을 읽고 그 작품에 맞는 질문을 만듭니다.',
+      '인터뷰어가 유명 작가 오마주 페르소나(아가타 크리스·도스토옙·무라카메 등)로 묻습니다.',
+      '대중성·작품성 리서치를 반영해 Story Contract(표면 약속·심층 질문·무게중심)와 검토 craft 기준, 문체 평가를 확장했습니다.',
+      '장편 10화 회귀 하네스, 작품 버전 히스토리·복원, 직접 편집 diff, 매체별 생성·검토를 더했습니다.'
+    ],
+    verification: ['npm test: 28 files / 130 tests', 'npm run build: pass'],
+    next: '외부 사용자를 위한 서버측 LLM 운영(2단계 E)을 준비한다.'
+  },
   {
     version: '0.8.0',
     label: 'Alpha v0.8.0',

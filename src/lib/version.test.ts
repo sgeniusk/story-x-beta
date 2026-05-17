@@ -9,15 +9,16 @@ const docs = readFileSync(resolve(__dirname, '../../docs/storyx-version-log.md')
 
 describe('Story X version log', () => {
   it('publishes the current alpha version as a reusable product constant', () => {
-    expect(STORYX_VERSION.label).toBe('Alpha v0.8.0');
-    expect(STORYX_VERSION.version).toBe('0.8.0');
+    expect(STORYX_VERSION.label).toBe('Alpha v0.9.0');
+    expect(STORYX_VERSION.version).toBe('0.9.0');
     expect(STORYX_VERSION.channel).toBe('alpha');
-    expect(STORYX_VERSION.codename).toBe('Real LLM Writing Loop');
-    expect(STORYX_VERSION.summary).toContain('Claude');
+    expect(STORYX_VERSION.codename).toBe('Closed Craft Loop');
+    expect(STORYX_VERSION.summary).toContain('craft');
   });
 
   it('keeps a compact milestone log for every major alpha improvement', () => {
     expect(storyxVersionLog.map((entry) => entry.version)).toEqual([
+      '0.9.0',
       '0.8.0',
       '0.7.1',
       '0.7.0',
@@ -28,11 +29,10 @@ describe('Story X version log', () => {
       '0.2.0',
       '0.1.0'
     ]);
-    expect(storyxVersionLog[0].title).toContain('LLM');
-    expect(storyxVersionLog[0].changes.join(' ')).toContain('Claude');
-    expect(storyxVersionLog[1].title).toContain('레이아웃 핫픽스');
-    expect(storyxVersionLog[2].title).toContain('명령 팔레트');
-    expect(storyxVersionLog[2].changes.join(' ')).toContain('⌘K');
+    expect(storyxVersionLog[0].title).toContain('루프');
+    expect(storyxVersionLog[0].changes.join(' ')).toContain('craft');
+    expect(storyxVersionLog[1].title).toContain('LLM');
+    expect(storyxVersionLog[2].title).toContain('레이아웃 핫픽스');
   });
 
   it('exposes the version and changelog in the app shell', () => {
@@ -46,8 +46,8 @@ describe('Story X version log', () => {
 
   it('documents the current roadmap baseline for future releases', () => {
     expect(docs).toContain('# Story X Version Log');
-    expect(docs).toContain('현재 기준 버전: `Alpha v0.8.0`');
-    expect(docs).toContain('Real LLM Writing Loop');
+    expect(docs).toContain('현재 기준 버전: `Alpha v0.9.0`');
+    expect(docs).toContain('Closed Craft Loop');
     expect(docs).toContain('v1.0.0-alpha');
   });
 });
