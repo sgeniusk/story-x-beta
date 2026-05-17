@@ -526,7 +526,12 @@ function getMockEvidence(agentId: string) {
   }
 }
 
-function getAgentLabel(agentId: string) {
+// 검토 규모별 에이전트 목록 — 에이전트별 분리 검토에서 이 순서대로 호출한다
+export function getReviewAgentIds(scale: AiCliScale): ValidationAgentId[] {
+  return [...defaultAgentsByScale[scale]];
+}
+
+export function getAgentLabel(agentId: string) {
   const labels: Record<string, string> = {
     showrunner: '쇼러너',
     'character-custodian': '캐릭터 큐레이터',

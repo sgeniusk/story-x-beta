@@ -1,29 +1,51 @@
-// storyx 로컬 브리지(/api/review)에 작가진 검토 LLM 실행을 요청하는 클라이언트
-import { normalizeProviderReviewOutput, type AiCliReviewResult, type AiCliScale } from './aiCliHarness';
+// storyx 로컬 브리지(/api/review-agent)에 에이전트 1명씩 분리 검토를 요청하는 클라이언트.
+// 각 에이전트가 자기 페르소나로 독립 호출되어, 한 번에 5모자를 쓰던 검토를 진짜 분리 검토로 바꾼다.
+import {
+  getAgentLabel,
+  type AiCliAgentReport,
+  type AiCliMemoryCandidate,
+  type AiCliReviewStatus
+} from './aiCliHarness';
+import type { ValidationAgentId } from './agentReviewProcess';
 
-export interface ReviewRequestInput {
-  scale: AiCliScale;
+export interface AgentReviewInput {
+  agentId: string;
   target: string;
-  /** 매체별 검토 — novel은 쇼러너 등 서사 에이전트, essay는 인터뷰어·문체·연속성 */
   medium: string;
-  /** 작품 계약(표면 약속·심층 질문·무게중심)과 캐논 맥락 — 검토 기준 */
   context: string;
 }
 
-export interface LlmReviewResult {
+export interface AgentReviewResult {
   ok: boolean;
-  result?: AiCliReviewResult;
+  report?: AiCliAgentReport;
+  memoryCandidates?: AiCliMemoryCandidate[];
   reason?: string;
 }
 
-// 로컬 dev 서버에만 존재하는 /api/review 브리지를 호출한다.
-// 배포본이나 브리지 미연결 환경에서는 ok:false로 떨어지고, 호출 측이 mock 검토로 폴백한다.
-export async function requestLlmReview(input: ReviewRequestInput, projectTitle: string): Promise<LlmReviewResult> {
+type MemoryOwner = AiCliMemoryCandidate['owner'];
+
+function normalizeOwner(value: unknown): MemoryOwner {
+  return value === 'character' || value === 'world' || value === 'plot' || value === 'voice' || value === 'visual' || value === 'audio'
+    ? value
+    : 'plot';
+}
+
+function toReviewStatus(value: unknown): AiCliReviewStatus {
+  return value === 'revise' || value === 'blocked' ? value : 'pass';
+}
+
+// 에이전트 1명에게 분리 검토를 요청한다. 브리지 미연결·실패 시 ok:false로 떨어진다.
+export async function requestAgentReview(input: AgentReviewInput): Promise<AgentReviewResult> {
   try {
-    const response = await fetch('/api/review', {
+    const response = await fetch('/api/review-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input)
+      body: JSON.stringify({
+        agent: input.agentId,
+        target: input.target,
+        medium: input.medium,
+        context: input.context
+      })
     });
 
     if (!response.ok) {
@@ -31,25 +53,38 @@ export async function requestLlmReview(input: ReviewRequestInput, projectTitle: 
     }
 
     const data = (await response.json()) as Record<string, unknown>;
-
     if (data.status === 'failed') {
-      const warning = typeof data.warning === 'string' ? data.warning : 'provider 호출 실패';
-      return { ok: false, reason: warning };
+      return { ok: false, reason: typeof data.warning === 'string' ? data.warning : 'provider 호출 실패' };
     }
 
-    const raw = typeof data.stdout === 'string' && data.stdout.trim().length > 0 ? data.stdout : '';
-    if (!raw) {
-      return { ok: false, reason: '검토 출력이 비어 있습니다.' };
-    }
+    const agentId = input.agentId as ValidationAgentId;
+    const report: AiCliAgentReport = {
+      agentId,
+      label: getAgentLabel(input.agentId),
+      status: toReviewStatus(data.verdict),
+      note: typeof data.note === 'string' && data.note.trim().length > 0 ? data.note : '검토 의견이 비어 있습니다.',
+      evidence: Array.isArray(data.evidence)
+        ? data.evidence.filter((item): item is string => typeof item === 'string')
+        : []
+    };
 
-    const result = normalizeProviderReviewOutput(raw, {
-      provider: 'claude',
-      mode: 'review',
-      scale: input.scale,
-      projectTitle
-    });
+    const memoryCandidates: AiCliMemoryCandidate[] = (Array.isArray(data.memoryCandidates) ? data.memoryCandidates : [])
+      .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+      .map((item, index) => {
+        const owner = normalizeOwner(item.owner);
+        return {
+          id: `${input.agentId}-mem-${index + 1}`,
+          owner,
+          status: 'pending' as const,
+          statement: typeof item.statement === 'string' ? item.statement : '',
+          sourceAgentId: agentId,
+          targetPath: `reviews/pending/${owner}-candidates.json`,
+          rationale: typeof item.rationale === 'string' ? item.rationale : '검토 에이전트가 제안한 후보입니다.'
+        };
+      })
+      .filter((candidate) => candidate.statement.trim().length > 0);
 
-    return { ok: true, result };
+    return { ok: true, report, memoryCandidates };
   } catch (error) {
     const reason = error instanceof Error ? error.message : '브리지에 연결할 수 없습니다.';
     return { ok: false, reason };

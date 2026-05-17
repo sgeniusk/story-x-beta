@@ -140,6 +140,20 @@ export default defineConfig({
       String(input.medium ?? 'novel'),
       '--freewrite',
       String(input.freewrite ?? '')
+    ]),
+    storyxBridge('/api/review-agent', (input) => [
+      'tools/storyx.mjs',
+      'review-agent',
+      '--provider',
+      'claude',
+      '--agent',
+      String(input.agent ?? 'showrunner'),
+      '--target',
+      String(input.target ?? ''),
+      '--medium',
+      String(input.medium ?? 'novel'),
+      '--context',
+      String(input.context ?? '')
     ])
   ]
 });

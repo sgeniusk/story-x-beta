@@ -7,6 +7,22 @@ const [, , command = 'help', ...args] = process.argv;
 const providerCommandHints = ['claude --print', 'codex exec'];
 void providerCommandHints;
 
+// 검토 에이전트 id → .claude/agents/ 페르소나 파일명
+const agentFileMap = {
+  showrunner: 'serial-showrunner',
+  'character-custodian': 'character-custodian',
+  'world-keeper': 'world-keeper',
+  'genre-stylist': 'genre-stylist',
+  'continuity-editor': 'continuity-editor',
+  'voice-curator': 'voice-curator',
+  'essay-interviewer': 'essay-interviewer',
+  'storyboard-agent': 'storyboard-agent',
+  'speech-bubble-agent': 'speech-bubble-agent',
+  'keyframe-art-director': 'keyframe-art-director',
+  'da-vinci': 'davinci-image-agent',
+  'frame-assembly-agent': 'frame-assembly-agent'
+};
+
 if (command === 'doctor') {
   const checks = ['claude', 'codex'].map((binary) => ({
     binary,
@@ -130,6 +146,44 @@ if (command === 'review') {
     warning: 'Actual Claude/Codex runs may spend tokens. Remove --dry-run only after choosing review scale.'
   });
   process.exit(0);
+}
+
+if (command === 'review-agent') {
+  const provider = readFlag(args, '--provider', 'mock');
+  const agentId = readFlag(args, '--agent', 'showrunner');
+  const target = readFlag(args, '--target', '');
+  const medium = readFlag(args, '--medium', 'novel');
+  const context = readFlag(args, '--context', '');
+  const persona = loadAgentPersona(agentId);
+  const prompt = buildAgentReviewPrompt({ agentId, persona, target, medium, context });
+
+  if (provider === 'mock') {
+    printJson({ provider, agentId, mode: 'review-agent', status: 'complete', verdict: 'pass', note: 'mock 단일 에이전트 검토', evidence: [], memoryCandidates: [] });
+    process.exit(0);
+  }
+
+  const commandPreview =
+    provider === 'claude'
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', '--model', 'sonnet', prompt]
+      : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
+
+  const providerResult = runProvider(commandPreview);
+  const rawOutput = providerResult.stdout || providerResult.stderr;
+  const parsed = parseProviderJson(rawOutput);
+
+  printJson({
+    provider,
+    agentId,
+    mode: 'review-agent',
+    status: providerResult.status === 0 ? 'complete' : 'failed',
+    exitCode: providerResult.status,
+    verdict: readString(parsed?.status),
+    note: readString(parsed?.note),
+    evidence: normalizeStringList(parsed?.evidence),
+    memoryCandidates: Array.isArray(parsed?.memoryCandidates) ? parsed.memoryCandidates : [],
+    warning: providerResult.status === 0 ? undefined : 'provider 호출이 실패했습니다.'
+  });
+  process.exit(providerResult.status === 0 ? 0 : 1);
 }
 
 if (command === 'draft') {
@@ -349,6 +403,53 @@ function buildReviewPrompt(scale, target, medium, context) {
     '    { "owner": "character|world|plot|voice", "status": "pending", "statement": "새 기억 후보", "sourceAgentId": "continuity-editor", "rationale": "후보로 둔 이유" }',
     '  ],',
     '  "nextActions": ["사용자가 다음에 할 행동"]',
+    '}'
+  ].join('\n');
+}
+
+// .claude/agents/<id>.md에서 에이전트 페르소나 본문을 읽어온다 (프런트매터 제거)
+function loadAgentPersona(agentId) {
+  const file = agentFileMap[agentId];
+  if (!file) {
+    return '';
+  }
+  const path = join(process.cwd(), '.claude', 'agents', `${file}.md`);
+  if (!existsSync(path)) {
+    return '';
+  }
+  try {
+    return readFileSync(path, 'utf8').replace(/^---[\s\S]*?---\s*/, '').trim();
+  } catch {
+    return '';
+  }
+}
+
+function buildAgentReviewPrompt({ agentId, persona, target, medium, context }) {
+  return [
+    `Story X 작가진 검토 — 당신은 한 명의 에이전트입니다: ${agentId}.`,
+    `매체: ${medium}`,
+    '',
+    '## 당신의 정체성',
+    persona || `(정의 파일이 없습니다 — ${agentId}의 전문 시선으로 검토하세요.)`,
+    '',
+    '## 작품 계약과 맥락 (검토 기준)',
+    context || '(맥락 없음)',
+    '',
+    '## 검토 대상 원고',
+    target || '(원고 본문이 없습니다 — 검토할 수 없음을 note에 적으세요.)',
+    '',
+    '## 지시',
+    '- 오직 당신의 전문 시선 하나로만 검토합니다. 다른 에이전트의 영역은 건드리지 않습니다.',
+    '- 원고의 구체적 문장을 근거(evidence)로 들어 pass / revise / blocked 중 하나로 판정합니다.',
+    '- 한국어로 쓰고, 번역투와 과한 AI식 설명을 피합니다.',
+    '- 새 사실은 canon으로 확정하지 말고 memoryCandidates에만 둡니다.',
+    '',
+    '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
+    '{',
+    '  "status": "pass|revise|blocked",',
+    '  "note": "이 에이전트의 검토 의견 한 단락",',
+    '  "evidence": ["원고에서 든 근거 문장"],',
+    '  "memoryCandidates": [{ "owner": "character|world|plot|voice", "statement": "새 기억 후보", "rationale": "후보로 둔 이유" }]',
     '}'
   ].join('\n');
 }

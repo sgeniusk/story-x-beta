@@ -46,6 +46,7 @@ import {
   produceNextChapter,
   type AgentRun,
   type Chapter,
+  type AgentId,
   type CreativeWeight,
   type GenreId,
   type ProductionRequest,
@@ -53,13 +54,17 @@ import {
   type SeriesProject
 } from './lib/storyEngine';
 import { requestLlmDraft } from './lib/draftClient';
-import { requestLlmReview } from './lib/reviewClient';
+import { requestAgentReview } from './lib/reviewClient';
 import { describeKoreanStyleLevel, evaluateKoreanProse } from './lib/koreanStyle';
 import { diffProseBlocks } from './lib/proseDiff';
 import {
   agentReportsToRuns,
   buildAiCliRunPlan,
   buildMockAiCliReviewResult,
+  getAgentLabel,
+  getReviewAgentIds,
+  type AiCliAgentReport,
+  type AiCliMemoryCandidate,
   type AiCliProvider,
   type AiCliReviewResult,
   type AiCliScale
@@ -1185,43 +1190,107 @@ export function StoryXDesk({
     setEditedSinceReview(false);
   }
 
-  // LLM 브리지(claude 구독)로 작가진 검토 실행, 실패 시 mock 검토로 폴백한다
+  // 에이전트별 분리 검토 — 한 명씩 따로 호출하고, 도착하는 순서대로 작가진 카드를 갱신한다
   async function runAiReview(reviewTarget: string) {
     if (isReviewing || isGenerating) {
       return;
     }
 
+    const agentIds = getReviewAgentIds(reviewScale);
+    const context = buildProjectContextDigest(project);
+
     setIsReviewing(true);
     setGenerationNote(null);
+    setEditedSinceReview(false);
+    setAgentRuns(
+      agentIds.map((agentId) => ({
+        agentId: agentId as AgentId,
+        title: getAgentLabel(agentId),
+        status: 'idle',
+        output: '검토 순서를 기다리는 중입니다.',
+        evidence: []
+      }))
+    );
+
+    const reports: AiCliAgentReport[] = [];
+    const candidates: AiCliMemoryCandidate[] = [];
 
     try {
-      const llm = await requestLlmReview(
-        {
-          scale: reviewScale,
+      for (const agentId of agentIds) {
+        setAgentRuns((current) =>
+          current.map((run) =>
+            run.agentId === agentId ? { ...run, output: '지금 원고를 읽고 있습니다…' } : run
+          )
+        );
+
+        const res = await requestAgentReview({
+          agentId,
           target: reviewTarget,
           medium: blueprint.medium,
-          context: buildProjectContextDigest(project)
-        },
-        project.title
-      );
+          context
+        });
 
-      if (llm.ok && llm.result) {
-        applyReviewResult(llm.result);
-        setGenerationNote('Claude 구독으로 작가진이 검토했습니다.');
-        return;
+        if (res.ok && res.report) {
+          const report = res.report;
+          reports.push(report);
+          if (res.memoryCandidates) {
+            candidates.push(...res.memoryCandidates);
+          }
+          setAgentRuns((current) =>
+            current.map((run) =>
+              run.agentId === agentId
+                ? {
+                    agentId: agentId as AgentId,
+                    title: report.label,
+                    status: report.status === 'blocked' ? 'block' : report.status,
+                    output: report.note,
+                    evidence: report.evidence
+                  }
+                : run
+            )
+          );
+        } else {
+          setAgentRuns((current) =>
+            current.map((run) =>
+              run.agentId === agentId
+                ? { ...run, output: `검토를 받지 못했습니다. (${res.reason ?? '실패'})` }
+                : run
+            )
+          );
+        }
       }
-
-      applyReviewResult(
-        buildMockAiCliReviewResult({ provider: 'mock', mode: 'review', scale: reviewScale, project }, reviewTarget)
-      );
-      setGenerationNote(
-        llm.reason
-          ? `검토 브리지를 쓰지 못해 기본 검토로 대체했습니다. (${llm.reason})`
-          : '기본 검토를 실행했습니다.'
-      );
     } finally {
       setIsReviewing(false);
     }
+
+    if (reports.length === 0) {
+      applyReviewResult(
+        buildMockAiCliReviewResult({ provider: 'mock', mode: 'review', scale: reviewScale, project }, reviewTarget)
+      );
+      setGenerationNote('검토 브리지를 쓰지 못해 기본 검토로 대체했습니다.');
+      return;
+    }
+
+    const pass = reports.filter((report) => report.status === 'pass').length;
+    const revise = reports.filter((report) => report.status === 'revise').length;
+    const blocked = reports.filter((report) => report.status === 'blocked').length;
+
+    setLatestReviewResult({
+      provider: 'claude',
+      mode: 'review',
+      scale: reviewScale,
+      generatedAt: new Date().toISOString(),
+      summary: `${reports.length}명의 에이전트가 각자 검토했습니다. 통과 ${pass} · 수정 ${revise} · 차단 ${blocked}.`,
+      agentReports: reports,
+      memoryCandidates: candidates,
+      nextActions: [
+        '수정·차단 의견을 원고에 반영한 뒤 다시 검토하세요.',
+        '승인할 기억 후보는 승인 대기함에서 캐논에 반영하세요.'
+      ],
+      pendingReviewTarget: 'reviews/pending',
+      approvalRequiredBeforeSync: true
+    });
+    setGenerationNote('Claude 구독으로 작가진이 한 명씩 검토했습니다.');
   }
 
   function reviewDraft() {
