@@ -1055,18 +1055,27 @@ function StoryXHome({
                 </button>
               )}
             </div>
-            <article className="hx-open-note">
-              <div className="hx-aside-label">추가 메모 (선택)</div>
-              <h3 className="hx-intake-question-text">선택지로 담기 어려운 설정이 있나요?</h3>
-              <textarea
-                aria-label="추가 메모 (주관식)"
-                className="hx-other-input"
-                value={interviewNote}
-                onChange={(event) => setInterviewNote(event.target.value)}
-                placeholder="예: 1부는 인간 시점, 2부는 토착 종족 시점으로 같은 사건을 다시 본다."
-                rows={3}
-              />
-            </article>
+            {!isInterviewLoading &&
+              effectiveIntakeQuestions.length > 0 &&
+              intakeQuestionIndex === effectiveIntakeQuestions.length - 1 && (
+                <article className="hx-open-note">
+                  <div className="hx-aside-label">마지막 · 자유 메모 (선택)</div>
+                  <h3 className="hx-intake-question-text">
+                    질문은 여기까지입니다. 작가진에게 더 하고 싶은 말이 있나요?
+                  </h3>
+                  <p className="hx-open-note-help">
+                    위 객관식으로 담기 어려운 설정·복선·금기를 자유롭게 적어 주세요. 비워 두어도 됩니다.
+                  </p>
+                  <textarea
+                    aria-label="자유 메모 (주관식)"
+                    className="hx-other-input"
+                    value={interviewNote}
+                    onChange={(event) => setInterviewNote(event.target.value)}
+                    placeholder="예: 1부는 인간 시점, 2부는 토착 종족 시점으로 같은 사건을 다시 본다."
+                    rows={3}
+                  />
+                </article>
+              )}
           </div>
           <aside className="hx-aside">
             <div className="hx-aside-card is-selected">

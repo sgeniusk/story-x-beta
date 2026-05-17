@@ -24,7 +24,7 @@ import {
   X
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { getAgentValidationProcess, reviewScales } from './lib/agentReviewProcess';
+import { getAgentValidationProcess } from './lib/agentReviewProcess';
 import {
   buildCreativeBlueprint,
   getFormatOptions,
@@ -1683,6 +1683,26 @@ export function StoryXDesk({
                   {blueprint.mediumLabel} / {blueprint.formatLabel}
                 </span>
                 <span className="ex-toolstrip-sep" aria-hidden="true" />
+                <div className="ex-scale-toggle" role="group" aria-label="검토 규모">
+                  {([
+                    ['small', 'Quick'],
+                    ['standard', 'Standard'],
+                    ['deep', 'Deep']
+                  ] as const).map(([scaleId, scaleLabel]) => (
+                    <button
+                      key={scaleId}
+                      type="button"
+                      className={reviewScale === scaleId ? 'is-active' : ''}
+                      aria-pressed={reviewScale === scaleId}
+                      title={`검토 규모 — ${scaleLabel}`}
+                      disabled={isGenerating || isReviewing}
+                      onClick={() => setReviewScale(scaleId)}
+                    >
+                      {scaleLabel}
+                    </button>
+                  ))}
+                </div>
+                <span className="ex-toolstrip-sep" aria-hidden="true" />
                 <button
                   type="button"
                   className="sx-primary-button ex-toolstrip-action"
@@ -3168,7 +3188,6 @@ function AgentProfileDialog({
   onClose: () => void;
 }) {
   const validationProcess = getAgentValidationProcess(persona.id);
-  const scaleOptions = Object.values(reviewScales);
   const [messages, setMessages] = useState<AgentChatMessage[]>([
     {
       role: 'agent',
@@ -3240,16 +3259,6 @@ function AgentProfileDialog({
                 <li key={memory}>{memory}</li>
               ))}
             </ul>
-            <div className="agent-review-scales" aria-label="검토 규모 옵션">
-              <span>테스트 검토 실행 전 규모 선택</span>
-              <div>
-                {scaleOptions.map((scale) => (
-                  <small key={scale.id}>
-                    {scale.label} · {scale.tokenProfile}
-                  </small>
-                ))}
-              </div>
-            </div>
           </aside>
           <section className="agent-chat-panel" aria-label={`${persona.title} 대화`}>
             <div className="agent-chat-list">

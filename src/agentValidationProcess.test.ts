@@ -53,7 +53,9 @@ describe('persona validation process', () => {
   it('surfaces the protocol in the editor and project skill', () => {
     expect(desk).toContain('검증 프로세스');
     expect(desk).toContain('성장 메모리');
-    expect(desk).toContain('reviewScales');
+    // 검토 규모는 에이전트 대화창이 아니라 툴스트립의 최상위 설정으로 노출한다
+    expect(desk).toContain('ex-scale-toggle');
+    expect(desk).toContain('reviewScale');
     expect(skill).toContain('검토 규모를 먼저 묻는다');
     expect(skill).toContain('검토의견');
     expect(skill).toContain('성장 메모리 업데이트');

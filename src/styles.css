@@ -5505,6 +5505,43 @@ body {
   min-height: 36px;
 }
 
+.sx-desk .ex-scale-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--sx-line);
+  border-radius: var(--sx-radius-pill);
+  background: var(--sx-card);
+}
+
+.sx-desk .ex-scale-toggle button {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--sx-radius-pill);
+  background: transparent;
+  color: var(--sx-muted);
+  font-size: 0.74rem;
+  font-weight: var(--sx-weight-semibold);
+  white-space: nowrap;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.sx-desk .ex-scale-toggle button:hover:not(.is-active):not(:disabled) {
+  color: var(--sx-ink);
+}
+
+.sx-desk .ex-scale-toggle button.is-active {
+  background: var(--nx-primary, #6448d3);
+  color: var(--nx-on-primary, #fff);
+}
+
+.sx-desk .ex-scale-toggle button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .sx-desk .ex-focus-btn {
   display: grid;
   place-items: center;
@@ -7262,40 +7299,6 @@ body {
 .agent-process-list li {
   color: var(--framer-ink-muted);
   line-height: 1.62;
-}
-
-.agent-review-scales {
-  display: grid;
-  gap: var(--sx-space-2);
-  margin-top: 16px;
-  padding: var(--sx-space-3);
-  border: 1px solid var(--framer-hairline-soft);
-  border-radius: var(--framer-rounded-lg);
-  background: var(--framer-surface-1);
-}
-
-.agent-review-scales > span {
-  color: var(--framer-ink);
-  font-size: 0.82rem;
-  font-weight: var(--sx-weight-semibold);
-}
-
-.agent-review-scales > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sx-space-2);
-}
-
-.agent-review-scales small {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 9px;
-  border-radius: var(--framer-rounded-pill);
-  background: var(--framer-surface-2);
-  color: var(--framer-ink-muted);
-  font-size: 0.72rem;
-  font-weight: var(--sx-weight-semibold);
 }
 
 .agent-chat-panel {
@@ -12293,7 +12296,13 @@ body {
   background: var(--nx-surface);
 }
 .home-page .hx-open-note .hx-intake-question-text {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+}
+.home-page .hx-open-note-help {
+  font-size: 0.82rem;
+  color: var(--nx-slate);
+  line-height: 1.6;
+  margin: 0 0 10px;
 }
 
 /* ── 구성 중 ── */
