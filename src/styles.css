@@ -8707,6 +8707,48 @@ body {
   overscroll-behavior: contain;
 }
 
+.home-flow-panel.is-building {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-building-stage {
+  display: grid;
+  gap: var(--sx-space-3);
+  max-width: 560px;
+  text-align: center;
+}
+
+.home-building-lead {
+  color: var(--sx-muted);
+  line-height: 1.6;
+}
+
+.home-building-steps {
+  margin: var(--sx-space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--sx-space-2);
+  text-align: left;
+}
+
+.home-building-steps li {
+  padding: 12px 16px;
+  border: 1px solid var(--sx-line);
+  border-radius: var(--sx-radius-md);
+  background: var(--sx-paper);
+  color: var(--sx-ink-2);
+  font-size: 0.9rem;
+}
+
+.home-building-note {
+  margin-top: var(--sx-space-2);
+  color: var(--sx-muted);
+  font-size: 0.85rem;
+}
+
 .home-flow-main {
   display: grid;
   grid-template-rows: auto auto auto;

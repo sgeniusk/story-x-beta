@@ -24,7 +24,7 @@ import {
   WandSparkles,
   X
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { getAgentValidationProcess, reviewScales } from './lib/agentReviewProcess';
 import {
   buildCreativeBlueprint,
@@ -48,6 +48,7 @@ import {
   type Chapter,
   type AgentId,
   type CreativeWeight,
+  type DraftChapterPayload,
   type GenreId,
   type ProductionRequest,
   type ProductionResult,
@@ -609,6 +610,7 @@ function buildBibleSectionState({
 interface StoryXDeskProps {
   initialMedium?: CreativeMedium;
   initialFormat?: CreativeFormat;
+  initialDraftPayload?: DraftChapterPayload | null;
   onOpenProjects?: () => void;
   onOpenLanding?: () => void;
 }
@@ -616,6 +618,7 @@ interface StoryXDeskProps {
 export function StoryXDesk({
   initialMedium = 'novel',
   initialFormat = 'long-novel',
+  initialDraftPayload = null,
   onOpenProjects,
   onOpenLanding
 }: StoryXDeskProps) {
@@ -656,6 +659,7 @@ export function StoryXDesk({
   const [generationNote, setGenerationNote] = useState<string | null>(null);
   const [projectSnapshots, setProjectSnapshots] = useState<ProjectSnapshot[]>(() => loadProjectSnapshots());
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const draftBootRef = useRef(false);
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [medium, format]);
   const editorWorkspace = useMemo(
@@ -940,6 +944,29 @@ export function StoryXDesk({
     setEditedSinceReview(false);
   }, [latestChapter]);
 
+  // 새 프로젝트 플로우에서 만든 첫 회차 초안으로 에디터를 시작하고, 작가진 검토를 자동 시작한다
+  useEffect(() => {
+    if (draftBootRef.current || !initialDraftPayload) {
+      return;
+    }
+    draftBootRef.current = true;
+
+    const seed = createSeedProject();
+    const bootRequest: ProductionRequest = {
+      genre: seed.genre,
+      intent: initialDraftPayload.title || '새 작품 첫 회차',
+      pressure: ''
+    };
+    const result = chapterFromDraftPayload(seed, initialDraftPayload, bootRequest);
+    setProject(result.updatedProject);
+    saveProject(result.updatedProject);
+    setLatestChapter(result.chapter);
+    setActiveTrack('draft');
+    setIsPublishingMode(false);
+    void runAiReview(result.chapter.prose, buildProjectContextDigest(result.updatedProject));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDraftPayload]);
+
   function selectMedium(nextMedium: CreativeMedium) {
     setMedium(nextMedium);
     setFormat(getFormatOptions(nextMedium)[0].id);
@@ -1191,13 +1218,13 @@ export function StoryXDesk({
   }
 
   // 에이전트별 분리 검토 — 한 명씩 따로 호출하고, 도착하는 순서대로 작가진 카드를 갱신한다
-  async function runAiReview(reviewTarget: string) {
+  async function runAiReview(reviewTarget: string, contextOverride?: string) {
     if (isReviewing || isGenerating) {
       return;
     }
 
     const agentIds = getReviewAgentIds(reviewScale);
-    const context = buildProjectContextDigest(project);
+    const context = contextOverride ?? buildProjectContextDigest(project);
 
     setIsReviewing(true);
     setGenerationNote(null);

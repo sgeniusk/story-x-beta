@@ -68,11 +68,13 @@ import {
   produceNextChapter,
   type AgentRun,
   type Chapter,
+  type DraftChapterPayload,
   type GenreId,
   type ProductionRequest,
   type SeriesProject
 } from './lib/storyEngine';
 import { clearProject, loadProject, saveProject } from './lib/storage';
+import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
 import { StoryXTestPage } from './StoryXTestPage';
 import storyXLogoLockup from './assets/brand/story-x-logo-lockup-mono.svg';
@@ -184,7 +186,7 @@ const homepageRoadmapItems = [
 
 type ActivePane = 'chapter' | 'canon';
 type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor';
-type HomeFlowStep = 'medium' | 'freewrite' | 'intake';
+type HomeFlowStep = 'medium' | 'freewrite' | 'intake' | 'building';
 type StoryXNavLink = {
   label: string;
   target: string;
@@ -208,6 +210,8 @@ function App() {
   const [stage, setStage] = useState<AppStage>(initialStage);
   const [medium, setMedium] = useState<CreativeMedium>('novel');
   const [format, setFormat] = useState<CreativeFormat>('long-novel');
+  // 새 프로젝트 플로우의 빌드 단계에서 만든 첫 회차 초안 — 에디터가 이걸로 시작한다
+  const [pendingDraft, setPendingDraft] = useState<DraftChapterPayload | null>(null);
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [format, medium]);
 
@@ -221,6 +225,7 @@ function App() {
       <StoryXDesk
         initialMedium={medium}
         initialFormat={format}
+        initialDraftPayload={pendingDraft}
         onOpenProjects={() => setStage('projects')}
         onOpenLanding={() => setStage('landing')}
       />
@@ -250,7 +255,10 @@ function App() {
         onSelectMedium={selectMedium}
         onSelectFormat={setFormat}
         onOpenLanding={() => setStage('landing')}
-        onOpenEditor={() => setStage('editor')}
+        onOpenEditor={(draft) => {
+          setPendingDraft(draft ?? null);
+          setStage('editor');
+        }}
       />
     );
   }
@@ -778,7 +786,7 @@ function StoryXHome({
   onSelectMedium: (medium: CreativeMedium) => void;
   onSelectFormat: (format: CreativeFormat) => void;
   onOpenLanding: () => void;
-  onOpenEditor: () => void;
+  onOpenEditor: (draft?: DraftChapterPayload) => void;
 }) {
   const formatOptions = getFormatOptions(medium);
   const workflowBoard = buildTesterDrivenWorkflow(blueprint);
@@ -794,6 +802,7 @@ function StoryXHome({
   const [homeFlowStep, setHomeFlowStep] = useState<HomeFlowStep>('medium');
   const [llmIntakeQuestions, setLlmIntakeQuestions] = useState<ProjectIntakeQuestion[] | null>(null);
   const [isInterviewLoading, setIsInterviewLoading] = useState(false);
+  const [isBuilding, setIsBuilding] = useState(false);
   const effectiveIntakeQuestions = llmIntakeQuestions ?? intakePlan.questions;
 
   // 자유 서술이나 매체가 바뀌면 LLM 인터뷰 질문 캐시를 비워 다음 진입 때 새로 생성한다
@@ -819,12 +828,56 @@ function StoryXHome({
       setIsInterviewLoading(false);
     }
   }
+  // 인터뷰 답변까지 모아 첫 회차 초안을 만들고, 끝나면 에디터로 넘긴다
+  async function goToBuilding() {
+    if (isBuilding) {
+      return;
+    }
+    setHomeFlowStep('building');
+    setIsBuilding(true);
+
+    const answerLines = effectiveIntakeQuestions
+      .map((question) => {
+        const selected = intakeAnswers[question.id];
+        if (!selected) {
+          return null;
+        }
+        if (selected === '_other') {
+          const other = intakeOtherAnswers[question.id]?.trim();
+          return other ? `- ${question.question} → ${other}` : null;
+        }
+        const option = question.options.find((opt) => opt.id === selected);
+        return option ? `- ${question.question} → ${option.label}` : null;
+      })
+      .filter((line): line is string => Boolean(line));
+
+    const enrichedFreewrite = [
+      freewriteText.trim(),
+      answerLines.length > 0 ? `[작가 인터뷰 답변]\n${answerLines.join('\n')}` : '',
+      interviewNote.trim() ? `[추가 메모]\n${interviewNote.trim()}` : ''
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    const llm = await requestLlmDraft({
+      medium: blueprint.medium,
+      format: blueprint.format,
+      freewrite: enrichedFreewrite,
+      title: '',
+      context: ''
+    });
+
+    setIsBuilding(false);
+    onOpenEditor(llm.ok && llm.payload ? llm.payload : undefined);
+  }
+
   const homeFlowSteps: Array<{ id: HomeFlowStep; label: string; caption: string }> = [
     { id: 'medium', label: '매체 선택', caption: '무엇을 만들지 정합니다.' },
     { id: 'freewrite', label: '자유 서술', caption: '쓰고 싶은 이야기를 흘려 적습니다.' },
     { id: 'intake', label: '작가 인터뷰', caption: '에이전트가 맞춤 질문을 합니다.' }
   ];
-  const homeFlowIndex = homeFlowSteps.findIndex((step) => step.id === homeFlowStep);
+  const homeFlowIndex =
+    homeFlowStep === 'building' ? 3 : homeFlowSteps.findIndex((step) => step.id === homeFlowStep);
 
   return (
     <main className="storyx-home">
@@ -846,7 +899,7 @@ function StoryXHome({
               </button>
             ))}
           </nav>
-          <button type="button" className="button-primary" onClick={onOpenEditor}>
+          <button type="button" className="button-primary" onClick={() => onOpenEditor()}>
             에디터로
           </button>
         </header>
@@ -1135,11 +1188,29 @@ function StoryXHome({
                 <button type="button" className="button-secondary" onClick={() => setHomeFlowStep('freewrite')}>
                   이전
                 </button>
-                <button type="button" className="button-primary" onClick={onOpenEditor}>
-                  에디터 화면으로 시작
+                <button type="button" className="button-primary" onClick={goToBuilding}>
+                  질문 완료 — 첫 회차 만들기
                 </button>
               </div>
             </aside>
+          </section>
+
+          <section className="home-flow-panel is-building" id="building" aria-label="첫 회차 구성 중">
+            <div className="home-building-stage">
+              <p className="framer-eyebrow">04 · 구성</p>
+              <h2>작가진이 첫 회차를 쓰고 있습니다.</h2>
+              <p className="home-building-lead">
+                자유 서술과 인터뷰 답변을 읽고, 첫 회차 초안과 작품 바이블의 초기 설정을 구성합니다. 끝나면
+                편집 화면이 열립니다.
+              </p>
+              <ol className="home-building-steps" aria-label="구성 단계">
+                <li>자유 서술과 인터뷰 답변을 읽습니다.</li>
+                <li>쇼러너가 첫 회차의 약속과 후크를 잡습니다.</li>
+                <li>캐릭터·배경 설계가 첫 장면을 세웁니다.</li>
+                <li>첫 회차 초안을 쓰고, 바이블에 초기 설정을 제안합니다.</li>
+              </ol>
+              <p className="home-building-note">잠시만 기다려 주세요 — 보통 1~3분 걸립니다.</p>
+            </div>
           </section>
         </div>
       </section>
