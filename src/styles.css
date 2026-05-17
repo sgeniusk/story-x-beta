@@ -5074,6 +5074,9 @@ body {
   flex: 0 0 auto;
   gap: var(--sx-space-2);
   min-width: 0;
+  /* overflow-x: auto가 스크롤 컨테이너로 만들어 grid auto 행에서 0까지 수축하므로
+     min-height로 38px 탭/안내 텍스트가 잘리지 않게 바닥을 고정한다 */
+  min-height: 48px;
   overflow-x: auto;
   padding: 2px 0 6px;
   scrollbar-width: thin;
