@@ -6657,6 +6657,13 @@ body {
   color: var(--sx-ink-2);
   font-size: 0.84rem;
   line-height: 1.45;
+  /* 실제 검토 의견은 길 수 있다 — 카드에는 4줄까지만 보이고 전문은 클릭 시 다이얼로그에서 */
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 .sx-agent-card small {
@@ -6941,7 +6948,9 @@ body {
   background: var(--framer-canvas);
 }
 
-.agent-instruction-panel {
+.agent-instruction-panel,
+.agent-chat-panel {
+  /* 실제 검토 의견·대화가 길어도 다이얼로그가 깨지지 않도록 패널 안에서 스크롤한다 */
   overflow: auto;
 }
 

@@ -3288,9 +3288,10 @@ function CreativeStage({
       {isFocusMode ? '축소' : '편집기 확대'}
     </button>
   );
-  const verticalSlicePanel = (
-    <VerticalSliceProofPanel verticalSlice={verticalSlice} onOpenApprovalQueue={onOpenApprovalQueue} />
-  );
+  // 편집기 중앙 무대에서 vertical-slice proof 패널을 제거 — 창작 공간을 가리지 않는다
+  void verticalSlice;
+  void onOpenApprovalQueue;
+  const verticalSlicePanel = null;
 
   if (blueprint.medium === 'comics') {
     const visualWorkflow = buildComicsVisualWorkflow(blueprint.format);
