@@ -18,12 +18,14 @@ describe('Story X focused editor layout', () => {
 
   it('keeps the creative artifact as the 70 percent center of the editor', () => {
     expect(css).toContain('grid-template-columns: clamp(200px, 15vw, 260px) minmax(0, 1fr) clamp(220px, 18vw, 320px)');
-    expect(css).toContain('@media (max-width: 1040px)');
+    // P5 — 3컬럼 그리드는 1280px·1440px에서 유지, 약 1080px 미만에서만 에이전트 레일을 접는다
+    expect(css).toContain('@media (max-width: 1080px)');
     expect(css).toContain('.sx-creative-stage');
     expect(css).toContain('.sx-writing-surface');
     expect(css).toContain('.sx-canvas-surface');
     expect(css).toContain('.sx-storyboard-surface');
-    expect(css).toContain('grid-template-rows: auto auto auto minmax(0, 1fr)');
+    // P1 — 편집 트랙은 얇은 툴스트립 1행 + 원고가 채우는 1행
+    expect(css).toContain('grid-template-rows: auto minmax(0, 1fr)');
     expect(css).toContain('height: 100%');
     expect(css).toContain('--sx-paper: var(--framer-canvas)');
     expect(css).toContain('.sx-workbench {\n    order: 1;');
@@ -39,7 +41,8 @@ describe('Story X focused editor layout', () => {
   it('uses a compact app shell instead of the marketing banner inside the editor', () => {
     expect(desk).toContain('sx-topbar-actions');
     expect(desk).toContain('className="sx-app-breadcrumb"');
-    expect(desk).toContain('className="sx-command-k"');
+    // P2 — 명령 팔레트는 ⌘K 단축키로 연다 (시각 버튼 제거)
+    expect(desk).toContain("event.key.toLowerCase() === 'k'");
     expect(desk).toContain('className="sx-save-chip"');
     expect(desk).toContain('function StoryXStatusBar');
     expect(desk).toContain('<StoryXStatusBar');
@@ -61,7 +64,9 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('const [editedSinceReview, setEditedSinceReview]');
     expect(desk).toContain('function reviewDraft');
     expect(desk).toContain('바이블 열기');
-    expect(desk).toContain('className="sx-draft-prompt-field"');
+    // P1 — '이번 회차 의도' 입력은 좌측 레일의 접이식 카드(ex-intent-card)로 이동했다
+    expect(desk).toContain('className="ex-intent-card"');
+    expect(desk).toContain('className="ex-intent-textarea"');
     expect(desk).toContain('aria-label="원고 편집기"');
     expect(desk).toContain('const [isFocusMode, setIsFocusMode]');
     expect(desk).toContain('className="sx-expand-editor-button"');
@@ -70,7 +75,8 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('? actionLabels.draft');
     expect(desk).toContain(': actionLabels.review');
     expect(desk).toContain('수정됨');
-    expect(desk).toContain('ChapterNavigator');
+    // P1 — 회차 이동은 툴스트립의 회차 탭으로 처리한다
+    expect(desk).toContain('aria-label="회차 이동"');
     expect(desk).toContain('ChapterTreeCard');
     expect(desk).toContain('작품 목차');
     expect(desk).toContain('검토');
@@ -79,18 +85,24 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-desk.is-focus-mode .sx-project-rail');
     expect(css).toContain('.sx-expand-editor-button');
     expect(css).toContain('.sx-manuscript-editor.is-edited');
-    expect(css).toContain('.sx-episode-tabs');
+    expect(css).toContain('.sx-desk .ex-chapter-tab');
     expect(css).toContain('.sx-chapter-tree');
   });
 
-  it('keeps episode tabs compact instead of stretching into the manuscript row', () => {
-    expect(desk).toContain("className={`sx-workbench ${isPublishingMode ? 'is-publishing' : activeTrack === 'bible' ? 'is-bible' : 'is-draft'}`}");
+  it('P1 — keeps the manuscript as the protagonist with a thin toolstrip above it', () => {
+    expect(desk).toContain("className={`sx-workbench ${isPublishingMode ? 'is-publishing' : activeTrack === 'bible' ? 'is-bible' : 'is-draft'}");
     expect(css).toContain('.sx-workbench.is-draft');
-    expect(css).toContain('grid-template-rows: auto auto auto minmax(0, 1fr)');
+    // 편집 트랙: 툴스트립 1행 + 원고가 나머지 공간을 채우는 1행
+    expect(css).toContain('grid-template-rows: auto minmax(0, 1fr)');
     expect(css).toContain('.sx-workbench.is-draft .sx-creative-stage');
-    expect(css).toContain('.sx-episode-tabs {\n  display: flex;\n  align-items: center;');
-    expect(css).toContain('flex: 0 0 auto;');
-    expect(css).toContain('.sx-episode-tabs button {\n  flex: 0 0 auto;');
+    // 얇은 툴스트립(~52px): 회차 탭 + 기본 액션 + 집중 모드 버튼
+    expect(desk).toContain('className="ex-toolstrip"');
+    expect(desk).toContain('className="ex-chapter-tabs"');
+    expect(desk).toContain('className="ex-focus-btn"');
+    expect(css).toContain('.sx-desk .ex-toolstrip');
+    expect(css).toContain('min-height: 52px;');
+    expect(css).toContain('.sx-desk .ex-chapter-tab');
+    expect(css).toContain('.sx-desk .ex-focus-btn');
   });
 
   it('adds a command palette for quick navigation and editor actions', () => {
@@ -98,15 +110,32 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('const [commandQuery, setCommandQuery]');
     expect(desk).toContain('const commandItems = useMemo<DeskCommand[]>');
     expect(desk).toContain('function CommandPalette');
-    expect(desk).toContain('aria-label="명령 팔레트 열기"');
-    expect(desk).toContain('onClick={() => setIsCommandPaletteOpen(true)}');
+    // P2 — 팔레트는 ⌘K 단축키로 연다. 상단 클러터를 줄이려 시각 버튼은 제거했다
     expect(desk).toContain("event.key.toLowerCase() === 'k'");
+    expect(desk).toContain('setIsCommandPaletteOpen((current) => !current)');
     expect(desk).toContain('명령 또는 화면 검색');
     expect(desk).toContain('승인 대기 열기');
     expect(desk).toContain('집중 모드 토글');
+    // 매체 변경도 팔레트 명령으로 유지된다
+    expect(desk).toContain("id: 'open-media-change'");
     expect(css).toContain('.sx-command-palette-backdrop');
     expect(css).toContain('.sx-command-palette');
     expect(css).toContain('.sx-command-list');
+  });
+
+  it('P2 — declutters the editor topbar to brand plus two right-side actions', () => {
+    // 상단 우측은 저장 상태 칩과 출간 버튼만 남긴다
+    expect(desk).toContain('className="sx-topbar-actions"');
+    expect(desk).toContain('className="sx-save-chip"');
+    expect(desk).toContain('className="sx-publish-button"');
+    // 홈 버튼/아바타/매체 칩/⌘K 버튼은 상단에서 제거했다
+    expect(desk).not.toContain('className="sx-command-k"');
+    expect(desk).not.toContain('className="sx-user-avatar"');
+    expect(desk).not.toContain('className="sx-media-change-button"');
+    expect(desk).not.toContain('className="sx-app-nav-links"');
+    // 브랜드 영역은 홈 버튼 + 인라인 편집 가능한 제목을 포함한다
+    expect(desk).toContain('className="sx-brand-mark sx-brand-home"');
+    expect(desk).toContain('className="sx-crumb-title-input"');
   });
 
   it('uses a two-track editor with publishing moved to a separate action', () => {
@@ -137,6 +166,12 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('수정 요청됨');
     expect(desk).toContain('보류됨');
     expect(css).toContain('.sx-track-tabs');
+    // P5 — 편집/바이블/출간 트랙 전환 시 작업대에 약 130ms opacity 페이드
+    expect(desk).toContain('const [isWorkbenchFading, setIsWorkbenchFading]');
+    expect(desk).toContain('function runWithWorkbenchFade');
+    expect(desk).toContain('function switchToTrack');
+    expect(css).toContain('.sx-workbench.is-fading');
+    expect(css).toContain('transition: opacity 130ms ease');
     expect(css).toContain('.sx-publish-button');
     expect(css).toContain('.sx-media-change-panel');
     expect(css).toContain('.sx-bible-studio');

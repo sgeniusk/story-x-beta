@@ -20,6 +20,7 @@ import {
   Map,
   PanelsTopLeft,
   PenTool,
+  Plus,
   RotateCcw,
   Save,
   Sparkles,
@@ -263,7 +264,7 @@ function App() {
     );
   }
 
-  return <MarketingLanding onOpenHome={() => setStage('home')} onOpenLogin={() => setStage('login')} />;
+  return <MarketingLanding onOpenHome={() => setStage('home')} onOpenProjects={() => setStage('projects')} />;
 }
 
 function BrandWordmark() {
@@ -302,283 +303,203 @@ function StoryXTopNav({
   );
 }
 
-function MarketingLanding({
-  onOpenHome,
-  onOpenLogin
-}: {
-  onOpenHome: () => void;
-  onOpenLogin: () => void;
-}) {
-  const creationPillars = [
-    {
-      label: 'Story core',
-      title: '하나의 이야기 중심을 먼저 세웁니다.',
-      body: '소설, 웹툰, 인스타툰, 오디오북으로 바뀌어도 주인공의 욕망과 세계의 규칙은 같은 중심에서 움직입니다.'
-    },
-    {
-      label: 'Continuity',
-      title: '설정 변경은 치환이 아니라 refactor입니다.',
-      body: '주인공 성별, 이름, 관계, 음성, 이미지 레퍼런스가 바뀌면 영향 범위를 계산하고 안전하게 반영합니다.'
-    },
-    {
-      label: 'Multimodal',
-      title: '글, 그림, 소리를 조용히 연결합니다.',
-      body: '초안, 컷, 말풍선, 음악 cue, narrator voice가 하나의 Codex와 품질 게이트를 공유합니다.'
-    }
-  ];
-  const integrityRows = [
-    {
-      eyebrow: '창작 인프라',
-      title: '작품의 신뢰성은 보이지 않는 구조에서 시작됩니다.',
-      body: 'Story X는 캐릭터 계약, 세계 규칙, 장면 기능, 음성 캐스팅, 이미지 레퍼런스를 연결해 창작자가 자유롭게 바꿔도 작품이 무너지지 않도록 돕습니다.',
-      metric: 'Canon'
-    },
-    {
-      eyebrow: '품질 게이트',
-      title: '좋아 보이는 결과보다, 다시 쓸 수 있는 결과를 남깁니다.',
-      body: '문체, 컷 밀도, 말풍선, 발음, 음악 분위기, 플랫폼 패키징을 포맷별로 따로 점검합니다. 막힌 부분은 숨기지 않고 다음 행동으로 보여줍니다.',
-      metric: 'Gates'
-    },
-    {
-      eyebrow: '레퍼런스 구조',
-      title: '햄릿 같은 압력, 인터스텔라 같은 상상력을 구조로 다룹니다.',
-      body: '작품 레퍼런스는 표면을 베끼기 위한 것이 아니라, 감정 엔진과 구조 엔진을 이해해 새로운 창작에 적용하기 위한 데이터입니다.',
-      metric: 'DNA'
-    }
-  ];
-  const navMenus = [
-    {
-      label: '제작 OS',
-      target: 'product',
-      columns: [
-        {
-          heading: '이야기 중심 엔진',
-          items: [
-            ['Story Contract', '독자 약속, 주인공 욕망, 금기, 형식 약속을 첫 기준으로 잠급니다.'],
-            ['Memory Bank', '캐논, 문체, 시각, 오디오 바이블을 필요한 에이전트에게만 전달합니다.'],
-            ['Quality Gates', 'Story, Voice, Continuity, Visual, Audio, Platform을 통과해야 다음 단계로 갑니다.']
-          ]
-        },
-        {
-          heading: 'AI 자원 조립',
-          items: [
-            ['글', '소설, 에세이, 각본, 내레이션 원고의 구조와 문체를 관리합니다.'],
-            ['그림', '캐릭터 시트, 컷 구성, 이미지 프롬프트, 시각 연속성을 관리합니다.'],
-            ['소리', '낭독, 음악 큐, 자막, 교육 영상 흐름과 청취 리듬을 설계합니다.']
-          ]
-        }
-      ]
-    },
-    {
-      label: '워크플로우',
-      target: 'workflows',
-      columns: [
-        {
-          heading: '매체별 제작실',
-          items: [
-            ['소설 제작실', '시리즈 바이블, 회차 보상, 복선 회수, 문체 일관성'],
-            ['만화 제작실', '컷 리듬, 말풍선, 캐릭터 비주얼, 스크롤 후킹'],
-            ['오디오 제작실', '화자 톤, 발음, 쉼, 음악 모티프, 첫 30초 증거']
-          ]
-        },
-        {
-          heading: '흐름 유지 장치',
-          items: [
-            ['Workflow Board', '지금 해야 할 행동, 담당 에이전트, 승인 조건을 한 화면에 둡니다.'],
-            ['Refactor Preview', '이름, 성별, 관계, 화자, 그림체 변경의 영향 범위를 먼저 보여줍니다.'],
-            ['AI Output Autopsy', '생성 뒤 새 캐논 후보와 손상 위험을 분리해 승인받습니다.']
-          ]
-        }
-      ]
-    },
-    {
-      label: '매체 전환',
-      target: 'media-bridge',
-      columns: [
-        {
-          heading: '전환 브릿지',
-          items: [
-            ['소설 → 웹툰', '장면 기능을 컷, 말풍선, 스크롤 리듬으로 변환합니다.'],
-            ['소설 → 동화책', '핵심 갈등을 반복 가능한 페이지 장면과 낭독 톤으로 압축합니다.'],
-            ['에세이 → 오디오북', '내 목소리의 거리와 쉼을 청취 경험으로 바꿉니다.']
-          ]
-        },
-        {
-          heading: '출력 패키지',
-          items: [
-            ['첫 300자', '웹소설/출판 플랫폼에 맞는 시작 증거를 만듭니다.'],
-            ['첫 3컷', '웹툰/인스타툰의 훅과 저장 포인트를 검증합니다.'],
-            ['첫 30초', '오디오북/교육영상의 이해 가능성과 피로도를 점검합니다.']
-          ]
-        }
-      ]
-    },
-    {
-      label: '프론트엔드 제작팀',
-      target: 'frontend-agents',
-      columns: [
-        {
-          heading: '제품 경험 에이전트',
-          items: [
-            ['에디터 UX 디렉터', '중앙 창작면, 사이드바, 품질 게이트의 위치를 정합니다.'],
-            ['온보딩 설계자', '첫 선택에서 첫 workflow board까지의 시간을 줄입니다.'],
-            ['작품 관리인', '시리즈, 버전, 캐논, 산출물 패키지를 잃어버리지 않게 합니다.']
-          ]
-        },
-        {
-          heading: '서비스 성장 에이전트',
-          items: [
-            ['브랜드/홈페이지 디렉터', 'Story X의 철학과 차별점을 소개 페이지로 번역합니다.'],
-            ['출판/배포 매니저', '게시, 다운로드, 매체 변환, 플랫폼 handoff를 준비합니다.'],
-            ['인사이트 분석가', '사용자 막힘과 검토 결과를 다음 개발로 되돌립니다.']
-          ]
-        }
-      ]
-    }
-  ];
-  const landingWorkflowTracks = [
-    {
-      title: '소설/웹소설',
-      promise: '주인공 욕망과 세계 규칙을 먼저 잠그고 회차가 늘어나도 무너지지 않는 연재 구조를 만듭니다.',
-      steps: ['Story Contract', 'Series Bible', 'Episode Promise', 'AI Output Autopsy'],
-      proof: '첫 300자, 다음 화 클릭 질문, 새 캐논 후보'
-    },
-    {
-      title: '만화/웹툰',
-      promise: '산문을 그림으로 옮기는 수준이 아니라 컷, 말풍선, 시선 흐름, 캐릭터 비주얼을 함께 설계합니다.',
-      steps: ['Visual Bible', 'Cut Board', 'Bubble Plan', 'DaVinci Prompt'],
-      proof: '첫 3컷, 저장 컷, 캐릭터 레퍼런스'
-    },
-    {
-      title: '에세이',
-      promise: '내 이야기를 AI가 지어내지 않도록 질문을 먼저 쌓고, 실제 주변 인물과 문체를 보호합니다.',
-      steps: ['Interview', 'Privacy Distance', 'Voice Sample', 'Korean Naturalness'],
-      proof: '내 문장 리듬, 질문 로그, 익명화 체크'
-    },
-    {
-      title: '오디오북/영상',
-      promise: '글을 귀와 화면으로 바꾸기 위해 낭독 톤, 쉼, 자막 밀도, 음악 큐를 한 흐름으로 연결합니다.',
-      steps: ['Narration Map', 'Pronunciation', 'Music Cue', 'First 30s Proof'],
-      proof: '첫 30초, 반복 후렴, 청취 피로 점검'
-    }
-  ];
-
+function LandingBrand({ onClick }: { onClick: () => void }) {
   return (
-    <main className="marketing-landing">
-      <StoryXTopNav
-        ariaLabel="Story X"
-        navLinks={navMenus.map((menu) => ({ label: menu.label, target: menu.target }))}
-        ctaLabel="창작 시작"
-        onLogoClick={onOpenHome}
-        onCtaClick={onOpenLogin}
-      />
-
-      <section className="landing-hero" aria-labelledby="landing-title">
-        <div className="hero-image-slot" aria-hidden="true">
-          <div className="hero-image-fallback" />
-          <img src={storyXHeroImage} alt="" />
-        </div>
-        <div className="hero-copy">
-          <button type="button" className="news-pill" onClick={onOpenHome}>
-            데모 둘러보기
-            <ChevronRight size={14} />
-          </button>
-          <h1 id="landing-title">조용하게 이야기를 만드는 방법.</h1>
-          <p>
-            Story X는 맑은 해안처럼 조용하지만, 안쪽에는 캐릭터, 세계관, 이미지, 음악, 오디오북까지
-            이어지는 정밀한 AI 제작 시스템을 품고 있습니다.
-          </p>
-          <button type="button" className="button-primary hero-start-button" onClick={onOpenLogin}>
-            창작 시작
-          </button>
-        </div>
-      </section>
-
-      <StoryCurrentSection />
-
-      <section className="duna-integrity-hero" id="integrity">
-        <h2>이야기는 무너지지 않습니다.</h2>
-        <p>
-          창작자는 자유롭게 바꿀 수 있어야 합니다. 시스템은 조용히 영향 범위를 추적하고,
-          모순과 품질 저하를 드러내야 합니다.
-        </p>
-      </section>
-
-      <section className="integrity-grid" aria-label="Story X trust principles">
-        {integrityRows.map((row, index) => (
-          <article key={row.title} className={index % 2 === 1 ? 'is-reversed' : ''}>
-            <div>
-              <p className="framer-eyebrow">{row.eyebrow}</p>
-              <h3>{row.title}</h3>
-              <p>{row.body}</p>
-            </div>
-            <div className="integrity-visual" aria-hidden="true">
-              <span>{row.metric}</span>
-              <i />
-              <i />
-              <i />
-            </div>
-          </article>
-        ))}
-      </section>
-
-      <section className="workflow-band" id="workflows">
-        <div>
-          <p className="framer-eyebrow">Workflow library</p>
-          <h2>홈화면은 단순 선택지가 아니라, 작품 제작의 관제탑이어야 합니다.</h2>
-          <p>
-            소설에서 시작해 웹툰, 동화책, 오디오북으로 자연스럽게 확장되도록 각 매체의 입력, 제작 단계,
-            검수 증거를 끊기지 않는 흐름으로 연결합니다.
-          </p>
-        </div>
-        <div className="workflow-list">
-          {landingWorkflowTracks.map((track, index) => (
-            <button key={track.title} type="button" className="landing-workflow-track" onClick={onOpenHome}>
-              <span>{String(index + 1).padStart(2, '0')}</span>
-              <strong>{track.title}</strong>
-              <small>{track.promise}</small>
-              <div className="track-step-row">
-                {track.steps.map((step) => (
-                  <em key={step}>{step}</em>
-                ))}
-              </div>
-              <p>{track.proof}</p>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <MediaBridgeSection />
-
-      <section className="duna-closing" id="resources">
-        <h2>어떤 형태로 바뀌어도 살아남는 이야기로 시작하세요.</h2>
-        <button type="button" className="button-primary" onClick={onOpenLogin}>
-          창작 시작
-        </button>
-      </section>
-    </main>
+    <button type="button" className="landing-brand" onClick={onClick}>
+      <span className="lx-brandmark" aria-hidden="true">
+        <Sparkles size={13} />
+      </span>
+      <span>Story X</span>
+    </button>
   );
 }
 
-function StoryCurrentSection() {
+function MarketingLanding({
+  onOpenHome,
+  onOpenProjects
+}: {
+  onOpenHome: () => void;
+  onOpenProjects: () => void;
+}) {
+  const features = [
+    {
+      sym: '⌀',
+      title: '캐논이 흔들리지 않습니다',
+      body: '30화가 쌓여도 1화의 규칙이 그대로입니다. 세계관, 캐릭터, 사건이 충돌하면 AI가 아닌 내가 결정합니다.',
+      tint: 'tint-lavender'
+    },
+    {
+      sym: '◉',
+      title: '캐릭터는 같은 사람이어야 합니다',
+      body: '매 회차마다 욕망, 상처, 말버릇이 동일한 기준으로 점검됩니다. 설정이 바뀌면 영향 범위를 먼저 보여줍니다.',
+      tint: 'tint-mint'
+    },
+    {
+      sym: '◈',
+      title: '승인은 작가가 합니다',
+      body: 'AI가 생성한 내용은 즉시 작품에 들어가지 않습니다. 승인 대기함에 쌓이고, 내가 확인한 것만 캐논이 됩니다.',
+      tint: 'tint-peach'
+    }
+  ];
+  const navLinks = [
+    { label: '핵심 원칙', target: 'features' },
+    { label: '매체 전환', target: 'media-bridge' }
+  ];
+  const mockAgents: Array<[string, string]> = [
+    ['쇼러너', 'pass'],
+    ['캐릭터', 'revise'],
+    ['연속성', 'block']
+  ];
+
   return (
-    <section className="story-current-section" aria-label="Story X brand concept">
-      <div>
-        <h2>바람과 물결이 교차할 때, 나의 이야기가 완성됩니다.</h2>
-        <p>
-          바람은 작가가 던지는 선택, 수정, 충동입니다. 물결은 메모리 뱅크와 에이전트 검토가 남기는
-          흐름입니다. Story X는 둘이 만나는 지점에서 회차, 문체, 인물, 세계관을 다시 정렬합니다.
-        </p>
-      </div>
-      <div className="current-wave-map" aria-hidden="true">
-        <span>wind</span>
-        <i />
-        <i />
-        <i />
-        <strong>story</strong>
-        <em>wave</em>
-      </div>
-    </section>
+    <div className="landing-page">
+      <nav className="lx-nav" aria-label="Story X">
+        <LandingBrand onClick={onOpenHome} />
+        <div className="lx-nav-links">
+          {navLinks.map((link) => (
+            <a key={link.target} href={`#${link.target}`} className="lx-nav-link">
+              {link.label}
+            </a>
+          ))}
+        </div>
+        <button type="button" className="btn-primary" onClick={onOpenHome}>
+          창작 시작
+        </button>
+      </nav>
+
+      <section className="hero-band" aria-labelledby="landing-title">
+        <div className="hero-inner">
+          <div className="hero-eyebrow">
+            <Sparkles size={12} />
+            이야기 창작 시스템
+          </div>
+          <h1 id="landing-title" className="hero-title">
+            조용하게 이야기를
+            <br />
+            만드는 방법.
+          </h1>
+          <p className="hero-sub">
+            소설에서 시작한 이야기가 웹툰, 동화책, 오디오북으로 이어질 때도 캐릭터, 세계관, 문체가
+            흔들리지 않도록 지켜줍니다.
+          </p>
+          <div className="hero-cta-row">
+            <button type="button" className="btn-primary btn-primary-lg" onClick={onOpenHome}>
+              창작 시작 — 무료
+            </button>
+            <button type="button" className="btn-secondary-on-dark" onClick={onOpenHome}>
+              데모 둘러보기
+            </button>
+          </div>
+          <p className="hero-already">
+            이미 프로젝트가 있나요?&nbsp;
+            <button type="button" className="link-btn" onClick={onOpenProjects}>
+              프로젝트 목록 →
+            </button>
+          </p>
+        </div>
+
+        <div className="hero-mockup" role="img" aria-label="Story X 에디터 미리보기">
+          <div className="hv-topbar">
+            <span className="hv-brand">
+              <Sparkles size={11} /> Story X
+            </span>
+            <div className="hv-tabs">
+              <span className="hv-tab active">편집</span>
+              <span className="hv-tab">바이블</span>
+            </div>
+            <span className="hv-pub">출간</span>
+          </div>
+          <div className="hv-body">
+            <div className="hv-rail">
+              <div className="hv-rail-proj">달의 탑 아래서</div>
+              <div className="hv-rail-ep">1화 · 마르지 않는 잉크</div>
+              <div className="hv-rail-ep active">2화 · 달의 수문장</div>
+              <div className="hv-rail-ep">3화 · 역방향의 시간</div>
+            </div>
+            <div className="hv-prose">
+              <div className="hv-prose-bar">2화 · 달의 수문장</div>
+              <div className="hv-prose-text">
+                탑의 입구에는 빛이 없었다. 달만이 돌계단을 희미하게 비추고 있었다. 서아가 첫 번째
+                계단에 발을 올려놓았을 때, 그림자 속에서 목소리가 들렸다.
+                <br />
+                <br />
+                “이서아. 드디어 왔군.”
+              </div>
+            </div>
+            <div className="hv-agents">
+              <div className="hv-agent-label">작가진</div>
+              {mockAgents.map(([name, state]) => (
+                <div key={name} className="hv-agent">
+                  <span className={`hv-dot hv-dot-${state}`} />
+                  <span>{name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="feature-section" id="features" aria-label="핵심 원칙">
+        <div className="feature-section-inner">
+          <div className="feature-eyebrow">왜 Story X인가요</div>
+          <div className="feature-grid">
+            {features.map((feature) => (
+              <div key={feature.title} className={`feature-card ${feature.tint}`}>
+                <div className="feature-sym">{feature.sym}</div>
+                <div className="feature-title">{feature.title}</div>
+                <p className="feature-body">{feature.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="lx-bridge-section" id="media-bridge" aria-label="매체 전환">
+        <div className="lx-bridge-inner">
+          <p className="lx-eyebrow" style={{ marginBottom: 14 }}>
+            Media Bridge
+          </p>
+          <h2 className="section-h2">
+            이야기가 먼저이고,
+            <br />
+            매체는 그 다음입니다.
+          </h2>
+          <p className="bridge-lead">
+            하나의 이야기가 소설에서 웹툰, 동화책, 오디오북으로 이동할 때 무엇을 보존하고 무엇을 다시
+            설계할지 보여줍니다.
+          </p>
+          <div className="bridge-grid">
+            {mediaBridgeRoutes.map((route) => (
+              <article key={route.title} className="bridge-card">
+                <div className="lx-bridge-route">
+                  <span>{route.from}</span>
+                  <ChevronRight size={11} />
+                  <span>{route.to}</span>
+                </div>
+                <div className="bridge-title">{route.title}</div>
+                <p className="bridge-body">{route.body}</p>
+                <div className="bridge-packet">
+                  {route.packet.map((item) => (
+                    <span key={item}>{item}</span>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-closing">
+        <h2>
+          어떤 형태로 바뀌어도
+          <br />
+          살아남는 이야기로 시작하세요.
+        </h2>
+        <button type="button" className="btn-primary btn-primary-lg" onClick={onOpenHome}>
+          창작 시작 — 무료
+        </button>
+      </section>
+    </div>
   );
 }
 
@@ -726,48 +647,45 @@ function ProjectHub({
   onOpenProject: () => void;
 }) {
   const project = loadProject();
-  const recentProjects = [
-    {
-      id: project.id,
-      title: project.title,
-      description: project.logline,
-      meta: `${project.currentEpisode} episodes · ${project.canonFacts.length} canon facts`
-    }
-  ];
+  const projectMeta = `소설 / 웹소설 · ${project.currentEpisode}화 · 캐논 ${project.canonFacts.length}개 · 캐릭터 ${project.characters.length}명`;
 
   return (
-    <main className="project-hub">
-      <nav className="auth-nav" aria-label="projects">
-        <button type="button" className="framer-wordmark" onClick={onOpenLanding}>
-          <BrandWordmark />
+    <div className="projects-page">
+      <nav className="pjx-nav" aria-label="프로젝트">
+        <button type="button" className="pjx-brand" onClick={onOpenLanding}>
+          <span className="pjx-brandmark" aria-hidden="true">
+            <Sparkles size={13} />
+          </span>
+          <span>Story X</span>
         </button>
-        <button type="button" className="button-primary" onClick={onOpenNewProject}>
-          새 프로젝트
+        <button type="button" className="pjx-btn" onClick={onOpenNewProject}>
+          <Plus size={13} /> 새 프로젝트
         </button>
       </nav>
 
-      <section className="project-hub-head">
-        <p className="framer-eyebrow">Projects</p>
-        <h1>작품을 고르거나 새 프로젝트를 시작하세요.</h1>
-        <p>기존 프로젝트는 바로 편집창으로 열리고, 새 프로젝트는 매체와 포맷을 고르는 장면으로 이동합니다.</p>
-      </section>
+      <header className="pjx-head">
+        <p className="pjx-eyebrow">Projects</p>
+        <h1 className="pjx-title">작품을 골라 이어가세요.</h1>
+      </header>
 
-      <section className="project-grid" aria-label="project list">
-        <button type="button" className="new-project-card" onClick={onOpenNewProject}>
-          <Sparkles size={22} />
+      <section className="pjx-grid" aria-label="프로젝트 목록">
+        <button type="button" className="pjx-new-card" onClick={onOpenNewProject}>
+          <Plus size={28} />
           <strong>새 프로젝트</strong>
-          <span>소설, 웹툰, 인스타툰, 오디오북 중에서 제작 흐름을 선택합니다.</span>
+          <span>소설, 웹툰, 에세이, 오디오북 중에서 선택</span>
         </button>
 
-        {recentProjects.map((item) => (
-          <button type="button" key={item.id} className="project-card" onClick={onOpenProject}>
-            <span>{item.meta}</span>
-            <strong>{item.title}</strong>
-            <p>{item.description}</p>
-          </button>
-        ))}
+        <button type="button" className="pjx-card" onClick={onOpenProject}>
+          <div className="pjx-card-meta">{projectMeta}</div>
+          <div className="pjx-card-title">{project.title}</div>
+          <p className="pjx-card-logline">{project.logline}</p>
+          <div className="pjx-card-status">
+            <span className="pjx-dot" />
+            원고 작업 중
+          </div>
+        </button>
       </section>
-    </main>
+    </div>
   );
 }
 
@@ -880,340 +798,313 @@ function StoryXHome({
     homeFlowStep === 'building' ? 3 : homeFlowSteps.findIndex((step) => step.id === homeFlowStep);
 
   return (
-    <main className="storyx-home">
-      <section className="storyx-fullscreen-flow" aria-label="Story X 제작 플로우">
-        <header className="storyx-app-nav">
-          <button type="button" className="framer-wordmark" onClick={onOpenLanding}>
-            <BrandWordmark />
-          </button>
-          <nav aria-label="창작 단계">
-            {homeFlowSteps.map((step) => (
+    <main className="home-page">
+      <header className="hx-nav">
+        <button type="button" className="hx-brand" onClick={onOpenLanding}>
+          <span className="hx-brandmark" aria-hidden="true">
+            <Sparkles size={13} />
+          </span>
+          <span>Story X</span>
+        </button>
+        <div className="hx-steps" role="tablist" aria-label="온보딩 단계">
+          {homeFlowSteps.map((step, index) => {
+            const stepIndex = homeFlowIndex < 0 ? 0 : homeFlowIndex;
+            const isActive = step.id === homeFlowStep;
+            const isDone = index < stepIndex;
+            return (
               <button
                 key={step.id}
                 type="button"
-                className={homeFlowStep === step.id ? 'is-active' : ''}
-                onClick={() => setHomeFlowStep(step.id)}
+                role="tab"
+                aria-selected={isActive}
+                className={`hx-step ${isActive ? 'is-active' : ''} ${isDone ? 'is-done' : ''}`}
+                onClick={() => index <= stepIndex && setHomeFlowStep(step.id)}
               >
-                <strong>{step.label}</strong>
-                <span>{step.caption}</span>
+                <span className="hx-step-num">{isDone ? <Check size={11} /> : index + 1}</span>
+                {step.label}
               </button>
-            ))}
-          </nav>
-          <button type="button" className="button-primary" onClick={() => onOpenEditor()}>
-            에디터로
-          </button>
-        </header>
-
-        <div className="home-flow-track" style={{ transform: `translateX(-${homeFlowIndex * 100}%)` }}>
-          <section className="home-flow-panel is-medium" id="choose" aria-label="매체와 형식 선택">
-            <div className="home-flow-main">
-              <div className="home-flow-copy">
-                <p className="framer-eyebrow">01 · Medium</p>
-                <h1 id="home-title">무엇을 만들까요?</h1>
-              </div>
-              <div className="home-option-grid">
-                {mediumOptions.map((option) => (
-                  <button
-                    type="button"
-                    key={option.id}
-                    className={medium === option.id ? 'is-selected' : ''}
-                    onClick={() => onSelectMedium(option.id)}
-                  >
-                    {getMediumIcon(option.id)}
-                    <strong>{option.label}</strong>
-                    <span>{option.signal}</span>
-                    <p>{option.description}</p>
-                  </button>
-                ))}
-              </div>
-              <div className="home-format-stack">
-                {formatOptions.map((option) => (
-                  <button
-                    type="button"
-                    key={option.id}
-                    className={format === option.id ? 'is-selected' : ''}
-                    onClick={() => onSelectFormat(option.id)}
-                  >
-                    <span>{option.cadence}</span>
-                    <strong>{option.label}</strong>
-                    <p>{option.description}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <aside className="home-flow-side">
-              <FlowAgentLayerCard assignment={flowAgentMap.medium} />
-              <article className="gradient-spotlight-card gradient-spotlight-card-magenta" id="workflow">
-                <span>Workflow</span>
-                <h2>{blueprint.projectRoomTitle}</h2>
-                <p>{blueprint.projectRoomSubtitle}</p>
-                <ul>
-                  {workflowPhases.map((phase) => (
-                    <li key={phase.title}>
-                      <strong>{phase.title}</strong>
-                      <small>{phase.outcome}</small>
-                    </li>
-                  ))}
-                </ul>
-                <div className="workflow-quality-strip" aria-label="공통 품질 게이트">
-                  {workflowBoard.qualityGateIds.map((gate) => (
-                    <span key={gate}>{gate}</span>
-                  ))}
-                </div>
-                <p className="workflow-proof">{workflowBoard.platformProof}</p>
-              </article>
-              <button type="button" className="button-primary home-next-button" onClick={() => setHomeFlowStep('freewrite')}>
-                자유 서술로 계속
-              </button>
-            </aside>
-          </section>
-
-          <section className="home-flow-panel is-freewrite" id="freewrite" aria-label="자유 서술 단계">
-            <div className="home-flow-main">
-              <section className="home-freewrite-stage">
-                <div className="home-intake-head">
-                  <div>
-                    <p className="framer-eyebrow">02 · 자유 서술</p>
-                    <h2>쓰고 싶은 이야기를 자유롭게 적어주세요.</h2>
-                    <p>
-                      구조, 인물 이름, 사건 순서는 신경 쓰지 않아도 됩니다. 떠오르는 대로 한 문단 정도면
-                      충분합니다. 다음 단계에서 작가진이 이 글을 읽고 맞춤 질문을 드립니다.
-                    </p>
-                  </div>
-                  <aside>
-                    <span>{blueprint.mediumLabel} · {blueprint.formatLabel}</span>
-                    <p>이 자유 서술은 인터뷰 + 첫 회차 초안의 기준이 됩니다. 비워두고 진행해도 인터뷰는 작동하지만, 한두 줄이라도 적으면 질문이 훨씬 정확해집니다.</p>
-                  </aside>
-                </div>
-                <textarea
-                  className="home-freewrite-input"
-                  aria-label="자유 서술 입력"
-                  value={freewriteText}
-                  onChange={(event) => setFreewriteText(event.target.value)}
-                  placeholder={
-                    blueprint.medium === 'essay'
-                      ? '예: 엄마가 돌아가신 뒤 1년 동안 부엌을 못 들어갔다. 1년 후 처음 들어갔을 때 냉장고에 메모를 발견했다.'
-                      : '예: 오빠가 사라진 그날 새벽, 한 소녀가 달의 탑 아래에서 마르지 않은 잉크 자국을 찾는다.'
-                  }
-                  rows={10}
-                />
-                <p className="home-freewrite-meter">
-                  {freewriteText.trim().length}자
-                  {blueprint.medium === 'audiobook' && (() => {
-                    const charCount = freewriteText.trim().length;
-                    const minutes = Math.floor(charCount / 280);
-                    const seconds = Math.round((charCount % 280) / 280 * 60);
-                    return ` · 예상 낭독 ${minutes}분 ${seconds}초`;
-                  })()}
-                </p>
-                {blueprint.medium === 'essay' && (
-                  <p className="home-fact-protection-note">
-                    <Lock size={13} aria-hidden="true" />
-                    <span>
-                      <strong>사실 보호 모드</strong> 에세이/회고 매체에서는 자유 서술에 적지 않은 디테일(인물의 직업·나이·장소 등)을 AI가 발명하지 않습니다. 빈 곳은 빈 곳으로 남고, 채우는 건 작가의 몫입니다.
-                    </span>
-                  </p>
-                )}
-              </section>
-            </div>
-            <aside className="home-flow-side">
-              <FlowAgentLayerCard assignment={flowAgentMap.intake} />
-              <article className="home-summary-card">
-                <span>다음 단계</span>
-                <strong>작가 인터뷰</strong>
-                <p>자유 서술을 기준으로 에이전트들이 인물·세계·문체·연속성을 묻습니다.</p>
-              </article>
-              <div className="home-flow-actions">
-                <button type="button" className="button-secondary" onClick={() => setHomeFlowStep('medium')}>
-                  이전
-                </button>
-                <button type="button" className="button-primary" onClick={goToIntake}>
-                  인터뷰로 계속
-                </button>
-              </div>
-            </aside>
-          </section>
-
-          <section className="home-flow-panel is-intake" id="intake" aria-label="새 프로젝트 에이전트 질문">
-            <div className="home-flow-main">
-              <section className="home-intake-questionnaire compact">
-                <div className="home-intake-head">
-                  <div>
-                    <p className="framer-eyebrow">02 · Agent setup · 객관식</p>
-                    <h2>에이전트들이 먼저 묻는 세팅 질문</h2>
-                    <p>
-                      {intakePlan.summary} 이 선택은 나중에 언제든지 바꿀 수 있습니다. 변경이 기존 출간본과
-                      충돌하면 변경 로그와 캐논 리팩터가 먼저 검토합니다.
-                    </p>
-                  </div>
-                  <aside>
-                    <span>{intakePlan.focusLabel}</span>
-                    <p>{intakePlan.notice}</p>
-                  </aside>
-                </div>
-                <div className="scope-focus-strip" aria-label="현재 개발 집중 범위">
-                  <strong>현재 집중</strong>
-                  {focusedScope.now.map((item) => (
-                    <span key={item}>{item}</span>
-                  ))}
-                  <em>후속: {focusedScope.later.join(' · ')}. 만화의 완성 이미지 생성은 후속 단계입니다.</em>
-                </div>
-                <div className="intake-question-stepper">
-                  <div className="intake-progress" aria-label="질문 진행도">
-                    <span>{intakeQuestionIndex + 1} / {effectiveIntakeQuestions.length}</span>
-                    <div className="intake-progress-bar" aria-hidden="true">
-                      <i style={{ width: `${((intakeQuestionIndex + 1) / effectiveIntakeQuestions.length) * 100}%` }} />
-                    </div>
-                  </div>
-                  {(() => {
-                    if (isInterviewLoading) {
-                      return (
-                        <article className="intake-question-card is-active">
-                          <div className="intake-question-interviewer">
-                            <b>인터뷰어들이 원고를 읽고 있습니다…</b>
-                            <em>당신이 쓴 자유 서술에 맞는 질문을 준비하는 중입니다.</em>
-                          </div>
-                        </article>
-                      );
-                    }
-
-                    const question = effectiveIntakeQuestions[intakeQuestionIndex];
-                    if (!question) return null;
-                    const selectedOption = intakeAnswers[question.id] ?? question.recommendedOptionId;
-                    const persona = getIntakePersona(question.agentId);
-
-                    return (
-                      <article className="intake-question-card is-active" key={question.id}>
-                        <div className="intake-question-interviewer">
-                          <b>{persona.name}</b>
-                          <em>
-                            {String(intakeQuestionIndex + 1).padStart(2, '0')} · {persona.blurb}
-                          </em>
-                        </div>
-                        <h3>{question.question}</h3>
-                        <div>
-                          {question.options.map((option) => (
-                            <button
-                              key={option.id}
-                              type="button"
-                              className={selectedOption === option.id ? 'is-selected' : ''}
-                              onClick={() => setIntakeAnswers((current) => ({ ...current, [question.id]: option.id }))}
-                            >
-                              <strong>{option.label}</strong>
-                              <small>{option.impact}</small>
-                            </button>
-                          ))}
-                          <button
-                            type="button"
-                            className={selectedOption === '_other' ? 'is-selected is-other' : 'is-other'}
-                            onClick={() => setIntakeAnswers((current) => ({ ...current, [question.id]: '_other' }))}
-                          >
-                            <strong>기타 (직접 입력)</strong>
-                            <small>객관식으로 안 맞는 답을 이쪽에 직접 적습니다.</small>
-                          </button>
-                        </div>
-                        {selectedOption === '_other' && (
-                          <textarea
-                            className="intake-other-input"
-                            aria-label={`${question.question} 기타 답변`}
-                            placeholder="이 질문에 대한 답을 한두 문장으로 적어주세요."
-                            value={intakeOtherAnswers[question.id] ?? ''}
-                            onChange={(event) =>
-                              setIntakeOtherAnswers((current) => ({
-                                ...current,
-                                [question.id]: event.target.value
-                              }))
-                            }
-                            rows={3}
-                          />
-                        )}
-                      </article>
-                    );
-                  })()}
-                  <div className="intake-question-nav">
-                    {intakeQuestionIndex > 0 && (
-                      <button
-                        type="button"
-                        className="button-secondary"
-                        onClick={() => setIntakeQuestionIndex((current) => Math.max(0, current - 1))}
-                      >
-                        이전 질문
-                      </button>
-                    )}
-                    {!isInterviewLoading && intakeQuestionIndex < effectiveIntakeQuestions.length - 1 && (
-                      <button
-                        type="button"
-                        className="button-primary"
-                        style={{ marginLeft: 'auto' }}
-                        onClick={() =>
-                          setIntakeQuestionIndex((current) =>
-                            Math.min(effectiveIntakeQuestions.length - 1, current + 1)
-                          )
-                        }
-                      >
-                        다음 질문
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <article className="intake-open-note">
-                  <span>+ 추가 메모 (선택)</span>
-                  <h3>객관식으로 안 들어가는 결정이 있나요?</h3>
-                  <p>세계관 설정·복선 한 줄·금기 같은 *주관식 답*을 자유롭게 적으시면 작가진이 인터뷰 답변과 함께 읽습니다.</p>
-                  <textarea
-                    aria-label="추가 메모 (주관식)"
-                    value={interviewNote}
-                    onChange={(event) => setInterviewNote(event.target.value)}
-                    placeholder="예: 1부는 인간 시점, 2부는 토착 종족 시점으로 같은 사건을 다시 본다. 시간선이 두 개라 회차 번호 옆에 표시 필요."
-                    rows={4}
-                  />
-                </article>
-              </section>
-            </div>
-            <aside className="home-flow-side">
-              <FlowAgentLayerCard assignment={flowAgentMap.intake} />
-              <article className="home-summary-card">
-                <span>Selected pipeline</span>
-                <strong>
-                  {blueprint.mediumLabel} · {blueprint.formatLabel}
-                </strong>
-                <p>{blueprint.projectRoomSubtitle}</p>
-                <div className="home-agent-strip" id="agents">
-                  {blueprint.agentStack.slice(0, 5).map((agent) => (
-                    <span key={agent}>{agent}</span>
-                  ))}
-                </div>
-              </article>
-              <div className="home-flow-actions">
-                <button type="button" className="button-secondary" onClick={() => setHomeFlowStep('freewrite')}>
-                  이전
-                </button>
-                <button type="button" className="button-primary" onClick={goToBuilding}>
-                  질문 완료 — 첫 회차 만들기
-                </button>
-              </div>
-            </aside>
-          </section>
-
-          <section className="home-flow-panel is-building" id="building" aria-label="첫 회차 구성 중">
-            <div className="home-building-stage">
-              <p className="framer-eyebrow">04 · 구성</p>
-              <h2>작가진이 첫 회차를 쓰고 있습니다.</h2>
-              <p className="home-building-lead">
-                자유 서술과 인터뷰 답변을 읽고, 첫 회차 초안과 작품 바이블의 초기 설정을 구성합니다. 끝나면
-                편집 화면이 열립니다.
-              </p>
-              <ol className="home-building-steps" aria-label="구성 단계">
-                <li>자유 서술과 인터뷰 답변을 읽습니다.</li>
-                <li>쇼러너가 첫 회차의 약속과 후크를 잡습니다.</li>
-                <li>캐릭터·배경 설계가 첫 장면을 세웁니다.</li>
-                <li>첫 회차 초안을 쓰고, 바이블에 초기 설정을 제안합니다.</li>
-              </ol>
-              <p className="home-building-note">잠시만 기다려 주세요 — 보통 1~3분 걸립니다.</p>
-            </div>
-          </section>
+            );
+          })}
         </div>
-      </section>
+        <button type="button" className="hx-btn" onClick={() => onOpenEditor()}>
+          에디터로 <ChevronRight size={13} />
+        </button>
+      </header>
+
+      <div className="hx-track" style={{ transform: `translateX(-${homeFlowIndex * 100}%)` }}>
+        <section className="hx-panel" aria-label="매체와 형식 선택">
+          <div className="hx-main">
+            <p className="hx-eyebrow">01 · 매체</p>
+            <h1 className="hx-h1">무엇을 만들까요?</h1>
+            <p className="hx-lead">매체를 고르면 맞춤 작가진과 제작 흐름이 자동 배정됩니다.</p>
+            <div className="hx-medium-grid">
+              {mediumOptions.map((option) => (
+                <button
+                  type="button"
+                  key={option.id}
+                  className={`hx-medium-card ${medium === option.id ? 'is-selected' : ''}`}
+                  aria-pressed={medium === option.id}
+                  onClick={() => onSelectMedium(option.id)}
+                >
+                  <span className="hx-medium-icon">{getMediumIcon(option.id)}</span>
+                  <strong>{option.label}</strong>
+                  <span className="hx-medium-signal">{option.signal}</span>
+                  <p>{option.description}</p>
+                  {medium === option.id && (
+                    <span className="hx-medium-check">
+                      <Check size={11} /> 선택됨
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="hx-format-stack">
+              {formatOptions.map((option) => (
+                <button
+                  type="button"
+                  key={option.id}
+                  className={`hx-format-card ${format === option.id ? 'is-selected' : ''}`}
+                  aria-pressed={format === option.id}
+                  onClick={() => onSelectFormat(option.id)}
+                >
+                  <span className="hx-format-cadence">{option.cadence}</span>
+                  <strong>{option.label}</strong>
+                  <p>{option.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+          <aside className="hx-aside">
+            <div className="hx-aside-card">
+              <div className="hx-aside-label">다음 단계</div>
+              <div className="hx-aside-title">자유 서술</div>
+              <p>쓰고 싶은 이야기를 자유롭게 흘려 적습니다. 구조나 인물 이름은 신경 쓰지 않아도 됩니다.</p>
+            </div>
+            <div className="hx-aside-card is-selected">
+              <div className="hx-aside-label">선택됨</div>
+              <div className="hx-aside-title">
+                {blueprint.mediumLabel} · {blueprint.formatLabel}
+              </div>
+              <p>{blueprint.projectRoomSubtitle}</p>
+            </div>
+            <button type="button" className="hx-btn hx-btn-block" onClick={() => setHomeFlowStep('freewrite')}>
+              자유 서술로 계속
+            </button>
+          </aside>
+        </section>
+
+        <section className="hx-panel" aria-label="자유 서술 단계">
+          <div className="hx-main">
+            <p className="hx-eyebrow">02 · 자유 서술</p>
+            <h1 className="hx-h1">쓰고 싶은 이야기를 자유롭게 적어주세요.</h1>
+            <p className="hx-lead">
+              구조, 인물 이름, 사건 순서는 신경 쓰지 않아도 됩니다. 떠오르는 대로 한 문단이면 충분합니다. 다음
+              단계에서 이 글을 기반으로 맞춤 인터뷰를 드립니다.
+            </p>
+            <textarea
+              className="hx-freewrite"
+              aria-label="자유 서술 입력"
+              value={freewriteText}
+              onChange={(event) => setFreewriteText(event.target.value)}
+              placeholder={
+                blueprint.medium === 'essay'
+                  ? '예: 엄마가 돌아가신 뒤 1년 동안 부엌을 못 들어갔다. 1년 후 처음 들어갔을 때 냉장고에 메모를 발견했다.'
+                  : '예: 오빠가 사라진 그날 새벽, 한 소녀가 달의 탑 아래에서 마르지 않은 잉크 자국을 찾는다.'
+              }
+              rows={10}
+            />
+            <p className="hx-freewrite-meter">
+              {freewriteText.trim().length}자
+              {blueprint.medium === 'audiobook' && (() => {
+                const charCount = freewriteText.trim().length;
+                const minutes = Math.floor(charCount / 280);
+                const seconds = Math.round((charCount % 280) / 280 * 60);
+                return ` · 예상 낭독 ${minutes}분 ${seconds}초`;
+              })()}
+            </p>
+            {blueprint.medium === 'essay' && (
+              <p className="hx-fact-note">
+                <Lock size={13} aria-hidden="true" />
+                <span>
+                  <strong>사실 보호 모드</strong> 에세이/회고 매체에서는 자유 서술에 적지 않은 디테일(인물의
+                  직업·나이·장소 등)을 AI가 발명하지 않습니다. 빈 곳은 빈 곳으로 남고, 채우는 건 작가의 몫입니다.
+                </span>
+              </p>
+            )}
+          </div>
+          <aside className="hx-aside">
+            <div className="hx-aside-card">
+              <div className="hx-aside-label">다음 단계</div>
+              <div className="hx-aside-title">작가 인터뷰</div>
+              <p>이 서술을 기반으로 작가진이 인물·세계·문체를 빠르게 묻습니다. 비워도 인터뷰는 작동합니다.</p>
+            </div>
+            <div className="hx-aside-actions">
+              <button type="button" className="hx-btn-ghost" onClick={() => setHomeFlowStep('medium')}>
+                이전
+              </button>
+              <button type="button" className="hx-btn" onClick={goToIntake}>
+                인터뷰로 계속
+              </button>
+            </div>
+          </aside>
+        </section>
+
+        <section className="hx-panel" aria-label="새 프로젝트 작가 인터뷰">
+          <div className="hx-main">
+            <p className="hx-eyebrow">03 · 작가 인터뷰</p>
+            <h1 className="hx-h1">작가진이 먼저 묻습니다.</h1>
+            <p className="hx-lead">
+              {intakePlan.summary} 선택은 언제든지 에디터에서 바꿀 수 있습니다. 변경이 기존 회차와 충돌하면 영향
+              범위를 먼저 보여줍니다.
+            </p>
+            <div className="hx-progress" aria-label="질문 진행도">
+              <span>
+                {intakeQuestionIndex + 1} / {effectiveIntakeQuestions.length}
+              </span>
+              <div className="hx-progress-bar" aria-hidden="true">
+                <i style={{ width: `${((intakeQuestionIndex + 1) / effectiveIntakeQuestions.length) * 100}%` }} />
+              </div>
+            </div>
+            {(() => {
+              if (isInterviewLoading) {
+                return (
+                  <article className="hx-intake-q">
+                    <div className="hx-intake-interviewer">
+                      <b>인터뷰어들이 원고를 읽고 있습니다…</b>
+                      <em>당신이 쓴 자유 서술에 맞는 질문을 준비하는 중입니다.</em>
+                    </div>
+                  </article>
+                );
+              }
+
+              const question = effectiveIntakeQuestions[intakeQuestionIndex];
+              if (!question) return null;
+              const selectedOption = intakeAnswers[question.id] ?? question.recommendedOptionId;
+              const persona = getIntakePersona(question.agentId);
+
+              return (
+                <article className="hx-intake-q" key={question.id}>
+                  <div className="hx-intake-interviewer">
+                    <b>{persona.name}</b>
+                    <em>
+                      {String(intakeQuestionIndex + 1).padStart(2, '0')} · {persona.blurb}
+                    </em>
+                  </div>
+                  <h3 className="hx-intake-question-text">{question.question}</h3>
+                  <div className="hx-intake-options">
+                    {question.options.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`hx-intake-option ${selectedOption === option.id ? 'is-selected' : ''}`}
+                        onClick={() => setIntakeAnswers((current) => ({ ...current, [question.id]: option.id }))}
+                      >
+                        <strong>{option.label}</strong>
+                        <small>{option.impact}</small>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className={`hx-intake-option ${selectedOption === '_other' ? 'is-selected' : ''}`}
+                      onClick={() => setIntakeAnswers((current) => ({ ...current, [question.id]: '_other' }))}
+                    >
+                      <strong>기타 (직접 입력)</strong>
+                      <small>객관식으로 안 맞는 답을 이쪽에 직접 적습니다.</small>
+                    </button>
+                  </div>
+                  {selectedOption === '_other' && (
+                    <textarea
+                      className="hx-other-input"
+                      aria-label={`${question.question} 기타 답변`}
+                      placeholder="이 질문에 대한 답을 한두 문장으로 적어주세요."
+                      value={intakeOtherAnswers[question.id] ?? ''}
+                      onChange={(event) =>
+                        setIntakeOtherAnswers((current) => ({
+                          ...current,
+                          [question.id]: event.target.value
+                        }))
+                      }
+                      rows={3}
+                    />
+                  )}
+                </article>
+              );
+            })()}
+            <div className="hx-q-nav">
+              {intakeQuestionIndex > 0 && (
+                <button
+                  type="button"
+                  className="hx-btn-ghost"
+                  onClick={() => setIntakeQuestionIndex((current) => Math.max(0, current - 1))}
+                >
+                  이전 질문
+                </button>
+              )}
+              {!isInterviewLoading && intakeQuestionIndex < effectiveIntakeQuestions.length - 1 && (
+                <button
+                  type="button"
+                  className="hx-btn"
+                  style={{ marginLeft: 'auto' }}
+                  onClick={() =>
+                    setIntakeQuestionIndex((current) =>
+                      Math.min(effectiveIntakeQuestions.length - 1, current + 1)
+                    )
+                  }
+                >
+                  다음 질문
+                </button>
+              )}
+            </div>
+            <article className="hx-open-note">
+              <div className="hx-aside-label">추가 메모 (선택)</div>
+              <h3 className="hx-intake-question-text">선택지로 담기 어려운 설정이 있나요?</h3>
+              <textarea
+                aria-label="추가 메모 (주관식)"
+                className="hx-other-input"
+                value={interviewNote}
+                onChange={(event) => setInterviewNote(event.target.value)}
+                placeholder="예: 1부는 인간 시점, 2부는 토착 종족 시점으로 같은 사건을 다시 본다."
+                rows={3}
+              />
+            </article>
+          </div>
+          <aside className="hx-aside">
+            <div className="hx-aside-card is-selected">
+              <div className="hx-aside-label">선택한 파이프라인</div>
+              <div className="hx-aside-title">
+                {blueprint.mediumLabel} · {blueprint.formatLabel}
+              </div>
+              <p>쇼러너, 캐릭터 큐레이터, 배경 설계자, 장르 스타일리스트, 연속성 감수자가 작가진으로 배정됩니다.</p>
+            </div>
+            <div className="hx-aside-actions">
+              <button type="button" className="hx-btn-ghost" onClick={() => setHomeFlowStep('freewrite')}>
+                이전
+              </button>
+              <button type="button" className="hx-btn" onClick={goToBuilding}>
+                질문 완료 — 첫 회차 만들기
+              </button>
+            </div>
+          </aside>
+        </section>
+
+        <section className="hx-panel hx-panel-building" aria-label="첫 회차 구성 중">
+          <div className="hx-building">
+            <p className="hx-eyebrow">04 · 구성</p>
+            <h1 className="hx-h1">작가진이 첫 회차를 쓰고 있습니다.</h1>
+            <p className="hx-lead">
+              자유 서술과 인터뷰 답변을 읽고, 첫 회차 초안과 작품 바이블의 초기 설정을 구성합니다. 끝나면 편집
+              화면이 열립니다.
+            </p>
+            <ol className="hx-building-steps" aria-label="구성 단계">
+              <li>자유 서술과 인터뷰 답변을 읽습니다.</li>
+              <li>쇼러너가 첫 회차의 약속과 후크를 잡습니다.</li>
+              <li>캐릭터·배경 설계가 첫 장면을 세웁니다.</li>
+              <li>첫 회차 초안을 쓰고, 바이블에 초기 설정을 제안합니다.</li>
+            </ol>
+            <p className="hx-building-note">잠시만 기다려 주세요 — 보통 1~3분 걸립니다.</p>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

@@ -2,13 +2,12 @@ import {
   BookOpen,
   BrainCircuit,
   Check,
+  ChevronDown,
   ChevronRight,
   ClipboardCheck,
   Database,
   FileText,
   GitBranch,
-  Home,
-  Layers,
   Library,
   ListChecks,
   Lock,
@@ -639,6 +638,8 @@ export function StoryXDesk({
     project.chapters.length > 0 ? project.chapters[project.chapters.length - 1] : null
   );
   const [activeTrack, setActiveTrack] = useState<DeskTrack>('draft');
+  const [isWorkbenchFading, setIsWorkbenchFading] = useState(false);
+  const [isIntentOpen, setIsIntentOpen] = useState(true);
   const [activeBibleSection, setActiveBibleSection] = useState<BibleSection>('overview');
   const [approvalDecisions, setApprovalDecisions] = useState<Record<string, ApprovalDecision>>({});
   const [approvalStatementOverrides, setApprovalStatementOverrides] = useState<Record<string, string>>({});
@@ -1375,17 +1376,76 @@ export function StoryXDesk({
     setCanonChanges([]);
   }
 
+  // P5 — 편집/바이블/출간 트랙 전환 시 작업대에 약 130ms opacity 페이드를 준다
+  function runWithWorkbenchFade(apply: () => void) {
+    setIsWorkbenchFading(true);
+    window.setTimeout(() => {
+      apply();
+      setIsWorkbenchFading(false);
+    }, 130);
+  }
+
+  function switchToTrack(nextTrack: DeskTrack) {
+    if (nextTrack === activeTrack && !isPublishingMode) {
+      return;
+    }
+    runWithWorkbenchFade(() => {
+      setActiveTrack(nextTrack);
+      setIsPublishingMode(false);
+      setIsMediaPanelOpen(false);
+    });
+  }
+
+  function openPublishingMode() {
+    if (isPublishingMode) {
+      return;
+    }
+    runWithWorkbenchFade(() => {
+      setIsPublishingMode(true);
+      setIsMediaPanelOpen(false);
+    });
+  }
+
+  function closePublishingMode() {
+    if (!isPublishingMode) {
+      return;
+    }
+    runWithWorkbenchFade(() => {
+      setIsPublishingMode(false);
+    });
+  }
+
   return (
     <main className={`sx-desk sx-genre-${request.genre} ${isFocusMode ? 'is-focus-mode' : ''}`}>
       <header className="sx-topbar sx-app-shell-topbar">
         <div className="sx-brand">
-          <span className="sx-brand-mark">
+          <button
+            type="button"
+            className="sx-brand-mark sx-brand-home"
+            aria-label={onOpenProjects ? '프로젝트로 이동' : 'Story X 홈'}
+            title={onOpenProjects ? '프로젝트로 이동' : 'Story X'}
+            onClick={() => {
+              if (onOpenProjects) {
+                onOpenProjects();
+              } else if (onOpenLanding) {
+                onOpenLanding();
+              }
+            }}
+          >
             <Sparkles size={17} />
-          </span>
+          </button>
           <nav className="sx-app-breadcrumb" aria-label="현재 위치">
             <span>Story X</span>
             <ChevronRight size={13} />
-            <strong>{project.title}</strong>
+            <input
+              className="sx-crumb-title-input"
+              aria-label="작품 제목"
+              name="breadcrumb-project-title"
+              value={project.title}
+              onChange={(event) => updateProject('title', event.target.value)}
+              autoComplete="off"
+              title="클릭해서 제목 편집"
+            />
             <ChevronRight size={13} />
             <span>{activeModeLabel}</span>
             {!isPublishingMode && <em>{chapterCrumb}</em>}
@@ -1395,11 +1455,7 @@ export function StoryXDesk({
           <button
             type="button"
             className={activeTrack === 'draft' && !isPublishingMode ? 'is-active' : ''}
-            onClick={() => {
-              setActiveTrack('draft');
-              setIsPublishingMode(false);
-              setIsMediaPanelOpen(false);
-            }}
+            onClick={() => switchToTrack('draft')}
           >
             <PenLine size={16} />
             편집
@@ -1407,56 +1463,28 @@ export function StoryXDesk({
           <button
             type="button"
             className={activeTrack === 'bible' && !isPublishingMode ? 'is-active' : ''}
-            onClick={() => {
-              setActiveTrack('bible');
-              setIsPublishingMode(false);
-              setIsMediaPanelOpen(false);
-            }}
+            onClick={() => switchToTrack('bible')}
           >
             <Database size={16} />
             바이블
             {bibleAlertCount > 0 && <span className="sx-bible-alert-badge">{bibleAlertCount}</span>}
           </button>
         </nav>
+        {/* P2 — 상단 우측은 저장 상태 칩과 출간 버튼 2개로만 유지한다. 명령 팔레트는 ⌘K 단축키로 열고,
+            매체 변경은 팔레트 명령으로 옮겨 시각적 클러터를 제거했다 */}
         <div className="sx-topbar-actions">
-          {onOpenProjects && (
-            <div className="sx-app-nav-links" aria-label="앱 이동">
-              <button type="button" aria-label="프로젝트로 이동" onClick={onOpenProjects}>
-                <Home size={14} />
-              </button>
-            </div>
-          )}
-          <button type="button" className="sx-command-k" aria-label="명령 팔레트 열기" onClick={() => setIsCommandPaletteOpen(true)}>
-            ⌘K
-          </button>
-          <span className="sx-save-chip" data-state={editedSinceReview ? 'dirty' : 'synced'}>
+          <span className="sx-save-chip" data-state={editedSinceReview ? 'dirty' : 'synced'} aria-live="polite">
             <Save size={14} />
             {saveLabel}
-          </span>
-          <span className="sx-user-avatar" aria-label="사용자 프로필">
-            TX
           </span>
           <button
             type="button"
             className="sx-publish-button"
             data-active={isPublishingMode ? 'true' : 'false'}
-            onClick={() => {
-              setIsPublishingMode(true);
-              setIsMediaPanelOpen(false);
-            }}
+            onClick={openPublishingMode}
           >
             <FileText size={16} />
             출간
-          </button>
-          <button
-            type="button"
-            className="sx-media-change-button"
-            aria-expanded={isMediaPanelOpen}
-            aria-label={`매체 변경 — 현재 ${blueprint.mediumLabel} ${blueprint.formatLabel}`}
-            onClick={() => setIsMediaPanelOpen((current) => !current)}
-          >
-            <Layers size={16} />
-            <span>매체</span>
           </button>
         </div>
       </header>
@@ -1532,11 +1560,61 @@ export function StoryXDesk({
           {isPublishingMode ? (
             <PublishingIndexCard plan={publishingPlan} />
           ) : activeTrack === 'draft' ? (
-            <ChapterTreeCard
-              project={project}
-              selectedChapterId={latestChapter?.id ?? null}
-              onSelectChapter={setLatestChapter}
-            />
+            <>
+              {/* P1 — '이번 회차 의도' 입력을 중앙 작업대에서 좌측 레일 접이식 섹션으로 옮긴다 */}
+              <section className="ex-intent-card" aria-label="이번 회차 의도">
+                <button
+                  type="button"
+                  className="ex-intent-toggle"
+                  aria-expanded={isIntentOpen}
+                  onClick={() => setIsIntentOpen((current) => !current)}
+                >
+                  <span>{latestChapter ? '다음 회차 의도' : '이번 회차 의도'}</span>
+                  <ChevronDown
+                    size={14}
+                    className="ex-intent-chevron"
+                    data-open={isIntentOpen ? 'true' : 'false'}
+                    aria-hidden="true"
+                  />
+                </button>
+                {isIntentOpen && (
+                  <div className="ex-intent-body">
+                    <textarea
+                      className="ex-intent-textarea"
+                      name="draft-prompt"
+                      aria-label={latestChapter ? '다음 회차에 담을 주요 내용' : '이번 회차에 담을 주요 내용'}
+                      value={draftPrompt}
+                      onChange={(event) => updateDraftPrompt(event.target.value)}
+                      placeholder={draftPromptPlaceholder}
+                      rows={4}
+                    />
+                    {isLatestLocked && latestChapter && (
+                      <p className="ex-intent-lock">
+                        <Lock size={11} aria-hidden="true" />
+                        <span>{latestChapter.episode}화는 출간 확정됨. 수정 대신 다음 회차로 진행합니다.</span>
+                      </p>
+                    )}
+                    {generationNote && (
+                      <p className="ex-intent-note" role="status">
+                        {generationNote}
+                      </p>
+                    )}
+                    {(editorText || latestChapter) && (
+                      <p className={`sx-style-chip is-${styleReport.level}`} role="status">
+                        문체 {describeKoreanStyleLevel(styleReport.level)} · {styleReport.score}점
+                        {styleReport.issues.length > 0 &&
+                          ` · ${styleReport.issues[0].label} ${styleReport.issues[0].count}`}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </section>
+              <ChapterTreeCard
+                project={project}
+                selectedChapterId={latestChapter?.id ?? null}
+                onSelectChapter={setLatestChapter}
+              />
+            </>
           ) : (
             <BibleIndexCard
               project={project}
@@ -1549,7 +1627,9 @@ export function StoryXDesk({
         </aside>
 
         <section
-          className={`sx-workbench ${isPublishingMode ? 'is-publishing' : activeTrack === 'bible' ? 'is-bible' : 'is-draft'}`}
+          className={`sx-workbench ${isPublishingMode ? 'is-publishing' : activeTrack === 'bible' ? 'is-bible' : 'is-draft'}${
+            isWorkbenchFading ? ' is-fading' : ''
+          }`}
           aria-label="Story X 작업대"
         >
           {isPublishingMode ? (
@@ -1557,11 +1637,13 @@ export function StoryXDesk({
               project={project}
               blueprint={blueprint}
               plan={publishingPlan}
-              onBackToEditor={() => setIsPublishingMode(false)}
+              onBackToEditor={closePublishingMode}
               onOpenBible={() => {
-                setIsPublishingMode(false);
-                setActiveTrack('bible');
                 setActiveBibleSection('approval');
+                runWithWorkbenchFade(() => {
+                  setIsPublishingMode(false);
+                  setActiveTrack('bible');
+                });
               }}
               onReviewDraft={reviewDraft}
               onConfirmChapterLock={(chapterId) => {
@@ -1574,71 +1656,53 @@ export function StoryXDesk({
             />
           ) : activeTrack === 'draft' ? (
             <>
-              <section className="sx-editor-titlebar">
-                <div>
-                  <p className="sx-eyebrow">
-                    {blueprint.mediumLabel} / {blueprint.formatLabel}
-                  </p>
-                  <input
-                    className="sx-title-input"
-                    aria-label="프로젝트 제목"
-                    name="project-title"
-                    value={project.title}
-                    onChange={(event) => updateProject('title', event.target.value)}
-                    autoComplete="off"
-                  />
-                  <label className="sx-draft-prompt-field">
-                    <span className="sx-eyebrow">
-                      {latestChapter ? '다음 회차에 담을 주요 내용' : '이번 회차에 담을 주요 내용'}
-                    </span>
-                    <textarea
-                      name="draft-prompt"
-                      value={draftPrompt}
-                      onChange={(event) => updateDraftPrompt(event.target.value)}
-                      placeholder={draftPromptPlaceholder}
-                      rows={3}
-                    />
-                  </label>
-                  {isLatestLocked && latestChapter && (
-                    <p className="sx-lock-chip">
-                      <Lock size={12} aria-hidden="true" />
-                      <span>
-                        {latestChapter.episode}화는 출간 확정됨. 수정 대신 다음 회차로 진행합니다.
-                      </span>
-                    </p>
+              {/* P1 — 얇은 툴스트립: 회차 탭 + 기본 액션 + 집중 모드 버튼. 원고가 나머지 세로 공간을 채운다 */}
+              <div className="ex-toolstrip" role="toolbar" aria-label="원고 작업 도구">
+                <nav className="ex-chapter-tabs" aria-label="회차 이동">
+                  {project.chapters.length === 0 ? (
+                    <span className="ex-chapter-tabs-empty">첫 초안을 생성하면 회차 탭이 생깁니다.</span>
+                  ) : (
+                    project.chapters.map((chapter) => (
+                      <button
+                        key={chapter.id}
+                        type="button"
+                        className={`ex-chapter-tab ${chapter.id === latestChapter?.id ? 'is-active' : ''}${
+                          chapter.locked ? ' is-locked' : ''
+                        }`}
+                        aria-pressed={chapter.id === latestChapter?.id}
+                        onClick={() => setLatestChapter(chapter)}
+                      >
+                        {chapter.locked && <Lock size={9} aria-hidden="true" />}
+                        {chapter.episode}화
+                      </button>
+                    ))
                   )}
-                  {generationNote && (
-                    <p className="sx-generation-note" role="status">
-                      {generationNote}
-                    </p>
-                  )}
-                  {(editorText || latestChapter) && (
-                    <p className={`sx-style-chip is-${styleReport.level}`} role="status">
-                      문체 {describeKoreanStyleLevel(styleReport.level)} · {styleReport.score}점
-                      {styleReport.issues.length > 0 &&
-                        ` · ${styleReport.issues[0].label} ${styleReport.issues[0].count}`}
-                    </p>
-                  )}
-                </div>
-                <div className="sx-editor-titlebar-actions">
-                  <span>{blueprint.projectRoomTitle}</span>
-                  <button
-                    type="button"
-                    className="sx-primary-button"
-                    onClick={mainActionRun}
-                    disabled={isGenerating || isReviewing}
-                  >
-                    <MainActionIcon size={isLatestLocked || !latestChapter ? 17 : 16} />
-                    {isGenerating ? '생성 중…' : isReviewing ? '검토 중…' : mainActionLabel}
-                  </button>
-                </div>
-              </section>
-
-              <ChapterNavigator
-                chapters={project.chapters}
-                selectedChapterId={latestChapter?.id ?? null}
-                onSelectChapter={setLatestChapter}
-              />
+                </nav>
+                <span className="ex-toolstrip-spacer" />
+                <span className="ex-toolstrip-medium" aria-hidden="true">
+                  {blueprint.mediumLabel} / {blueprint.formatLabel}
+                </span>
+                <span className="ex-toolstrip-sep" aria-hidden="true" />
+                <button
+                  type="button"
+                  className="sx-primary-button ex-toolstrip-action"
+                  onClick={mainActionRun}
+                  disabled={isGenerating || isReviewing}
+                >
+                  <MainActionIcon size={15} />
+                  {isGenerating ? '생성 중…' : isReviewing ? '검토 중…' : mainActionLabel}
+                </button>
+                <button
+                  type="button"
+                  className="ex-focus-btn"
+                  aria-pressed={isFocusMode}
+                  aria-label={isFocusMode ? '집중 모드 해제 (⌘.)' : '집중 모드 (⌘.)'}
+                  title={isFocusMode ? '집중 모드 해제 (⌘.)' : '집중 모드 (⌘.)'}
+                  onClick={() => setIsFocusMode((current) => !current)}
+                >
+                  {isFocusMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                </button>
+              </div>
 
               <CreativeStage
                 blueprint={blueprint}
@@ -1915,35 +1979,6 @@ function VersionLogDialog({
         </div>
       </section>
     </div>
-  );
-}
-
-function ChapterNavigator({
-  chapters,
-  selectedChapterId,
-  onSelectChapter
-}: {
-  chapters: Chapter[];
-  selectedChapterId: string | null;
-  onSelectChapter: (chapter: Chapter) => void;
-}) {
-  return (
-    <nav className="sx-episode-tabs" aria-label="회차 이동">
-      {chapters.length === 0 ? (
-        <span>첫 초안을 생성하면 1화, 2화처럼 이동 탭이 생깁니다.</span>
-      ) : (
-        chapters.map((chapter) => (
-          <button
-            key={chapter.id}
-            type="button"
-            className={chapter.id === selectedChapterId ? 'is-selected' : ''}
-            onClick={() => onSelectChapter(chapter)}
-          >
-            {chapter.episode}화
-          </button>
-        ))
-      )}
-    </nav>
   );
 }
 

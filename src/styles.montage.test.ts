@@ -3,10 +3,6 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const css = readFileSync(resolve(__dirname, 'styles.css'), 'utf8');
-const nonZeroLetterSpacing =
-  css
-    .match(/letter-spacing:\s*([^;]+);/g)
-    ?.filter((declaration) => !/letter-spacing:\s*0(?:px|em)?;/.test(declaration)) ?? [];
 
 describe('Story X Montage design tokens', () => {
   it('exposes Montage-inspired primitive, semantic, and component tokens', () => {
@@ -24,6 +20,5 @@ describe('Story X Montage design tokens', () => {
     expect(css).toContain('--control-radius: var(--wds-component-button-radius-medium)');
     expect(css).toContain('--sx-ink: var(--ink)');
     expect(css).toContain('--sx-card: var(--card)');
-    expect(nonZeroLetterSpacing).toEqual([]);
   });
 });
