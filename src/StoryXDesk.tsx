@@ -1860,28 +1860,8 @@ export function StoryXDesk({
             />
           ) : activeTrack === 'draft' ? (
             <>
-              {/* P1 — 얇은 툴스트립: 회차 탭 + 기본 액션 + 집중 모드 버튼. 원고가 나머지 세로 공간을 채운다 */}
+              {/* P1 — 얇은 툴스트립: 매체 라벨 + 검토 규모 + 집중 모드. 회차 이동은 상단바 회차 선택기로 일원화했다 */}
               <div className="ex-toolstrip" role="toolbar" aria-label="원고 작업 도구">
-                <nav className="ex-chapter-tabs" aria-label="회차 이동">
-                  {project.chapters.length === 0 ? (
-                    <span className="ex-chapter-tabs-empty">첫 초안을 생성하면 회차 탭이 생깁니다.</span>
-                  ) : (
-                    project.chapters.map((chapter) => (
-                      <button
-                        key={chapter.id}
-                        type="button"
-                        className={`ex-chapter-tab ${chapter.id === latestChapter?.id ? 'is-active' : ''}${
-                          chapter.locked ? ' is-locked' : ''
-                        }`}
-                        aria-pressed={chapter.id === latestChapter?.id}
-                        onClick={() => setLatestChapter(chapter)}
-                      >
-                        {chapter.locked && <Lock size={9} aria-hidden="true" />}
-                        {chapter.episode}화
-                      </button>
-                    ))
-                  )}
-                </nav>
                 <span className="ex-toolstrip-spacer" />
                 <span className="ex-toolstrip-medium" aria-hidden="true">
                   {blueprint.mediumLabel} / {blueprint.formatLabel}

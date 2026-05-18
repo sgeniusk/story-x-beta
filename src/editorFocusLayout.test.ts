@@ -75,7 +75,7 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('? actionLabels.draft');
     expect(desk).toContain(': actionLabels.review');
     expect(desk).toContain('수정됨');
-    // 회차 이동은 상단바 회차 선택기와 툴스트립 회차 탭에서 가능하다
+    // 회차 이동은 상단바 회차 선택기로 일원화했다
     expect(desk).toContain('aria-label="회차 이동"');
     // 좌측 레일은 회차 카드 목록 대신 현재 회차의 구성(beat) 목록을 보여준다
     expect(desk).toContain('ChapterBeatsCard');
@@ -87,7 +87,6 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-desk.is-focus-mode .sx-project-rail');
     expect(css).toContain('.sx-expand-editor-button');
     expect(css).toContain('.sx-manuscript-editor.is-edited');
-    expect(css).toContain('.sx-desk .ex-chapter-tab');
     expect(css).toContain('.sx-desk .ex-beat-item');
   });
 
@@ -97,13 +96,13 @@ describe('Story X focused editor layout', () => {
     // 편집 트랙: 툴스트립 1행 + 원고가 나머지 공간을 채우는 1행
     expect(css).toContain('grid-template-rows: auto minmax(0, 1fr)');
     expect(css).toContain('.sx-workbench.is-draft .sx-creative-stage');
-    // 얇은 툴스트립(~52px): 회차 탭 + 기본 액션 + 집중 모드 버튼
+    // 얇은 툴스트립(~52px): 매체 라벨 + 검토 규모 토글 + 집중 모드 버튼
     expect(desk).toContain('className="ex-toolstrip"');
-    expect(desk).toContain('className="ex-chapter-tabs"');
+    expect(desk).toContain('className="ex-scale-toggle"');
     expect(desk).toContain('className="ex-focus-btn"');
     expect(css).toContain('.sx-desk .ex-toolstrip');
     expect(css).toContain('min-height: 52px;');
-    expect(css).toContain('.sx-desk .ex-chapter-tab');
+    expect(css).toContain('.sx-desk .ex-scale-toggle');
     expect(css).toContain('.sx-desk .ex-focus-btn');
   });
 

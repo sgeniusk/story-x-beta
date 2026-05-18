@@ -3135,52 +3135,6 @@ body {
   display: none;
 }
 
-.sx-desk .ex-chapter-tabs {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-}
-
-.sx-desk .ex-chapter-tabs-empty {
-  color: var(--sx-muted);
-  font-size: 0.82rem;
-  font-weight: var(--sx-weight-semibold);
-  white-space: nowrap;
-}
-
-.sx-desk .ex-chapter-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex: 0 0 auto;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--sx-line);
-  border-radius: var(--sx-radius-pill);
-  background: var(--sx-card);
-  color: var(--sx-muted);
-  font-size: 0.84rem;
-  font-weight: var(--sx-weight-semibold);
-  white-space: nowrap;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-
-.sx-desk .ex-chapter-tab:hover {
-  color: var(--sx-ink);
-  border-color: var(--nx-hairline-strong, rgba(55, 53, 47, 0.17));
-}
-
-.sx-desk .ex-chapter-tab.is-active {
-  color: var(--nx-on-primary, #fff);
-  border-color: var(--nx-primary, #6448d3);
-  background: var(--nx-primary, #6448d3);
-}
-
-.sx-desk .ex-chapter-tab.is-locked:not(.is-active) {
-  color: var(--sx-warn, #d4a94d);
-}
-
 .sx-desk .ex-toolstrip-spacer {
   flex: 1 1 auto;
 }
