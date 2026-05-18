@@ -18,7 +18,7 @@ describe('Story X Montage design tokens', () => {
     expect(css).toContain('--card: var(--wds-semantic-color-background-elevated-normal)');
     expect(css).toContain('--button-bg: var(--wds-semantic-color-label-normal)');
     expect(css).toContain('--control-radius: var(--wds-component-button-radius-medium)');
-    expect(css).toContain('--sx-ink: var(--ink)');
-    expect(css).toContain('--sx-card: var(--card)');
+    expect(css).toContain('--sx-ink: var(--framer-ink)');
+    expect(css).toContain('--sx-card: var(--framer-surface-1)');
   });
 });

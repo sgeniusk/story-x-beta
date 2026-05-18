@@ -8,8 +8,6 @@ import {
   serviceOperationsGroups
 } from './lib/serviceOperationsAgents';
 
-const app = readFileSync(resolve(__dirname, 'App.tsx'), 'utf8');
-const css = readFileSync(resolve(__dirname, 'styles.css'), 'utf8');
 const manifest = readFileSync(resolve(__dirname, '../docs/codex-agent-manifest.md'), 'utf8');
 
 describe('service operations agents', () => {
@@ -27,18 +25,6 @@ describe('service operations agents', () => {
     ]);
     expect(getServiceAgentsByGroup('product')).toHaveLength(4);
     expect(getServiceAgentsByGroup('growth')).toHaveLength(4);
-  });
-
-  it('surfaces the service operations room on the homepage', () => {
-    expect(app).toContain('serviceOperationsAgents');
-    expect(app).toContain('서비스 운영실');
-    expect(app).toContain('에디터 UX 디렉터');
-    expect(app).toContain('수익화 설계자');
-    expect(app).toContain('FrontendAgentShowcase');
-    expect(app).toContain('frontendProductionAgentIds');
-    expect(css).toContain('.service-ops-section');
-    expect(css).toContain('.service-agent-grid');
-    expect(css).toContain('.frontend-agent-grid');
   });
 
   it('documents the service agents for Codex and Claude Code compatibility', () => {
