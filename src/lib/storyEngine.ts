@@ -57,12 +57,22 @@ export interface CanonFact {
   statement: string;
 }
 
+// 회차 구성 단위 — 이야기 흐름의 의미 단위 하나. 번호·라벨·요약으로 원고 위에 오버레이된다.
+export interface ChapterBeat {
+  id: string;
+  no: number;
+  label: string;
+  summary: string;
+}
+
 export interface Chapter {
   id: string;
   episode: number;
   title: string;
   hook: string;
   outline: string[];
+  /** 회차 구성 — 번호 매겨진 흐름 단위 목록. 원고와는 오버레이 관계(원고는 자유 textarea). */
+  beats: ChapterBeat[];
   prose: string;
   memoryAnchors: string[];
   newCanonFacts: CanonFact[];
@@ -159,12 +169,42 @@ export interface DraftChapterPayloadCanonFact {
   statement: string;
 }
 
+export interface DraftChapterPayloadBeat {
+  label: string;
+  summary: string;
+}
+
 export interface DraftChapterPayload {
   title: string;
   hook: string;
   outline: string[];
+  /** 회차 구성 — LLM이 초안과 함께 내는 흐름 단위 outline. 번호는 커밋 시 매긴다. */
+  beats: DraftChapterPayloadBeat[];
   prose: string;
   newCanonFacts: DraftChapterPayloadCanonFact[];
+}
+
+// 라벨·요약 쌍 목록을 번호 매겨진 ChapterBeat[]로 정규화한다. 빈 항목은 버린다.
+export function normalizeChapterBeats(
+  episode: number,
+  raw: ReadonlyArray<{ label?: unknown; summary?: unknown }> | undefined
+): ChapterBeat[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw
+    .map((item) => ({
+      label: typeof item?.label === 'string' ? item.label.trim() : '',
+      summary: typeof item?.summary === 'string' ? item.summary.trim() : ''
+    }))
+    .filter((item) => item.label.length > 0 || item.summary.length > 0)
+    .map((item, index) => ({
+      id: `beat-${episode.toString().padStart(3, '0')}-${String(index + 1).padStart(2, '0')}`,
+      no: index + 1,
+      label: item.label || `구성 ${index + 1}`,
+      summary: item.summary
+    }));
 }
 
 export type EditorViewModeId = 'binder' | 'corkboard' | 'outliner' | 'scrivenings';
@@ -467,12 +507,31 @@ export function produceNextChapter(project: SeriesProject, request: ProductionRe
     `그 순간 ${primaryCharacter.name}은 오빠가 쓰던 필압으로 새겨진 표식을 발견했다. 잉크는 마르지 않았고, 탑은 방금 누군가를 기억한 것처럼 낮게 울었다.`
   ].join('\n\n');
 
+  const beats = normalizeChapterBeats(episode, [
+    {
+      label: '하층으로 내려가는 길',
+      summary: `${primaryCharacter.name}이 등잔을 들고 달의 탑 하층으로 들어선다.`
+    },
+    {
+      label: '지워진 이름의 흔적',
+      summary: '벽의 은빛 먼지에서 누군가 지운 이름의 자취를 읽는다.'
+    },
+    {
+      label: `${partner.name}의 선택적 침묵`,
+      summary: `${partner.name}이 초대장의 빈칸을 가리며 규칙의 일부를 숨긴다.`
+    },
+    {
+      label: '마르지 않은 표식',
+      summary: `${primaryCharacter.name}이 오빠의 필압으로 새겨진 표식을 발견하고 탑이 낮게 운다.`
+    }
+  ]);
   const chapter: Chapter = {
     id: `episode-${episode}`,
     episode,
     title: `${episode}화: 마르지 않은 이름`,
     hook: '오빠의 표식이 방금 쓰인 것처럼 빛나고, 이안은 초대장의 대가를 숨긴다.',
     outline,
+    beats,
     prose,
     memoryAnchors,
     newCanonFacts
@@ -514,6 +573,7 @@ export function chapterFromDraftPayload(
     outline: (payload.outline ?? []).filter(
       (line): line is string => typeof line === 'string' && line.trim().length > 0
     ),
+    beats: normalizeChapterBeats(episode, payload.beats),
     prose: payload.prose ?? '',
     memoryAnchors,
     newCanonFacts

@@ -3,6 +3,7 @@ import {
   BrainCircuit,
   Check,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   ClipboardCheck,
   Database,
@@ -22,7 +23,7 @@ import {
   WandSparkles,
   X
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type RefObject } from 'react';
 import { getAgentValidationProcess } from './lib/agentReviewProcess';
 import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
 import {
@@ -45,6 +46,7 @@ import {
   produceNextChapter,
   type AgentRun,
   type Chapter,
+  type ChapterBeat,
   type AgentId,
   type CreativeWeight,
   type DraftChapterPayload,
@@ -660,7 +662,9 @@ export function StoryXDesk({
   const [generationNote, setGenerationNote] = useState<string | null>(null);
   const [projectSnapshots, setProjectSnapshots] = useState<ProjectSnapshot[]>(() => loadProjectSnapshots());
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [activeBeatId, setActiveBeatId] = useState<string | null>(null);
   const draftBootRef = useRef(false);
+  const manuscriptRef = useRef<HTMLTextAreaElement>(null);
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [medium, format]);
   const editorWorkspace = useMemo(
@@ -752,6 +756,21 @@ export function StoryXDesk({
   const activeModeLabel = isPublishingMode ? '출간 준비' : activeTrack === 'bible' ? '작품 바이블' : '원고';
   const chapterCrumb = latestChapter ? `${latestChapter.episode}화` : '새 초안';
   const saveLabel = editedSinceReview ? '수정 중' : '저장됨';
+  // 상단바 회차 선택기 — 좌측 레일에서 회차 카드 목록을 들어낸 자리를 대신한다
+  const activeChapterIndex = latestChapter
+    ? project.chapters.findIndex((chapter) => chapter.id === latestChapter.id)
+    : -1;
+  const hasPrevChapter = activeChapterIndex > 0;
+  const hasNextChapter = activeChapterIndex >= 0 && activeChapterIndex < project.chapters.length - 1;
+  function stepChapter(delta: number) {
+    if (activeChapterIndex < 0) {
+      return;
+    }
+    const next = project.chapters[activeChapterIndex + delta];
+    if (next) {
+      setLatestChapter(next);
+    }
+  }
   // 일하는 바 — 회차 분량 미터: 실제 원고 글자 수를 한 회차 목표 5,000자와 비교한다
   const CHAPTER_CHAR_TARGET = 5000;
   const chapterCharCount = (editorText || latestChapter?.prose || '').replace(/\s/g, '').length;
@@ -971,6 +990,7 @@ export function StoryXDesk({
 
     setEditorText(latestChapter.prose);
     setEditedSinceReview(false);
+    setActiveBeatId(null);
   }, [latestChapter]);
 
   // 새 프로젝트 플로우에서 만든 첫 회차 초안으로 에디터를 시작하고, 작가진 검토를 자동 시작한다
@@ -1004,6 +1024,23 @@ export function StoryXDesk({
   function updateDraftPrompt(value: string) {
     setDraftPrompt(value);
     setRequest((current) => ({ ...current, intent: value }));
+  }
+
+  // 회차 구성(beat) 클릭 — 구성은 원고 위의 계획층(오버레이)이므로, 원고 textarea를
+  // beat 순번 비율만큼 스크롤해 해당 대목 근처로 이동시킨다(정밀 문단 매핑은 하지 않는다).
+  function selectBeat(beat: ChapterBeat) {
+    setActiveBeatId(beat.id);
+
+    const textarea = manuscriptRef.current;
+    const total = latestChapter?.beats.length ?? 0;
+    if (!textarea || total === 0) {
+      return;
+    }
+
+    const ratio = total > 1 ? (beat.no - 1) / total : 0;
+    const target = Math.max(0, (textarea.scrollHeight - textarea.clientHeight) * ratio);
+    textarea.focus({ preventScroll: true });
+    textarea.scrollTo({ top: target, behavior: 'smooth' });
   }
 
   function logCanonChange(input: CanonChangeEntryInput) {
@@ -1478,7 +1515,51 @@ export function StoryXDesk({
             />
             <ChevronRight size={12} className="ex-workbar-crumb-sep" aria-hidden="true" />
             <span>{activeModeLabel}</span>
-            {!isPublishingMode && <em>{chapterCrumb}</em>}
+            {!isPublishingMode &&
+              (project.chapters.length > 0 ? (
+                <span className="ex-chapter-picker" role="group" aria-label="회차 선택">
+                  <button
+                    type="button"
+                    className="ex-chapter-picker-step"
+                    aria-label="이전 회차"
+                    title="이전 회차"
+                    disabled={!hasPrevChapter}
+                    onClick={() => stepChapter(-1)}
+                  >
+                    <ChevronLeft size={13} aria-hidden="true" />
+                  </button>
+                  <select
+                    className="ex-chapter-picker-select"
+                    aria-label="회차 이동"
+                    value={latestChapter?.id ?? ''}
+                    onChange={(event) => {
+                      const next = project.chapters.find((chapter) => chapter.id === event.target.value);
+                      if (next) {
+                        setLatestChapter(next);
+                      }
+                    }}
+                  >
+                    {project.chapters.map((chapter) => (
+                      <option key={chapter.id} value={chapter.id}>
+                        {chapter.episode}화 · {chapter.title}
+                        {chapter.locked ? ' (잠김)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="ex-chapter-picker-step"
+                    aria-label="다음 회차"
+                    title="다음 회차"
+                    disabled={!hasNextChapter}
+                    onClick={() => stepChapter(1)}
+                  >
+                    <ChevronRight size={13} aria-hidden="true" />
+                  </button>
+                </span>
+              ) : (
+                <em>{chapterCrumb}</em>
+              ))}
           </nav>
           {isDraftMode && latestChapter && (
             <span className="ex-workbar-scene" title="현재 작업 지점">
@@ -1732,12 +1813,10 @@ export function StoryXDesk({
                   </div>
                 )}
               </section>
-              <ChapterTreeCard
-                project={project}
-                selectedChapterId={latestChapter?.id ?? null}
-                onSelectChapter={setLatestChapter}
-                onAddChapter={produceEpisode}
-                isBusy={isGenerating || isReviewing}
+              <ChapterBeatsCard
+                chapter={latestChapter}
+                activeBeatId={activeBeatId}
+                onSelectBeat={selectBeat}
               />
             </>
           ) : (
@@ -1830,15 +1909,6 @@ export function StoryXDesk({
                 <span className="ex-toolstrip-sep" aria-hidden="true" />
                 <button
                   type="button"
-                  className="sx-primary-button ex-toolstrip-action"
-                  onClick={mainActionRun}
-                  disabled={isGenerating || isReviewing}
-                >
-                  <MainActionIcon size={15} />
-                  {isGenerating ? '생성 중…' : isReviewing ? '검토 중…' : mainActionLabel}
-                </button>
-                <button
-                  type="button"
                   className="ex-focus-btn"
                   aria-pressed={isFocusMode}
                   aria-label={isFocusMode ? '집중 모드 해제 (⌘.)' : '집중 모드 (⌘.)'}
@@ -1857,6 +1927,7 @@ export function StoryXDesk({
                 editableText={editorText}
                 editedSinceReview={editedSinceReview}
                 isFocusMode={isFocusMode}
+                manuscriptRef={manuscriptRef}
                 onEditableTextChange={updateEditorText}
                 onReviewDraft={reviewDraft}
                 onOpenApprovalQueue={() => {
@@ -2127,77 +2198,53 @@ function VersionLogDialog({
   );
 }
 
-function ChapterTreeCard({
-  project,
-  selectedChapterId,
-  onSelectChapter,
-  onAddChapter,
-  isBusy
+// 현재 회차의 구성(beat) 목록 — 좌측 레일의 네비게이션·체크리스트 오버레이.
+// 회차 카드 목록을 대체한다(회차 이동은 상단바 회차 선택기로 옮겼다).
+function ChapterBeatsCard({
+  chapter,
+  activeBeatId,
+  onSelectBeat
 }: {
-  project: SeriesProject;
-  selectedChapterId: string | null;
-  onSelectChapter: (chapter: Chapter) => void;
-  onAddChapter?: () => void;
-  isBusy?: boolean;
+  chapter: Chapter | null;
+  activeBeatId: string | null;
+  onSelectBeat: (beat: ChapterBeat) => void;
 }) {
+  const beats = chapter?.beats ?? [];
+
   return (
-    <section className="sx-panel sx-chapter-tree" aria-label="작품 목차">
+    <section className="sx-panel ex-beats-card" aria-label="회차 구성">
       <div className="ex-rail-section-head">
-        <span className="ex-rail-label">회차 · {project.chapters.length}</span>
+        <span className="ex-rail-label">회차 구성 · {beats.length}</span>
       </div>
-      <div className="ex-chapter-cards">
-        {project.chapters.length === 0 ? (
-          <p className="ex-chapter-empty">첫 회차를 생성하면 회차 카드가 채워집니다.</p>
-        ) : (
-          project.chapters.map((chapter) => {
-            const isActive = chapter.id === selectedChapterId;
-            const charCount = chapter.prose?.trim().length ?? 0;
-            const meta = chapter.locked
-              ? '출간 확정 · 잠금'
-              : charCount > 0
-                ? `작성 중 · ${charCount.toLocaleString()}자`
-                : '비어 있음 · 초안 대기';
+      {!chapter ? (
+        <p className="ex-beats-empty">첫 초안을 생성하면 회차 구성이 여기에 채워집니다.</p>
+      ) : beats.length === 0 ? (
+        <p className="ex-beats-empty">이 회차에는 아직 구성이 없습니다. 다음 초안 생성부터 구성이 함께 만들어집니다.</p>
+      ) : (
+        <ol className="ex-beats-list">
+          {beats.map((beat) => {
+            const isActive = beat.id === activeBeatId;
 
             return (
-              <button
-                key={chapter.id}
-                type="button"
-                className={`ex-chapter-card ${isActive ? 'is-active' : ''}${chapter.locked ? ' is-locked' : ''}`}
-                aria-current={isActive ? 'true' : undefined}
-                aria-label={
-                  chapter.locked
-                    ? `${chapter.episode}화 ${chapter.title} (출간 확정, 잠김)`
-                    : `${chapter.episode}화 ${chapter.title}`
-                }
-                onClick={() => onSelectChapter(chapter)}
-              >
-                <span className="ex-cc-ep">{chapter.episode}</span>
-                <span className="ex-cc-body">
-                  <span className="ex-cc-title">{chapter.title}</span>
-                  <span className="ex-cc-meta">{meta}</span>
-                </span>
-                <span className={`ex-cc-state ${chapter.locked ? 'is-locked' : isActive ? 'is-current' : ''}`}>
-                  {chapter.locked ? (
-                    <Lock size={11} aria-hidden="true" />
-                  ) : isActive ? (
-                    <span className="ex-cc-pulse" aria-label="현재 편집 중" />
-                  ) : null}
-                </span>
-              </button>
+              <li key={beat.id}>
+                <button
+                  type="button"
+                  className={`ex-beat-item ${isActive ? 'is-active' : ''}`}
+                  aria-current={isActive ? 'true' : undefined}
+                  aria-label={`구성 ${beat.no} — ${beat.label}`}
+                  onClick={() => onSelectBeat(beat)}
+                >
+                  <span className="ex-beat-no">{String(beat.no).padStart(2, '0')}</span>
+                  <span className="ex-beat-body">
+                    <span className="ex-beat-label">{beat.label}</span>
+                    {beat.summary && <span className="ex-beat-summary">{beat.summary}</span>}
+                  </span>
+                </button>
+              </li>
             );
-          })
-        )}
-        {onAddChapter && (
-          <button
-            type="button"
-            className="ex-chapter-add"
-            onClick={onAddChapter}
-            disabled={isBusy}
-          >
-            <Plus size={12} aria-hidden="true" /> 새 회차 만들기
-          </button>
-        )}
-      </div>
+          })}
+        </ol>
+      )}
     </section>
   );
 }
@@ -3555,6 +3602,7 @@ function CreativeStage({
   editableText,
   editedSinceReview,
   isFocusMode,
+  manuscriptRef,
   onEditableTextChange,
   onReviewDraft,
   onOpenApprovalQueue,
@@ -3567,6 +3615,7 @@ function CreativeStage({
   editableText: string;
   editedSinceReview: boolean;
   isFocusMode: boolean;
+  manuscriptRef: RefObject<HTMLTextAreaElement>;
   onEditableTextChange: (value: string) => void;
   onReviewDraft: () => void;
   onOpenApprovalQueue: () => void;
@@ -3713,6 +3762,7 @@ function CreativeStage({
                 </div>
               ) : (
                 <textarea
+                  ref={manuscriptRef}
                   className={`sx-manuscript-editor ${editedSinceReview ? 'is-edited' : ''}`}
                   aria-label="원고 편집기"
                   value={editableText}

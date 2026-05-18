@@ -5,6 +5,7 @@ import {
   chapterFromDraftPayload,
   createSeedProject,
   lockChapter,
+  normalizeChapterBeats,
   produceNextChapter,
   unlockChapter,
   validateContinuity
@@ -28,6 +29,13 @@ describe('storyEngine', () => {
     expect(result.chapter.outline[0]).not.toContain('달의 문서고');
     expect(result.chapter.outline[0]).not.toContain('샘플 작품');
     expect(result.chapter.memoryAnchors).toContain('서윤은 사라진 오빠의 행방을 찾고 있다.');
+    // 결정적 fallback 회차도 번호 매겨진 회차 구성(beats)을 채운다
+    expect(result.chapter.beats.length).toBeGreaterThanOrEqual(4);
+    expect(result.chapter.beats.map((beat) => beat.no)).toEqual(
+      result.chapter.beats.map((_, index) => index + 1)
+    );
+    expect(result.chapter.beats.every((beat) => beat.label.length > 0)).toBe(true);
+    expect(result.chapter.beats.every((beat) => beat.id.startsWith('beat-'))).toBe(true);
     expect(result.agentRuns.map((run) => run.agentId)).toEqual([
       'showrunner',
       'character-custodian',
@@ -72,6 +80,11 @@ describe('storyEngine', () => {
         title: '1화 — 팔리지 않는 기억',
         hook: '거래소 주인은 그녀가 팔러 온 기억을 이미 샀다고 말했다.',
         outline: ['도주가 거래소 문을 연다.', '거래 규칙이 드러난다.', '   '],
+        beats: [
+          { label: '거래소 문', summary: '도주가 좁은 골목 끝의 문을 연다.' },
+          { label: '이미 팔린 기억', summary: '주인이 그녀의 기억을 이미 샀다고 말한다.' },
+          { label: '', summary: '   ' }
+        ],
         prose: '골목은 막다른 곳에서 한 번 더 꺾였다.\n\n그 자리에 문이 있었다.',
         newCanonFacts: [
           { owner: 'world', statement: '기억은 판 순간 매도인에게서 사라진다.' },
@@ -90,6 +103,12 @@ describe('storyEngine', () => {
     expect(result.chapter.title).toBe('1화 — 팔리지 않는 기억');
     expect(result.chapter.prose).toContain('막다른 곳');
     expect(result.chapter.outline).toHaveLength(2);
+    // payload의 beats가 번호 매겨진 ChapterBeat[]로 정규화되고, 빈 항목은 버려진다
+    expect(result.chapter.beats).toHaveLength(2);
+    expect(result.chapter.beats[0]).toEqual(
+      expect.objectContaining({ no: 1, label: '거래소 문' })
+    );
+    expect(result.chapter.beats[1].no).toBe(2);
     expect(result.chapter.newCanonFacts).toHaveLength(3);
     expect(result.chapter.newCanonFacts[0].owner).toBe('world');
     expect(result.chapter.newCanonFacts[2].owner).toBe('plot');
@@ -97,6 +116,45 @@ describe('storyEngine', () => {
     expect(result.updatedProject.canonFacts).toHaveLength(project.canonFacts.length + 3);
     expect(result.updatedProject.chapters.at(-1)?.id).toBe(result.chapter.id);
     expect(result.agentRuns.map((run) => run.agentId)).toContain('showrunner');
+  });
+
+  it('tolerates a draft payload with missing beats by falling back to an empty list', () => {
+    const project = createSeedProject();
+
+    const result = chapterFromDraftPayload(
+      project,
+      {
+        title: '1화',
+        hook: '후크',
+        outline: ['비트'],
+        // 구버전·실패 응답: beats 누락
+        beats: undefined as never,
+        prose: '본문이 있다.',
+        newCanonFacts: []
+      },
+      {
+        genre: 'romance-fantasy',
+        intent: '주인공이 움직인다',
+        pressure: ''
+      }
+    );
+
+    expect(result.chapter.beats).toEqual([]);
+  });
+
+  it('normalizeChapterBeats numbers entries and drops empty ones', () => {
+    expect(normalizeChapterBeats(3, undefined)).toEqual([]);
+
+    const beats = normalizeChapterBeats(3, [
+      { label: '도입', summary: '문을 연다.' },
+      { label: '   ', summary: '   ' },
+      { label: '반전', summary: '거짓이 드러난다.' }
+    ]);
+
+    expect(beats).toHaveLength(2);
+    expect(beats.map((beat) => beat.no)).toEqual([1, 2]);
+    expect(beats[0].id).toBe('beat-003-01');
+    expect(beats[1].label).toBe('반전');
   });
 
   it('applies approved memory candidates as new canon facts', () => {

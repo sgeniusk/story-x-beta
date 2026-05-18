@@ -97,13 +97,18 @@ export function clearProjectSnapshots() {
 }
 
 function normalizeProject(project: SeriesProject): SeriesProject {
-  // 표면 약속/심층 질문/무게중심 도입 이전에 저장된 프로젝트를 위한 백필
+  // 표면 약속/심층 질문/무게중심 도입 이전에 저장된 프로젝트를 위한 백필.
+  // 회차 구성(beats) 도입 이전 회차에는 beats: []를 채워 UI가 깨지지 않게 한다.
   const normalizedProject = {
     ...project,
     localization: getProjectLocalization(project),
     deepQuestion: typeof project.deepQuestion === 'string' ? project.deepQuestion : '',
     creativeWeight: project.creativeWeight ?? 'balanced',
-    formIntent: typeof project.formIntent === 'string' ? project.formIntent : ''
+    formIntent: typeof project.formIntent === 'string' ? project.formIntent : '',
+    chapters: project.chapters.map((chapter) => ({
+      ...chapter,
+      beats: Array.isArray(chapter.beats) ? chapter.beats : []
+    }))
   };
 
   if (project.title !== '달의 문서고' && project.id !== 'moon-archive') {
@@ -114,9 +119,9 @@ function normalizeProject(project: SeriesProject): SeriesProject {
     ...normalizedProject,
     id: 'sample-project',
     title: '샘플 작품',
-    chapters: project.chapters.map((chapter) => ({
+    chapters: normalizedProject.chapters.map((chapter) => ({
       ...chapter,
-      outline: chapter.outline.map((beat) => beat.replace(/^달의 문서고\s+/, ''))
+      outline: chapter.outline.map((line) => line.replace(/^달의 문서고\s+/, ''))
     }))
   };
 }

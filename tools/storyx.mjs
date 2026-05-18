@@ -207,6 +207,10 @@ if (command === 'draft') {
       title: title || '샘플 1화',
       hook: 'mock 후크 — 실제 생성은 --provider claude로 실행하세요.',
       outline: ['mock 장면 비트 1', 'mock 장면 비트 2'],
+      beats: [
+        { label: 'mock 도입', summary: 'mock 구성 — 실제 생성은 --provider claude로 실행하세요.' },
+        { label: 'mock 전개', summary: 'mock 구성 — 자리표시 데이터입니다.' }
+      ],
       prose: 'mock 초안입니다. 실제 claude 호출 없이 만든 자리표시 텍스트라 작품 평가에는 쓰지 마세요.',
       newCanonFacts: [],
       approvalRequiredBeforeSync: true
@@ -540,11 +544,18 @@ function buildDraftPrompt({ medium, format, freewrite, title, context }) {
     '## 규칙',
     ...rules,
     '',
+    '## 회차 구성(beats)',
+    isEssay
+      ? '- beats는 이 글의 흐름을 4~8개의 의미 단위로 나눈 구성표입니다. 각 단위는 짧은 label과 한 문장 summary로 적습니다.'
+      : '- beats는 이 회차의 이야기 흐름을 4~8개의 의미 단위로 나눈 구성표입니다. 각 단위는 짧은 label과 한 문장 summary로 적습니다.',
+    '- beats는 prose 본문의 실제 전개 순서를 그대로 따라야 하며, prose를 대체하지 않는 계획층입니다.',
+    '',
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',
     '  "title": "제목",',
     isEssay ? '  "hook": "글을 닫는 한 줄 — 독자에게 남는 울림",' : '  "hook": "다음 회차로 이어지는 한 줄 후크",',
     '  "outline": ["장면/단락 비트 1", "비트 2", "비트 3"],',
+    '  "beats": [{ "label": "구성 단위 이름", "summary": "이 단위에서 일어나는 일 한 문장" }],',
     '  "prose": "본문",',
     isEssay
       ? '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 글에서 확정된 사실 — 작가가 말한 경험만" }]'
@@ -565,10 +576,26 @@ function normalizeDraftOutput(rawOutput, options) {
     title: readString(parsed?.title) || options.title || '제목 미정 1화',
     hook: readString(parsed?.hook) || '',
     outline: normalizeStringList(parsed?.outline),
+    beats: normalizeDraftBeats(parsed?.beats),
     prose: readString(parsed?.prose) || summarizeRawProviderOutput(rawOutput, options.title || 'Story X draft'),
     newCanonFacts: normalizeDraftCanonFacts(parsed?.newCanonFacts),
     approvalRequiredBeforeSync: true
   };
+}
+
+// provider 응답의 beats 배열을 { label, summary } 쌍으로 정규화한다. 빈 항목·구버전 응답은 버린다.
+function normalizeDraftBeats(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(isRecord)
+    .map((beat) => ({
+      label: readString(beat.label) || readString(beat.title),
+      summary: readString(beat.summary) || readString(beat.note) || readString(beat.detail)
+    }))
+    .filter((beat) => beat.label || beat.summary);
 }
 
 function normalizeDraftCanonFacts(value) {

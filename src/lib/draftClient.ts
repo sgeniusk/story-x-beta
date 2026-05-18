@@ -48,6 +48,7 @@ export async function requestLlmDraft(input: DraftRequestInput): Promise<LlmDraf
         title: typeof data.title === 'string' ? data.title : '',
         hook: typeof data.hook === 'string' ? data.hook : '',
         outline: Array.isArray(data.outline) ? data.outline.filter((line): line is string => typeof line === 'string') : [],
+        beats: normalizeBeats(data.beats),
         prose,
         newCanonFacts: normalizeCanonFacts(data.newCanonFacts)
       }
@@ -56,6 +57,21 @@ export async function requestLlmDraft(input: DraftRequestInput): Promise<LlmDraf
     const reason = error instanceof Error ? error.message : '브리지에 연결할 수 없습니다.';
     return { ok: false, reason };
   }
+}
+
+// 브리지 응답의 beats를 { label, summary } 쌍으로 정규화한다. 구버전·누락 응답은 빈 배열로 떨어진다.
+function normalizeBeats(value: unknown): DraftChapterPayload['beats'] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+    .map((item) => ({
+      label: typeof item.label === 'string' ? item.label : '',
+      summary: typeof item.summary === 'string' ? item.summary : ''
+    }))
+    .filter((beat) => beat.label.trim().length > 0 || beat.summary.trim().length > 0);
 }
 
 function normalizeCanonFacts(value: unknown): DraftChapterPayload['newCanonFacts'] {

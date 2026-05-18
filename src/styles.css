@@ -678,6 +678,55 @@ body {
   font-size: 0.7rem;
 }
 
+/* 상단바 회차 선택기 — prev/next + 회차 드롭다운 */
+.ex-workbar .sx-app-breadcrumb .ex-chapter-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--sx-line-2);
+  border-radius: var(--sx-radius-xs);
+  background: var(--sx-paper-soft);
+}
+
+.ex-chapter-picker-step {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: var(--sx-radius-xs);
+  background: transparent;
+  color: var(--sx-muted);
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.ex-chapter-picker-step:hover:not(:disabled) {
+  background: var(--sx-paper-2);
+  color: var(--sx-ink);
+}
+
+.ex-chapter-picker-step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ex-chapter-picker-select {
+  max-width: 200px;
+  border: 0;
+  border-radius: var(--sx-radius-xs);
+  background: transparent;
+  color: var(--sx-ink-2);
+  font-size: 0.72rem;
+  font-weight: var(--sx-weight-semibold);
+  font-family: inherit;
+}
+
+.ex-chapter-picker-select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--nx-primary, #6448d3) 55%, transparent);
+  outline-offset: 1px;
+}
+
 /* 현재 작업 지점 칩 — 편집 모드 좌측 존 */
 .ex-workbar-scene {
   display: inline-flex;
@@ -3153,11 +3202,6 @@ body {
   background: var(--sx-line-2, rgba(32, 32, 30, 0.12));
 }
 
-.sx-desk .ex-toolstrip-action {
-  flex: 0 0 auto;
-  min-height: 36px;
-}
-
 .sx-desk .ex-scale-toggle {
   display: inline-flex;
   flex: 0 0 auto;
@@ -5532,14 +5576,8 @@ body {
   text-transform: uppercase;
 }
 
-/* ── 회차 카드 ── */
-.sx-desk .ex-chapter-cards {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sx-space-2);
-}
-
-.sx-desk .ex-chapter-empty {
+/* ── 회차 구성(beat) 목록 — 좌측 레일의 네비게이션·체크리스트 오버레이 ── */
+.sx-desk .ex-beats-empty {
   margin: 0;
   padding: 12px 12px;
   border: 1px dashed var(--sx-line);
@@ -5547,14 +5585,24 @@ body {
   color: var(--sx-muted);
   background: var(--sx-paper);
   font-size: 0.8rem;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
-.sx-desk .ex-chapter-card {
+.sx-desk .ex-beats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+
+.sx-desk .ex-beat-item {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 20px;
+  grid-template-columns: 26px minmax(0, 1fr);
   gap: var(--sx-space-2);
-  align-items: center;
+  align-items: start;
   width: 100%;
   padding: 9px 11px;
   border: 1px solid var(--sx-line);
@@ -5562,126 +5610,50 @@ body {
   text-align: left;
   background: var(--sx-paper);
   color: var(--sx-ink);
-  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+  transition: border-color 120ms ease, background 120ms ease;
 }
 
-.sx-desk .ex-chapter-card:hover {
+.sx-desk .ex-beat-item:hover {
   border-color: var(--sx-line-2);
   background: var(--sx-paper-2);
 }
 
-.sx-desk .ex-chapter-card.is-active {
+.sx-desk .ex-beat-item.is-active {
   border-color: color-mix(in srgb, var(--nx-primary, #6448d3) 42%, var(--sx-line));
   background: color-mix(in srgb, var(--nx-primary, #6448d3) 12%, var(--sx-paper));
 }
 
-.sx-desk .ex-cc-ep {
+.sx-desk .ex-beat-no {
   font-family: 'Noto Serif KR', serif;
-  font-size: 1.18rem;
+  font-size: 0.92rem;
   font-weight: var(--sx-weight-bold);
-  line-height: 1;
+  line-height: 1.4;
   text-align: center;
   color: var(--sx-muted);
   font-variant-numeric: tabular-nums;
 }
 
-.sx-desk .ex-chapter-card.is-active .ex-cc-ep {
+.sx-desk .ex-beat-item.is-active .ex-beat-no {
   color: var(--nx-primary, #6448d3);
 }
 
-.sx-desk .ex-chapter-card.is-locked .ex-cc-ep {
-  color: var(--sx-accent);
-}
-
-.sx-desk .ex-cc-body {
+.sx-desk .ex-beat-body {
   display: grid;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 
-.sx-desk .ex-cc-title {
-  overflow: hidden;
+.sx-desk .ex-beat-label {
   color: var(--sx-ink);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: var(--sx-weight-semibold);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
 }
 
-.sx-desk .ex-cc-meta {
-  overflow: hidden;
+.sx-desk .ex-beat-summary {
   color: var(--sx-muted);
-  font-size: 0.68rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sx-desk .ex-cc-state {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  color: var(--sx-muted);
-}
-
-.sx-desk .ex-cc-state.is-locked {
-  color: var(--sx-accent);
-}
-
-.sx-desk .ex-cc-state.is-current {
-  color: var(--nx-primary, #6448d3);
-}
-
-.sx-desk .ex-cc-pulse {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: ex-cc-pulse 1.8s ease-out infinite;
-}
-
-@keyframes ex-cc-pulse {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--nx-primary, #6448d3) 55%, transparent);
-  }
-  70% {
-    box-shadow: 0 0 0 6px color-mix(in srgb, var(--nx-primary, #6448d3) 0%, transparent);
-  }
-  100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--nx-primary, #6448d3) 0%, transparent);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sx-desk .ex-cc-pulse {
-    animation: none;
-  }
-}
-
-.sx-desk .ex-chapter-add {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin-top: 2px;
-  padding: 9px 11px;
-  border: 1px dashed var(--sx-line-2);
-  border-radius: var(--sx-radius-sm);
-  color: var(--sx-muted);
-  background: transparent;
-  font-size: 0.76rem;
-  font-weight: var(--sx-weight-semibold);
-  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
-}
-
-.sx-desk .ex-chapter-add:hover:not(:disabled) {
-  border-color: var(--nx-primary, #6448d3);
-  color: var(--nx-primary, #6448d3);
-  background: color-mix(in srgb, var(--nx-primary, #6448d3) 7%, transparent);
-}
-
-.sx-desk .ex-chapter-add:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+  font-size: 0.71rem;
+  line-height: 1.5;
 }
 
 /* ── 바이블 목차 — 갤러리 카드 그리드 ── */

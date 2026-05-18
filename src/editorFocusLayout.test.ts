@@ -75,10 +75,12 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('? actionLabels.draft');
     expect(desk).toContain(': actionLabels.review');
     expect(desk).toContain('수정됨');
-    // P1 — 회차 이동은 툴스트립의 회차 탭으로 처리한다
+    // 회차 이동은 상단바 회차 선택기와 툴스트립 회차 탭에서 가능하다
     expect(desk).toContain('aria-label="회차 이동"');
-    expect(desk).toContain('ChapterTreeCard');
-    expect(desk).toContain('작품 목차');
+    // 좌측 레일은 회차 카드 목록 대신 현재 회차의 구성(beat) 목록을 보여준다
+    expect(desk).toContain('ChapterBeatsCard');
+    expect(desk).toContain('회차 구성');
+    expect(desk).not.toContain('function ChapterTreeCard');
     expect(desk).toContain('검토');
     expect(css).toContain('.sx-manuscript-editor');
     expect(css).toContain('position: sticky');
@@ -86,7 +88,7 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-expand-editor-button');
     expect(css).toContain('.sx-manuscript-editor.is-edited');
     expect(css).toContain('.sx-desk .ex-chapter-tab');
-    expect(css).toContain('.sx-chapter-tree');
+    expect(css).toContain('.sx-desk .ex-beat-item');
   });
 
   it('P1 — keeps the manuscript as the protagonist with a thin toolstrip above it', () => {
