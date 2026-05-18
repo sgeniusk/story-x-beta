@@ -7150,7 +7150,7 @@ body {
 
 /* ── 구성 중 ── */
 .home-page .hx-building {
-  max-width: 520px;
+  max-width: 540px;
   padding: 40px;
   text-align: center;
 }
@@ -7161,23 +7161,155 @@ body {
   margin-left: auto;
   margin-right: auto;
 }
+
+/* ── 작가실 — 원고가 쓰이는 애니메이션 ── */
+.home-page .hx-studio {
+  display: flex;
+  justify-content: center;
+  margin: 26px 0 28px;
+}
+.home-page .hx-studio-paper {
+  width: 100%;
+  max-width: 340px;
+  padding: 18px 20px 16px;
+  border: 1px solid var(--nx-hairline);
+  border-radius: var(--nx-r-lg);
+  background: var(--nx-canvas);
+  box-shadow: var(--nx-sh-card);
+  text-align: left;
+}
+.home-page .hx-studio-head {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 16px;
+}
+.home-page .hx-studio-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--nx-hairline-strong);
+}
+.home-page .hx-studio-dot:nth-child(1) {
+  background: var(--nx-primary);
+  animation: hx-studio-pulse 2.4s ease-in-out infinite;
+}
+.home-page .hx-studio-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.home-page .hx-studio-line {
+  height: 8px;
+  width: 0;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--nx-tint-lavender), var(--nx-surface-soft));
+  animation: hx-studio-write 9s ease-in-out infinite;
+}
+.home-page .hx-studio-line:nth-child(1) { --lw: 92%; animation-delay: 0s; }
+.home-page .hx-studio-line:nth-child(2) { --lw: 78%; animation-delay: 0.55s; }
+.home-page .hx-studio-line:nth-child(3) { --lw: 88%; animation-delay: 1.1s; }
+.home-page .hx-studio-line:nth-child(4) { --lw: 64%; animation-delay: 1.65s; }
+.home-page .hx-studio-line:nth-child(5) { --lw: 84%; animation-delay: 2.2s; }
+.home-page .hx-studio-line:nth-child(6) { --lw: 46%; animation-delay: 2.75s; }
+.home-page .hx-studio-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.home-page .hx-studio-caret {
+  width: 2px;
+  height: 14px;
+  background: var(--nx-primary);
+  border-radius: 1px;
+  animation: hx-blink 1s step-end infinite;
+}
+.home-page .hx-studio-penning {
+  font-size: 0.72rem;
+  color: var(--nx-steel);
+  font-weight: 500;
+}
+@keyframes hx-studio-write {
+  0% { width: 0; opacity: 0.3; }
+  10% { opacity: 1; }
+  16% { width: var(--lw); }
+  78% { width: var(--lw); opacity: 1; }
+  92% { width: var(--lw); opacity: 0.15; }
+  100% { width: 0; opacity: 0; }
+}
+@keyframes hx-studio-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@keyframes hx-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* ── 구성 단계 — 순차 활성 ── */
 .home-page .hx-building-steps {
+  list-style: none;
   text-align: left;
   display: inline-flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
   margin: 0 0 20px;
-  padding-left: 20px;
+  padding: 0;
 }
 .home-page .hx-building-steps li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   font-size: 0.88rem;
-  color: var(--nx-charcoal);
   line-height: 1.5;
+  color: var(--nx-steel);
+  animation: hx-step-cycle 10s ease-in-out infinite;
+}
+.home-page .hx-building-steps li:nth-child(1) { animation-delay: 0s; }
+.home-page .hx-building-steps li:nth-child(2) { animation-delay: 2.5s; }
+.home-page .hx-building-steps li:nth-child(3) { animation-delay: 5s; }
+.home-page .hx-building-steps li:nth-child(4) { animation-delay: 7.5s; }
+.home-page .hx-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--nx-hairline-strong);
+  flex-shrink: 0;
+  animation: hx-step-dot-cycle 10s ease-in-out infinite;
+}
+.home-page .hx-building-steps li:nth-child(1) .hx-step-dot { animation-delay: 0s; }
+.home-page .hx-building-steps li:nth-child(2) .hx-step-dot { animation-delay: 2.5s; }
+.home-page .hx-building-steps li:nth-child(3) .hx-step-dot { animation-delay: 5s; }
+.home-page .hx-building-steps li:nth-child(4) .hx-step-dot { animation-delay: 7.5s; }
+@keyframes hx-step-cycle {
+  0% { color: var(--nx-ink); }
+  25% { color: var(--nx-ink); }
+  30% { color: var(--nx-steel); }
+  100% { color: var(--nx-steel); }
+}
+@keyframes hx-step-dot-cycle {
+  0% { background: var(--nx-primary); transform: scale(1.25); }
+  25% { background: var(--nx-primary); transform: scale(1.25); }
+  30% { background: var(--nx-hairline-strong); transform: scale(1); }
+  100% { background: var(--nx-hairline-strong); transform: scale(1); }
 }
 .home-page .hx-building-note {
   font-size: 0.82rem;
   color: var(--nx-steel);
   margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-page .hx-studio-line,
+  .home-page .hx-studio-dot,
+  .home-page .hx-studio-caret,
+  .home-page .hx-building-steps li,
+  .home-page .hx-step-dot {
+    animation: none;
+  }
+  .home-page .hx-studio-line { width: var(--lw, 80%); opacity: 1; }
+  .home-page .hx-building-steps li { color: var(--nx-charcoal); }
+  .home-page .hx-step-dot { background: var(--nx-primary); }
 }
 
 @media (max-width: 900px) {

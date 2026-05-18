@@ -837,11 +837,44 @@ function StoryXHome({
               자유 서술과 인터뷰 답변을 읽고, 첫 회차 초안과 작품 바이블의 초기 설정을 구성합니다. 끝나면 편집
               화면이 열립니다.
             </p>
+            <div className="hx-studio" aria-hidden="true">
+              <div className="hx-studio-paper">
+                <div className="hx-studio-head">
+                  <span className="hx-studio-dot" />
+                  <span className="hx-studio-dot" />
+                  <span className="hx-studio-dot" />
+                </div>
+                <div className="hx-studio-lines">
+                  <span className="hx-studio-line" />
+                  <span className="hx-studio-line" />
+                  <span className="hx-studio-line" />
+                  <span className="hx-studio-line" />
+                  <span className="hx-studio-line" />
+                  <span className="hx-studio-line" />
+                </div>
+                <div className="hx-studio-foot">
+                  <span className="hx-studio-caret" />
+                  <span className="hx-studio-penning">작가진이 쓰는 중</span>
+                </div>
+              </div>
+            </div>
             <ol className="hx-building-steps" aria-label="구성 단계">
-              <li>자유 서술과 인터뷰 답변을 읽습니다.</li>
-              <li>쇼러너가 첫 회차의 약속과 후크를 잡습니다.</li>
-              <li>캐릭터·배경 설계가 첫 장면을 세웁니다.</li>
-              <li>첫 회차 초안을 쓰고, 바이블에 초기 설정을 제안합니다.</li>
+              <li>
+                <span className="hx-step-dot" />
+                자유 서술과 인터뷰 답변을 읽습니다.
+              </li>
+              <li>
+                <span className="hx-step-dot" />
+                쇼러너가 첫 회차의 약속과 후크를 잡습니다.
+              </li>
+              <li>
+                <span className="hx-step-dot" />
+                캐릭터·배경 설계가 첫 장면을 세웁니다.
+              </li>
+              <li>
+                <span className="hx-step-dot" />
+                첫 회차 초안을 쓰고, 바이블에 초기 설정을 제안합니다.
+              </li>
             </ol>
             <p className="hx-building-note">잠시만 기다려 주세요 — 보통 1~3분 걸립니다.</p>
           </div>
