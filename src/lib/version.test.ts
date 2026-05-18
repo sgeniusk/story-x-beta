@@ -9,15 +9,16 @@ const docs = readFileSync(resolve(__dirname, '../../docs/storyx-version-log.md')
 
 describe('Story X version log', () => {
   it('publishes the current alpha version as a reusable product constant', () => {
-    expect(STORYX_VERSION.label).toBe('Alpha v0.9.0');
-    expect(STORYX_VERSION.version).toBe('0.9.0');
+    expect(STORYX_VERSION.label).toBe('Alpha v0.10.0');
+    expect(STORYX_VERSION.version).toBe('0.10.0');
     expect(STORYX_VERSION.channel).toBe('alpha');
-    expect(STORYX_VERSION.codename).toBe('Closed Craft Loop');
-    expect(STORYX_VERSION.summary).toContain('craft');
+    expect(STORYX_VERSION.codename).toBe('Quiet Studio');
+    expect(STORYX_VERSION.summary).toContain('디자인');
   });
 
   it('keeps a compact milestone log for every major alpha improvement', () => {
     expect(storyxVersionLog.map((entry) => entry.version)).toEqual([
+      '0.10.0',
       '0.9.0',
       '0.8.0',
       '0.7.1',
@@ -29,10 +30,11 @@ describe('Story X version log', () => {
       '0.2.0',
       '0.1.0'
     ]);
-    expect(storyxVersionLog[0].title).toContain('루프');
-    expect(storyxVersionLog[0].changes.join(' ')).toContain('craft');
-    expect(storyxVersionLog[1].title).toContain('LLM');
-    expect(storyxVersionLog[2].title).toContain('레이아웃 핫픽스');
+    expect(storyxVersionLog[0].title).toContain('디자인');
+    expect(storyxVersionLog[1].title).toContain('루프');
+    expect(storyxVersionLog[1].changes.join(' ')).toContain('craft');
+    expect(storyxVersionLog[2].title).toContain('LLM');
+    expect(storyxVersionLog[3].title).toContain('레이아웃 핫픽스');
   });
 
   it('exposes the version and changelog in the app shell', () => {
@@ -46,8 +48,8 @@ describe('Story X version log', () => {
 
   it('documents the current roadmap baseline for future releases', () => {
     expect(docs).toContain('# Story X Version Log');
-    expect(docs).toContain('현재 기준 버전: `Alpha v0.9.0`');
-    expect(docs).toContain('Closed Craft Loop');
+    expect(docs).toContain('현재 기준 버전: `Alpha v0.10.0`');
+    expect(docs).toContain('Quiet Studio');
     expect(docs).toContain('v1.0.0-alpha');
   });
 });

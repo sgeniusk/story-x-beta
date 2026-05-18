@@ -26,18 +26,35 @@ export interface StoryXVersionLogEntry {
 
 export const STORYX_VERSION: StoryXVersionInfo = {
   product: 'Story X',
-  version: '0.9.0',
+  version: '0.10.0',
   channel: 'alpha',
-  label: 'Alpha v0.9.0',
-  codename: 'Closed Craft Loop',
-  releasedAt: '2026-05-17',
-  latestCommit: '35fdc55',
-  testProof: '130 tests passing',
+  label: 'Alpha v0.10.0',
+  codename: 'Quiet Studio',
+  releasedAt: '2026-05-18',
+  latestCommit: 'd05aa6a',
+  testProof: '127 tests passing',
   buildProof: 'Vite production build passing',
-  summary: '생성·검토·인터뷰가 작가가 쓴 내용을 기준으로 한 루프로 돌고, 대중성·작품성 craft 원리가 그 안에서 작동하는 알파 마일스톤입니다.'
+  summary: '랜딩·프로젝트·홈·에디터·로그인을 Notion 디자인 시스템으로 다시 세우고, 에디터 작업 구조를 작가가 원고에 집중하도록 정리한 디자인 마일스톤입니다.'
 };
 
 export const storyxVersionLog: StoryXVersionLogEntry[] = [
+  {
+    version: '0.10.0',
+    label: 'Alpha v0.10.0',
+    date: '2026-05-18',
+    title: 'Notion 디자인 시스템과 에디터 구조 개편',
+    commit: 'd05aa6a',
+    changes: [
+      '랜딩·프로젝트 목록·홈 플로우·에디터·로그인을 Notion 디자인 시스템(라이트 캔버스·purple primary·사각 버튼)으로 다시 지었습니다.',
+      '에디터를 원고가 주인공이 되도록 정리했습니다 — 얇은 툴스트립, 상단바 액션 축소, 트랙 전환 페이드.',
+      '에디터 좌측 레일을 단일 스크롤·카드형 회차 목록·캐논 건강도 바로, 바이블 목차를 갤러리 카드 그리드로 바꿨습니다.',
+      '작가진 다이얼로그를 헤더·본문 스크롤·입력 3분할로 나눠 조언이 길어도 입력창이 항상 보입니다.',
+      '작가 인터뷰 질문을 매체별 6~10개로 늘리고, 자유 메모를 마지막 단계로 분리했습니다.',
+      '브랜드 심볼 로고를 모든 화면 상단에 복원했습니다.'
+    ],
+    verification: ['npm test: 28 files / 127 tests', 'npm run build: pass'],
+    next: '만화 제작실과 서버측 LLM 운영(2단계 E)을 준비한다.'
+  },
   {
     version: '0.9.0',
     label: 'Alpha v0.9.0',
