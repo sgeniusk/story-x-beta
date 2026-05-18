@@ -12736,3 +12736,148 @@ body {
   object-fit: contain;
   pointer-events: none;
 }
+
+/* ════════════════════════════════════════════════════════════
+   NOTION DS 리디자인 — 로그인 (lgx-)
+   ════════════════════════════════════════════════════════════ */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--nx-canvas);
+  color: var(--nx-ink);
+  font-family: 'Inter', 'Pretendard Variable', 'Apple SD Gothic Neo', sans-serif;
+  word-break: keep-all;
+  text-wrap: pretty;
+  letter-spacing: 0;
+}
+.login-page * {
+  box-sizing: border-box;
+}
+.login-page .lgx-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 48px;
+  height: 60px;
+  border-bottom: 1px solid var(--nx-hairline);
+}
+.login-page .lgx-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--nx-ink);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.login-page .lgx-brandmark {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.login-page .lgx-back {
+  height: 36px;
+  padding: 0 14px;
+  background: transparent;
+  color: var(--nx-ink);
+  border: 1px solid var(--nx-hairline-strong);
+  border-radius: var(--nx-r);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.login-page .lgx-back:hover {
+  background: var(--nx-surface);
+}
+.login-page .lgx-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+.login-page .lgx-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 40px;
+  border: 1px solid var(--nx-hairline);
+  border-radius: var(--nx-r-lg);
+  background: var(--nx-canvas);
+  box-shadow: var(--nx-sh-card);
+}
+.login-page .lgx-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--nx-steel);
+  margin: 0 0 10px;
+}
+.login-page .lgx-title {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: var(--nx-ink);
+  margin: 0 0 10px;
+}
+.login-page .lgx-sub {
+  font-size: 0.9rem;
+  color: var(--nx-slate);
+  line-height: 1.65;
+  margin: 0 0 24px;
+}
+.login-page .lgx-field {
+  display: block;
+  margin-bottom: 18px;
+}
+.login-page .lgx-field span {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--nx-slate);
+  margin-bottom: 6px;
+}
+.login-page .lgx-field input {
+  width: 100%;
+  height: 42px;
+  padding: 0 13px;
+  border: 1.5px solid var(--nx-hairline-strong);
+  border-radius: var(--nx-r);
+  background: var(--nx-canvas);
+  color: var(--nx-ink);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+.login-page .lgx-field input:focus {
+  border-color: var(--nx-primary);
+  box-shadow: 0 0 0 3px rgba(100, 72, 211, 0.12);
+}
+.login-page .lgx-submit {
+  width: 100%;
+  height: 44px;
+  background: var(--nx-primary);
+  color: var(--nx-on-primary);
+  border: 0;
+  border-radius: var(--nx-r);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.login-page .lgx-submit:hover {
+  background: var(--nx-primary-hover);
+}
+@media (max-width: 600px) {
+  .login-page .lgx-nav {
+    padding: 0 24px;
+  }
+  .login-page .lgx-card {
+    padding: 28px;
+  }
+}

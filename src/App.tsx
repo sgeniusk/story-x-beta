@@ -613,28 +613,35 @@ function HomepageRoadmapSection() {
 
 function LoginScreen({ onBack, onContinue }: { onBack: () => void; onContinue: () => void }) {
   return (
-    <main className="auth-shell">
-      <nav className="auth-nav" aria-label="login">
-        <button type="button" className="framer-wordmark" onClick={onBack}>
-          <BrandWordmark />
+    <div className="login-page">
+      <nav className="lgx-nav" aria-label="로그인">
+        <button type="button" className="lgx-brand" onClick={onBack}>
+          <span className="lgx-brandmark" aria-hidden="true">
+            <img className="nx-brand-symbol" src={storyXSymbol} alt="" />
+          </span>
+          <span>Story X</span>
         </button>
-        <button type="button" className="button-secondary" onClick={onBack}>
+        <button type="button" className="lgx-back" onClick={onBack}>
           소개로
         </button>
       </nav>
-      <section className="auth-card" aria-labelledby="login-title">
-        <p className="framer-eyebrow">Login</p>
-        <h1 id="login-title">창작 공간으로 들어가기</h1>
-        <p>지금은 로컬 프로토타입이라 계정 검증 없이 프로젝트 관리 화면으로 이어집니다.</p>
-        <label>
-          <span>이메일</span>
-          <input type="email" name="email" defaultValue="writer@storyx.local" autoComplete="email" />
-        </label>
-        <button type="button" className="button-primary" onClick={onContinue}>
-          계속하기
-        </button>
-      </section>
-    </main>
+      <main className="lgx-main">
+        <section className="lgx-card" aria-labelledby="login-title">
+          <p className="lgx-eyebrow">Login</p>
+          <h1 id="login-title" className="lgx-title">창작 공간으로 들어가기</h1>
+          <p className="lgx-sub">
+            지금은 로컬 프로토타입이라 계정 검증 없이 프로젝트 화면으로 이어집니다.
+          </p>
+          <label className="lgx-field">
+            <span>이메일</span>
+            <input type="email" name="email" defaultValue="writer@storyx.local" autoComplete="email" />
+          </label>
+          <button type="button" className="lgx-submit" onClick={onContinue}>
+            계속하기
+          </button>
+        </section>
+      </main>
+    </div>
   );
 }
 
