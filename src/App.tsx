@@ -80,6 +80,7 @@ import { StoryXDesk } from './StoryXDesk';
 import { StoryXTestPage } from './StoryXTestPage';
 import storyXLogoLockup from './assets/brand/story-x-logo-lockup-mono.svg';
 import storyXHeroImage from './assets/story-x-hero-clear-coast.webp';
+import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
 
 const genreProfiles = getGenreProfiles();
 const mediumOptions = getMediumOptions();
@@ -307,7 +308,7 @@ function LandingBrand({ onClick }: { onClick: () => void }) {
   return (
     <button type="button" className="landing-brand" onClick={onClick}>
       <span className="lx-brandmark" aria-hidden="true">
-        <Sparkles size={13} />
+        <img className="nx-brand-symbol" src={storyXSymbol} alt="" />
       </span>
       <span>Story X</span>
     </button>
@@ -654,7 +655,7 @@ function ProjectHub({
       <nav className="pjx-nav" aria-label="프로젝트">
         <button type="button" className="pjx-brand" onClick={onOpenLanding}>
           <span className="pjx-brandmark" aria-hidden="true">
-            <Sparkles size={13} />
+            <img className="nx-brand-symbol" src={storyXSymbol} alt="" />
           </span>
           <span>Story X</span>
         </button>
@@ -802,7 +803,7 @@ function StoryXHome({
       <header className="hx-nav">
         <button type="button" className="hx-brand" onClick={onOpenLanding}>
           <span className="hx-brandmark" aria-hidden="true">
-            <Sparkles size={13} />
+            <img className="nx-brand-symbol" src={storyXSymbol} alt="" />
           </span>
           <span>Story X</span>
         </button>

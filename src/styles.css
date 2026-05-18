@@ -3194,17 +3194,12 @@ body {
 }
 
 .sx-brand-mark {
-  display: grid;
+  display: flex;
   flex: 0 0 auto;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  color: var(--sx-card);
-  border: 1px solid var(--sx-ink);
-  border-radius: var(--sx-radius-sm);
-  background:
-    linear-gradient(135deg, transparent 43%, rgba(255, 255, 255, 0.22) 43% 57%, transparent 57%),
-    var(--sx-ink);
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
 }
 
 .sx-app-breadcrumb {
@@ -7190,8 +7185,9 @@ body {
 }
 
 .agent-dialog {
+  /* 검토 의견이 길어져도 다이얼로그 자체는 커지지 않게 — 고정 헤더 / 스크롤 본문 / 고정 입력 3분할 */
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(920px, 100%);
   max-height: min(760px, calc(100vh - 48px));
   overflow: hidden;
@@ -7237,28 +7233,32 @@ body {
 }
 
 .agent-dialog-body {
+  /* 가운데 본문 페인 — 지시사항과 대화가 길어지면 여기만 세로로 스크롤한다 */
   display: grid;
   grid-template-columns: minmax(260px, 0.92fr) minmax(0, 1.08fr);
   gap: var(--sx-space-4);
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--sx-space-5);
+  scrollbar-gutter: stable;
 }
 
 .agent-instruction-panel,
 .agent-chat-panel {
   min-width: 0;
   min-height: 0;
+  align-self: start;
   padding: var(--sx-space-4);
   border: 1px solid var(--framer-hairline-soft);
   border-radius: var(--framer-rounded-xl);
   background: var(--framer-canvas);
 }
 
-.agent-instruction-panel,
-.agent-chat-panel {
-  /* 실제 검토 의견·대화가 길어도 다이얼로그가 깨지지 않도록 패널 안에서 스크롤한다 */
-  overflow: auto;
+@media (max-width: 720px) {
+  .agent-dialog-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .agent-instruction-panel h3,
@@ -7301,19 +7301,10 @@ body {
   line-height: 1.62;
 }
 
-.agent-chat-panel {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: var(--sx-space-4);
-}
-
 .agent-chat-list {
   display: grid;
   align-content: start;
   gap: var(--sx-space-3);
-  min-height: 300px;
-  max-height: 380px;
-  overflow: auto;
 }
 
 .agent-chat-message {
@@ -7345,6 +7336,13 @@ body {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--sx-space-2);
   align-items: end;
+}
+
+/* 입력 행은 검토 의견 길이와 무관하게 항상 다이얼로그 하단에 고정 */
+.agent-dialog .ex-dialog-input-pin {
+  padding: var(--sx-space-4) var(--sx-space-5);
+  border-top: 1px solid var(--framer-hairline-soft);
+  background: color-mix(in oklch, var(--framer-surface-1) 86%, var(--framer-canvas));
 }
 
 .agent-chat-form label {
@@ -7662,6 +7660,408 @@ body {
   line-height: 1.35;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+/* ════════════════════════════════════════════════════════════
+   편집기 좌측 레일 개편 — 단일 스크롤 + 고정 헤더 + 캐논 건강도 바
+   회차 카드 / 바이블 목차 갤러리 그리드 (ex- 프리픽스, .sx-desk 한정)
+   ════════════════════════════════════════════════════════════ */
+
+/* 좌측 레일은 하나의 매끄러운 세로 스크롤. 프로젝트 상태 카드는 sticky */
+.sx-desk .sx-project-rail {
+  align-content: start;
+  padding-right: 2px;
+}
+
+.sx-desk .sx-project-rail > .sx-project-card {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+}
+
+.sx-desk .sx-project-rail::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sx-desk .sx-project-rail::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--sx-ink) 16%, transparent);
+}
+
+/* 캐논 건강도 바 — 라벨 + 트랙 + 채움 + % */
+.sx-desk .ex-canon-health {
+  display: flex;
+  align-items: center;
+  gap: var(--sx-space-2);
+  margin-top: 11px;
+}
+
+.sx-desk .ex-canon-health-label {
+  flex-shrink: 0;
+  color: var(--sx-muted);
+  font-size: 0.62rem;
+  font-weight: var(--sx-weight-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.sx-desk .ex-canon-health-track {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--sx-radius-pill);
+  background: color-mix(in srgb, var(--sx-ink) 10%, transparent);
+}
+
+.sx-desk .ex-canon-health-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--sx-accent), var(--nx-primary, #6448d3));
+  transition: width 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.sx-desk .ex-canon-health-pct {
+  flex-shrink: 0;
+  color: var(--sx-ink-2);
+  font-size: 0.68rem;
+  font-weight: var(--sx-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 레일 섹션 헤더 — 회차 / 바이블 목차 라벨 */
+.sx-desk .ex-rail-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.sx-desk .ex-rail-label {
+  color: var(--sx-muted);
+  font-size: 0.7rem;
+  font-weight: var(--sx-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── 회차 카드 ── */
+.sx-desk .ex-chapter-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sx-space-2);
+}
+
+.sx-desk .ex-chapter-empty {
+  margin: 0;
+  padding: 12px 12px;
+  border: 1px dashed var(--sx-line);
+  border-radius: var(--sx-radius-sm);
+  color: var(--sx-muted);
+  background: var(--sx-paper);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.sx-desk .ex-chapter-card {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 20px;
+  gap: var(--sx-space-2);
+  align-items: center;
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--sx-line);
+  border-radius: var(--sx-radius-md);
+  text-align: left;
+  background: var(--sx-paper);
+  color: var(--sx-ink);
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.sx-desk .ex-chapter-card:hover {
+  border-color: var(--sx-line-2);
+  background: var(--sx-paper-2);
+}
+
+.sx-desk .ex-chapter-card.is-active {
+  border-color: color-mix(in srgb, var(--nx-primary, #6448d3) 42%, var(--sx-line));
+  background: color-mix(in srgb, var(--nx-primary, #6448d3) 12%, var(--sx-paper));
+}
+
+.sx-desk .ex-cc-ep {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 1.18rem;
+  font-weight: var(--sx-weight-bold);
+  line-height: 1;
+  text-align: center;
+  color: var(--sx-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sx-desk .ex-chapter-card.is-active .ex-cc-ep {
+  color: var(--nx-primary, #6448d3);
+}
+
+.sx-desk .ex-chapter-card.is-locked .ex-cc-ep {
+  color: var(--sx-accent);
+}
+
+.sx-desk .ex-cc-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sx-desk .ex-cc-title {
+  overflow: hidden;
+  color: var(--sx-ink);
+  font-size: 0.84rem;
+  font-weight: var(--sx-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sx-desk .ex-cc-meta {
+  overflow: hidden;
+  color: var(--sx-muted);
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sx-desk .ex-cc-state {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  color: var(--sx-muted);
+}
+
+.sx-desk .ex-cc-state.is-locked {
+  color: var(--sx-accent);
+}
+
+.sx-desk .ex-cc-state.is-current {
+  color: var(--nx-primary, #6448d3);
+}
+
+.sx-desk .ex-cc-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: ex-cc-pulse 1.8s ease-out infinite;
+}
+
+@keyframes ex-cc-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--nx-primary, #6448d3) 55%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--nx-primary, #6448d3) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--nx-primary, #6448d3) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sx-desk .ex-cc-pulse {
+    animation: none;
+  }
+}
+
+.sx-desk .ex-chapter-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 9px 11px;
+  border: 1px dashed var(--sx-line-2);
+  border-radius: var(--sx-radius-sm);
+  color: var(--sx-muted);
+  background: transparent;
+  font-size: 0.76rem;
+  font-weight: var(--sx-weight-semibold);
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+
+.sx-desk .ex-chapter-add:hover:not(:disabled) {
+  border-color: var(--nx-primary, #6448d3);
+  color: var(--nx-primary, #6448d3);
+  background: color-mix(in srgb, var(--nx-primary, #6448d3) 7%, transparent);
+}
+
+.sx-desk .ex-chapter-add:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── 바이블 목차 — 갤러리 카드 그리드 ── */
+.sx-desk .ex-bible-toc-card {
+  display: grid;
+  gap: var(--sx-space-3);
+}
+
+.sx-desk .ex-bible-toc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sx-space-2);
+}
+
+.sx-desk .ex-btc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-height: 80px;
+  padding: 11px 11px 12px;
+  overflow: hidden;
+  border: 1px solid var(--sx-line);
+  border-radius: var(--sx-radius-sm);
+  text-align: left;
+  background: var(--sx-paper);
+  color: var(--sx-ink);
+  transition: border-color 130ms ease, background 130ms ease, transform 130ms ease;
+}
+
+.sx-desk .ex-btc::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: var(--ex-btc-clr, var(--sx-muted));
+  opacity: 0.34;
+  transition: width 120ms ease, opacity 120ms ease;
+}
+
+.sx-desk .ex-btc:hover {
+  border-color: var(--sx-line-2);
+  background: var(--sx-paper-2);
+  transform: translateY(-1px);
+}
+
+.sx-desk .ex-btc:hover::before {
+  width: 3px;
+  opacity: 0.85;
+}
+
+.sx-desk .ex-btc.is-active {
+  border-color: color-mix(in srgb, var(--nx-primary, #6448d3) 42%, var(--sx-line));
+  background: color-mix(in srgb, var(--nx-primary, #6448d3) 12%, var(--sx-paper));
+}
+
+.sx-desk .ex-btc.is-active::before {
+  width: 3px;
+  opacity: 1;
+  background: var(--nx-primary, #6448d3);
+}
+
+.sx-desk .ex-btc-overview {
+  --ex-btc-clr: #a285f7;
+}
+
+.sx-desk .ex-btc-characters {
+  --ex-btc-clr: #49b7c9;
+}
+
+.sx-desk .ex-btc-world {
+  --ex-btc-clr: #79a869;
+}
+
+.sx-desk .ex-btc-canon {
+  --ex-btc-clr: #d4a94d;
+}
+
+.sx-desk .ex-btc-voice {
+  --ex-btc-clr: var(--nx-primary, #6448d3);
+}
+
+.sx-desk .ex-btc-approval {
+  --ex-btc-clr: #d84b3a;
+}
+
+.sx-desk .ex-btc-glyph {
+  margin-bottom: 2px;
+  color: var(--ex-btc-clr, var(--sx-muted));
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.sx-desk .ex-btc.is-active .ex-btc-glyph {
+  color: var(--nx-primary, #6448d3);
+}
+
+.sx-desk .ex-btc-label {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 0.86rem;
+  font-weight: var(--sx-weight-bold);
+  line-height: 1.2;
+  color: var(--sx-ink);
+}
+
+.sx-desk .ex-btc-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
+  padding-top: 5px;
+  color: var(--sx-muted);
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sx-desk .ex-btc-count {
+  color: var(--sx-ink-2);
+  font-weight: var(--sx-weight-bold);
+}
+
+.sx-desk .ex-btc-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--sx-radius-pill);
+  background: #d84b3a;
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: var(--sx-weight-bold);
+  box-shadow: 0 0 0 2px var(--sx-card);
+}
+
+.sx-desk .ex-btc-pending .ex-btc-badge {
+  animation: ex-btc-badge-pulse 1.8s ease-out infinite;
+}
+
+@keyframes ex-btc-badge-pulse {
+  0% {
+    box-shadow: 0 0 0 2px var(--sx-card), 0 0 0 2px rgba(216, 75, 58, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 2px var(--sx-card), 0 0 0 8px rgba(216, 75, 58, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 2px var(--sx-card), 0 0 0 8px rgba(216, 75, 58, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sx-desk .ex-btc-pending .ex-btc-badge {
+    animation: none;
+  }
+}
+
+.sx-desk .ex-bible-toc-note {
+  margin: 0;
+  color: var(--sx-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -11172,13 +11572,8 @@ body {
   cursor: pointer;
 }
 .landing-page .lx-brandmark {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--nx-r-sm);
-  background: linear-gradient(135deg, var(--nx-primary) 0%, #a285f7 100%);
-  color: #fff;
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
 }
 .landing-page .lx-nav-links {
@@ -11636,13 +12031,8 @@ body {
   cursor: pointer;
 }
 .projects-page .pjx-brandmark {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--nx-r-sm);
-  background: linear-gradient(135deg, var(--nx-primary) 0%, #a285f7 100%);
-  color: #fff;
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
 }
 .projects-page .pjx-btn {
@@ -11822,13 +12212,8 @@ body {
   cursor: pointer;
 }
 .home-page .hx-brandmark {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--nx-r-sm);
-  background: linear-gradient(135deg, var(--nx-primary) 0%, #a285f7 100%);
-  color: #fff;
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
 }
 .home-page .hx-steps {
@@ -12342,4 +12727,12 @@ body {
   .home-page .hx-aside { display: none; }
   .home-page .hx-main { padding: 32px 24px; }
   .home-page .hx-medium-grid { grid-template-columns: 1fr; }
+}
+
+/* 브랜드 마크 안의 사용자 심볼 로고 — 보라 그라디언트 위에 흰색으로 */
+.nx-brand-symbol {
+  width: auto;
+  height: 30px;
+  object-fit: contain;
+  pointer-events: none;
 }

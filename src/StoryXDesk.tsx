@@ -8,23 +8,23 @@ import {
   Database,
   FileText,
   GitBranch,
-  Library,
   ListChecks,
   Lock,
   Maximize2,
   MessageCircle,
   Minimize2,
   PenLine,
+  Plus,
   RotateCcw,
   Save,
   Send,
   ShieldAlert,
-  Sparkles,
   WandSparkles,
   X
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { getAgentValidationProcess } from './lib/agentReviewProcess';
+import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
 import {
   buildCreativeBlueprint,
   getFormatOptions,
@@ -1432,7 +1432,7 @@ export function StoryXDesk({
               }
             }}
           >
-            <Sparkles size={17} />
+            <img className="nx-brand-symbol" src={storyXSymbol} alt="" />
           </button>
           <nav className="sx-app-breadcrumb" aria-label="현재 위치">
             <span>Story X</span>
@@ -1613,6 +1613,8 @@ export function StoryXDesk({
                 project={project}
                 selectedChapterId={latestChapter?.id ?? null}
                 onSelectChapter={setLatestChapter}
+                onAddChapter={produceEpisode}
+                isBusy={isGenerating || isReviewing}
               />
             </>
           ) : (
@@ -2005,42 +2007,72 @@ function VersionLogDialog({
 function ChapterTreeCard({
   project,
   selectedChapterId,
-  onSelectChapter
+  onSelectChapter,
+  onAddChapter,
+  isBusy
 }: {
   project: SeriesProject;
   selectedChapterId: string | null;
   onSelectChapter: (chapter: Chapter) => void;
+  onAddChapter?: () => void;
+  isBusy?: boolean;
 }) {
   return (
     <section className="sx-panel sx-chapter-tree" aria-label="작품 목차">
-      <div className="sx-panel-heading">
-        <FileText size={16} />
-        <h2>작품 목차</h2>
+      <div className="ex-rail-section-head">
+        <span className="ex-rail-label">회차 · {project.chapters.length}</span>
       </div>
-      <div className="sx-chapter-tree-root">
-        <Library size={15} />
-        <strong>{project.title}</strong>
-      </div>
-      <div className="sx-chapter-tree-list">
+      <div className="ex-chapter-cards">
         {project.chapters.length === 0 ? (
-          <p>첫 회차를 생성하면 트리 목차가 채워집니다.</p>
+          <p className="ex-chapter-empty">첫 회차를 생성하면 회차 카드가 채워집니다.</p>
         ) : (
-          project.chapters.map((chapter) => (
-            <button
-              key={chapter.id}
-              type="button"
-              className={`${chapter.id === selectedChapterId ? 'is-selected' : ''}${chapter.locked ? ' is-locked' : ''}`}
-              aria-label={chapter.locked ? `${chapter.episode}화 ${chapter.title} (출간 확정, 잠김)` : `${chapter.episode}화 ${chapter.title}`}
-              onClick={() => onSelectChapter(chapter)}
-            >
-              <span>
-                {chapter.episode}화
-                {chapter.locked && <Lock size={11} aria-hidden="true" />}
-              </span>
-              <strong>{chapter.title}</strong>
-              <small>{chapter.hook}</small>
-            </button>
-          ))
+          project.chapters.map((chapter) => {
+            const isActive = chapter.id === selectedChapterId;
+            const charCount = chapter.prose?.trim().length ?? 0;
+            const meta = chapter.locked
+              ? '출간 확정 · 잠금'
+              : charCount > 0
+                ? `작성 중 · ${charCount.toLocaleString()}자`
+                : '비어 있음 · 초안 대기';
+
+            return (
+              <button
+                key={chapter.id}
+                type="button"
+                className={`ex-chapter-card ${isActive ? 'is-active' : ''}${chapter.locked ? ' is-locked' : ''}`}
+                aria-current={isActive ? 'true' : undefined}
+                aria-label={
+                  chapter.locked
+                    ? `${chapter.episode}화 ${chapter.title} (출간 확정, 잠김)`
+                    : `${chapter.episode}화 ${chapter.title}`
+                }
+                onClick={() => onSelectChapter(chapter)}
+              >
+                <span className="ex-cc-ep">{chapter.episode}</span>
+                <span className="ex-cc-body">
+                  <span className="ex-cc-title">{chapter.title}</span>
+                  <span className="ex-cc-meta">{meta}</span>
+                </span>
+                <span className={`ex-cc-state ${chapter.locked ? 'is-locked' : isActive ? 'is-current' : ''}`}>
+                  {chapter.locked ? (
+                    <Lock size={11} aria-hidden="true" />
+                  ) : isActive ? (
+                    <span className="ex-cc-pulse" aria-label="현재 편집 중" />
+                  ) : null}
+                </span>
+              </button>
+            );
+          })
+        )}
+        {onAddChapter && (
+          <button
+            type="button"
+            className="ex-chapter-add"
+            onClick={onAddChapter}
+            disabled={isBusy}
+          >
+            <Plus size={12} aria-hidden="true" /> 새 회차 만들기
+          </button>
         )}
       </div>
     </section>
@@ -2060,33 +2092,61 @@ function BibleIndexCard({
   activeSection: BibleSection;
   onSelectSection: (section: BibleSection) => void;
 }) {
-  const sectionCounts: Record<BibleSection, string> = {
-    overview: `${bank.syncableFiles.length}개 동기화 기억`,
-    characters: `${project.characters.length}명 · 욕망/상처/현재 상태`,
-    world: `${project.worldRules.length}개 규칙 · 비용/예외/장소`,
-    canon: `${project.canonFacts.length}개 사실 · ${project.chapters.length}개 회차`,
-    voice: `${project.characters.flatMap((character) => character.voiceRules).length}개 말투 규칙`,
-    approval: `${approvalQueue.summary.total}개 후보 · ${approvalQueue.summary.canSync}개 동기화 가능`
+  const pendingCount = approvalQueue.summary.total;
+  const sectionMeta: Record<BibleSection, { glyph: string; tone: string; count: string }> = {
+    overview: { glyph: '⬡', tone: 'overview', count: `${bank.syncableFiles.length} 기억` },
+    characters: { glyph: '◑', tone: 'characters', count: `${project.characters.length}명` },
+    world: { glyph: '◉', tone: 'world', count: `${project.worldRules.length} 규칙` },
+    canon: { glyph: '◈', tone: 'canon', count: `${project.canonFacts.length} 사실` },
+    voice: {
+      glyph: '◇',
+      tone: 'voice',
+      count: `${project.characters.flatMap((character) => character.voiceRules).length} 규칙`
+    },
+    approval: { glyph: '⚑', tone: 'approval', count: `${pendingCount}개` }
   };
 
   return (
-    <section className="sx-panel sx-bible-index-card" aria-label="작품 바이블 목차">
-      <div className="sx-panel-heading">
-        <Database size={16} />
-        <h2>바이블 목차</h2>
+    <section className="sx-panel sx-bible-index-card ex-bible-toc-card" aria-label="작품 바이블 목차">
+      <div className="ex-rail-section-head">
+        <span className="ex-rail-label">바이블 목차</span>
       </div>
-      {bibleSections.map((section) => (
-        <button
-          key={section.id}
-          type="button"
-          className={activeSection === section.id ? 'is-selected' : ''}
-          onClick={() => onSelectSection(section.id)}
-        >
-          <strong>{section.label}</strong>
-          <span>{sectionCounts[section.id]}</span>
-        </button>
-      ))}
-      <small>원고에서 생긴 새 사실은 바로 저장하지 않고 승인 대기 목록으로 보냅니다.</small>
+      <div className="ex-bible-toc-grid">
+        {bibleSections.map((section) => {
+          const meta = sectionMeta[section.id];
+          const isActive = activeSection === section.id;
+          const hasPending = section.id === 'approval' && pendingCount > 0;
+
+          return (
+            <button
+              key={section.id}
+              type="button"
+              className={`ex-btc ex-btc-${meta.tone} ${isActive ? 'is-active' : ''}${
+                hasPending ? ' ex-btc-pending' : ''
+              }`}
+              aria-current={isActive ? 'true' : undefined}
+              aria-label={`${section.label} — ${meta.count}`}
+              onClick={() => onSelectSection(section.id)}
+            >
+              <span className="ex-btc-glyph" aria-hidden="true">
+                {meta.glyph}
+              </span>
+              <span className="ex-btc-label">{section.label}</span>
+              <span className="ex-btc-meta">
+                <span className="ex-btc-count">{meta.count}</span>
+              </span>
+              {hasPending && (
+                <span className="ex-btc-badge" aria-hidden="true">
+                  {pendingCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <small className="ex-bible-toc-note">
+        원고에서 생긴 새 사실은 바로 저장하지 않고 승인 대기 목록으로 보냅니다.
+      </small>
     </section>
   );
 }
@@ -2784,6 +2844,13 @@ function ProjectStateCard({
       <div className="sx-meter-track">
         <i style={{ width: `${canonHealth}%` }} />
       </div>
+      <div className="ex-canon-health" title="캐논 건강도 — 회차 대비 확정 사실·규칙·인물의 밀도">
+        <span className="ex-canon-health-label">캐논</span>
+        <span className="ex-canon-health-track">
+          <i className="ex-canon-health-fill" style={{ width: `${canonHealth}%` }} />
+        </span>
+        <span className="ex-canon-health-pct">{canonHealth}%</span>
+      </div>
       <dl>
         <div>
           <dt>회차</dt>
@@ -3235,7 +3302,7 @@ function AgentProfileDialog({
             <X size={18} />
           </button>
         </header>
-        <div className="agent-dialog-body">
+        <div className="agent-dialog-body ex-dialog-scroll">
           <aside className="agent-instruction-panel">
             <h3>자세한 지시사항</h3>
             <p>{persona.instruction}</p>
@@ -3268,22 +3335,22 @@ function AgentProfileDialog({
                 </p>
               ))}
             </div>
-            <form className="agent-chat-form" onSubmit={submitAgentQuestion}>
-              <label>
-                <span>{persona.title}에게 묻기</span>
-                <input
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  placeholder="예: 이 인물이 여기서 이렇게 행동해도 괜찮을까?"
-                  autoComplete="off"
-                />
-              </label>
-              <button type="submit" aria-label="질문 보내기">
-                <Send size={16} />
-              </button>
-            </form>
           </section>
         </div>
+        <form className="agent-chat-form ex-dialog-input-pin" onSubmit={submitAgentQuestion}>
+          <label>
+            <span>{persona.title}에게 묻기</span>
+            <input
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder="예: 이 인물이 여기서 이렇게 행동해도 괜찮을까?"
+              autoComplete="off"
+            />
+          </label>
+          <button type="submit" aria-label="질문 보내기">
+            <Send size={16} />
+          </button>
+        </form>
       </section>
     </div>
   );
