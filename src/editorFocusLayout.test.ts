@@ -27,7 +27,8 @@ describe('Story X focused editor layout', () => {
     // P1 — 편집 트랙은 얇은 툴스트립 1행 + 원고가 채우는 1행
     expect(css).toContain('grid-template-rows: auto minmax(0, 1fr)');
     expect(css).toContain('height: 100%');
-    expect(css).toContain('--sx-paper: var(--framer-canvas)');
+    // design3 Editorial DS — warm cream 캔버스 토큰
+    expect(css).toContain('--sx-paper: #f7f7f4');
     expect(css).toContain('.sx-workbench {\n    order: 1;');
   });
 
@@ -43,7 +44,8 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('className="sx-app-breadcrumb"');
     // P2 — 명령 팔레트는 ⌘K 단축키로 연다 (시각 버튼 제거)
     expect(desk).toContain("event.key.toLowerCase() === 'k'");
-    expect(desk).toContain('className="sx-save-chip"');
+    // 일하는 바 — 저장 상태 칩은 좌측 존에 있다
+    expect(desk).toContain('sx-save-chip ex-workbar-save');
     expect(desk).toContain('function StoryXStatusBar');
     expect(desk).toContain('<StoryXStatusBar');
     expect(desk).toContain('alphaReport={alphaReport}');
@@ -51,11 +53,9 @@ describe('Story X focused editor layout', () => {
     expect(desk).not.toContain('<AlphaSelfCheckCard alphaReport={alphaReport} />');
     expect(css).toContain('.sx-statusbar');
     expect(css).toContain('height: 32px');
-    expect(css).toContain('--sx-ink-2: rgba(32, 32, 30, 0.74)');
+    expect(css).toContain('--sx-ink-2: rgba(38, 37, 30, 0.78)');
     expect(css).toContain('.sx-writing-surface .sx-writing-page h2');
-    expect(css).toContain('color: #f7f3ea');
     expect(css).toContain('.sx-writing-surface .sx-outline-strip p');
-    expect(css).toContain('color: #25211d');
   });
 
   it('supports user editing, review runs, and a chapter tree in the editor', () => {
@@ -123,11 +123,19 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-command-list');
   });
 
-  it('P2 — declutters the editor topbar to brand plus two right-side actions', () => {
-    // 상단 우측은 저장 상태 칩과 출간 버튼만 남긴다
-    expect(desk).toContain('className="sx-topbar-actions"');
-    expect(desk).toContain('className="sx-save-chip"');
-    expect(desk).toContain('className="sx-publish-button"');
+  it('P2 — restructures the editor topbar into a dense 3-zone working bar', () => {
+    // 일하는 바 — 좌/중앙/우 3존 구조 (design3 working bar)
+    expect(desk).toContain('sx-topbar sx-app-shell-topbar ex-workbar');
+    expect(desk).toContain('sx-brand ex-workbar-left');
+    expect(desk).toContain('sx-track-tabs ex-workbar-modes');
+    expect(desk).toContain('sx-topbar-actions ex-workbar-right');
+    // 저장 상태 칩과 출간 버튼은 유지되지만 working bar 존으로 재배치됐다
+    expect(desk).toContain('sx-save-chip ex-workbar-save');
+    expect(desk).toContain('sx-publish-button');
+    // 우측 존: 편집 모드에서만 작가진 진행 스트립·분량 미터·승인 대기를 노출한다
+    expect(desk).toContain('className="ex-workbar-crew"');
+    expect(desk).toContain('className="ex-workbar-meter"');
+    expect(desk).toContain('className="ex-workbar-pending"');
     // 홈 버튼/아바타/매체 칩/⌘K 버튼은 상단에서 제거했다
     expect(desk).not.toContain('className="sx-command-k"');
     expect(desk).not.toContain('className="sx-user-avatar"');
@@ -149,9 +157,9 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('원고 편집');
     expect(desk).toContain('작품 바이블');
     expect(desk).toContain('출간 준비');
-    expect(desk).toContain('className="sx-publish-button"');
+    expect(desk).toContain('sx-publish-button');
     expect(desk).toContain('매체 변경');
-    expect(desk).toContain('className="sx-track-tabs"');
+    expect(desk).toContain('sx-track-tabs ex-workbar-modes');
     expect(desk).toContain('className="sx-bible-alert-badge"');
     expect(desk).toContain('className="sx-media-change-panel"');
     expect(desk).toContain('function MemoryBankStudio');

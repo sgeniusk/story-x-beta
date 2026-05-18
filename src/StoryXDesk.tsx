@@ -748,9 +748,37 @@ export function StoryXDesk({
   }, [project]);
   const bibleAlertCount = editorWorkspace.continuitySummary.blocked + editorWorkspace.continuitySummary.warnings;
   const isBibleMode = activeTrack === 'bible' && !isPublishingMode;
+  const isDraftMode = activeTrack === 'draft' && !isPublishingMode;
   const activeModeLabel = isPublishingMode ? '출간 준비' : activeTrack === 'bible' ? '작품 바이블' : '원고';
   const chapterCrumb = latestChapter ? `${latestChapter.episode}화` : '새 초안';
   const saveLabel = editedSinceReview ? '수정 중' : '저장됨';
+  // 일하는 바 — 회차 분량 미터: 실제 원고 글자 수를 한 회차 목표 5,000자와 비교한다
+  const CHAPTER_CHAR_TARGET = 5000;
+  const chapterCharCount = (editorText || latestChapter?.prose || '').replace(/\s/g, '').length;
+  const chapterCharPct = Math.min(100, Math.round((chapterCharCount / CHAPTER_CHAR_TARGET) * 100));
+  const pendingApprovalCount = approvalQueue.items.filter((item) => item.status !== 'approved').length;
+  // 일하는 바 우측 작가진 진행 스트립 — 실제 검토 에이전트의 상태를 design의 AI-stage로 매핑한다
+  const topbarStageFromStatus = (status: AgentRun['status']): string => {
+    switch (status) {
+      case 'pass':
+      case 'complete':
+        return 'done';
+      case 'revise':
+        return 'mark';
+      case 'block':
+        return 'write';
+      case 'idle':
+      default:
+        return 'queued';
+    }
+  };
+  const crewProgress = displayedAgentRuns.slice(0, 6).map((run) => ({
+    agentId: run.agentId,
+    persona: getAgentPersona(run),
+    stage: topbarStageFromStatus(run.status),
+    isReviewing: run.output.includes('읽고') || run.output.includes('읽는')
+  }));
+  const crewDoneCount = crewProgress.filter((member) => member.stage === 'done').length;
   const isLatestLocked = latestChapter?.locked === true;
   const actionLabels = getCreativeActionLabels(blueprint.medium);
   const mainActionLabel = !latestChapter
@@ -1417,8 +1445,12 @@ export function StoryXDesk({
 
   return (
     <main className={`sx-desk sx-genre-${request.genre} ${isFocusMode ? 'is-focus-mode' : ''}`}>
-      <header className="sx-topbar sx-app-shell-topbar">
-        <div className="sx-brand">
+      {/* 일하는 바 — design의 dense 56px 3-zone working bar.
+          좌: 워드마크·작품·회차 빵부스러기 + (편집) 현재 작업 지점 칩 + 저장 상태
+          중앙: 편집/바이블/출간 모드 탭
+          우: (편집) 작가진 진행 스트립 + 회차 분량 미터 + 승인 대기 + 기본 액션 */}
+      <header className="sx-topbar sx-app-shell-topbar ex-workbar">
+        <div className="sx-brand ex-workbar-left">
           <button
             type="button"
             className="sx-brand-mark sx-brand-home"
@@ -1435,8 +1467,6 @@ export function StoryXDesk({
             <img className="nx-brand-symbol" src={storyXSymbol} alt="" />
           </button>
           <nav className="sx-app-breadcrumb" aria-label="현재 위치">
-            <span>Story X</span>
-            <ChevronRight size={13} />
             <input
               className="sx-crumb-title-input"
               aria-label="작품 제목"
@@ -1446,45 +1476,138 @@ export function StoryXDesk({
               autoComplete="off"
               title="클릭해서 제목 편집"
             />
-            <ChevronRight size={13} />
+            <ChevronRight size={12} className="ex-workbar-crumb-sep" aria-hidden="true" />
             <span>{activeModeLabel}</span>
             {!isPublishingMode && <em>{chapterCrumb}</em>}
           </nav>
-        </div>
-        <nav className="sx-track-tabs" aria-label="작업 트랙">
-          <button
-            type="button"
-            className={activeTrack === 'draft' && !isPublishingMode ? 'is-active' : ''}
-            onClick={() => switchToTrack('draft')}
-          >
-            <PenLine size={16} />
-            편집
-          </button>
-          <button
-            type="button"
-            className={activeTrack === 'bible' && !isPublishingMode ? 'is-active' : ''}
-            onClick={() => switchToTrack('bible')}
-          >
-            <Database size={16} />
-            바이블
-            {bibleAlertCount > 0 && <span className="sx-bible-alert-badge">{bibleAlertCount}</span>}
-          </button>
-        </nav>
-        {/* P2 — 상단 우측은 저장 상태 칩과 출간 버튼 2개로만 유지한다. 명령 팔레트는 ⌘K 단축키로 열고,
-            매체 변경은 팔레트 명령으로 옮겨 시각적 클러터를 제거했다 */}
-        <div className="sx-topbar-actions">
-          <span className="sx-save-chip" data-state={editedSinceReview ? 'dirty' : 'synced'} aria-live="polite">
-            <Save size={14} />
+          {isDraftMode && latestChapter && (
+            <span className="ex-workbar-scene" title="현재 작업 지점">
+              <span className="ex-workbar-scene-dot" aria-hidden="true" />
+              <span className="ex-workbar-scene-now">지금</span>
+              <strong>{latestChapter.episode}화</strong>
+              <span className="ex-workbar-scene-detail">· {latestChapter.title}</span>
+            </span>
+          )}
+          <span className="sx-save-chip ex-workbar-save" data-state={editedSinceReview ? 'dirty' : 'synced'} aria-live="polite">
+            <Save size={13} />
             {saveLabel}
           </span>
+        </div>
+        <nav className="sx-track-tabs ex-workbar-modes" aria-label="작업 트랙">
           <button
             type="button"
-            className="sx-publish-button"
+            className={isDraftMode ? 'is-active' : ''}
+            onClick={() => switchToTrack('draft')}
+          >
+            <PenLine size={15} />
+            편집
+            <em className="ex-mode-meta">쓰기</em>
+          </button>
+          <button
+            type="button"
+            className={isBibleMode ? 'is-active' : ''}
+            onClick={() => switchToTrack('bible')}
+          >
+            <Database size={15} />
+            바이블
+            <em className="ex-mode-meta">캐논</em>
+            {bibleAlertCount > 0 && <span className="sx-bible-alert-badge">{bibleAlertCount}</span>}
+          </button>
+          <button
+            type="button"
+            className={`sx-publish-button ${isPublishingMode ? 'is-active' : ''}`}
             data-active={isPublishingMode ? 'true' : 'false'}
             onClick={openPublishingMode}
           >
-            <FileText size={16} />
+            <FileText size={15} />
             출간
+            <em className="ex-mode-meta">게시</em>
+          </button>
+        </nav>
+        <div className="sx-topbar-actions ex-workbar-right">
+          {isDraftMode && (
+            <button
+              type="button"
+              className="ex-workbar-crew"
+              title="작가진 진행 상황 — 클릭하면 작가진 검토 레일로 이동합니다"
+              onClick={() => setIsFocusMode(false)}
+            >
+              <span className="ex-workbar-crew-label">작가진</span>
+              <span className="ex-workbar-crew-stack">
+                {crewProgress.map((member) => (
+                  <span key={member.agentId} className="ex-workbar-crew-portrait">
+                    <span
+                      className={`pixel-agent ex-crew-pixel ${member.persona.pixelClass}`}
+                      aria-hidden="true"
+                    >
+                      <span className="pixel-agent-hair" />
+                      <span className="pixel-agent-head">
+                        <i />
+                        <b />
+                      </span>
+                      <span className="pixel-agent-neck" />
+                      <span className="pixel-agent-body" />
+                    </span>
+                    <span className={`ex-workbar-crew-stage ex-stage-${member.stage}`} aria-hidden="true" />
+                  </span>
+                ))}
+              </span>
+              <span className="ex-workbar-crew-count">
+                {crewDoneCount}
+                <em>/{crewProgress.length}</em>
+              </span>
+            </button>
+          )}
+          {isDraftMode && (
+            <span
+              className="ex-workbar-meter"
+              title={`이번 회차 분량 — ${chapterCharCount.toLocaleString()}자 / 목표 ${CHAPTER_CHAR_TARGET.toLocaleString()}자`}
+            >
+              <span className="ex-workbar-meter-num">
+                {chapterCharCount.toLocaleString()}
+                <em>/{CHAPTER_CHAR_TARGET.toLocaleString()}</em>
+              </span>
+              <span className="ex-workbar-meter-track">
+                <i
+                  className={chapterCharPct < 40 ? 'is-low' : ''}
+                  style={{ width: `${chapterCharPct}%` }}
+                />
+              </span>
+            </span>
+          )}
+          {isDraftMode && (
+            <button
+              type="button"
+              className="ex-workbar-pending"
+              onClick={() => {
+                setActiveTrack('bible');
+                setIsPublishingMode(false);
+                setIsMediaPanelOpen(false);
+                setActiveBibleSection('approval');
+              }}
+            >
+              <ClipboardCheck size={13} />
+              승인 대기
+              <span className="ex-workbar-pending-count">{pendingApprovalCount}</span>
+            </button>
+          )}
+          <button
+            type="button"
+            className={`sx-primary-button ex-workbar-action ${isPublishingMode ? 'is-publish' : ''}`}
+            onClick={isPublishingMode ? closePublishingMode : mainActionRun}
+            disabled={!isPublishingMode && (isGenerating || isReviewing)}
+          >
+            {isPublishingMode ? (
+              <>
+                <PenLine size={15} />
+                편집으로
+              </>
+            ) : (
+              <>
+                <MainActionIcon size={15} />
+                {isGenerating ? '생성 중…' : isReviewing ? '검토 중…' : mainActionLabel}
+              </>
+            )}
           </button>
         </div>
       </header>
@@ -3114,6 +3237,36 @@ function OpenThreadsCard({ threads }: { threads: string[] }) {
   );
 }
 
+// 작가진 검토 레일 — 상태별 AI-stage 분포를 design3 timeline 스트립으로 요약한다
+const REVIEW_STAGE_STRIP: Array<{ id: AgentRun['status']; label: string; tone: string }> = [
+  { id: 'idle', label: '대기', tone: 'queued' },
+  { id: 'revise', label: '표시', tone: 'mark' },
+  { id: 'block', label: '작성', tone: 'write' },
+  { id: 'pass', label: '완료', tone: 'done' }
+];
+
+function AgentStageTimeline({ runs }: { runs: AgentRun[] }) {
+  const counts: Record<string, number> = { queued: 0, mark: 0, write: 0, done: 0 };
+  for (const run of runs) {
+    if (run.status === 'pass' || run.status === 'complete') counts.done += 1;
+    else if (run.status === 'revise') counts.mark += 1;
+    else if (run.status === 'block') counts.write += 1;
+    else counts.queued += 1;
+  }
+  return (
+    <div className="ex-crew-timeline" aria-label="작가진 검토 단계 분포">
+      {REVIEW_STAGE_STRIP.map((stage) => (
+        <span key={stage.tone} className="ex-crew-timeline-seg" style={{ flex: Math.max(counts[stage.tone], 0.4) }}>
+          <span className={`ex-crew-timeline-dot ex-stage-${stage.tone}`} aria-hidden="true" />
+          <span className="ex-crew-timeline-label">
+            {stage.label} {counts[stage.tone]}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function AgentSidebar({
   runs,
   onSelectAgent
@@ -3121,12 +3274,18 @@ function AgentSidebar({
   runs: AgentRun[];
   onSelectAgent: (run: AgentRun, persona: AgentPersona) => void;
 }) {
+  const doneCount = runs.filter((run) => run.status === 'pass' || run.status === 'complete').length;
   return (
-    <section className="sx-panel sx-agent-sidebar" aria-label="AI 작가진">
-      <div className="sx-panel-heading">
-        <BrainCircuit size={16} />
-        <h2>작가진</h2>
+    <section className="sx-panel sx-agent-sidebar ex-crew-rail" aria-label="AI 작가진">
+      <div className="sx-panel-heading ex-crew-head">
+        <span className="ex-crew-overline">작가진 검토</span>
+        <h2>{runs.length}명이 읽고 있어요</h2>
+        <span className="ex-crew-done">
+          {doneCount}
+          <em>/{runs.length}</em>
+        </span>
       </div>
+      <AgentStageTimeline runs={runs} />
       <div>
         {runs.map((run) => {
           const persona = getAgentPersona(run);
@@ -3155,6 +3314,9 @@ function AgentSidebar({
               <div>
                 <span>{persona.subtitle}</span>
                 <strong>{persona.title}</strong>
+                <span className={`ex-crew-stage-pill ex-crew-stage-pill--${run.status}`}>
+                  {agentStatusLabel(run.status)}
+                </span>
                 <p>{run.output}</p>
                 <small>
                   <MessageCircle size={13} />

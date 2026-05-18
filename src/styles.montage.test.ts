@@ -18,7 +18,20 @@ describe('Story X Montage design tokens', () => {
     expect(css).toContain('--card: var(--wds-semantic-color-background-elevated-normal)');
     expect(css).toContain('--button-bg: var(--wds-semantic-color-label-normal)');
     expect(css).toContain('--control-radius: var(--wds-component-button-radius-medium)');
-    expect(css).toContain('--sx-ink: var(--framer-ink)');
-    expect(css).toContain('--sx-card: var(--framer-surface-1)');
+  });
+
+  it('scopes the editor (.sx-desk) to the design3 Editorial DS palette', () => {
+    // 편집기는 자체 표면을 쓴다 — warm cream 캔버스 + dark manuscript + 보라 brand
+    expect(css).toContain('--sx-ink: #26251e');
+    expect(css).toContain('--sx-card: #ffffff');
+    expect(css).toContain('--sx-paper: #f7f7f4');
+    expect(css).toContain('--sx-brand: #6448d3');
+    expect(css).toContain('--sx-page: #1c1a17');
+    // AI-stage 파스텔 토큰
+    expect(css).toContain('--sx-stage-think: #dfa88f');
+    expect(css).toContain('--sx-stage-read: #9fbbe0');
+    expect(css).toContain('--sx-stage-mark: #9fc9a2');
+    expect(css).toContain('--sx-stage-write: #c0a8dd');
+    expect(css).toContain('--sx-stage-done: #c08532');
   });
 });
