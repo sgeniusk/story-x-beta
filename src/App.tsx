@@ -32,6 +32,37 @@ import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
 
 const mediumOptions = getMediumOptions();
 
+// 작가 인터뷰어 id → 픽셀아트 초상 클래스. 에디터 작가진과 같은 픽셀 시스템을 재사용한다
+const intakePixelClass: Record<string, string> = {
+  showrunner: 'is-showrunner',
+  'character-custodian': 'is-character',
+  'world-keeper': 'is-world',
+  'voice-curator': 'is-voice',
+  'essay-interviewer': 'is-essay',
+  'essay-thesis': 'is-thesis',
+  'continuity-editor': 'is-continuity',
+  'creative-coach': 'is-coach',
+  'storyboard-agent': 'is-storyboard',
+  'speech-bubble-agent': 'is-bubble'
+};
+
+function InterviewerPortrait({ agentId }: { agentId: string }) {
+  const pixelClass = intakePixelClass[agentId] ?? 'is-default';
+  return (
+    <span className="hx-interviewer-portrait" aria-hidden="true">
+      <span className={`pixel-agent ${pixelClass}`}>
+        <span className="pixel-agent-hair" />
+        <span className="pixel-agent-head">
+          <i />
+          <b />
+        </span>
+        <span className="pixel-agent-neck" />
+        <span className="pixel-agent-body" />
+      </span>
+    </span>
+  );
+}
+
 const mediaBridgeRoutes = [
   {
     from: '소설',
@@ -703,8 +734,10 @@ function StoryXHome({
                 return (
                   <article className="hx-intake-q">
                     <div className="hx-intake-interviewer">
-                      <b>인터뷰어들이 원고를 읽고 있습니다…</b>
-                      <em>당신이 쓴 자유 서술에 맞는 질문을 준비하는 중입니다.</em>
+                      <span className="hx-interviewer-text">
+                        <b>인터뷰어들이 원고를 읽고 있습니다…</b>
+                        <em>당신이 쓴 자유 서술에 맞는 질문을 준비하는 중입니다.</em>
+                      </span>
                     </div>
                   </article>
                 );
@@ -718,10 +751,13 @@ function StoryXHome({
               return (
                 <article className="hx-intake-q" key={question.id}>
                   <div className="hx-intake-interviewer">
-                    <b>{persona.name}</b>
-                    <em>
-                      {String(intakeQuestionIndex + 1).padStart(2, '0')} · {persona.blurb}
-                    </em>
+                    <InterviewerPortrait agentId={question.agentId} />
+                    <span className="hx-interviewer-text">
+                      <b>{persona.name}</b>
+                      <em>
+                        {String(intakeQuestionIndex + 1).padStart(2, '0')} · {persona.blurb}
+                      </em>
+                    </span>
                   </div>
                   <h3 className="hx-intake-question-text">{question.question}</h3>
                   <div className="hx-intake-options">

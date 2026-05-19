@@ -4956,6 +4956,18 @@ body {
   --shirt: #9a7cff;
 }
 
+.pixel-agent.is-thesis {
+  --skin: #d8a07e;
+  --hair: #3a3a3a;
+  --shirt: #3fae8f;
+}
+
+.pixel-agent.is-coach {
+  --skin: #e8b48c;
+  --hair: #6b4a2a;
+  --shirt: #e0564e;
+}
+
 .agent-dialog-backdrop {
   position: fixed;
   inset: 0;
@@ -7512,16 +7524,38 @@ body {
 }
 .home-page .hx-intake-interviewer {
   display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 12px;
+}
+.home-page .hx-interviewer-portrait {
+  position: relative;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 46px;
+  border-radius: var(--nx-r);
+  background: var(--nx-tint-lavender);
+  overflow: hidden;
+}
+.home-page .hx-interviewer-portrait .pixel-agent {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.74);
+}
+.home-page .hx-interviewer-text {
+  display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-bottom: 10px;
+  min-width: 0;
 }
-.home-page .hx-intake-interviewer b {
+.home-page .hx-interviewer-text b {
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--nx-primary);
 }
-.home-page .hx-intake-interviewer em {
+.home-page .hx-interviewer-text em {
   font-size: 0.74rem;
   font-style: normal;
   color: var(--nx-steel);
