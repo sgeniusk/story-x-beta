@@ -59,7 +59,8 @@ export async function requestLlmDraft(input: DraftRequestInput): Promise<LlmDraf
   }
 }
 
-// 브리지 응답의 beats를 { label, summary } 쌍으로 정규화한다. 구버전·누락 응답은 빈 배열로 떨어진다.
+// 브리지 응답의 beats를 { label, summary, tension? } 쌍으로 정규화한다. 구버전·누락 응답은 빈 배열로 떨어진다.
+// tension은 브리지가 보낸 숫자만 그대로 통과시키고, 누락 시 chapterFromDraftPayload 쪽에서 기본값으로 보정된다.
 function normalizeBeats(value: unknown): DraftChapterPayload['beats'] {
   if (!Array.isArray(value)) {
     return [];
@@ -69,7 +70,10 @@ function normalizeBeats(value: unknown): DraftChapterPayload['beats'] {
     .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
     .map((item) => ({
       label: typeof item.label === 'string' ? item.label : '',
-      summary: typeof item.summary === 'string' ? item.summary : ''
+      summary: typeof item.summary === 'string' ? item.summary : '',
+      ...(typeof item.tension === 'number' && Number.isFinite(item.tension)
+        ? { tension: item.tension }
+        : {})
     }))
     .filter((beat) => beat.label.trim().length > 0 || beat.summary.trim().length > 0);
 }

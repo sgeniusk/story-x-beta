@@ -157,6 +157,89 @@ describe('storyEngine', () => {
     expect(beats[1].label).toBe('반전');
   });
 
+  it('normalizeChapterBeats carries tension and defaults missing or invalid values', () => {
+    const beats = normalizeChapterBeats(4, [
+      { label: '도입', summary: '문을 연다.', tension: 20 },
+      // tension 누락 — 기본값으로 보정돼야 한다
+      { label: '전개', summary: '단서가 늘어난다.' },
+      // 범위를 벗어난 값은 0~100으로 클램프된다
+      { label: '절정', summary: '진실이 드러난다.', tension: 140 },
+      // 숫자가 아니면 기본값으로 떨어진다
+      { label: '여운', summary: '여백을 남긴다.', tension: 'high' as never }
+    ]);
+
+    expect(beats.map((beat) => beat.tension)).toEqual([20, 50, 100, 50]);
+  });
+
+  it('produceNextChapter generates beats that carry a tension value', () => {
+    const result = produceNextChapter(createSeedProject(), {
+      genre: 'romance-fantasy',
+      intent: '주인공이 금지된 탑에서 첫 단서를 발견한다',
+      pressure: '낮은 감정선에서 시작해 마지막에 큰 반전을 둔다'
+    });
+
+    expect(result.chapter.beats.length).toBeGreaterThanOrEqual(4);
+    expect(
+      result.chapter.beats.every(
+        (beat) => typeof beat.tension === 'number' && beat.tension >= 0 && beat.tension <= 100
+      )
+    ).toBe(true);
+  });
+
+  it('chapterFromDraftPayload carries beat tension and defaults when the payload omits it', () => {
+    const project = createSeedProject();
+
+    const result = chapterFromDraftPayload(
+      project,
+      {
+        title: '1화',
+        hook: '후크',
+        outline: ['비트'],
+        beats: [
+          { label: '문', summary: '문을 연다.', tension: 35 },
+          // tension 누락 — 기본값 50으로 보정돼야 한다
+          { label: '반전', summary: '거짓이 드러난다.' }
+        ],
+        prose: '본문이 있다.',
+        newCanonFacts: []
+      },
+      {
+        genre: 'romance-fantasy',
+        intent: '주인공이 움직인다',
+        pressure: ''
+      }
+    );
+
+    expect(result.chapter.beats.map((beat) => beat.tension)).toEqual([35, 50]);
+  });
+
+  it('createSeedProject populates the data-mode canon arrays and bible outline', () => {
+    const project = createSeedProject();
+
+    expect(project.places.length).toBeGreaterThan(0);
+    expect(project.objects.length).toBeGreaterThan(0);
+    expect(project.events.length).toBeGreaterThan(0);
+    expect(project.timeline.length).toBeGreaterThan(0);
+
+    // 바이블 규칙은 정확히 5섹션, 고정된 id 순서를 가진다
+    expect(project.bibleOutline.map((section) => section.id)).toEqual([
+      'tone',
+      'rhythm',
+      'world',
+      'vocab',
+      'motif'
+    ]);
+
+    // 후속 UI가 보여줄 수 있도록 충돌·미확정 엔티티가 최소 하나씩 있어야 한다
+    const allEntities = [...project.places, ...project.objects, ...project.events];
+    expect(allEntities.some((entity) => entity.status === 'conflict')).toBe(true);
+    expect(allEntities.some((entity) => entity.status === 'unverified')).toBe(true);
+
+    // 인물은 relations 배열을 가지며, 시드에 최소 하나의 관계가 있다
+    expect(project.characters.every((character) => Array.isArray(character.relations))).toBe(true);
+    expect(project.characters.some((character) => character.relations.length > 0)).toBe(true);
+  });
+
   it('applies approved memory candidates as new canon facts', () => {
     const project = createSeedProject();
     const before = project.canonFacts.length;

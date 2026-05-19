@@ -25,6 +25,14 @@ export type GenreId =
 
 export type Severity = 'info' | 'warning' | 'error';
 
+// 인물 사이의 관계 한 줄 — 관계도 엣지 하나. strong은 굵은 선, dashed는 점선(불확실·잠정).
+export interface CharacterRelation {
+  targetId: string;
+  label: string;
+  strong?: boolean;
+  dashed?: boolean;
+}
+
 export interface CharacterProfile {
   id: string;
   name: string;
@@ -38,6 +46,39 @@ export interface CharacterProfile {
     claim: string;
     reason: string;
   }>;
+  /** 다른 인물과의 관계 — 관계도 엣지 목록 */
+  relations: CharacterRelation[];
+}
+
+// 캐논 엔티티 정합 상태 — ok는 충돌 없음, conflict는 본문과 어긋남, unverified는 아직 본문에 미등장.
+export type CanonStatus = 'ok' | 'conflict' | 'unverified';
+
+// 인물/장소/사물/사건이 공유하는 캐논 엔티티 공통 형태. status가 conflict면 conflict에 어긋난 내용을 적는다.
+export interface CanonEntity {
+  id: string;
+  name: string;
+  sub: string;
+  facts: string[];
+  appearedIn: string[];
+  status: CanonStatus;
+  conflict?: string;
+}
+
+// 작품 연표의 한 항목 — 연도·계절·라벨·메모. 아직 확정 안 된 시점은 status로 표시한다.
+export interface TimelineEntry {
+  id: string;
+  year: number;
+  season: string;
+  label: string;
+  note: string;
+  status: CanonStatus;
+}
+
+// 작품 바이블 규칙 한 섹션 — 톤·문장 리듬·세계관 규칙·어휘 금기·시각 모티프 중 하나.
+export interface BibleSection {
+  id: string;
+  title: string;
+  body: string;
 }
 
 export interface WorldRule {
@@ -63,6 +104,8 @@ export interface ChapterBeat {
   no: number;
   label: string;
   summary: string;
+  /** 계획된 긴장 강도 — 0~100. 긴장 곡선 차트의 한 점이 된다. */
+  tension: number;
 }
 
 export interface Chapter {
@@ -132,6 +175,16 @@ export interface SeriesProject {
   canonFacts: CanonFact[];
   openThreads: string[];
   chapters: Chapter[];
+  /** 캐논 장소 — 데이터 모드 장소 카드 */
+  places: CanonEntity[];
+  /** 캐논 사물 — 데이터 모드 사물 카드 */
+  objects: CanonEntity[];
+  /** 캐논 사건 — 데이터 모드 사건 카드 */
+  events: CanonEntity[];
+  /** 작품 연표 — 데이터 모드 시간선 */
+  timeline: TimelineEntry[];
+  /** 바이블 규칙 5섹션 — tone·rhythm·world·vocab·motif */
+  bibleOutline: BibleSection[];
 }
 
 export interface ProductionRequest {
@@ -172,6 +225,20 @@ export interface DraftChapterPayloadCanonFact {
 export interface DraftChapterPayloadBeat {
   label: string;
   summary: string;
+  /** 계획된 긴장 강도 — 0~100. 구버전·실패 응답에서는 누락될 수 있어 정규화 시 기본값으로 보정한다. */
+  tension?: number;
+}
+
+// 기본 긴장 강도 — beat에 tension이 누락됐을 때 채우는 값.
+export const DEFAULT_BEAT_TENSION = 50;
+
+// 임의 값을 0~100 사이 정수 긴장 강도로 정규화한다. 숫자가 아니면 기본값으로 떨어진다.
+function normalizeTension(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return DEFAULT_BEAT_TENSION;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 export interface DraftChapterPayload {
@@ -184,10 +251,10 @@ export interface DraftChapterPayload {
   newCanonFacts: DraftChapterPayloadCanonFact[];
 }
 
-// 라벨·요약 쌍 목록을 번호 매겨진 ChapterBeat[]로 정규화한다. 빈 항목은 버린다.
+// 라벨·요약 쌍 목록을 번호 매겨진 ChapterBeat[]로 정규화한다. 빈 항목은 버리고, tension 누락은 기본값으로 보정한다.
 export function normalizeChapterBeats(
   episode: number,
-  raw: ReadonlyArray<{ label?: unknown; summary?: unknown }> | undefined
+  raw: ReadonlyArray<{ label?: unknown; summary?: unknown; tension?: unknown }> | undefined
 ): ChapterBeat[] {
   if (!Array.isArray(raw)) {
     return [];
@@ -196,14 +263,16 @@ export function normalizeChapterBeats(
   return raw
     .map((item) => ({
       label: typeof item?.label === 'string' ? item.label.trim() : '',
-      summary: typeof item?.summary === 'string' ? item.summary.trim() : ''
+      summary: typeof item?.summary === 'string' ? item.summary.trim() : '',
+      tension: normalizeTension(item?.tension)
     }))
     .filter((item) => item.label.length > 0 || item.summary.length > 0)
     .map((item, index) => ({
       id: `beat-${episode.toString().padStart(3, '0')}-${String(index + 1).padStart(2, '0')}`,
       no: index + 1,
       label: item.label || `구성 ${index + 1}`,
-      summary: item.summary
+      summary: item.summary,
+      tension: item.tension
     }));
 }
 
@@ -348,6 +417,10 @@ export function createSeedProject(): SeriesProject {
           claim: '서윤은 오빠를 처음부터 싫어했고 찾고 싶어 하지 않는다.',
           reason: '시리즈의 장기 동기는 오빠를 찾는 죄책감과 애정이다.'
         }
+      ],
+      relations: [
+        { targetId: 'ian', label: '불완전한 협력자', strong: true },
+        { targetId: 'do-hyun', label: '찾고 있는 오빠', dashed: true }
       ]
     },
     {
@@ -364,6 +437,28 @@ export function createSeedProject(): SeriesProject {
           claim: '이안은 처음부터 모든 비밀을 솔직히 공개했다.',
           reason: '이안의 긴장감은 선택적 침묵과 불완전한 협력에서 나온다.'
         }
+      ],
+      relations: [
+        { targetId: 'seo-yoon', label: '불완전한 협력자', strong: true }
+      ]
+    },
+    {
+      id: 'do-hyun',
+      name: '한도현',
+      role: '사라진 서윤의 오빠 — 전직 탑 기록관',
+      desire: '탑이 지운 진짜 이름을 되돌려 놓는다',
+      wound: '동생을 지키려고 자신의 이름 일부를 탑에 내주었다',
+      currentState: '아직 직접 등장하지 않고 표식과 편지로만 흔적을 남긴다',
+      voiceRules: ['직접 등장 전까지는 사물·표식으로만 말한다'],
+      canonAnchors: ['도현은 탑에 이름의 일부를 대가로 바치고 사라졌다.'],
+      forbiddenContradictions: [
+        {
+          claim: '도현은 처음부터 탑과 무관한 인물이었다.',
+          reason: '도현의 실종과 탑의 출입 대가가 시리즈의 핵심 미스터리를 묶는다.'
+        }
+      ],
+      relations: [
+        { targetId: 'seo-yoon', label: '지키려 한 동생', dashed: true }
       ]
     }
   ];
@@ -414,6 +509,148 @@ export function createSeedProject(): SeriesProject {
     }
   ];
 
+  const places: CanonEntity[] = [
+    {
+      id: 'place-moon-tower',
+      name: '달의 탑',
+      sub: '왕도 북쪽 끝 · 출입 통제 구역',
+      facts: [
+        '초대장, 빚, 이름의 일부 중 하나를 대가로 받은 사람만 들어갈 수 있다.',
+        '하층은 폐쇄된 기록실로, 마르지 않은 잉크 표식이 남아 있다.'
+      ],
+      appearedIn: [],
+      status: 'ok'
+    },
+    {
+      id: 'place-royal-archive',
+      name: '왕립 문서고',
+      sub: '왕도 중심부 · 서윤이 해임된 직장',
+      facts: [
+        '서윤이 필사관으로 일하다 기록 수정 혐의로 해임된 곳이다.',
+        '비공식 의뢰는 대부분 이곳 출신 인맥을 통해 들어온다.'
+      ],
+      appearedIn: [],
+      status: 'unverified'
+    },
+    {
+      id: 'place-lower-record-room',
+      name: '하층 기록실',
+      sub: '달의 탑 지하 · 봉인된 구역',
+      facts: [
+        '탑이 지운 이름의 잔재가 은빛 먼지로 벽에 묻어 있다.',
+        '오빠의 필압으로 새겨진 표식이 발견되는 장소로 계획됐다.'
+      ],
+      appearedIn: [],
+      status: 'unverified'
+    }
+  ];
+
+  const objects: CanonEntity[] = [
+    {
+      id: 'object-old-lamp',
+      name: '낡은 등잔',
+      sub: '문서고에서 가져온 휴대용 조명',
+      facts: [
+        '서윤이 하층으로 내려갈 때 들고 가는 유일한 광원이다.',
+        '불빛이 닿으면 지워진 표식이 잠깐 떠오른다.'
+      ],
+      appearedIn: [],
+      status: 'ok'
+    },
+    {
+      id: 'object-sealed-invitation',
+      name: '봉인된 초대장',
+      sub: '이안이 쥐고 있는 탑 출입 증표',
+      facts: [
+        '대가를 적는 빈칸이 있고, 이안은 그 칸을 손바닥으로 가린다.',
+        '빈칸에 무엇이 적혔는지는 아직 본문에 드러나지 않았다.'
+      ],
+      appearedIn: [],
+      status: 'conflict',
+      conflict: '세계 규칙은 대가가 「이름의 일부」라 못박지만, 초대장 빈칸 묘사는 「빚」으로도 읽힌다.'
+    }
+  ];
+
+  const events: CanonEntity[] = [
+    {
+      id: 'event-archive-dismissal',
+      name: '문서고 해임',
+      sub: '연재 시작 약 3개월 전',
+      facts: [
+        '서윤이 기록 수정 혐의로 왕립 문서고에서 해임됐다.',
+        '이 사건이 비공식 의뢰를 받게 된 직접적 계기다.'
+      ],
+      appearedIn: [],
+      status: 'ok'
+    },
+    {
+      id: 'event-brother-disappearance',
+      name: '오빠의 실종',
+      sub: '연재 시작 약 1년 전',
+      facts: [
+        '도현이 마지막 편지를 남기고 사라졌다.',
+        '편지에 서윤의 필체가 섞여 있던 이유는 아직 미해결이다.'
+      ],
+      appearedIn: [],
+      status: 'unverified'
+    }
+  ];
+
+  const timeline: TimelineEntry[] = [
+    {
+      id: 'timeline-001',
+      year: 0,
+      season: '1년 전',
+      label: '오빠의 실종',
+      note: '도현이 마지막 편지를 남기고 달의 탑 방향으로 사라진다.',
+      status: 'ok'
+    },
+    {
+      id: 'timeline-002',
+      year: 0,
+      season: '3개월 전',
+      label: '문서고 해임',
+      note: '서윤이 기록 수정 혐의로 왕립 문서고에서 해임된다.',
+      status: 'ok'
+    },
+    {
+      id: 'timeline-003',
+      year: 0,
+      season: '현재',
+      label: '하층 진입 계획',
+      note: '서윤이 비공식 의뢰를 받아 달의 탑 하층으로 내려갈 시점 — 정확한 일자 미확정.',
+      status: 'unverified'
+    }
+  ];
+
+  const bibleOutline: BibleSection[] = [
+    {
+      id: 'tone',
+      title: '톤',
+      body: '서늘한 궁정 미스터리. 감정은 직접 말하지 않고 사물의 상태로 우회해 드러낸다. 직접적 감정 토로는 회차당 한 번을 넘기지 않는다.'
+    },
+    {
+      id: 'rhythm',
+      title: '문장 리듬',
+      body: '평소엔 호흡이 긴 묘사를 쓰되 결정적 순간에는 단문으로 끊는다. 비슷한 길이의 문단이 세 번 이상 이어지지 않게 한다.'
+    },
+    {
+      id: 'world',
+      title: '세계관 규칙',
+      body: '달의 탑은 초대장·빚·이름의 일부 중 하나를 대가로 받은 사람만 들인다. 기억 잉크는 사실을 창조하지 못하고 이미 존재한 기억의 순서만 바꾼다.'
+    },
+    {
+      id: 'vocab',
+      title: '어휘 금기',
+      body: '「운명」, 「숙명」은 쓰지 않는다. 「기억」, 「기록」은 핵심어이므로 회차당 합쳐 과용하지 않도록 의식한다.'
+    },
+    {
+      id: 'motif',
+      title: '시각 모티프',
+      body: '은빛 먼지 — 지워진 이름. 마르지 않은 잉크 — 방금 일어난 기억. 가려진 빈칸 — 숨겨진 대가. 회차마다 셋 중 하나는 배치한다.'
+    }
+  ];
+
   return {
     id: 'sample-project',
     title: '샘플 작품',
@@ -430,7 +667,12 @@ export function createSeedProject(): SeriesProject {
     worldRules,
     canonFacts,
     openThreads: ['오빠의 마지막 편지에는 왜 서윤의 필체가 남아 있었나?', '이안은 탑에 무엇을 두고 나왔나?'],
-    chapters: []
+    chapters: [],
+    places,
+    objects,
+    events,
+    timeline,
+    bibleOutline
   };
 }
 
@@ -510,19 +752,23 @@ export function produceNextChapter(project: SeriesProject, request: ProductionRe
   const beats = normalizeChapterBeats(episode, [
     {
       label: '하층으로 내려가는 길',
-      summary: `${primaryCharacter.name}이 등잔을 들고 달의 탑 하층으로 들어선다.`
+      summary: `${primaryCharacter.name}이 등잔을 들고 달의 탑 하층으로 들어선다.`,
+      tension: 30
     },
     {
       label: '지워진 이름의 흔적',
-      summary: '벽의 은빛 먼지에서 누군가 지운 이름의 자취를 읽는다.'
+      summary: '벽의 은빛 먼지에서 누군가 지운 이름의 자취를 읽는다.',
+      tension: 52
     },
     {
       label: `${partner.name}의 선택적 침묵`,
-      summary: `${partner.name}이 초대장의 빈칸을 가리며 규칙의 일부를 숨긴다.`
+      summary: `${partner.name}이 초대장의 빈칸을 가리며 규칙의 일부를 숨긴다.`,
+      tension: 68
     },
     {
       label: '마르지 않은 표식',
-      summary: `${primaryCharacter.name}이 오빠의 필압으로 새겨진 표식을 발견하고 탑이 낮게 운다.`
+      summary: `${primaryCharacter.name}이 오빠의 필압으로 새겨진 표식을 발견하고 탑이 낮게 운다.`,
+      tension: 88
     }
   ]);
   const chapter: Chapter = {

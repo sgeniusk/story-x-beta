@@ -1,5 +1,13 @@
 // 작품 프로젝트와 버전 스냅샷을 브라우저 localStorage에 저장·복원한다
-import { createSeedProject, type SeriesProject } from './storyEngine';
+import {
+  createSeedProject,
+  DEFAULT_BEAT_TENSION,
+  type BibleSection,
+  type CanonEntity,
+  type CharacterProfile,
+  type SeriesProject,
+  type TimelineEntry
+} from './storyEngine';
 import { getProjectLocalization } from './localization';
 
 const storageKey = 'serial-story-studio/project';
@@ -96,18 +104,51 @@ export function clearProjectSnapshots() {
   window.localStorage.removeItem(snapshotsKey);
 }
 
+// 데이터 모드 도입 이전 저장본을 위한 기본 바이블 5섹션. createSeedProject와 같은 id·제목을 쓴다.
+function defaultBibleOutline(): BibleSection[] {
+  return [
+    { id: 'tone', title: '톤', body: '' },
+    { id: 'rhythm', title: '문장 리듬', body: '' },
+    { id: 'world', title: '세계관 규칙', body: '' },
+    { id: 'vocab', title: '어휘 금기', body: '' },
+    { id: 'motif', title: '시각 모티프', body: '' }
+  ];
+}
+
 function normalizeProject(project: SeriesProject): SeriesProject {
   // 표면 약속/심층 질문/무게중심 도입 이전에 저장된 프로젝트를 위한 백필.
-  // 회차 구성(beats) 도입 이전 회차에는 beats: []를 채워 UI가 깨지지 않게 한다.
+  // 회차 구성(beats) 도입 이전 회차에는 beats: []를 채우고, beat에 tension이 없으면 기본값으로 보정한다.
+  // 데이터 모드(places·objects·events·timeline·bibleOutline)와 인물 relations 도입 이전 저장본도 함께 백필한다.
   const normalizedProject = {
     ...project,
     localization: getProjectLocalization(project),
     deepQuestion: typeof project.deepQuestion === 'string' ? project.deepQuestion : '',
     creativeWeight: project.creativeWeight ?? 'balanced',
     formIntent: typeof project.formIntent === 'string' ? project.formIntent : '',
+    characters: Array.isArray(project.characters)
+      ? project.characters.map((character): CharacterProfile => ({
+          ...character,
+          relations: Array.isArray(character.relations) ? character.relations : []
+        }))
+      : [],
+    places: Array.isArray(project.places) ? (project.places as CanonEntity[]) : [],
+    objects: Array.isArray(project.objects) ? (project.objects as CanonEntity[]) : [],
+    events: Array.isArray(project.events) ? (project.events as CanonEntity[]) : [],
+    timeline: Array.isArray(project.timeline) ? (project.timeline as TimelineEntry[]) : [],
+    bibleOutline:
+      Array.isArray(project.bibleOutline) && project.bibleOutline.length > 0
+        ? (project.bibleOutline as BibleSection[])
+        : defaultBibleOutline(),
     chapters: project.chapters.map((chapter) => ({
       ...chapter,
-      beats: Array.isArray(chapter.beats) ? chapter.beats : []
+      beats: Array.isArray(chapter.beats)
+        ? chapter.beats.map((beat) => ({
+            ...beat,
+            tension: typeof beat.tension === 'number' && Number.isFinite(beat.tension)
+              ? beat.tension
+              : DEFAULT_BEAT_TENSION
+          }))
+        : []
     }))
   };
 
