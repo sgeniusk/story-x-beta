@@ -2968,22 +2968,10 @@ body {
   letter-spacing: -0.01em;
 }
 
-.sx-writing-surface .sx-writing-hook,
 .sx-writing-surface .sx-writing-page > p:not(.sx-eyebrow) {
   color: var(--sx-page-ink-soft);
 }
 
-.sx-writing-surface .sx-writing-hook {
-  margin-top: 10px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--sx-page-line);
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 0.96rem;
-  line-height: 1.6;
-}
-
-.sx-writing-hook,
 .sx-writing-page > p:not(.sx-eyebrow),
 .sx-canvas-surface header p:not(.sx-eyebrow),
 .sx-storyboard-surface header p:not(.sx-eyebrow) {
@@ -5450,28 +5438,6 @@ body {
 .sx-canon-list p {
   margin: 8px 0 0;
   color: var(--sx-ink-2);
-}
-
-.sx-outline-strip {
-  display: grid;
-  gap: var(--sx-space-2);
-  margin: 16px 0;
-}
-
-.sx-outline-strip p {
-  margin: 0;
-  padding: 11px 12px;
-  border-left: 3px solid color-mix(in oklch, var(--sx-accent) 58%, var(--sx-line));
-  border-radius: 0 8px 8px 0;
-  background: var(--sx-paper);
-  color: var(--sx-ink-2);
-}
-
-.sx-writing-surface .sx-outline-strip p {
-  border-left-color: var(--sx-stage-write);
-  background: var(--sx-page-soft);
-  color: var(--sx-page-ink-soft);
-  font-size: 0.82rem;
 }
 
 .sx-paper-panel pre {

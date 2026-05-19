@@ -721,7 +721,57 @@ function StoryXHome({
           </aside>
         </section>
 
-        <section className="hx-panel" aria-label="새 프로젝트 작가 인터뷰">
+        <section
+          className={`hx-panel ${isInterviewLoading ? 'hx-panel-building' : ''}`}
+          aria-label="새 프로젝트 작가 인터뷰"
+        >
+          {isInterviewLoading ? (
+            <div className="hx-building">
+              <p className="hx-eyebrow">03 · 작가 인터뷰</p>
+              <h1 className="hx-h1">작가진이 질문을 준비하고 있습니다.</h1>
+              <p className="hx-lead">
+                당신이 쓴 자유 서술을 처음부터 끝까지 읽고, 이 작품에만 필요한 인터뷰 질문을 만드는
+                중입니다. 끝나면 질문이 하나씩 열립니다.
+              </p>
+              <div className="hx-studio" aria-hidden="true">
+                <div className="hx-studio-paper">
+                  <div className="hx-studio-head">
+                    <span className="hx-studio-dot" />
+                    <span className="hx-studio-dot" />
+                    <span className="hx-studio-dot" />
+                  </div>
+                  <div className="hx-studio-lines">
+                    <span className="hx-studio-line" />
+                    <span className="hx-studio-line" />
+                    <span className="hx-studio-line" />
+                    <span className="hx-studio-line" />
+                    <span className="hx-studio-line" />
+                    <span className="hx-studio-line" />
+                  </div>
+                  <div className="hx-studio-foot">
+                    <span className="hx-studio-caret" />
+                    <span className="hx-studio-penning">작가진이 읽는 중</span>
+                  </div>
+                </div>
+              </div>
+              <ol className="hx-building-steps" aria-label="질문 준비 단계">
+                <li>
+                  <span className="hx-step-dot" />
+                  자유 서술을 처음부터 끝까지 읽습니다.
+                </li>
+                <li>
+                  <span className="hx-step-dot" />
+                  인물·세계·문체에서 더 들어야 할 빈 곳을 찾습니다.
+                </li>
+                <li>
+                  <span className="hx-step-dot" />
+                  이 작품에만 필요한 질문을 추립니다.
+                </li>
+              </ol>
+              <p className="hx-building-note">잠시만 기다려 주세요 — 보통 10~30초 걸립니다.</p>
+            </div>
+          ) : (
+            <>
           <div className="hx-main">
             <p className="hx-eyebrow">03 · 작가 인터뷰</p>
             <h1 className="hx-h1">작가진이 먼저 묻습니다.</h1>
@@ -738,19 +788,6 @@ function StoryXHome({
               </div>
             </div>
             {(() => {
-              if (isInterviewLoading) {
-                return (
-                  <article className="hx-intake-q">
-                    <div className="hx-intake-interviewer">
-                      <span className="hx-interviewer-text">
-                        <b>인터뷰어들이 원고를 읽고 있습니다…</b>
-                        <em>당신이 쓴 자유 서술에 맞는 질문을 준비하는 중입니다.</em>
-                      </span>
-                    </div>
-                  </article>
-                );
-              }
-
               const question = effectiveIntakeQuestions[intakeQuestionIndex];
               if (!question) return null;
               const selectedOption = intakeAnswers[question.id] ?? question.recommendedOptionId;
@@ -871,6 +908,8 @@ function StoryXHome({
               </button>
             </div>
           </aside>
+            </>
+          )}
         </section>
 
         <section className="hx-panel hx-panel-building" aria-label={`${draftUnitLabel} 구성 중`}>

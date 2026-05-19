@@ -55,7 +55,9 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('height: 32px');
     expect(css).toContain('--sx-ink-2: rgba(38, 37, 30, 0.78)');
     expect(css).toContain('.sx-writing-surface .sx-writing-page h2');
-    expect(css).toContain('.sx-writing-surface .sx-outline-strip p');
+    // 원고칸은 산문만 — beat 한줄 요약은 좌측 구조 트리에서만 본다
+    expect(desk).not.toContain('sx-outline-strip');
+    expect(desk).not.toContain('sx-writing-hook');
   });
 
   it('supports user editing, review runs, and a chapter tree in the editor', () => {

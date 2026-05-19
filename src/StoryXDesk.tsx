@@ -4912,15 +4912,9 @@ function CreativeStage({
               {isSerialFormat(blueprint.format) ? `Episode ${chapter.episode}` : '원고'}
             </p>
             <h2>{chapter.title}</h2>
-            <p className="sx-writing-hook">{chapter.hook}</p>
-            <div className="sx-outline-strip">
-              {chapter.outline.map((beat) => (
-                <p key={beat}>{beat}</p>
-              ))}
-            </div>
             <label className="sx-manuscript-editor-wrap">
               <span className="sx-manuscript-editor-head">
-                직접 편집 원고
+                원고
                 {proseDiff.changed && (
                   <button
                     type="button"
