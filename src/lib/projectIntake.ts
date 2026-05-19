@@ -1,4 +1,4 @@
-import type { CreativeBlueprint } from './projectBlueprint';
+import { isSerialFormat, type CreativeBlueprint } from './projectBlueprint';
 
 export type IntakeAgentId =
   | 'showrunner'
@@ -6,6 +6,7 @@ export type IntakeAgentId =
   | 'world-keeper'
   | 'voice-curator'
   | 'essay-interviewer'
+  | 'essay-thesis'
   | 'continuity-editor'
   | 'creative-coach'
   | 'storyboard-agent'
@@ -46,6 +47,29 @@ export function getFocusedServiceScope(): FocusedServiceScope {
     now: ['소설', '에세이', '만화 스토리보드'],
     later: ['완성 이미지 생성', '오디오북/영상 생성', '클라우드 협업', '유료 심층 검토']
   };
+}
+
+// 작품 인터뷰어 페르소나 — 유명 작가를 살짝 비튼 캐릭터가 자기 전문 시선으로 묻는다
+export interface IntakePersona {
+  name: string;
+  blurb: string;
+}
+
+const intakePersonas: Record<IntakeAgentId, IntakePersona> = {
+  showrunner: { name: '아가타 크리스', blurb: '첫 장면에 수수께끼를 거는 플롯의 장인' },
+  'character-custodian': { name: '도스토옙', blurb: '인물의 모순과 죄의식을 끝까지 파고드는 사람' },
+  'world-keeper': { name: '르 권', blurb: '세계의 규칙과 그 대가를 묻는 설계자' },
+  'voice-curator': { name: '무라카메', blurb: '문장의 호흡과 거리를 듣는 문체가' },
+  'essay-interviewer': { name: '버지니아 울브', blurb: '사적 경험과 의식의 흐름을 따라가는 에세이스트' },
+  'essay-thesis': { name: '유발 하리', blurb: '큰 그림과 논증의 뼈대를 묻는 사상가' },
+  'continuity-editor': { name: '맥스 퍼킨', blurb: '앞 회차와 어긋나는 곳을 끝까지 보는 편집자' },
+  'storyboard-agent': { name: '데즈카 오사', blurb: '칸과 호흡으로 장면을 짜는 연출가' },
+  'speech-bubble-agent': { name: '윌 아이스', blurb: '말풍선과 침묵의 위치를 보는 연출가' },
+  'creative-coach': { name: '스티브 킨', blurb: '막힌 작가에게 다음 한 줄을 묻는 코치' }
+};
+
+export function getIntakePersona(agentId: IntakeAgentId): IntakePersona {
+  return intakePersonas[agentId];
 }
 
 export function buildProjectIntakePlan(blueprint: CreativeBlueprint): ProjectIntakePlan {
@@ -124,6 +148,78 @@ export function buildProjectIntakePlan(blueprint: CreativeBlueprint): ProjectInt
               id: 'nearly-real',
               label: '거의 사실대로',
               impact: '동의, 명예훼손, 사생활 위험을 별도 경고로 표시합니다.'
+            }
+          ]
+        },
+        {
+          id: 'essay-thesis-core',
+          agentId: 'essay-thesis',
+          agentLabel: '에세이 사상가',
+          question: '이 글이 독자에게 남기려는 하나는 무엇에 가깝나요?',
+          recommendedOptionId: 'one-question',
+          options: [
+            {
+              id: 'one-question',
+              label: '하나의 질문',
+              impact: '교훈을 닫지 않고, 글 전체가 그 질문을 향하도록 구조를 잡습니다.'
+            },
+            {
+              id: 'one-insight',
+              label: '하나의 깨달음',
+              impact: '경험에서 깨달음으로 이어지는 논증의 디딤돌을 점검합니다.'
+            },
+            {
+              id: 'one-image',
+              label: '하나의 장면·인상',
+              impact: '설명을 줄이고 그 장면이 오래 남도록 묘사에 무게를 둡니다.'
+            }
+          ]
+        },
+        {
+          id: 'essay-why-now',
+          agentId: 'essay-interviewer',
+          agentLabel: '에세이 인터뷰어',
+          question: '그 경험을 지금 다시 쓰는 이유는 무엇인가요?',
+          recommendedOptionId: 'still-unsettled',
+          options: [
+            {
+              id: 'still-unsettled',
+              label: '아직 정리되지 않아서',
+              impact: '결론을 서두르지 않고 의식의 흐름을 따라가는 질문을 더 둡니다.'
+            },
+            {
+              id: 'to-tell-someone',
+              label: '누군가에게 전하고 싶어서',
+              impact: '독자를 향한 호흡과 말 거는 거리를 문체 바이블에 적어 둡니다.'
+            },
+            {
+              id: 'to-understand-self',
+              label: '그때의 나를 이해하려고',
+              impact: '그때의 나와 지금의 나를 분리해 시점 거리를 점검합니다.'
+            }
+          ]
+        },
+        {
+          id: 'essay-hard-part',
+          agentId: 'creative-coach',
+          agentLabel: '창작 코치',
+          question: '이 글에서 가장 쓰기 어려운 지점은 어디인가요?',
+          recommendedOptionId: 'honesty',
+          options: [
+            {
+              id: 'honesty',
+              label: '솔직해지는 것',
+              impact: '쓰기 두려운 부분을 미루지 않게 질문을 단계적으로 엽니다.'
+            },
+            {
+              id: 'structure',
+              label: '구조 잡기',
+              impact: '장면과 사유의 순서를 먼저 정리하는 검토 항목을 둡니다.'
+            },
+            {
+              id: 'polish',
+              label: '문장 다듬기',
+              impact: '문체 큐레이터가 군더더기와 번역투를 더 자주 점검합니다.'
             }
           ]
         }
@@ -208,17 +304,87 @@ export function buildProjectIntakePlan(blueprint: CreativeBlueprint): ProjectInt
               impact: '색, 조명, 렌즈 감각을 키프레임 후보의 평가 기준으로 둡니다.'
             }
           ]
+        },
+        {
+          id: 'comics-pull',
+          agentId: 'showrunner',
+          agentLabel: '쇼러너',
+          question: '독자가 다음 화를 누르게 만드는 힘은 무엇인가요?',
+          recommendedOptionId: 'event-action',
+          options: [
+            {
+              id: 'event-action',
+              label: '매 화의 사건·액션',
+              impact: '회차마다 시각적 사건 하나를 클라이맥스 컷으로 배치합니다.'
+            },
+            {
+              id: 'relationship-tension',
+              label: '관계의 긴장',
+              impact: '인물 사이의 감정 변화를 컷의 마지막에 남기는 후킹으로 씁니다.'
+            },
+            {
+              id: 'mystery-hook',
+              label: '미스터리·떡밥',
+              impact: '회차 끝마다 풀리지 않은 질문을 하나씩 남기는 보드를 만듭니다.'
+            }
+          ]
+        },
+        {
+          id: 'comics-character-anchor',
+          agentId: 'character-custodian',
+          agentLabel: '캐릭터 큐레이터',
+          question: '주인공에게서 절대 흔들리면 안 되는 것은 무엇인가요?',
+          recommendedOptionId: 'design',
+          options: [
+            {
+              id: 'design',
+              label: '외형·디자인',
+              impact: '실루엣, 의상, 색을 visual bible 후보로 먼저 고정합니다.'
+            },
+            {
+              id: 'personality',
+              label: '성격·말투',
+              impact: '말풍선 대사와 표정 연출의 기준을 캐릭터 메모리에 저장합니다.'
+            },
+            {
+              id: 'goal',
+              label: '욕망·목표',
+              impact: '컷의 선택과 행동이 주인공의 목표와 어긋나지 않는지 점검합니다.'
+            }
+          ]
+        },
+        {
+          id: 'comics-world-rule',
+          agentId: 'world-keeper',
+          agentLabel: '배경 설계자',
+          question: '이 만화 세계에서 가장 먼저 정해야 할 규칙은 무엇인가요?',
+          recommendedOptionId: 'ability-cost',
+          options: [
+            {
+              id: 'ability-cost',
+              label: '능력·설정의 비용',
+              impact: '강한 연출일수록 대가와 한계를 함께 적어 긴장감을 지킵니다.'
+            },
+            {
+              id: 'space-structure',
+              label: '공간·장소 구조',
+              impact: '재사용 배경과 동선을 정리해 컷 이동의 혼선을 줄입니다.'
+            },
+            {
+              id: 'social-order',
+              label: '사회·관계 질서',
+              impact: '인물이 마음대로 못 움직이는 압력을 컷의 갈등으로 씁니다.'
+            }
+          ]
         }
       ]
     };
   }
 
-  return {
-    focusLabel: '소설 연재 세팅',
-    notice: defaultNotice,
-    summary: '연재가 길어져도 흔들리지 않도록 독자 약속, 인물 욕망, 세계 규칙, 문체 기준을 먼저 잡습니다.',
-    questions: [
-      {
+  // 연재형(장편·중편)은 회차 경험을 묻고, 단편·단독 완결형은 한 편의 완결 효과를 묻는다.
+  const isSerial = isSerialFormat(blueprint.format);
+  const promiseQuestion: ProjectIntakeQuestion = isSerial
+    ? {
         id: 'episode-promise',
         agentId: 'showrunner',
         agentLabel: '쇼러너',
@@ -241,7 +407,40 @@ export function buildProjectIntakePlan(blueprint: CreativeBlueprint): ProjectInt
             impact: '분량을 줄이고 마지막 전환을 중심으로 장면 수를 제한합니다.'
           }
         ]
-      },
+      }
+    : {
+        id: 'episode-promise',
+        agentId: 'showrunner',
+        agentLabel: '쇼러너',
+        question: '이 한 편이 독자에게 약속하는 경험은 무엇에 가깝나요?',
+        recommendedOptionId: 'single-impact',
+        options: [
+          {
+            id: 'single-impact',
+            label: '하나의 반전',
+            impact: '마지막 전환 하나를 향해 장면 수를 줄이고 군더더기를 덜어냅니다.'
+          },
+          {
+            id: 'slow-immersion',
+            label: '하나의 정서',
+            impact: '사건보다 분위기와 인물 결을 또렷하게 쌓는 장면 설계를 우선합니다.'
+          },
+          {
+            id: 'single-image',
+            label: '하나의 이미지',
+            impact: '독자에게 오래 남을 핵심 장면 하나에 묘사의 무게를 둡니다.'
+          }
+        ]
+      };
+
+  return {
+    focusLabel: isSerial ? '소설 연재 세팅' : '단편 소설 세팅',
+    notice: defaultNotice,
+    summary: isSerial
+      ? '연재가 길어져도 흔들리지 않도록 독자 약속, 인물 욕망, 세계 규칙, 문체 기준을 먼저 잡습니다.'
+      : '한 편으로 완결되는 작품인 만큼, 하나의 효과와 인물 욕망, 세계 규칙, 문체 기준을 먼저 잡습니다.',
+    questions: [
+      promiseQuestion,
       {
         id: 'character-axis',
         agentId: 'character-custodian',
@@ -299,7 +498,7 @@ export function buildProjectIntakePlan(blueprint: CreativeBlueprint): ProjectInt
         options: [
           {
             id: 'clear-commercial',
-            label: '선명한 연재체',
+            label: isSerial ? '선명한 연재체' : '선명한 서술체',
             impact: '짧은 문단, 빠른 정보 전달, 다음 장면으로 넘어가는 추진력을 우선합니다.'
           },
           {
@@ -311,6 +510,88 @@ export function buildProjectIntakePlan(blueprint: CreativeBlueprint): ProjectInt
             id: 'dry-humor',
             label: '건조한 유머',
             impact: '과장 대신 타이밍과 관찰로 웃음을 만드는 문장 규칙을 둡니다.'
+          }
+        ]
+      },
+      {
+        id: 'central-conflict',
+        agentId: 'showrunner',
+        agentLabel: '쇼러너',
+        question: '이야기를 끝까지 밀고 가는 핵심 갈등은 어디에 있나요?',
+        recommendedOptionId: 'outer-threat',
+        options: [
+          {
+            id: 'outer-threat',
+            label: '외부의 적·위협',
+            impact: isSerial
+              ? '회차마다 위협의 강도를 올리는 사건 사다리를 먼저 설계합니다.'
+              : '위협의 강도를 차츰 올리는 사건 사다리를 먼저 설계합니다.'
+          },
+          {
+            id: 'relationship',
+            label: '인물 사이의 관계',
+            impact: isSerial
+              ? '관계의 균열과 회복을 회차 보상의 축으로 삼습니다.'
+              : '관계의 균열과 회복을 이야기의 감정 축으로 삼습니다.'
+          },
+          {
+            id: 'inner-contradiction',
+            label: '주인공 내면의 모순',
+            impact: isSerial
+              ? '주인공이 자기 욕망과 싸우는 장면을 매 회차에 한 번씩 둡니다.'
+              : '주인공이 자기 욕망과 싸우는 장면을 중심 갈등으로 둡니다.'
+          }
+        ]
+      },
+      {
+        id: 'story-destination',
+        agentId: 'continuity-editor',
+        agentLabel: '연속성 감수자',
+        question: '이 이야기는 어디에 도착해야 하나요?',
+        recommendedOptionId: 'goal-reached',
+        options: [
+          {
+            id: 'goal-reached',
+            label: '목표 달성·해결',
+            impact: isSerial
+              ? '결말에서 회수할 약속을 미리 적어 두고 회차가 엇나가지 않게 점검합니다.'
+              : '결말에서 회수할 약속을 미리 적어 두고 이야기가 엇나가지 않게 점검합니다.'
+          },
+          {
+            id: 'inner-change',
+            label: '인물의 내적 변화',
+            impact: '사건보다 주인공의 변화 곡선을 연속성 기준으로 추적합니다.'
+          },
+          {
+            id: 'open-ending',
+            label: '열린 결말·여운',
+            impact: '닫지 않을 질문을 정해 두고 나머지 복선은 회수 대상으로 표시합니다.'
+          }
+        ]
+      },
+      {
+        id: 'writer-worry',
+        agentId: 'creative-coach',
+        agentLabel: '창작 코치',
+        question: '이 작품에서 가장 자신 없는 부분은 어디인가요?',
+        recommendedOptionId: 'momentum',
+        options: [
+          {
+            id: 'momentum',
+            label: '이야기를 끌고 가는 추진력',
+            impact: isSerial
+              ? '쇼러너가 회차 후크와 다음 화 질문을 더 자주 점검합니다.'
+              : '쇼러너가 장면 사이의 추진력과 끌고 가는 질문을 더 자주 점검합니다.'
+          },
+          {
+            id: 'consistency',
+            label: '인물·설정의 일관성',
+            impact: '캐릭터 큐레이터와 연속성 감수자의 검토 빈도를 높입니다.'
+          },
+          {
+            id: 'sentences',
+            label: '문장과 묘사',
+            impact: '문체 큐레이터가 한국어 문장 결을 더 촘촘히 다듬습니다.'
           }
         ]
       }

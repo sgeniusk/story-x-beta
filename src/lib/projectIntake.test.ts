@@ -16,6 +16,17 @@ describe('Story X project intake', () => {
     expect(plan.questions[0].options[0].impact).toContain('회차');
   });
 
+  it('drops serial-chapter language for a standalone short novel', () => {
+    const plan = buildProjectIntakePlan(buildCreativeBlueprint({ medium: 'novel', format: 'short-novel' }));
+
+    expect(plan.focusLabel).toBe('단편 소설 세팅');
+    expect(plan.summary).not.toContain('연재');
+    // 단편 인터뷰는 회차·다음 화를 가정하지 않는다
+    const firstQuestion = plan.questions[0];
+    expect(firstQuestion.question).not.toContain('회차');
+    expect(firstQuestion.options.map((option) => `${option.label} ${option.impact}`).join(' ')).not.toContain('회차');
+  });
+
   it('keeps essay intake centered on lived material and voice boundaries', () => {
     const plan = buildProjectIntakePlan(buildCreativeBlueprint({ medium: 'essay', format: 'personal-essay' }));
 

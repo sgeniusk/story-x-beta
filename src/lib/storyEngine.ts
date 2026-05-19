@@ -25,6 +25,14 @@ export type GenreId =
 
 export type Severity = 'info' | 'warning' | 'error';
 
+// 인물 사이의 관계 한 줄 — 관계도 엣지 하나. strong은 굵은 선, dashed는 점선(불확실·잠정).
+export interface CharacterRelation {
+  targetId: string;
+  label: string;
+  strong?: boolean;
+  dashed?: boolean;
+}
+
 export interface CharacterProfile {
   id: string;
   name: string;
@@ -38,6 +46,39 @@ export interface CharacterProfile {
     claim: string;
     reason: string;
   }>;
+  /** 다른 인물과의 관계 — 관계도 엣지 목록 */
+  relations: CharacterRelation[];
+}
+
+// 캐논 엔티티 정합 상태 — ok는 충돌 없음, conflict는 본문과 어긋남, unverified는 아직 본문에 미등장.
+export type CanonStatus = 'ok' | 'conflict' | 'unverified';
+
+// 인물/장소/사물/사건이 공유하는 캐논 엔티티 공통 형태. status가 conflict면 conflict에 어긋난 내용을 적는다.
+export interface CanonEntity {
+  id: string;
+  name: string;
+  sub: string;
+  facts: string[];
+  appearedIn: string[];
+  status: CanonStatus;
+  conflict?: string;
+}
+
+// 작품 연표의 한 항목 — 연도·계절·라벨·메모. 아직 확정 안 된 시점은 status로 표시한다.
+export interface TimelineEntry {
+  id: string;
+  year: number;
+  season: string;
+  label: string;
+  note: string;
+  status: CanonStatus;
+}
+
+// 작품 바이블 규칙 한 섹션 — 톤·문장 리듬·세계관 규칙·어휘 금기·시각 모티프 중 하나.
+export interface BibleSection {
+  id: string;
+  title: string;
+  body: string;
 }
 
 export interface WorldRule {
@@ -57,12 +98,24 @@ export interface CanonFact {
   statement: string;
 }
 
+// 회차 구성 단위 — 이야기 흐름의 의미 단위 하나. 번호·라벨·요약으로 원고 위에 오버레이된다.
+export interface ChapterBeat {
+  id: string;
+  no: number;
+  label: string;
+  summary: string;
+  /** 계획된 긴장 강도 — 0~100. 긴장 곡선 차트의 한 점이 된다. */
+  tension: number;
+}
+
 export interface Chapter {
   id: string;
   episode: number;
   title: string;
   hook: string;
   outline: string[];
+  /** 회차 구성 — 번호 매겨진 흐름 단위 목록. 원고와는 오버레이 관계(원고는 자유 textarea). */
+  beats: ChapterBeat[];
   prose: string;
   memoryAnchors: string[];
   newCanonFacts: CanonFact[];
@@ -87,6 +140,20 @@ export function unlockChapter(project: SeriesProject, chapterId: string): Series
   };
 }
 
+// 작품 무게중심 — 대중성/작품성 중 어디에 비중을 두는지. 생성·검토 강조점을 가른다.
+export type CreativeWeight = 'popular' | 'balanced' | 'literary';
+
+export function describeCreativeWeight(weight: CreativeWeight): string {
+  switch (weight) {
+    case 'popular':
+      return '대중성 우선 — 사건·후크·보상 리듬을 빠르고 선명하게';
+    case 'literary':
+      return '작품성 우선 — 여백·주제 층위·고유한 목소리를 깊게';
+    default:
+      return '균형 — 표면 사건은 명료하게, 심층 주제는 깊게';
+  }
+}
+
 export interface SeriesProject {
   id: string;
   title: string;
@@ -94,13 +161,30 @@ export interface SeriesProject {
   localization: LocalizationPolicy;
   genre: GenreId;
   tone: string;
+  /** 표면 약속 — 독자에게 거는, 플롯·사건 차원의 약속 */
   audiencePromise: string;
+  /** 심층 질문 — 표면 사건 아래에서 작품이 진짜 묻는 것 */
+  deepQuestion: string;
+  /** 작품 무게중심 — 대중성/작품성 비중 */
+  creativeWeight: CreativeWeight;
+  /** 형식·구조 의도 — 시점·시제·구성이 주제를 어떻게 수행하는가 */
+  formIntent: string;
   currentEpisode: number;
   characters: CharacterProfile[];
   worldRules: WorldRule[];
   canonFacts: CanonFact[];
   openThreads: string[];
   chapters: Chapter[];
+  /** 캐논 장소 — 데이터 모드 장소 카드 */
+  places: CanonEntity[];
+  /** 캐논 사물 — 데이터 모드 사물 카드 */
+  objects: CanonEntity[];
+  /** 캐논 사건 — 데이터 모드 사건 카드 */
+  events: CanonEntity[];
+  /** 작품 연표 — 데이터 모드 시간선 */
+  timeline: TimelineEntry[];
+  /** 바이블 규칙 5섹션 — tone·rhythm·world·vocab·motif */
+  bibleOutline: BibleSection[];
 }
 
 export interface ProductionRequest {
@@ -117,6 +201,9 @@ export interface AgentRun {
   status: AgentRunStatus;
   output: string;
   evidence: string[];
+  // 이번 회차 검토에서 이 에이전트가 잘했다고 본 점과 짚어낸 문제. 옛 데이터/목 검토 호환을 위해 옵션.
+  strengths?: string[];
+  issues?: string[];
 }
 
 export interface ContinuityIssue {
@@ -131,6 +218,65 @@ export interface ProductionResult {
   agentRuns: AgentRun[];
   continuityIssues: ContinuityIssue[];
   updatedProject: SeriesProject;
+}
+
+export interface DraftChapterPayloadCanonFact {
+  owner: string;
+  statement: string;
+}
+
+export interface DraftChapterPayloadBeat {
+  label: string;
+  summary: string;
+  /** 계획된 긴장 강도 — 0~100. 구버전·실패 응답에서는 누락될 수 있어 정규화 시 기본값으로 보정한다. */
+  tension?: number;
+}
+
+// 기본 긴장 강도 — beat에 tension이 누락됐을 때 채우는 값.
+export const DEFAULT_BEAT_TENSION = 50;
+
+// 임의 값을 0~100 사이 정수 긴장 강도로 정규화한다. 숫자가 아니면 기본값으로 떨어진다.
+function normalizeTension(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return DEFAULT_BEAT_TENSION;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+export interface DraftChapterPayload {
+  title: string;
+  hook: string;
+  outline: string[];
+  /** 회차 구성 — LLM이 초안과 함께 내는 흐름 단위 outline. 번호는 커밋 시 매긴다. */
+  beats: DraftChapterPayloadBeat[];
+  prose: string;
+  newCanonFacts: DraftChapterPayloadCanonFact[];
+}
+
+// 라벨·요약 쌍 목록을 번호 매겨진 ChapterBeat[]로 정규화한다. 빈 항목은 버리고, tension 누락은 기본값으로 보정한다.
+export function normalizeChapterBeats(
+  episode: number,
+  raw: ReadonlyArray<{ label?: unknown; summary?: unknown; tension?: unknown }> | undefined
+): ChapterBeat[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw
+    .map((item) => ({
+      label: typeof item?.label === 'string' ? item.label.trim() : '',
+      summary: typeof item?.summary === 'string' ? item.summary.trim() : '',
+      tension: normalizeTension(item?.tension)
+    }))
+    .filter((item) => item.label.length > 0 || item.summary.length > 0)
+    .map((item, index) => ({
+      id: `beat-${episode.toString().padStart(3, '0')}-${String(index + 1).padStart(2, '0')}`,
+      no: index + 1,
+      label: item.label || `구성 ${index + 1}`,
+      summary: item.summary,
+      tension: item.tension
+    }));
 }
 
 export type EditorViewModeId = 'binder' | 'corkboard' | 'outliner' | 'scrivenings';
@@ -274,6 +420,10 @@ export function createSeedProject(): SeriesProject {
           claim: '서윤은 오빠를 처음부터 싫어했고 찾고 싶어 하지 않는다.',
           reason: '시리즈의 장기 동기는 오빠를 찾는 죄책감과 애정이다.'
         }
+      ],
+      relations: [
+        { targetId: 'ian', label: '불완전한 협력자', strong: true },
+        { targetId: 'do-hyun', label: '찾고 있는 오빠', dashed: true }
       ]
     },
     {
@@ -290,6 +440,28 @@ export function createSeedProject(): SeriesProject {
           claim: '이안은 처음부터 모든 비밀을 솔직히 공개했다.',
           reason: '이안의 긴장감은 선택적 침묵과 불완전한 협력에서 나온다.'
         }
+      ],
+      relations: [
+        { targetId: 'seo-yoon', label: '불완전한 협력자', strong: true }
+      ]
+    },
+    {
+      id: 'do-hyun',
+      name: '한도현',
+      role: '사라진 서윤의 오빠 — 전직 탑 기록관',
+      desire: '탑이 지운 진짜 이름을 되돌려 놓는다',
+      wound: '동생을 지키려고 자신의 이름 일부를 탑에 내주었다',
+      currentState: '아직 직접 등장하지 않고 표식과 편지로만 흔적을 남긴다',
+      voiceRules: ['직접 등장 전까지는 사물·표식으로만 말한다'],
+      canonAnchors: ['도현은 탑에 이름의 일부를 대가로 바치고 사라졌다.'],
+      forbiddenContradictions: [
+        {
+          claim: '도현은 처음부터 탑과 무관한 인물이었다.',
+          reason: '도현의 실종과 탑의 출입 대가가 시리즈의 핵심 미스터리를 묶는다.'
+        }
+      ],
+      relations: [
+        { targetId: 'seo-yoon', label: '지키려 한 동생', dashed: true }
       ]
     }
   ];
@@ -340,6 +512,148 @@ export function createSeedProject(): SeriesProject {
     }
   ];
 
+  const places: CanonEntity[] = [
+    {
+      id: 'place-moon-tower',
+      name: '달의 탑',
+      sub: '왕도 북쪽 끝 · 출입 통제 구역',
+      facts: [
+        '초대장, 빚, 이름의 일부 중 하나를 대가로 받은 사람만 들어갈 수 있다.',
+        '하층은 폐쇄된 기록실로, 마르지 않은 잉크 표식이 남아 있다.'
+      ],
+      appearedIn: [],
+      status: 'ok'
+    },
+    {
+      id: 'place-royal-archive',
+      name: '왕립 문서고',
+      sub: '왕도 중심부 · 서윤이 해임된 직장',
+      facts: [
+        '서윤이 필사관으로 일하다 기록 수정 혐의로 해임된 곳이다.',
+        '비공식 의뢰는 대부분 이곳 출신 인맥을 통해 들어온다.'
+      ],
+      appearedIn: [],
+      status: 'unverified'
+    },
+    {
+      id: 'place-lower-record-room',
+      name: '하층 기록실',
+      sub: '달의 탑 지하 · 봉인된 구역',
+      facts: [
+        '탑이 지운 이름의 잔재가 은빛 먼지로 벽에 묻어 있다.',
+        '오빠의 필압으로 새겨진 표식이 발견되는 장소로 계획됐다.'
+      ],
+      appearedIn: [],
+      status: 'unverified'
+    }
+  ];
+
+  const objects: CanonEntity[] = [
+    {
+      id: 'object-old-lamp',
+      name: '낡은 등잔',
+      sub: '문서고에서 가져온 휴대용 조명',
+      facts: [
+        '서윤이 하층으로 내려갈 때 들고 가는 유일한 광원이다.',
+        '불빛이 닿으면 지워진 표식이 잠깐 떠오른다.'
+      ],
+      appearedIn: [],
+      status: 'ok'
+    },
+    {
+      id: 'object-sealed-invitation',
+      name: '봉인된 초대장',
+      sub: '이안이 쥐고 있는 탑 출입 증표',
+      facts: [
+        '대가를 적는 빈칸이 있고, 이안은 그 칸을 손바닥으로 가린다.',
+        '빈칸에 무엇이 적혔는지는 아직 본문에 드러나지 않았다.'
+      ],
+      appearedIn: [],
+      status: 'conflict',
+      conflict: '세계 규칙은 대가가 「이름의 일부」라 못박지만, 초대장 빈칸 묘사는 「빚」으로도 읽힌다.'
+    }
+  ];
+
+  const events: CanonEntity[] = [
+    {
+      id: 'event-archive-dismissal',
+      name: '문서고 해임',
+      sub: '연재 시작 약 3개월 전',
+      facts: [
+        '서윤이 기록 수정 혐의로 왕립 문서고에서 해임됐다.',
+        '이 사건이 비공식 의뢰를 받게 된 직접적 계기다.'
+      ],
+      appearedIn: [],
+      status: 'ok'
+    },
+    {
+      id: 'event-brother-disappearance',
+      name: '오빠의 실종',
+      sub: '연재 시작 약 1년 전',
+      facts: [
+        '도현이 마지막 편지를 남기고 사라졌다.',
+        '편지에 서윤의 필체가 섞여 있던 이유는 아직 미해결이다.'
+      ],
+      appearedIn: [],
+      status: 'unverified'
+    }
+  ];
+
+  const timeline: TimelineEntry[] = [
+    {
+      id: 'timeline-001',
+      year: 0,
+      season: '1년 전',
+      label: '오빠의 실종',
+      note: '도현이 마지막 편지를 남기고 달의 탑 방향으로 사라진다.',
+      status: 'ok'
+    },
+    {
+      id: 'timeline-002',
+      year: 0,
+      season: '3개월 전',
+      label: '문서고 해임',
+      note: '서윤이 기록 수정 혐의로 왕립 문서고에서 해임된다.',
+      status: 'ok'
+    },
+    {
+      id: 'timeline-003',
+      year: 0,
+      season: '현재',
+      label: '하층 진입 계획',
+      note: '서윤이 비공식 의뢰를 받아 달의 탑 하층으로 내려갈 시점 — 정확한 일자 미확정.',
+      status: 'unverified'
+    }
+  ];
+
+  const bibleOutline: BibleSection[] = [
+    {
+      id: 'tone',
+      title: '톤',
+      body: '서늘한 궁정 미스터리. 감정은 직접 말하지 않고 사물의 상태로 우회해 드러낸다. 직접적 감정 토로는 회차당 한 번을 넘기지 않는다.'
+    },
+    {
+      id: 'rhythm',
+      title: '문장 리듬',
+      body: '평소엔 호흡이 긴 묘사를 쓰되 결정적 순간에는 단문으로 끊는다. 비슷한 길이의 문단이 세 번 이상 이어지지 않게 한다.'
+    },
+    {
+      id: 'world',
+      title: '세계관 규칙',
+      body: '달의 탑은 초대장·빚·이름의 일부 중 하나를 대가로 받은 사람만 들인다. 기억 잉크는 사실을 창조하지 못하고 이미 존재한 기억의 순서만 바꾼다.'
+    },
+    {
+      id: 'vocab',
+      title: '어휘 금기',
+      body: '「운명」, 「숙명」은 쓰지 않는다. 「기억」, 「기록」은 핵심어이므로 회차당 합쳐 과용하지 않도록 의식한다.'
+    },
+    {
+      id: 'motif',
+      title: '시각 모티프',
+      body: '은빛 먼지 — 지워진 이름. 마르지 않은 잉크 — 방금 일어난 기억. 가려진 빈칸 — 숨겨진 대가. 회차마다 셋 중 하나는 배치한다.'
+    }
+  ];
+
   return {
     id: 'sample-project',
     title: '샘플 작품',
@@ -348,12 +662,60 @@ export function createSeedProject(): SeriesProject {
     genre: 'romance-fantasy',
     tone: '서늘한 궁정 미스터리와 느리게 타오르는 신뢰',
     audiencePromise: '매 회차마다 감정적 선택, 새로운 단서, 다음 편을 누르게 하는 반전을 제공한다.',
+    deepQuestion: '기록을 고친다는 것은 사람을 구하는 일인가, 또 다른 거짓을 쌓는 일인가?',
+    creativeWeight: 'balanced',
+    formIntent: '서윤에게 밀착한 3인칭 제한 시점, 과거형. 회차마다 한 장소·한 장면에 머물러 긴장을 모은다.',
     currentEpisode: 0,
     characters,
     worldRules,
     canonFacts,
     openThreads: ['오빠의 마지막 편지에는 왜 서윤의 필체가 남아 있었나?', '이안은 탑에 무엇을 두고 나왔나?'],
-    chapters: []
+    chapters: [],
+    places,
+    objects,
+    events,
+    timeline,
+    bibleOutline
+  };
+}
+
+// 작품 제목 후보를 자유 서술/초안에서 다듬는다. 빈 입력이면 중립 기본값을 돌려준다.
+function deriveProjectTitle(rawTitle: string | undefined): string {
+  const cleaned = (rawTitle ?? '').trim();
+  if (cleaned.length === 0) {
+    return '새 작품';
+  }
+  // "1화 — 제목", "1화: 제목" 같은 회차 접두를 떼어 작품 제목으로 쓴다.
+  const withoutEpisode = cleaned.replace(/^\s*\d+\s*화\s*[—\-:·]?\s*/u, '').trim();
+  return withoutEpisode.length > 0 ? withoutEpisode : cleaned;
+}
+
+// 새 프로젝트의 빈 캔버스 — 샘플 작품의 인물·장소·떡밥을 전혀 담지 않는다.
+// 새 프로젝트 플로우(initialDraftPayload)가 에디터를 열 때 이걸로 시작해야 샘플 데이터가 새지 않는다.
+// 인물/장소/사물/사건/시간선/캐논/열린 질문은 비어 있고, 작가와 에이전트가 채운다.
+export function createEmptyProject(input: { title?: string } = {}): SeriesProject {
+  return {
+    id: `project-${Date.now().toString(36)}`,
+    title: deriveProjectTitle(input.title),
+    logline: '',
+    localization: createDefaultLocalizationPolicy(),
+    genre: 'urban-fantasy',
+    tone: '',
+    audiencePromise: '',
+    deepQuestion: '',
+    creativeWeight: 'balanced',
+    formIntent: '',
+    currentEpisode: 0,
+    characters: [],
+    worldRules: [],
+    canonFacts: [],
+    openThreads: [],
+    chapters: [],
+    places: [],
+    objects: [],
+    events: [],
+    timeline: [],
+    bibleOutline: []
   };
 }
 
@@ -430,12 +792,35 @@ export function produceNextChapter(project: SeriesProject, request: ProductionRe
     `그 순간 ${primaryCharacter.name}은 오빠가 쓰던 필압으로 새겨진 표식을 발견했다. 잉크는 마르지 않았고, 탑은 방금 누군가를 기억한 것처럼 낮게 울었다.`
   ].join('\n\n');
 
+  const beats = normalizeChapterBeats(episode, [
+    {
+      label: '하층으로 내려가는 길',
+      summary: `${primaryCharacter.name}이 등잔을 들고 달의 탑 하층으로 들어선다.`,
+      tension: 30
+    },
+    {
+      label: '지워진 이름의 흔적',
+      summary: '벽의 은빛 먼지에서 누군가 지운 이름의 자취를 읽는다.',
+      tension: 52
+    },
+    {
+      label: `${partner.name}의 선택적 침묵`,
+      summary: `${partner.name}이 초대장의 빈칸을 가리며 규칙의 일부를 숨긴다.`,
+      tension: 68
+    },
+    {
+      label: '마르지 않은 표식',
+      summary: `${primaryCharacter.name}이 오빠의 필압으로 새겨진 표식을 발견하고 탑이 낮게 운다.`,
+      tension: 88
+    }
+  ]);
   const chapter: Chapter = {
     id: `episode-${episode}`,
     episode,
     title: `${episode}화: 마르지 않은 이름`,
     hook: '오빠의 표식이 방금 쓰인 것처럼 빛나고, 이안은 초대장의 대가를 숨긴다.',
     outline,
+    beats,
     prose,
     memoryAnchors,
     newCanonFacts
@@ -452,16 +837,334 @@ export function produceNextChapter(project: SeriesProject, request: ProductionRe
   };
 }
 
+// LLM 브리지가 만든 회차 초안 payload를 캐논 정규화·에이전트 검토와 함께 정식 Chapter로 커밋한다
+export function chapterFromDraftPayload(
+  project: SeriesProject,
+  payload: DraftChapterPayload,
+  request: ProductionRequest
+): ProductionResult {
+  const episode = project.currentEpisode + 1;
+  const memoryAnchors = project.canonFacts.slice(0, 4).map((fact) => fact.statement);
+  const continuityIssues = validateContinuity(project, [request.intent, request.pressure]);
+  const newCanonFacts: CanonFact[] = (payload.newCanonFacts ?? [])
+    .filter((fact) => typeof fact?.statement === 'string' && fact.statement.trim().length > 0)
+    .map((fact, index) => ({
+      id: `canon-${episode.toString().padStart(3, '0')}-llm-${String(index + 1).padStart(2, '0')}`,
+      episode,
+      owner: normalizeCanonOwner(fact.owner),
+      statement: fact.statement.trim()
+    }));
+  const chapter: Chapter = {
+    id: `episode-${episode}`,
+    episode,
+    title: payload.title?.trim() || `${episode}화`,
+    hook: payload.hook?.trim() ?? '',
+    outline: (payload.outline ?? []).filter(
+      (line): line is string => typeof line === 'string' && line.trim().length > 0
+    ),
+    beats: normalizeChapterBeats(episode, payload.beats),
+    prose: payload.prose ?? '',
+    memoryAnchors,
+    newCanonFacts
+  };
+  const agentRuns = buildAgentRuns(project, request, chapter, continuityIssues);
+  const updatedProject = commitChapter(project, chapter);
+
+  return {
+    chapter,
+    agentRuns,
+    continuityIssues: continuityIssues.filter((issue) => issue.severity !== 'warning'),
+    updatedProject
+  };
+}
+
+function normalizeCanonOwner(owner: string): CanonFact['owner'] {
+  return owner === 'character' || owner === 'world' || owner === 'plot' ? owner : 'plot';
+}
+
+const CONTEXT_CANON_LIMIT = 40;
+const CONTEXT_CANON_HEAD = 6;
+const CONTEXT_THREAD_LIMIT = 8;
+
+// 2화 이상 생성 시 LLM에 넘길 연속성 컨텍스트를 만든다.
+// 장편에서 캐논이 쌓여도 프롬프트가 무한정 커지지 않도록 초반 정착 캐논 + 최근 캐논으로 예산을 제한한다.
+export function buildProjectContextDigest(project: SeriesProject): string {
+  const lines: string[] = [];
+
+  // 작품 계약 — 1화부터 모든 생성이 따라야 하는 약속. 회차가 없어도 항상 넘긴다.
+  lines.push('작품 계약:');
+  if (project.audiencePromise) {
+    lines.push(`- 표면 약속(독자에게 거는 약속): ${project.audiencePromise}`);
+  }
+  if (project.deepQuestion) {
+    lines.push(`- 심층 질문(작품이 진짜 묻는 것): ${project.deepQuestion}`);
+  }
+  if (project.formIntent) {
+    lines.push(`- 형식·구조(시점·시제·구성 의도): ${project.formIntent}`);
+  }
+  lines.push(`- 무게중심: ${describeCreativeWeight(project.creativeWeight ?? 'balanced')}`);
+
+  if (project.chapters.length > 0) {
+    lines.push('', `지금까지 ${project.currentEpisode}화까지 진행됨.`);
+  }
+
+  if (project.canonFacts.length > 0) {
+    lines.push('', '확정 캐논 (절대 위반 금지):');
+    const facts = project.canonFacts;
+    const printFact = (fact: CanonFact) => lines.push(`- [${fact.owner}] ${fact.statement}`);
+
+    if (facts.length <= CONTEXT_CANON_LIMIT) {
+      facts.forEach(printFact);
+    } else {
+      const tailCount = CONTEXT_CANON_LIMIT - CONTEXT_CANON_HEAD;
+      facts.slice(0, CONTEXT_CANON_HEAD).forEach(printFact);
+      lines.push(`- … 초반 캐논 ${facts.length - CONTEXT_CANON_LIMIT}개 생략, 최근 캐논 우선 …`);
+      facts.slice(facts.length - tailCount).forEach(printFact);
+    }
+  }
+  if (project.characters.length > 0) {
+    lines.push('', '인물:');
+    project.characters.forEach((character) =>
+      lines.push(
+        `- ${character.name} (${character.role}) — 욕망: ${character.desire} / 상처: ${character.wound} / 현재: ${character.currentState}`
+      )
+    );
+  }
+  if (project.worldRules.length > 0) {
+    lines.push('', '세계 규칙:');
+    project.worldRules.forEach((rule) => lines.push(`- ${rule.title}: ${rule.rule}`));
+  }
+  if (project.openThreads.length > 0) {
+    lines.push('', '열린 떡밥:');
+    project.openThreads.slice(-CONTEXT_THREAD_LIMIT).forEach((thread) => lines.push(`- ${thread}`));
+  }
+
+  return lines.join('\n');
+}
+
+// 데이터 모드 캐논 분야 — 데이터 검토가 다루는 5종.
+export type CanonReviewCategory = 'characters' | 'places' | 'objects' | 'events' | 'timeline';
+
+const canonReviewCategoryLabels: Record<CanonReviewCategory, string> = {
+  characters: '인물',
+  places: '장소',
+  objects: '사물',
+  events: '사건',
+  timeline: '시간선'
+};
+
+// 데이터 검토용 분야 라벨을 돌려준다 — 인물/장소/사물/사건/시간선.
+export function getCanonReviewCategoryLabel(category: CanonReviewCategory): string {
+  return canonReviewCategoryLabels[category];
+}
+
+function describeCanonStatus(status: CanonStatus, conflict?: string): string {
+  if (status === 'conflict') {
+    return conflict ? `충돌 — ${conflict}` : '충돌';
+  }
+  if (status === 'unverified') {
+    return '미확인 — 아직 본문에 등장하지 않음';
+  }
+  return '정합 확인됨';
+}
+
+// 한 캐논 분야의 엔티티를 LLM 데이터 검토에 넘길 텍스트로 직렬화한다.
+// 인물은 욕망·상처·관계까지, 장소/사물/사건은 사실·등장 회차·상태, 시간선은 연도·계절·라벨을 담는다.
+export function serializeCanonCategory(project: SeriesProject, category: CanonReviewCategory): string {
+  const lines: string[] = [`분야: ${getCanonReviewCategoryLabel(category)}`];
+
+  if (category === 'characters') {
+    if (project.characters.length === 0) {
+      lines.push('(등록된 인물이 없습니다.)');
+      return lines.join('\n');
+    }
+    project.characters.forEach((character) => {
+      lines.push('', `- ${character.name} (${character.role})`);
+      lines.push(`  · 욕망: ${character.desire}`);
+      lines.push(`  · 상처: ${character.wound}`);
+      lines.push(`  · 현재 상태: ${character.currentState}`);
+      if (character.relations.length > 0) {
+        const relationText = character.relations
+          .map((relation) => {
+            const target = project.characters.find((item) => item.id === relation.targetId);
+            const targetName = target ? target.name : relation.targetId;
+            return `${targetName}(${relation.label}${relation.dashed ? ', 잠정' : ''})`;
+          })
+          .join(', ');
+        lines.push(`  · 관계: ${relationText}`);
+      }
+    });
+    return lines.join('\n');
+  }
+
+  if (category === 'timeline') {
+    if (project.timeline.length === 0) {
+      lines.push('(등록된 시간선 항목이 없습니다.)');
+      return lines.join('\n');
+    }
+    project.timeline.forEach((entry) => {
+      lines.push(
+        '',
+        `- ${entry.year}년 ${entry.season} · ${entry.label} [${describeCanonStatus(entry.status)}]`
+      );
+      if (entry.note) {
+        lines.push(`  · 메모: ${entry.note}`);
+      }
+    });
+    return lines.join('\n');
+  }
+
+  const entities = category === 'places' ? project.places : category === 'objects' ? project.objects : project.events;
+  if (entities.length === 0) {
+    lines.push(`(등록된 ${getCanonReviewCategoryLabel(category)} 엔티티가 없습니다.)`);
+    return lines.join('\n');
+  }
+  entities.forEach((entity) => {
+    lines.push('', `- ${entity.name}${entity.sub ? ` (${entity.sub})` : ''} [${describeCanonStatus(entity.status, entity.conflict)}]`);
+    entity.facts.forEach((fact) => lines.push(`  · 사실: ${fact}`));
+    if (entity.appearedIn.length > 0) {
+      lines.push(`  · 등장 회차: ${entity.appearedIn.join(', ')}`);
+    }
+  });
+  return lines.join('\n');
+}
+
+// 데이터 검토 노트 한 건 — 정합(consistency check) 또는 제안(strengthening idea).
+export interface DataReviewNoteRecord {
+  kind: '정합' | '제안';
+  title: string;
+  body: string;
+}
+
+export interface DeterministicDataReview {
+  summary: string;
+  notes: DataReviewNoteRecord[];
+}
+
+// 브리지 미연결·오프라인일 때 쓰는 deterministic 데이터 검토 — 실제 엔티티 상태에서 정합/제안 노트를 만든다.
+export function buildDeterministicDataReview(
+  project: SeriesProject,
+  category: CanonReviewCategory
+): DeterministicDataReview {
+  const label = getCanonReviewCategoryLabel(category);
+  const notes: DataReviewNoteRecord[] = [];
+
+  if (category === 'characters') {
+    const count = project.characters.length;
+    const noRelations = project.characters.filter((character) => character.relations.length === 0);
+    notes.push({
+      kind: '정합',
+      title: `${label} ${count}명의 욕망·상처 정합`,
+      body:
+        count > 0
+          ? `등록된 인물 ${count}명의 욕망과 상처가 서로 모순되지 않는지 확인했습니다. 회차가 쌓이면 현재 상태와 캐논 사실의 어긋남을 다시 점검하세요.`
+          : '아직 등록된 인물이 없어 정합을 확인할 대상이 없습니다.'
+    });
+    notes.push({
+      kind: '제안',
+      title: noRelations.length > 0 ? '관계가 비어 있는 인물 보강' : '인물 관계 심화',
+      body:
+        noRelations.length > 0
+          ? `${noRelations.map((character) => character.name).join(', ')}의 관계가 비어 있습니다. 다른 인물과의 관계를 한 줄이라도 채우면 관계도가 살아납니다.`
+          : '관계도의 잠정(점선) 관계 중 회차에서 확정할 만한 것을 골라 굵은 선으로 올리면 인물 망이 단단해집니다.'
+    });
+    return {
+      summary: `${label} 분야 deterministic 검토 — 인물 ${count}명의 정합과 보강 지점을 정리했습니다. 실제 검토는 Claude 구독으로 실행하세요.`,
+      notes
+    };
+  }
+
+  if (category === 'timeline') {
+    const entries = project.timeline;
+    const flagged = entries.filter((entry) => entry.status !== 'ok');
+    notes.push({
+      kind: '정합',
+      title: flagged.length > 0 ? `시간선 미확정 ${flagged.length}건` : '시간선 연도 정합',
+      body:
+        flagged.length > 0
+          ? `${flagged.map((entry) => `${entry.year}년 ${entry.label}`).join(', ')} 항목이 아직 확정되지 않았습니다. 본문과 대조해 연도·계절을 확정하세요.`
+          : '등록된 시간선 항목의 연도 순서와 계절이 서로 어긋나지 않습니다.'
+    });
+    notes.push({
+      kind: '제안',
+      title: '시간선 공백 보강',
+      body:
+        entries.length > 1
+          ? '연속된 두 항목 사이의 간격이 큰 구간이 있으면, 그 사이를 메우는 사건 한 줄을 더하면 연표가 촘촘해집니다.'
+          : '시간선 항목이 부족합니다. 핵심 사건의 연도를 두세 개 더 등록하면 회차 간 시점 검증이 쉬워집니다.'
+    });
+    return {
+      summary: `${label} 분야 deterministic 검토 — 시간선 ${entries.length}개 항목의 정합과 공백을 정리했습니다. 실제 검토는 Claude 구독으로 실행하세요.`,
+      notes
+    };
+  }
+
+  const entities = category === 'places' ? project.places : category === 'objects' ? project.objects : project.events;
+  const conflicts = entities.filter((entity) => entity.status === 'conflict');
+  const unverified = entities.filter((entity) => entity.status === 'unverified');
+  notes.push({
+    kind: '정합',
+    title:
+      conflicts.length > 0
+        ? `${label} 충돌 ${conflicts.length}건`
+        : unverified.length > 0
+          ? `${label} 미확인 ${unverified.length}건`
+          : `${label} 사실 정합`,
+    body:
+      conflicts.length > 0
+        ? `${conflicts.map((entity) => entity.name).join(', ')}의 사실이 본문과 어긋납니다. 충돌 내용을 확인하고 사실 또는 본문을 맞추세요.`
+        : unverified.length > 0
+          ? `${unverified.map((entity) => entity.name).join(', ')}이(가) 아직 본문에 등장하지 않았습니다. 등장 회차를 채우거나 사용 계획을 정하세요.`
+          : `등록된 ${label} 엔티티의 사실과 등장 회차가 서로 어긋나지 않습니다.`
+  });
+  notes.push({
+    kind: '제안',
+    title: `${label} 활용 보강`,
+    body:
+      entities.length > 0
+        ? `등록된 ${label} 중 등장 회차가 하나뿐인 엔티티는 다음 회차에서 다시 불러 쓰면 작품의 밀도가 올라갑니다.`
+        : `아직 등록된 ${label} 엔티티가 없습니다. 작품에 이미 나온 ${label}을(를) 캐논으로 등록하면 연속성 검증이 가능해집니다.`
+  });
+  return {
+    summary: `${label} 분야 deterministic 검토 — ${label} ${entities.length}개 엔티티의 정합과 보강을 정리했습니다. 실제 검토는 Claude 구독으로 실행하세요.`,
+    notes
+  };
+}
+
+export interface ApprovedMemoryInput {
+  id: string;
+  owner: string;
+  statement: string;
+}
+
+// 승인된 검토 기억 후보를 실제 작품 캐논으로 반영한다 — 생성-검토-승인 루프를 닫는 지점
+export function applyApprovedMemory(project: SeriesProject, approved: ApprovedMemoryInput[]): SeriesProject {
+  const newFacts: CanonFact[] = approved
+    .filter((item) => typeof item.statement === 'string' && item.statement.trim().length > 0)
+    .map((item) => ({
+      id: `canon-approved-${item.id}`,
+      episode: project.currentEpisode,
+      owner: normalizeCanonOwner(item.owner),
+      statement: item.statement.trim()
+    }));
+
+  if (newFacts.length === 0) {
+    return project;
+  }
+
+  return {
+    ...project,
+    canonFacts: [...project.canonFacts, ...newFacts]
+  };
+}
+
 export function commitChapter(project: SeriesProject, chapter: Chapter): SeriesProject {
+  // 회차를 커밋해도 열린 질문은 그대로 둔다 — 떡밥은 작가/에이전트 검토가 관리하며,
+  // 엔진이 임의 문장을 끼워 넣지 않는다(빈 프로젝트에 샘플 떡밥이 새지 않도록).
   return {
     ...project,
     currentEpisode: chapter.episode,
     canonFacts: [...project.canonFacts, ...chapter.newCanonFacts],
-    openThreads: [
-      ...project.openThreads.slice(0, 1),
-      '새 표식은 현재 시점에서 누가 남겼는가?',
-      '이름의 일부를 잃으면 인물 관계는 어떻게 변하는가?'
-    ],
     chapters: [...project.chapters, chapter]
   };
 }

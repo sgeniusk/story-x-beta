@@ -26,18 +26,65 @@ export interface StoryXVersionLogEntry {
 
 export const STORYX_VERSION: StoryXVersionInfo = {
   product: 'Story X',
-  version: '0.7.1',
+  version: '0.10.0',
   channel: 'alpha',
-  label: 'Alpha v0.7.1',
-  codename: 'Editor Rail Fix',
-  releasedAt: '2026-05-15',
-  latestCommit: '43b60ac',
-  testProof: '111 tests passing',
+  label: 'Alpha v0.10.0',
+  codename: 'Quiet Studio',
+  releasedAt: '2026-05-18',
+  latestCommit: 'd05aa6a',
+  testProof: '127 tests passing',
   buildProof: 'Vite production build passing',
-  summary: '회차 탭이 원고 행으로 늘어나는 에디터 레이아웃 문제를 고친 알파 핫픽스입니다.'
+  summary: '랜딩·프로젝트·홈·에디터·로그인을 Notion 디자인 시스템으로 다시 세우고, 에디터 작업 구조를 작가가 원고에 집중하도록 정리한 디자인 마일스톤입니다.'
 };
 
 export const storyxVersionLog: StoryXVersionLogEntry[] = [
+  {
+    version: '0.10.0',
+    label: 'Alpha v0.10.0',
+    date: '2026-05-18',
+    title: 'Notion 디자인 시스템과 에디터 구조 개편',
+    commit: 'd05aa6a',
+    changes: [
+      '랜딩·프로젝트 목록·홈 플로우·에디터·로그인을 Notion 디자인 시스템(라이트 캔버스·purple primary·사각 버튼)으로 다시 지었습니다.',
+      '에디터를 원고가 주인공이 되도록 정리했습니다 — 얇은 툴스트립, 상단바 액션 축소, 트랙 전환 페이드.',
+      '에디터 좌측 레일을 단일 스크롤·카드형 회차 목록·캐논 건강도 바로, 바이블 목차를 갤러리 카드 그리드로 바꿨습니다.',
+      '작가진 다이얼로그를 헤더·본문 스크롤·입력 3분할로 나눠 조언이 길어도 입력창이 항상 보입니다.',
+      '작가 인터뷰 질문을 매체별 6~10개로 늘리고, 자유 메모를 마지막 단계로 분리했습니다.',
+      '브랜드 심볼 로고를 모든 화면 상단에 복원했습니다.'
+    ],
+    verification: ['npm test: 28 files / 127 tests', 'npm run build: pass'],
+    next: '만화 제작실과 서버측 LLM 운영(2단계 E)을 준비한다.'
+  },
+  {
+    version: '0.9.0',
+    label: 'Alpha v0.9.0',
+    date: '2026-05-17',
+    title: '닫힌 창작 루프와 craft 적용',
+    commit: '35fdc55',
+    changes: [
+      '검토에서 승인한 기억 후보가 실제 작품 캐논으로 반영되어 생성-검토-승인 루프가 닫혔습니다.',
+      '작가 인터뷰가 매체별 고정 질문 대신 작가가 쓴 자유 서술을 읽고 그 작품에 맞는 질문을 만듭니다.',
+      '인터뷰어가 유명 작가 오마주 페르소나(아가타 크리스·도스토옙·무라카메 등)로 묻습니다.',
+      '대중성·작품성 리서치를 반영해 Story Contract(표면 약속·심층 질문·무게중심)와 검토 craft 기준, 문체 평가를 확장했습니다.',
+      '장편 10화 회귀 하네스, 작품 버전 히스토리·복원, 직접 편집 diff, 매체별 생성·검토를 더했습니다.'
+    ],
+    verification: ['npm test: 28 files / 130 tests', 'npm run build: pass'],
+    next: '외부 사용자를 위한 서버측 LLM 운영(2단계 E)을 준비한다.'
+  },
+  {
+    version: '0.8.0',
+    label: 'Alpha v0.8.0',
+    date: '2026-05-16',
+    title: '실제 LLM 글쓰기 루프',
+    commit: '3e548b7',
+    changes: [
+      '편집기의 초안 생성이 로컬 브리지를 거쳐 실제 Claude 구독 호출로 회차를 만듭니다.',
+      '흐름 검증·결 점검이 쇼러너·캐릭터·배경·장르·연속성 에이전트의 실제 검토를 받습니다.',
+      '2화 이상 생성 시 확정 캐논·인물·세계 규칙을 함께 넘겨 회차 연속성을 지킵니다.'
+    ],
+    verification: ['npm test: 24 files / 113 tests', 'npm run build: pass'],
+    next: '검토에서 승인한 기억 후보가 실제 작품 캐논·바이블로 반영되는 루프를 닫는다.'
+  },
   {
     version: '0.7.1',
     label: 'Alpha v0.7.1',
