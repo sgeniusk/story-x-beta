@@ -5005,9 +5005,9 @@ body {
 }
 
 .agent-dialog {
-  /* 검토 의견이 길어져도 다이얼로그 자체는 커지지 않게 — 고정 헤더 / 스크롤 본문 / 고정 입력 3분할 */
+  /* 검토 의견이 길어져도 다이얼로그 자체는 커지지 않게 — 고정 헤더 / (선택)기준 패널 / 스크롤 본문 / 고정 입력 */
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   width: min(920px, 100%);
   max-height: min(760px, calc(100vh - 48px));
   overflow: hidden;
@@ -5052,10 +5052,85 @@ body {
   color: var(--framer-ink);
 }
 
-.agent-dialog-body {
-  /* 가운데 본문 페인 — 지시사항과 대화가 길어지면 여기만 세로로 스크롤한다 */
+/* 헤더 우측 — i 버튼과 닫기 버튼을 한 줄로 묶는다 */
+.ex-pro-head-actions {
+  display: flex;
+  gap: var(--sx-space-2);
+  align-items: center;
+}
+
+.ex-pro-info-btn {
   display: grid;
-  grid-template-columns: minmax(260px, 0.92fr) minmax(0, 1.08fr);
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid var(--framer-hairline-soft);
+  border-radius: var(--framer-rounded-pill);
+  background: var(--framer-surface-2);
+  color: var(--framer-ink-muted);
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.ex-pro-info-btn:hover {
+  color: var(--framer-ink);
+  border-color: var(--framer-hairline);
+}
+
+.ex-pro-info-btn.is-active {
+  color: var(--framer-on-primary);
+  border-color: var(--framer-primary);
+  background: var(--framer-primary);
+}
+
+/* i 버튼으로 펼치는 정적 기준 패널 — 평소엔 숨김, 본문 위에 접혀 나온다 */
+.ex-pro-reference {
+  min-height: 0;
+  max-height: 232px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--sx-space-4) var(--sx-space-5);
+  border-bottom: 1px solid var(--framer-hairline-soft);
+  background: var(--framer-canvas);
+}
+
+.ex-pro-reference h3,
+.ex-pro-reference h4 {
+  margin: 0;
+  color: var(--framer-ink);
+}
+
+.ex-pro-reference h3 {
+  font-size: 0.96rem;
+}
+
+.ex-pro-reference h4 {
+  margin-top: 14px;
+  font-size: 0.84rem;
+}
+
+.ex-pro-reference p,
+.ex-pro-reference li {
+  color: var(--framer-ink-muted);
+  line-height: 1.6;
+}
+
+.ex-pro-reference p {
+  margin: 8px 0 0;
+}
+
+.ex-pro-reference ul {
+  display: grid;
+  gap: var(--sx-space-1);
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.agent-dialog-body {
+  /* 가운데 본문 페인 — 검토 결과와 대화가 길어지면 여기만 세로로 스크롤한다 */
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--sx-space-4);
   min-height: 0;
   overflow-y: auto;
@@ -5064,49 +5139,205 @@ body {
   scrollbar-gutter: stable;
 }
 
-.agent-instruction-panel,
-.agent-chat-panel {
+/* 검토 결과 — 잘된 점 / 잘못된 점을 두 칼럼으로 나눈다 */
+.ex-pro-review {
   min-width: 0;
-  min-height: 0;
-  align-self: start;
-  padding: var(--sx-space-4);
+}
+
+.ex-pro-review-head {
+  display: flex;
+  gap: var(--sx-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ex-pro-review-overline {
+  color: var(--framer-ink-muted);
+  font-size: 0.74rem;
+  font-weight: var(--sx-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ex-pro-verdict {
+  padding: 3px 10px;
+  border: 1px solid var(--framer-hairline-soft);
+  border-radius: var(--framer-rounded-pill);
+  font-size: 0.76rem;
+  font-weight: var(--sx-weight-semibold);
+  color: var(--framer-ink-muted);
+  background: var(--framer-surface-2);
+}
+
+.ex-pro-verdict--pass,
+.ex-pro-verdict--complete {
+  color: var(--framer-on-primary);
+  border-color: var(--framer-primary);
+  background: var(--framer-primary);
+}
+
+.ex-pro-verdict--revise {
+  color: var(--framer-ink);
+  border-color: color-mix(in oklch, var(--framer-accent-blue) 48%, var(--framer-hairline));
+  background: color-mix(in oklch, var(--framer-accent-blue) 16%, var(--framer-surface-2));
+}
+
+.ex-pro-verdict--block {
+  color: var(--framer-ink);
+  border-color: color-mix(in oklch, var(--sx-err) 52%, var(--framer-hairline));
+  background: color-mix(in oklch, var(--sx-err) 16%, var(--framer-surface-2));
+}
+
+.ex-pro-review-note {
+  margin: 10px 0 0;
+  color: var(--framer-ink-muted);
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+.ex-pro-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sx-space-3);
+  margin-top: var(--sx-space-3);
+}
+
+@media (max-width: 720px) {
+  .ex-pro-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ex-pro-col {
+  min-width: 0;
+  padding: var(--sx-space-3) var(--sx-space-4);
   border: 1px solid var(--framer-hairline-soft);
   border-radius: var(--framer-rounded-xl);
   background: var(--framer-canvas);
 }
 
-@media (max-width: 720px) {
-  .agent-dialog-body {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.agent-instruction-panel h3,
-.agent-instruction-panel h4 {
+.ex-pro-col h3 {
+  display: flex;
+  gap: 6px;
+  align-items: center;
   margin: 0;
+  font-size: 0.88rem;
   color: var(--framer-ink);
 }
 
-.agent-instruction-panel h4 {
-  margin-top: 16px;
-  font-size: 0.9rem;
+.ex-pro-col--good h3 {
+  color: color-mix(in oklch, var(--sx-good) 72%, var(--framer-ink));
 }
 
-.agent-instruction-panel p,
-.agent-instruction-panel li {
-  color: var(--framer-ink-muted);
-  line-height: 1.62;
+.ex-pro-col--bad h3 {
+  color: color-mix(in oklch, var(--sx-err) 64%, var(--framer-ink));
 }
 
-.agent-instruction-panel p {
+.ex-pro-col ul {
+  display: grid;
+  gap: 7px;
   margin: 10px 0 0;
+  padding-left: 16px;
 }
 
-.agent-instruction-panel ul {
+.ex-pro-col li {
+  color: var(--framer-ink-muted);
+  line-height: 1.56;
+  font-size: 0.88rem;
+}
+
+.ex-pro-col--good li::marker {
+  color: var(--sx-good);
+}
+
+.ex-pro-col--bad li::marker {
+  color: var(--sx-err);
+}
+
+.ex-pro-col-empty {
+  margin: 10px 0 0;
+  color: var(--framer-ink-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+/* 검토 전 빈 상태 — 조용하게, 검토 실행 버튼 한 개 */
+.ex-pro-empty {
   display: grid;
   gap: var(--sx-space-2);
-  margin: 10px 0 0;
-  padding-left: 18px;
+  justify-items: start;
+  margin-top: var(--sx-space-3);
+  padding: var(--sx-space-5);
+  border: 1px dashed var(--framer-hairline);
+  border-radius: var(--framer-rounded-xl);
+  background: var(--framer-canvas);
+}
+
+.ex-pro-empty-title {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: var(--sx-weight-semibold);
+  color: var(--framer-ink);
+}
+
+.ex-pro-empty-body {
+  margin: 0;
+  color: var(--framer-ink-muted);
+  line-height: 1.58;
+  font-size: 0.88rem;
+}
+
+.ex-pro-empty-btn {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  margin-top: 4px;
+  padding: 9px 15px;
+  border: 1px solid var(--framer-primary);
+  border-radius: var(--framer-rounded-pill);
+  background: var(--framer-primary);
+  color: var(--framer-on-primary);
+  font-size: 0.86rem;
+  font-weight: var(--sx-weight-semibold);
+  cursor: pointer;
+}
+
+.ex-pro-empty-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* 대화 영역 — 답이 어디에 표시되는지 분명하게 라벨과 카드로 묶는다 */
+.ex-pro-chat {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--sx-space-2);
+  min-height: 0;
+}
+
+.ex-pro-chat-overline {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--framer-ink-muted);
+  font-size: 0.74rem;
+  font-weight: var(--sx-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ex-pro-thread {
+  display: grid;
+  align-content: start;
+  gap: var(--sx-space-3);
+  min-height: 168px;
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--sx-space-4);
+  border: 1px solid var(--framer-hairline-soft);
+  border-radius: var(--framer-rounded-xl);
+  background: var(--framer-canvas);
 }
 
 .agent-process-list {
@@ -5119,12 +5350,6 @@ body {
 .agent-process-list li {
   color: var(--framer-ink-muted);
   line-height: 1.62;
-}
-
-.agent-chat-list {
-  display: grid;
-  align-content: start;
-  gap: var(--sx-space-3);
 }
 
 .agent-chat-message {
@@ -7052,13 +7277,9 @@ body {
     display: none;
   }
 
-  .agent-dialog-body {
-    grid-template-columns: 1fr;
-  }
-
-  .agent-chat-list {
-    min-height: 240px;
-    max-height: 320px;
+  .ex-pro-thread {
+    min-height: 200px;
+    max-height: 300px;
   }
 }
 

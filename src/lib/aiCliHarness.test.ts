@@ -85,6 +85,11 @@ describe('Story X AI CLI harness', () => {
     expect(result.approvalRequiredBeforeSync).toBe(true);
     expect(runs[0].agentId).toBe('showrunner');
     expect(runs[0].output).toContain('mock');
+    // 새 계약 — mock 검토도 잘된 점/잘못된 점을 항목 리스트로 채워 다이얼로그가 비지 않게 한다
+    expect(result.agentReports[0].strengths.length).toBeGreaterThan(0);
+    expect(result.agentReports[0].issues.length).toBeGreaterThan(0);
+    expect(runs[0].strengths).toEqual(result.agentReports[0].strengths);
+    expect(runs[0].issues).toEqual(result.agentReports[0].issues);
   });
 
   it('normalizes provider raw JSON into the same pending review contract', () => {
@@ -97,6 +102,8 @@ describe('Story X AI CLI harness', () => {
             agentId: 'showrunner',
             status: 'pass',
             note: '독자 약속은 선명하지만 마지막 질문을 더 빨리 배치하세요.',
+            strengths: ['독자 약속이 한 문장으로 선명합니다.'],
+            issues: ['마지막 질문 배치가 한 박자 늦습니다.'],
             evidence: ['hook']
           }
         ],
@@ -125,6 +132,9 @@ describe('Story X AI CLI harness', () => {
     expect(normalized.provider).toBe('claude');
     expect(normalized.summary).toBe('Claude review completed.');
     expect(normalized.agentReports[0].agentId).toBe('showrunner');
+    // provider JSON의 strengths/issues가 항목 리스트로 정규화돼 들어온다
+    expect(normalized.agentReports[0].strengths).toEqual(['독자 약속이 한 문장으로 선명합니다.']);
+    expect(normalized.agentReports[0].issues).toEqual(['마지막 질문 배치가 한 박자 늦습니다.']);
     expect(normalized.memoryCandidates[0].targetPath).toBe('reviews/pending/plot-candidates.json');
     expect(normalized.pendingReviewTarget).toBe('reviews/pending');
     expect(normalized.approvalRequiredBeforeSync).toBe(true);
@@ -140,6 +150,9 @@ describe('Story X AI CLI harness', () => {
 
     expect(normalized.summary).toContain('전체적으로 좋지만');
     expect(normalized.agentReports[0].agentId).toBe('continuity-editor');
+    // 구조화 실패 시 fallback 리포트도 strengths/issues 필드를 빈 안전값으로 갖춘다
+    expect(normalized.agentReports[0].strengths).toEqual([]);
+    expect(normalized.agentReports[0].issues.length).toBeGreaterThan(0);
     expect(normalized.memoryCandidates).toEqual([]);
     expect(normalized.nextActions[0]).toContain('구조화되지 않은 provider 출력');
   });

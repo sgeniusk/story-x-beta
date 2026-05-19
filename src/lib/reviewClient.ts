@@ -34,6 +34,13 @@ function toReviewStatus(value: unknown): AiCliReviewStatus {
   return value === 'revise' || value === 'blocked' ? value : 'pass';
 }
 
+// 브리지 응답의 배열 필드를 빈 항목 없는 문자열 리스트로 정규화한다
+function toStringList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    : [];
+}
+
 // 에이전트 1명에게 분리 검토를 요청한다. 브리지 미연결·실패 시 ok:false로 떨어진다.
 export async function requestAgentReview(input: AgentReviewInput): Promise<AgentReviewResult> {
   try {
@@ -63,9 +70,9 @@ export async function requestAgentReview(input: AgentReviewInput): Promise<Agent
       label: getAgentLabel(input.agentId),
       status: toReviewStatus(data.verdict),
       note: typeof data.note === 'string' && data.note.trim().length > 0 ? data.note : '검토 의견이 비어 있습니다.',
-      evidence: Array.isArray(data.evidence)
-        ? data.evidence.filter((item): item is string => typeof item === 'string')
-        : []
+      evidence: toStringList(data.evidence),
+      strengths: toStringList(data.strengths),
+      issues: toStringList(data.issues)
     };
 
     const memoryCandidates: AiCliMemoryCandidate[] = (Array.isArray(data.memoryCandidates) ? data.memoryCandidates : [])

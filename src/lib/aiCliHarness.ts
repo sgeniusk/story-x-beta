@@ -55,6 +55,9 @@ export interface AiCliAgentReport {
   status: AiCliReviewStatus;
   note: string;
   evidence: string[];
+  // 항목별 검토 결과. 잘된 점/잘못된 점을 짧은 항목 리스트로 나눠 담는다. 옛 출력 호환을 위해 기본값 [].
+  strengths: string[];
+  issues: string[];
 }
 
 export interface AiCliMemoryCandidate {
@@ -174,7 +177,9 @@ export function buildMockAiCliReviewResult(options: AiCliRunOptions, draftText =
     label: getAgentLabel(agentId),
     status: getMockStatus(agentId, index),
     note: buildMockAgentNote(agentId, excerpt),
-    evidence: [plan.mode, plan.scale, ...getMockEvidence(agentId)]
+    evidence: [plan.mode, plan.scale, ...getMockEvidence(agentId)],
+    strengths: getMockStrengths(agentId),
+    issues: getMockIssues(agentId)
   }));
   const memoryCandidates = buildMockMemoryCandidates(options.project, plan.selectedAgentIds as ValidationAgentId[], excerpt);
 
@@ -202,7 +207,9 @@ export function agentReportsToRuns(result: AiCliReviewResult): AgentRun[] {
     title: report.label,
     status: 'complete',
     output: `[${result.provider} ${result.scale}] ${report.note}`,
-    evidence: report.evidence
+    evidence: report.evidence,
+    strengths: report.strengths ?? [],
+    issues: report.issues ?? []
   }));
 }
 
@@ -228,7 +235,9 @@ export function normalizeProviderReviewOutput(rawOutput: string, options: Normal
               label: getAgentLabel('continuity-editor'),
               status: 'revise',
               note: '구조화되지 않은 provider 출력을 원문 검토 대상으로 보류했습니다.',
-              evidence: ['provider-raw']
+              evidence: ['provider-raw'],
+              strengths: [],
+              issues: ['provider 출력이 구조화되지 않아 항목별 검토를 분리하지 못했습니다.']
             }
           ],
     memoryCandidates,
@@ -314,7 +323,9 @@ function normalizeAgentReports(value: unknown): AiCliAgentReport[] {
       label: readString(report.label) || getAgentLabel(agentId),
       status: normalizeReviewStatus(readString(report.status)),
       note: readString(report.note) || readString(report.output) || 'provider 검토 의견이 비어 있습니다.',
-      evidence: normalizeStringList(report.evidence)
+      evidence: normalizeStringList(report.evidence),
+      strengths: normalizeStringList(report.strengths),
+      issues: normalizeStringList(report.issues)
     };
   });
 }
@@ -502,6 +513,46 @@ function buildMockAgentNote(agentId: string, excerpt: string) {
       return 'mock 검토: 시각 후보는 선택된 원화만 visual DNA로 승격해야 합니다.';
     default:
       return `mock 검토: ${getAgentLabel(agentId)} 기준으로 산출물의 다음 수정 행동을 정리했습니다.`;
+  }
+}
+
+// 목 검토에서도 다이얼로그가 비지 않도록 에이전트별 잘된 점 샘플을 만든다
+function getMockStrengths(agentId: string): string[] {
+  switch (agentId) {
+    case 'showrunner':
+      return ['독자 약속이 첫 문단에서 한 문장으로 잡힙니다.', '마지막 장면이 다음 회차 행동을 분명히 부릅니다.'];
+    case 'character-custodian':
+      return ['인물의 욕망과 상처가 행동으로 드러납니다.', '관계 온도 변화가 장면 안에서 일어납니다.'];
+    case 'world-keeper':
+      return ['세계 규칙의 비용이 장면마다 유지됩니다.', '장소 이동과 시간순서가 무리 없이 이어집니다.'];
+    case 'genre-stylist':
+      return ['장르 리듬이 회차 목적을 살립니다.', '문장 질감이 장면 감정을 돕습니다.'];
+    case 'continuity-editor':
+      return ['새 사실이 기존 캐논과 충돌하지 않습니다.', '저장할 캐논 후보가 명확히 분리됐습니다.'];
+    case 'voice-curator':
+      return ['문체가 처음부터 끝까지 일관됩니다.', '한국어 문장이 번역투 없이 자연스럽습니다.'];
+    default:
+      return [`${getAgentLabel(agentId)} 기준에서 큰 문제는 보이지 않습니다.`];
+  }
+}
+
+// 목 검토에서도 다이얼로그가 비지 않도록 에이전트별 잘못된 점 샘플을 만든다
+function getMockIssues(agentId: string): string[] {
+  switch (agentId) {
+    case 'showrunner':
+      return ['중간 장면의 압력이 잠시 느슨해집니다.'];
+    case 'character-custodian':
+      return ['직접 편집 이후 대사 거리를 다시 확인해야 합니다.'];
+    case 'world-keeper':
+      return ['새 설정이 기존 규칙을 싸게 만들 위험이 있어 revision 후보로 둡니다.'];
+    case 'genre-stylist':
+      return ['후크 배치가 한 박자 늦습니다.'];
+    case 'continuity-editor':
+      return ['새 기억 후보는 승인 전까지 canon에 넣지 않고 pending으로 둡니다.'];
+    case 'voice-curator':
+      return ['반복되는 AI식 표현 한두 곳을 다듬으면 좋겠습니다.'];
+    default:
+      return [`${getAgentLabel(agentId)} 관점에서 다음 수정 행동을 정리했습니다.`];
   }
 }
 

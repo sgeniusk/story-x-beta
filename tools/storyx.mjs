@@ -158,7 +158,18 @@ if (command === 'review-agent') {
   const prompt = buildAgentReviewPrompt({ agentId, persona, target, medium, context });
 
   if (provider === 'mock') {
-    printJson({ provider, agentId, mode: 'review-agent', status: 'complete', verdict: 'pass', note: 'mock 단일 에이전트 검토', evidence: [], memoryCandidates: [] });
+    printJson({
+      provider,
+      agentId,
+      mode: 'review-agent',
+      status: 'complete',
+      verdict: 'pass',
+      note: 'mock 단일 에이전트 검토',
+      strengths: ['mock 검토: 검토 기준이 또렷하게 잡혀 있습니다.', 'mock 검토: 다음 회차로 이어지는 약속이 살아 있습니다.'],
+      issues: ['mock 검토: 일부 장면의 압력을 한 단계 더 끌어올릴 여지가 있습니다.'],
+      evidence: [],
+      memoryCandidates: []
+    });
     process.exit(0);
   }
 
@@ -179,6 +190,8 @@ if (command === 'review-agent') {
     exitCode: providerResult.status,
     verdict: readString(parsed?.status),
     note: readString(parsed?.note),
+    strengths: normalizeStringList(parsed?.strengths),
+    issues: normalizeStringList(parsed?.issues),
     evidence: normalizeStringList(parsed?.evidence),
     memoryCandidates: Array.isArray(parsed?.memoryCandidates) ? parsed.memoryCandidates : [],
     warning: providerResult.status === 0 ? undefined : 'provider 호출이 실패했습니다.'
@@ -501,6 +514,7 @@ function buildAgentReviewPrompt({ agentId, persona, target, medium, context }) {
     '## 지시',
     '- 오직 당신의 전문 시선 하나로만 검토합니다. 다른 에이전트의 영역은 건드리지 않습니다.',
     '- 원고의 구체적 문장을 근거(evidence)로 들어 pass / revise / blocked 중 하나로 판정합니다.',
+    '- 잘된 점(strengths)과 잘못된 점(issues)을 각각 짧고 또렷한 항목으로 나눠 적습니다. 한 항목은 한 문장으로 씁니다.',
     '- 한국어로 쓰고, 번역투와 과한 AI식 설명을 피합니다.',
     '- 새 사실은 canon으로 확정하지 말고 memoryCandidates에만 둡니다.',
     '',
@@ -508,6 +522,8 @@ function buildAgentReviewPrompt({ agentId, persona, target, medium, context }) {
     '{',
     '  "status": "pass|revise|blocked",',
     '  "note": "이 에이전트의 검토 의견 한 단락",',
+    '  "strengths": ["원고에서 잘된 점을 한 문장씩"],',
+    '  "issues": ["원고에서 짚어낸 문제를 한 문장씩"],',
     '  "evidence": ["원고에서 든 근거 문장"],',
     '  "memoryCandidates": [{ "owner": "character|world|plot|voice", "statement": "새 기억 후보", "rationale": "후보로 둔 이유" }]',
     '}'

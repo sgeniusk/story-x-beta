@@ -201,6 +201,9 @@ export interface AgentRun {
   status: AgentRunStatus;
   output: string;
   evidence: string[];
+  // 이번 회차 검토에서 이 에이전트가 잘했다고 본 점과 짚어낸 문제. 옛 데이터/목 검토 호환을 위해 옵션.
+  strengths?: string[];
+  issues?: string[];
 }
 
 export interface ContinuityIssue {

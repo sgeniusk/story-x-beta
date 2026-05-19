@@ -9,6 +9,7 @@ import {
   Database,
   FileText,
   GitBranch,
+  Info,
   ListChecks,
   Lock,
   Maximize2,
@@ -1371,7 +1372,9 @@ export function StoryXDesk({
                     title: report.label,
                     status: report.status === 'blocked' ? 'block' : report.status,
                     output: report.note,
-                    evidence: report.evidence
+                    evidence: report.evidence,
+                    strengths: report.strengths ?? [],
+                    issues: report.issues ?? []
                   }
                 : run
             )
@@ -2077,6 +2080,11 @@ export function StoryXDesk({
           run={selectedAgent.run}
           persona={selectedAgent.persona}
           projectTitle={project.title}
+          isReviewing={isReviewing}
+          onRunReview={() => {
+            setSelectedAgent(null);
+            reviewDraft();
+          }}
           onClose={() => setSelectedAgent(null)}
         />
       )}
@@ -4469,14 +4477,19 @@ function AgentProfileDialog({
   run,
   persona,
   projectTitle,
+  isReviewing,
+  onRunReview,
   onClose
 }: {
   run: AgentRun;
   persona: AgentPersona;
   projectTitle: string;
+  isReviewing: boolean;
+  onRunReview: () => void;
   onClose: () => void;
 }) {
   const validationProcess = getAgentValidationProcess(persona.id);
+  const [referenceOpen, setReferenceOpen] = useState(false);
   const [messages, setMessages] = useState<AgentChatMessage[]>([
     {
       role: 'agent',
@@ -4484,6 +4497,20 @@ function AgentProfileDialog({
     }
   ]);
   const [draft, setDraft] = useState('');
+  const threadRef = useRef<HTMLDivElement>(null);
+
+  const strengths = run.strengths ?? [];
+  const issues = run.issues ?? [];
+  // 검토 전 상태 — pass/revise/block/complete 중 어떤 결과도 아직 없고, 항목 리스트도 비어 있을 때.
+  const reviewed = run.status !== 'idle' || strengths.length > 0 || issues.length > 0;
+
+  // 새 답변이 도착하면 대화 스레드를 항상 마지막 메시지로 스크롤한다
+  useEffect(() => {
+    const thread = threadRef.current;
+    if (thread) {
+      thread.scrollTop = thread.scrollHeight;
+    }
+  }, [messages]);
 
   function submitAgentQuestion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -4520,12 +4547,24 @@ function AgentProfileDialog({
             <h2 id="agent-dialog-title">{persona.title}</h2>
             <span>{persona.subtitle}</span>
           </div>
-          <button type="button" className="agent-dialog-close" aria-label="에이전트 대화창 닫기" onClick={onClose}>
-            <X size={18} />
-          </button>
+          <div className="ex-pro-head-actions">
+            <button
+              type="button"
+              className={`ex-pro-info-btn ${referenceOpen ? 'is-active' : ''}`}
+              aria-label="에이전트 지시사항과 검증 프로세스 보기"
+              aria-expanded={referenceOpen}
+              aria-pressed={referenceOpen}
+              onClick={() => setReferenceOpen((current) => !current)}
+            >
+              <Info size={17} />
+            </button>
+            <button type="button" className="agent-dialog-close" aria-label="에이전트 대화창 닫기" onClick={onClose}>
+              <X size={18} />
+            </button>
+          </div>
         </header>
-        <div className="agent-dialog-body ex-dialog-scroll">
-          <aside className="agent-instruction-panel">
+        {referenceOpen && (
+          <aside className="ex-pro-reference" aria-label={`${persona.title} 기준 정보`}>
             <h3>자세한 지시사항</h3>
             <p>{persona.instruction}</p>
             <h4>검수 기준</h4>
@@ -4534,13 +4573,11 @@ function AgentProfileDialog({
                 <li key={check}>{check}</li>
               ))}
             </ul>
-            <h4>최근 판단</h4>
-            <p>{run.output}</p>
             <h4>검증 프로세스</h4>
             <ol className="agent-process-list">
               <li>{validationProcess.agenda}</li>
               <li>독립 검토 후 {validationProcess.outputFormat.join(', ')}을 남깁니다.</li>
-              <li>차단 신호: {validationProcess.blockingSignals.join(' / ')}</li>
+              <li>차단 신호 — {validationProcess.blockingSignals.join(' / ')}</li>
             </ol>
             <h4>성장 메모리</h4>
             <ul>
@@ -4549,8 +4586,65 @@ function AgentProfileDialog({
               ))}
             </ul>
           </aside>
-          <section className="agent-chat-panel" aria-label={`${persona.title} 대화`}>
-            <div className="agent-chat-list">
+        )}
+        <div className="agent-dialog-body ex-dialog-scroll">
+          <section className="ex-pro-review" aria-label={`${persona.title} 검토 결과`}>
+            <div className="ex-pro-review-head">
+              <span className="ex-pro-review-overline">이번 회차 검토</span>
+              <span className={`ex-pro-verdict ex-pro-verdict--${run.status}`}>{agentStatusLabel(run.status)}</span>
+            </div>
+            {reviewed ? (
+              <>
+                {run.output && <p className="ex-pro-review-note">{run.output}</p>}
+                <div className="ex-pro-split">
+                  <div className="ex-pro-col ex-pro-col--good">
+                    <h3>
+                      <Check size={14} />
+                      잘된 점
+                    </h3>
+                    {strengths.length > 0 ? (
+                      <ul>
+                        {strengths.map((item, index) => (
+                          <li key={`good-${index}`}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="ex-pro-col-empty">짚어낸 강점이 아직 없습니다.</p>
+                    )}
+                  </div>
+                  <div className="ex-pro-col ex-pro-col--bad">
+                    <h3>
+                      <ShieldAlert size={14} />
+                      잘못된 점
+                    </h3>
+                    {issues.length > 0 ? (
+                      <ul>
+                        {issues.map((item, index) => (
+                          <li key={`bad-${index}`}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="ex-pro-col-empty">짚어낸 문제가 아직 없습니다.</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="ex-pro-empty">
+                <p className="ex-pro-empty-title">아직 검토 전이에요</p>
+                <p className="ex-pro-empty-body">
+                  {persona.title}이 이번 회차를 읽으면 잘된 점과 잘못된 점이 여기에 항목으로 정리됩니다.
+                </p>
+                <button type="button" className="ex-pro-empty-btn" onClick={onRunReview} disabled={isReviewing}>
+                  <WandSparkles size={15} />
+                  {isReviewing ? '검토 진행 중' : '지금 검토 실행'}
+                </button>
+              </div>
+            )}
+          </section>
+          <section className="ex-pro-chat" aria-label={`${persona.title} 대화`}>
+            <span className="ex-pro-chat-overline">{persona.title}와의 대화</span>
+            <div className="ex-pro-thread" ref={threadRef}>
               {messages.map((message, index) => (
                 <p key={`${message.role}-${index}`} className={`agent-chat-message is-${message.role}`}>
                   {message.text}
@@ -4561,7 +4655,7 @@ function AgentProfileDialog({
         </div>
         <form className="agent-chat-form ex-dialog-input-pin" onSubmit={submitAgentQuestion}>
           <label>
-            <span>{persona.title}에게 묻기</span>
+            <span>{persona.title}에게 묻기 — 답은 위 대화창에 표시됩니다</span>
             <input
               value={draft}
               onChange={(event) => setDraft(event.target.value)}

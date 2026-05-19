@@ -39,6 +39,31 @@ describe('storyx CLI script', () => {
     expect(saved).toContain('approvalRequiredBeforeSync');
   });
 
+  it('returns item-level strengths/issues from a mock per-agent review', () => {
+    // 에이전트 다이얼로그가 잘된 점/잘못된 점을 항목으로 보여주려면 review-agent가 두 배열을 채워야 한다
+    const result = spawnSync(
+      'node',
+      [cliPath, 'review-agent', '--provider', 'mock', '--agent', 'showrunner', '--target', '- 서윤이 탑에 오른다'],
+      { encoding: 'utf8' }
+    );
+    const payload = JSON.parse(result.stdout) as {
+      mode: string;
+      verdict: string;
+      strengths: string[];
+      issues: string[];
+    };
+
+    expect(result.status).toBe(0);
+    expect(payload.mode).toBe('review-agent');
+    expect(Array.isArray(payload.strengths)).toBe(true);
+    expect(Array.isArray(payload.issues)).toBe(true);
+    expect(payload.strengths.length).toBeGreaterThan(0);
+    expect(payload.issues.length).toBeGreaterThan(0);
+    // 에이전트 검토 프롬프트가 strengths/issues 출력 필드를 명시해야 provider가 항목별로 답한다
+    expect(cli).toContain('"strengths":');
+    expect(cli).toContain('"issues":');
+  });
+
   it('exposes a review-data command for per-category canon review', () => {
     expect(cli).toContain("command === 'review-data'");
     expect(cli).toContain('buildDataReviewPrompt');
