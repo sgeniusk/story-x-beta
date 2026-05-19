@@ -1,4 +1,4 @@
-import type { CreativeBlueprint } from './projectBlueprint';
+import { isSerialFormat, type CreativeBlueprint } from './projectBlueprint';
 
 export type IntakeAgentId =
   | 'showrunner'
@@ -381,12 +381,10 @@ export function buildProjectIntakePlan(blueprint: CreativeBlueprint): ProjectInt
     };
   }
 
-  return {
-    focusLabel: '소설 연재 세팅',
-    notice: defaultNotice,
-    summary: '연재가 길어져도 흔들리지 않도록 독자 약속, 인물 욕망, 세계 규칙, 문체 기준을 먼저 잡습니다.',
-    questions: [
-      {
+  // 연재형(장편·중편)은 회차 경험을 묻고, 단편·단독 완결형은 한 편의 완결 효과를 묻는다.
+  const isSerial = isSerialFormat(blueprint.format);
+  const promiseQuestion: ProjectIntakeQuestion = isSerial
+    ? {
         id: 'episode-promise',
         agentId: 'showrunner',
         agentLabel: '쇼러너',
@@ -409,7 +407,40 @@ export function buildProjectIntakePlan(blueprint: CreativeBlueprint): ProjectInt
             impact: '분량을 줄이고 마지막 전환을 중심으로 장면 수를 제한합니다.'
           }
         ]
-      },
+      }
+    : {
+        id: 'episode-promise',
+        agentId: 'showrunner',
+        agentLabel: '쇼러너',
+        question: '이 한 편이 독자에게 약속하는 경험은 무엇에 가깝나요?',
+        recommendedOptionId: 'single-impact',
+        options: [
+          {
+            id: 'single-impact',
+            label: '하나의 반전',
+            impact: '마지막 전환 하나를 향해 장면 수를 줄이고 군더더기를 덜어냅니다.'
+          },
+          {
+            id: 'slow-immersion',
+            label: '하나의 정서',
+            impact: '사건보다 분위기와 인물 결을 또렷하게 쌓는 장면 설계를 우선합니다.'
+          },
+          {
+            id: 'single-image',
+            label: '하나의 이미지',
+            impact: '독자에게 오래 남을 핵심 장면 하나에 묘사의 무게를 둡니다.'
+          }
+        ]
+      };
+
+  return {
+    focusLabel: isSerial ? '소설 연재 세팅' : '단편 소설 세팅',
+    notice: defaultNotice,
+    summary: isSerial
+      ? '연재가 길어져도 흔들리지 않도록 독자 약속, 인물 욕망, 세계 규칙, 문체 기준을 먼저 잡습니다.'
+      : '한 편으로 완결되는 작품인 만큼, 하나의 효과와 인물 욕망, 세계 규칙, 문체 기준을 먼저 잡습니다.',
+    questions: [
+      promiseQuestion,
       {
         id: 'character-axis',
         agentId: 'character-custodian',
@@ -467,7 +498,7 @@ export function buildProjectIntakePlan(blueprint: CreativeBlueprint): ProjectInt
         options: [
           {
             id: 'clear-commercial',
-            label: '선명한 연재체',
+            label: isSerial ? '선명한 연재체' : '선명한 서술체',
             impact: '짧은 문단, 빠른 정보 전달, 다음 장면으로 넘어가는 추진력을 우선합니다.'
           },
           {
@@ -492,17 +523,23 @@ export function buildProjectIntakePlan(blueprint: CreativeBlueprint): ProjectInt
           {
             id: 'outer-threat',
             label: '외부의 적·위협',
-            impact: '회차마다 위협의 강도를 올리는 사건 사다리를 먼저 설계합니다.'
+            impact: isSerial
+              ? '회차마다 위협의 강도를 올리는 사건 사다리를 먼저 설계합니다.'
+              : '위협의 강도를 차츰 올리는 사건 사다리를 먼저 설계합니다.'
           },
           {
             id: 'relationship',
             label: '인물 사이의 관계',
-            impact: '관계의 균열과 회복을 회차 보상의 축으로 삼습니다.'
+            impact: isSerial
+              ? '관계의 균열과 회복을 회차 보상의 축으로 삼습니다.'
+              : '관계의 균열과 회복을 이야기의 감정 축으로 삼습니다.'
           },
           {
             id: 'inner-contradiction',
             label: '주인공 내면의 모순',
-            impact: '주인공이 자기 욕망과 싸우는 장면을 매 회차에 한 번씩 둡니다.'
+            impact: isSerial
+              ? '주인공이 자기 욕망과 싸우는 장면을 매 회차에 한 번씩 둡니다.'
+              : '주인공이 자기 욕망과 싸우는 장면을 중심 갈등으로 둡니다.'
           }
         ]
       },
@@ -516,7 +553,9 @@ export function buildProjectIntakePlan(blueprint: CreativeBlueprint): ProjectInt
           {
             id: 'goal-reached',
             label: '목표 달성·해결',
-            impact: '결말에서 회수할 약속을 미리 적어 두고 회차가 엇나가지 않게 점검합니다.'
+            impact: isSerial
+              ? '결말에서 회수할 약속을 미리 적어 두고 회차가 엇나가지 않게 점검합니다.'
+              : '결말에서 회수할 약속을 미리 적어 두고 이야기가 엇나가지 않게 점검합니다.'
           },
           {
             id: 'inner-change',
@@ -540,7 +579,9 @@ export function buildProjectIntakePlan(blueprint: CreativeBlueprint): ProjectInt
           {
             id: 'momentum',
             label: '이야기를 끌고 가는 추진력',
-            impact: '쇼러너가 회차 후크와 다음 화 질문을 더 자주 점검합니다.'
+            impact: isSerial
+              ? '쇼러너가 회차 후크와 다음 화 질문을 더 자주 점검합니다.'
+              : '쇼러너가 장면 사이의 추진력과 끌고 가는 질문을 더 자주 점검합니다.'
           },
           {
             id: 'consistency',

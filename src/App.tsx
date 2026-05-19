@@ -14,6 +14,7 @@ import {
   buildCreativeBlueprint,
   getFormatOptions,
   getMediumOptions,
+  isSerialFormat,
   type CreativeBlueprint,
   type CreativeFormat,
   type CreativeMedium
@@ -476,6 +477,9 @@ function StoryXHome({
 }) {
   const formatOptions = getFormatOptions(medium);
   const intakePlan = useMemo(() => buildProjectIntakePlan(blueprint), [blueprint]);
+  // 연재형이면 "회차" 언어를 쓰고, 단편·단독 완결형이면 "글/원고" 언어를 쓴다.
+  const isSerial = isSerialFormat(format);
+  const draftUnitLabel = isSerial ? '첫 회차' : '첫 원고';
   const [intakeAnswers, setIntakeAnswers] = useState<Record<string, string>>({});
   const [intakeOtherAnswers, setIntakeOtherAnswers] = useState<Record<string, string>>({});
   const [interviewNote, setInterviewNote] = useState('');
@@ -501,7 +505,11 @@ function StoryXHome({
     }
     setIsInterviewLoading(true);
     try {
-      const result = await requestLlmInterview({ medium: blueprint.medium, freewrite: freewriteText });
+      const result = await requestLlmInterview({
+        medium: blueprint.medium,
+        format: blueprint.format,
+        freewrite: freewriteText
+      });
       if (result.ok && result.questions) {
         setLlmIntakeQuestions(result.questions);
         setIntakeQuestionIndex(0);
@@ -510,7 +518,7 @@ function StoryXHome({
       setIsInterviewLoading(false);
     }
   }
-  // 인터뷰 답변까지 모아 첫 회차 초안을 만들고, 끝나면 에디터로 넘긴다
+  // 인터뷰 답변까지 모아 첫 초안(연재형=회차, 단독 완결형=원고)을 만들고, 끝나면 에디터로 넘긴다
   async function goToBuilding() {
     if (isBuilding) {
       return;
@@ -718,8 +726,8 @@ function StoryXHome({
             <p className="hx-eyebrow">03 · 작가 인터뷰</p>
             <h1 className="hx-h1">작가진이 먼저 묻습니다.</h1>
             <p className="hx-lead">
-              {intakePlan.summary} 선택은 언제든지 에디터에서 바꿀 수 있습니다. 변경이 기존 회차와 충돌하면 영향
-              범위를 먼저 보여줍니다.
+              {intakePlan.summary} 선택은 언제든지 에디터에서 바꿀 수 있습니다. 변경이 기존
+              {isSerial ? ' 회차와' : ' 원고와'} 충돌하면 영향 범위를 먼저 보여줍니다.
             </p>
             <div className="hx-progress" aria-label="질문 진행도">
               <span>
@@ -859,18 +867,18 @@ function StoryXHome({
                 이전
               </button>
               <button type="button" className="hx-btn" onClick={goToBuilding}>
-                질문 완료 — 첫 회차 만들기
+                질문 완료 — {draftUnitLabel} 만들기
               </button>
             </div>
           </aside>
         </section>
 
-        <section className="hx-panel hx-panel-building" aria-label="첫 회차 구성 중">
+        <section className="hx-panel hx-panel-building" aria-label={`${draftUnitLabel} 구성 중`}>
           <div className="hx-building">
             <p className="hx-eyebrow">04 · 구성</p>
-            <h1 className="hx-h1">작가진이 첫 회차를 쓰고 있습니다.</h1>
+            <h1 className="hx-h1">작가진이 {draftUnitLabel}를 쓰고 있습니다.</h1>
             <p className="hx-lead">
-              자유 서술과 인터뷰 답변을 읽고, 첫 회차 초안과 작품 바이블의 초기 설정을 구성합니다. 끝나면 편집
+              자유 서술과 인터뷰 답변을 읽고, {draftUnitLabel} 초안과 작품 바이블의 초기 설정을 구성합니다. 끝나면 편집
               화면이 열립니다.
             </p>
             <div className="hx-studio" aria-hidden="true">
@@ -901,7 +909,7 @@ function StoryXHome({
               </li>
               <li>
                 <span className="hx-step-dot" />
-                쇼러너가 첫 회차의 약속과 후크를 잡습니다.
+                쇼러너가 {draftUnitLabel}의 약속과 후크를 잡습니다.
               </li>
               <li>
                 <span className="hx-step-dot" />
@@ -909,7 +917,7 @@ function StoryXHome({
               </li>
               <li>
                 <span className="hx-step-dot" />
-                첫 회차 초안을 쓰고, 바이블에 초기 설정을 제안합니다.
+                {draftUnitLabel} 초안을 쓰고, 바이블에 초기 설정을 제안합니다.
               </li>
             </ol>
             <p className="hx-building-note">잠시만 기다려 주세요 — 보통 1~3분 걸립니다.</p>

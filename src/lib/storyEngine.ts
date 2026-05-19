@@ -679,6 +679,46 @@ export function createSeedProject(): SeriesProject {
   };
 }
 
+// 작품 제목 후보를 자유 서술/초안에서 다듬는다. 빈 입력이면 중립 기본값을 돌려준다.
+function deriveProjectTitle(rawTitle: string | undefined): string {
+  const cleaned = (rawTitle ?? '').trim();
+  if (cleaned.length === 0) {
+    return '새 작품';
+  }
+  // "1화 — 제목", "1화: 제목" 같은 회차 접두를 떼어 작품 제목으로 쓴다.
+  const withoutEpisode = cleaned.replace(/^\s*\d+\s*화\s*[—\-:·]?\s*/u, '').trim();
+  return withoutEpisode.length > 0 ? withoutEpisode : cleaned;
+}
+
+// 새 프로젝트의 빈 캔버스 — 샘플 작품의 인물·장소·떡밥을 전혀 담지 않는다.
+// 새 프로젝트 플로우(initialDraftPayload)가 에디터를 열 때 이걸로 시작해야 샘플 데이터가 새지 않는다.
+// 인물/장소/사물/사건/시간선/캐논/열린 질문은 비어 있고, 작가와 에이전트가 채운다.
+export function createEmptyProject(input: { title?: string } = {}): SeriesProject {
+  return {
+    id: `project-${Date.now().toString(36)}`,
+    title: deriveProjectTitle(input.title),
+    logline: '',
+    localization: createDefaultLocalizationPolicy(),
+    genre: 'urban-fantasy',
+    tone: '',
+    audiencePromise: '',
+    deepQuestion: '',
+    creativeWeight: 'balanced',
+    formIntent: '',
+    currentEpisode: 0,
+    characters: [],
+    worldRules: [],
+    canonFacts: [],
+    openThreads: [],
+    chapters: [],
+    places: [],
+    objects: [],
+    events: [],
+    timeline: [],
+    bibleOutline: []
+  };
+}
+
 export function validateContinuity(project: SeriesProject, claims: string[]): ContinuityIssue[] {
   const characterIssues = project.characters.flatMap((character) =>
     character.forbiddenContradictions
@@ -1119,15 +1159,12 @@ export function applyApprovedMemory(project: SeriesProject, approved: ApprovedMe
 }
 
 export function commitChapter(project: SeriesProject, chapter: Chapter): SeriesProject {
+  // 회차를 커밋해도 열린 질문은 그대로 둔다 — 떡밥은 작가/에이전트 검토가 관리하며,
+  // 엔진이 임의 문장을 끼워 넣지 않는다(빈 프로젝트에 샘플 떡밥이 새지 않도록).
   return {
     ...project,
     currentEpisode: chapter.episode,
     canonFacts: [...project.canonFacts, ...chapter.newCanonFacts],
-    openThreads: [
-      ...project.openThreads.slice(0, 1),
-      '새 표식은 현재 시점에서 누가 남겼는가?',
-      '이름의 일부를 잃으면 인물 관계는 어떻게 변하는가?'
-    ],
     chapters: [...project.chapters, chapter]
   };
 }

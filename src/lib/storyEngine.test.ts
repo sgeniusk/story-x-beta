@@ -4,6 +4,7 @@ import {
   buildDeterministicDataReview,
   buildStoryEditorWorkspace,
   chapterFromDraftPayload,
+  createEmptyProject,
   createSeedProject,
   getCanonReviewCategoryLabel,
   lockChapter,
@@ -17,6 +18,49 @@ import {
 describe('storyEngine', () => {
   it('uses a neutral sample project name instead of a fake production title', () => {
     expect(createSeedProject().title).toBe('샘플 작품');
+  });
+
+  it('createEmptyProject starts a brand-new project with no sample content', () => {
+    const empty = createEmptyProject({ title: '1화 — 잊혀진 골목' });
+
+    // 회차 접두를 떼어낸 작품 제목을 쓴다
+    expect(empty.title).toBe('잊혀진 골목');
+    // 샘플 작품의 인물·장소·사물·사건·시간선·캐논·열린 질문이 새지 않는다
+    expect(empty.characters).toEqual([]);
+    expect(empty.places).toEqual([]);
+    expect(empty.objects).toEqual([]);
+    expect(empty.events).toEqual([]);
+    expect(empty.timeline).toEqual([]);
+    expect(empty.canonFacts).toEqual([]);
+    expect(empty.openThreads).toEqual([]);
+    expect(empty.worldRules).toEqual([]);
+    expect(empty.bibleOutline).toEqual([]);
+    expect(empty.chapters).toEqual([]);
+    expect(empty.title).not.toBe('샘플 작품');
+  });
+
+  it('createEmptyProject falls back to a neutral title when the draft has none', () => {
+    expect(createEmptyProject().title).toBe('새 작품');
+    expect(createEmptyProject({ title: '   ' }).title).toBe('새 작품');
+  });
+
+  it('commitChapter no longer injects sample open threads into an empty project', () => {
+    const empty = createEmptyProject({ title: '단편 하나' });
+    const result = chapterFromDraftPayload(
+      empty,
+      {
+        title: '잊혀진 골목',
+        hook: '골목 끝의 문이 다시 열렸다.',
+        outline: ['문이 열린다.'],
+        beats: [{ label: '문', summary: '골목 끝의 문이 열린다.' }],
+        prose: '골목은 막다른 곳에서 한 번 더 꺾였다.',
+        newCanonFacts: []
+      },
+      { genre: 'urban-fantasy', intent: '문이 열린다', pressure: '' }
+    );
+
+    // 빈 프로젝트에 회차를 커밋해도 열린 질문은 비어 있다 — 샘플 떡밥이 새지 않는다
+    expect(result.updatedProject.openThreads).toEqual([]);
   });
 
   it('continues the series from the current canon and stores new memory anchors', () => {
@@ -351,9 +395,11 @@ describe('storyEngine', () => {
           kind: 'world-rule',
           title: '기억 잉크'
         }),
+        // commitChapter는 더 이상 임의의 떡밥을 끼워 넣지 않으므로,
+        // plot-thread 코덱스 항목은 시드 프로젝트의 실제 열린 질문에서 나온다.
         expect.objectContaining({
           kind: 'plot-thread',
-          title: '새 표식은 현재 시점에서 누가 남겼는가?'
+          title: '오빠의 마지막 편지에는 왜 서윤의 필체가 남아 있었나?'
         })
       ])
     );

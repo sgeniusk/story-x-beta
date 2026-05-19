@@ -491,6 +491,25 @@ const blueprintByFormat: Record<CreativeFormat, Omit<CreativeBlueprint, 'medium'
   }
 };
 
+// 연재형 포맷 — 회차(N화)가 누적되는 형식. 나머지는 단독 완결형(원고 하나).
+const serialFormats: ReadonlySet<CreativeFormat> = new Set<CreativeFormat>([
+  'long-novel',
+  'medium-novel',
+  'essay-series',
+  'serial-webtoon',
+  'insta-toon'
+]);
+
+// 포맷이 회차가 쌓이는 연재형인지 — 단편·단독 완결형이면 false.
+export function isSerialFormat(format: CreativeFormat): boolean {
+  return serialFormats.has(format);
+}
+
+// 작업 단위 명사 — 연재형은 "회차", 단독 완결형은 "원고". UI 라벨 분기에 쓴다.
+export function getWorkUnitNoun(format: CreativeFormat): string {
+  return isSerialFormat(format) ? '회차' : '원고';
+}
+
 export function getMediumOptions(): MediumOption[] {
   return mediumOptions;
 }

@@ -5558,6 +5558,18 @@ body {
   font-size: 0.9rem;
 }
 
+/* 열린 질문 빈 상태 — 새 프로젝트는 떡밥이 없는 게 정상이라 차분한 안내문을 둔다 */
+.sx-thread-empty {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed var(--sx-line-2);
+  border-radius: 8px;
+  background: var(--sx-paper);
+  color: var(--sx-muted);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
 .sx-chapter-log p {
   margin: 0;
   color: var(--sx-muted);
@@ -5842,6 +5854,11 @@ body {
   font-size: 0.66rem;
   font-weight: var(--sx-weight-regular);
   color: var(--sx-muted);
+}
+
+/* 단독 완결형 작품 상태 — 회차 숫자 대신 단계 텍스트(초안/완성)를 보여줄 때 */
+.sx-desk .ex-work-state-value-text {
+  font-size: 0.84rem;
 }
 
 /* ── P2-B 회차 의도 — 에이전트 발언 ── */

@@ -31,6 +31,8 @@ import {
   buildCreativeBlueprint,
   getFormatOptions,
   getMediumOptions,
+  getWorkUnitNoun,
+  isSerialFormat,
   type CreativeBlueprint,
   type CreativeFormat,
   type CreativeMedium
@@ -41,6 +43,7 @@ import {
   buildProjectContextDigest,
   buildStoryEditorWorkspace,
   chapterFromDraftPayload,
+  createEmptyProject,
   createSeedProject,
   describeCreativeWeight,
   getCanonReviewCategoryLabel,
@@ -789,7 +792,12 @@ export function StoryXDesk({
   const isBibleMode = activeTrack === 'bible' && !isPublishingMode;
   const isDraftMode = activeTrack === 'draft' && !isPublishingMode;
   const activeModeLabel = isPublishingMode ? '출간 준비' : activeTrack === 'bible' ? '작품 바이블' : '원고';
-  const chapterCrumb = latestChapter ? `${latestChapter.episode}화` : '새 초안';
+  // 연재형 포맷만 회차(N화) 언어를 쓴다. 단편·단독 완결형은 "원고" 하나로 다룬다.
+  const isSerial = isSerialFormat(format);
+  const unitNoun = getWorkUnitNoun(format);
+  // 회차 라벨 — 연재형은 "N화", 단독 완결형은 진행 표시 없이 "원고".
+  const chapterLabel = (chapter: Chapter) => (isSerial ? `${chapter.episode}화` : '원고');
+  const chapterCrumb = latestChapter ? chapterLabel(latestChapter) : '새 초안';
   const saveLabel = editedSinceReview ? '수정 중' : '저장됨';
   // 상단바 회차 선택기 — 좌측 레일에서 회차 카드 목록을 들어낸 자리를 대신한다
   const activeChapterIndex = latestChapter
@@ -843,7 +851,9 @@ export function StoryXDesk({
   const mainActionRun = !latestChapter || isLatestLocked ? produceEpisode : reviewDraft;
   const MainActionIcon = !latestChapter || isLatestLocked ? WandSparkles : ClipboardCheck;
   const draftPromptPlaceholder = isLatestLocked
-    ? `잠긴 ${blueprint.medium === 'essay' ? '글' : '회차'} 다음에 담을 내용을 적어주세요.`
+    ? isSerial
+      ? `잠긴 ${unitNoun} 다음에 담을 내용을 적어주세요.`
+      : '잠긴 원고 다음에 손볼 내용을 적어주세요.'
     : '예: 용사랑 외계인이 싸우는 장면으로 시작한다.';
   const commandItems = useMemo<DeskCommand[]>(
     () => [
@@ -1028,17 +1038,18 @@ export function StoryXDesk({
     setActiveBeatId(null);
   }, [latestChapter]);
 
-  // 새 프로젝트 플로우에서 만든 첫 회차 초안으로 에디터를 시작하고, 작가진 검토를 자동 시작한다
+  // 새 프로젝트 플로우에서 만든 첫 초안으로 에디터를 시작하고, 작가진 검토를 자동 시작한다.
+  // 빈 프로젝트(createEmptyProject)에서 시작하므로 샘플 작품의 인물·장소·열린 질문이 새지 않는다.
   useEffect(() => {
     if (draftBootRef.current || !initialDraftPayload) {
       return;
     }
     draftBootRef.current = true;
 
-    const seed = createSeedProject();
+    const seed = createEmptyProject({ title: initialDraftPayload.title });
     const bootRequest: ProductionRequest = {
       genre: seed.genre,
-      intent: initialDraftPayload.title || '새 작품 첫 회차',
+      intent: initialDraftPayload.title || '새 작품 첫 원고',
       pressure: ''
     };
     const result = chapterFromDraftPayload(seed, initialDraftPayload, bootRequest);
@@ -1294,14 +1305,14 @@ export function StoryXDesk({
       if (llm.ok && llm.payload) {
         const result = chapterFromDraftPayload(project, llm.payload, effectiveRequest);
         applyProductionResult(result);
-        setProjectSnapshots(pushProjectSnapshot(result.updatedProject, `${result.chapter.episode}화 생성`));
+        setProjectSnapshots(pushProjectSnapshot(result.updatedProject, `${chapterLabel(result.chapter)} 생성`));
         setGenerationNote('Claude 구독으로 생성한 초안입니다.');
         return;
       }
 
       const fallback = produceNextChapter(project, effectiveRequest);
       applyProductionResult(fallback);
-      setProjectSnapshots(pushProjectSnapshot(fallback.updatedProject, `${fallback.chapter.episode}화 생성`));
+      setProjectSnapshots(pushProjectSnapshot(fallback.updatedProject, `${chapterLabel(fallback.chapter)} 생성`));
       setGenerationNote(
         llm.reason
           ? `LLM 브리지를 쓰지 못해 기본 생성으로 대체했습니다. (${llm.reason})`
@@ -1608,7 +1619,7 @@ export function StoryXDesk({
             <ChevronRight size={12} className="ex-workbar-crumb-sep" aria-hidden="true" />
             <span>{activeModeLabel}</span>
             {!isPublishingMode &&
-              (project.chapters.length > 0 ? (
+              (isSerial && project.chapters.length > 0 ? (
                 <span className="ex-chapter-picker" role="group" aria-label="회차 선택">
                   <button
                     type="button"
@@ -1649,6 +1660,8 @@ export function StoryXDesk({
                     <ChevronRight size={13} aria-hidden="true" />
                   </button>
                 </span>
+              ) : !isSerial && latestChapter ? (
+                <em title="현재 원고">{latestChapter.title}</em>
               ) : (
                 <em>{chapterCrumb}</em>
               ))}
@@ -1657,7 +1670,7 @@ export function StoryXDesk({
             <span className="ex-workbar-scene" title="현재 작업 지점">
               <span className="ex-workbar-scene-dot" aria-hidden="true" />
               <span className="ex-workbar-scene-now">지금</span>
-              <strong>{latestChapter.episode}화</strong>
+              <strong>{chapterLabel(latestChapter)}</strong>
               <span className="ex-workbar-scene-detail">· {latestChapter.title}</span>
             </span>
           )}
@@ -1725,7 +1738,7 @@ export function StoryXDesk({
           {isDraftMode && (
             <span
               className="ex-workbar-meter"
-              title={`이번 회차 분량 — ${chapterCharCount.toLocaleString()}자 / 목표 ${CHAPTER_CHAR_TARGET.toLocaleString()}자`}
+              title={`${isSerial ? '이번 회차 분량' : '원고 분량'} — ${chapterCharCount.toLocaleString()}자 / 목표 ${CHAPTER_CHAR_TARGET.toLocaleString()}자`}
             >
               <span className="ex-workbar-meter-num">
                 {chapterCharCount.toLocaleString()}
@@ -1865,7 +1878,7 @@ export function StoryXDesk({
                 <div className="ex-rail-section-head">
                   <span className="ex-rail-label">작품 상태</span>
                 </div>
-                <WorkStateGrid project={project} latestChapter={latestChapter} />
+                <WorkStateGrid project={project} latestChapter={latestChapter} isSerial={isSerial} />
                 <div className="ex-canon-health" title="캐논 건강도 — 회차 대비 확정 사실·규칙·인물의 밀도">
                   <span className="ex-canon-health-label">캐논</span>
                   <span className="ex-canon-health-track">
@@ -1876,6 +1889,7 @@ export function StoryXDesk({
               </section>
               <AgentIntentCard
                 latestChapter={latestChapter}
+                isSerial={isSerial}
                 draftPrompt={draftPrompt}
                 isOpen={isIntentOpen}
                 onToggleOpen={() => setIsIntentOpen((current) => !current)}
@@ -1895,6 +1909,7 @@ export function StoryXDesk({
               />
               <ChapterStructureTree
                 chapter={latestChapter}
+                isSerial={isSerial}
                 activeBeatId={activeBeatId}
                 onSelectBeat={selectBeat}
               />
@@ -1909,6 +1924,7 @@ export function StoryXDesk({
             <DataLeftRail
               project={project}
               latestChapter={latestChapter}
+              isSerial={isSerial}
               canonHealth={canonHealth}
               approvalQueue={approvalQueue}
               dataView={dataView}
@@ -2290,16 +2306,26 @@ function VersionLogDialog({
   );
 }
 
-// 작품 상태 4셀 그리드 — 총 분량 / 회차 / 이번 회차 분량 / 진행 %. 실제 프로젝트 데이터로 채운다.
-function WorkStateGrid({ project, latestChapter }: { project: SeriesProject; latestChapter: Chapter | null }) {
+// 작품 상태 4셀 그리드 — 총 분량 / 회차(연재형) / 현재 분량 / 진행 %. 실제 프로젝트 데이터로 채운다.
+// 단독 완결형은 회차가 없으므로 둘째 셀을 "단계"(초안/검토/완성)로 바꿔 보여준다.
+function WorkStateGrid({
+  project,
+  latestChapter,
+  isSerial
+}: {
+  project: SeriesProject;
+  latestChapter: Chapter | null;
+  isSerial: boolean;
+}) {
   const totalChars = project.chapters.reduce(
     (sum, chapter) => sum + chapter.prose.replace(/\s/g, '').length,
     0
   );
   const chapterCount = project.chapters.length;
   const currentChars = (latestChapter?.prose ?? '').replace(/\s/g, '').length;
-  // 진행 % — 이번 회차 분량을 한 회차 목표 5,000자와 비교한 비율
+  // 진행 % — 현재 분량을 목표 5,000자와 비교한 비율
   const progressPct = Math.min(100, Math.round((currentChars / 5000) * 100));
+  const draftStage = !latestChapter ? '시작 전' : latestChapter.locked ? '완성' : '초안';
 
   return (
     <div className="ex-work-state" aria-label="작품 상태">
@@ -2310,15 +2336,22 @@ function WorkStateGrid({ project, latestChapter }: { project: SeriesProject; lat
           <small>자</small>
         </span>
       </div>
+      {isSerial ? (
+        <div>
+          <span className="ex-work-state-label">회차</span>
+          <span className="ex-work-state-value">
+            {chapterCount}
+            <small>화</small>
+          </span>
+        </div>
+      ) : (
+        <div>
+          <span className="ex-work-state-label">단계</span>
+          <span className="ex-work-state-value ex-work-state-value-text">{draftStage}</span>
+        </div>
+      )}
       <div>
-        <span className="ex-work-state-label">회차</span>
-        <span className="ex-work-state-value">
-          {chapterCount}
-          <small>화</small>
-        </span>
-      </div>
-      <div>
-        <span className="ex-work-state-label">이번 회차 분량</span>
+        <span className="ex-work-state-label">{isSerial ? '이번 회차 분량' : '원고 분량'}</span>
         <span className="ex-work-state-value">
           {currentChars.toLocaleString()}
           <small>자</small>
@@ -2335,9 +2368,11 @@ function WorkStateGrid({ project, latestChapter }: { project: SeriesProject; lat
   );
 }
 
-// 이번 회차 의도 — AI 에이전트(쇼러너)가 잡은 프레이밍. 작가는 textarea에서 직접 조정한다.
+// 작업 의도 — AI 에이전트(쇼러너)가 잡은 프레이밍. 작가는 textarea에서 직접 조정한다.
+// 연재형이면 "다음 회차 의도", 단편·단독 완결형이면 "이번 글의 의도"로 라벨이 바뀐다.
 function AgentIntentCard({
   latestChapter,
+  isSerial,
   draftPrompt,
   isOpen,
   onToggleOpen,
@@ -2348,6 +2383,7 @@ function AgentIntentCard({
   styleChip
 }: {
   latestChapter: Chapter | null;
+  isSerial: boolean;
   draftPrompt: string;
   isOpen: boolean;
   onToggleOpen: () => void;
@@ -2358,7 +2394,19 @@ function AgentIntentCard({
   styleChip: React.ReactNode;
 }) {
   const persona = agentPersonas.showrunner;
-  const intentLabel = latestChapter ? '다음 회차 의도' : '이번 회차 의도';
+  // 연재형: 회차 단위 의도. 단독 완결형: 작품/원고 하나의 의도.
+  const intentLabel = isSerial
+    ? latestChapter
+      ? '다음 회차 의도'
+      : '이번 회차 의도'
+    : latestChapter
+      ? '이 원고의 의도'
+      : '이번 글의 의도';
+  const intentTextareaLabel = isSerial
+    ? latestChapter
+      ? '다음 회차에 담을 주요 내용'
+      : '이번 회차에 담을 주요 내용'
+    : '이 글에 담을 주요 내용';
 
   return (
     <section className="sx-panel ex-intent-card" aria-label={intentLabel}>
@@ -2385,11 +2433,13 @@ function AgentIntentCard({
       </button>
       {isOpen && (
         <div className="ex-intent-body">
-          <p className="ex-intent-frame">에이전트의 프레이밍입니다. 아래에서 직접 조정할 수 있어요.</p>
+          <p className="ex-intent-frame">
+            {persona.title}가 잡은 작업 프레이밍입니다. 작가가 아래에서 직접 고쳐 쓸 수 있어요.
+          </p>
           <textarea
             className="ex-intent-textarea"
             name="draft-prompt"
-            aria-label={latestChapter ? '다음 회차에 담을 주요 내용' : '이번 회차에 담을 주요 내용'}
+            aria-label={intentTextareaLabel}
             value={draftPrompt}
             onChange={(event) => onChangeDraftPrompt(event.target.value)}
             placeholder={draftPromptPlaceholder}
@@ -2398,7 +2448,11 @@ function AgentIntentCard({
           {isLatestLocked && latestChapter && (
             <p className="ex-intent-lock">
               <Lock size={11} aria-hidden="true" />
-              <span>{latestChapter.episode}화는 출간 확정됨. 수정 대신 다음 회차로 진행합니다.</span>
+              <span>
+                {isSerial
+                  ? `${latestChapter.episode}화는 출간 확정됨. 수정 대신 다음 회차로 진행합니다.`
+                  : '이 원고는 출간 확정됨. 잠금을 풀어야 다시 손볼 수 있습니다.'}
+              </span>
             </p>
           )}
           {generationNote && (
@@ -2441,10 +2495,12 @@ function groupBeatsIntoActs(beats: ChapterBeat[]): Array<{
 
 function ChapterStructureTree({
   chapter,
+  isSerial,
   activeBeatId,
   onSelectBeat
 }: {
   chapter: Chapter | null;
+  isSerial: boolean;
   activeBeatId: string | null;
   onSelectBeat: (beat: ChapterBeat) => void;
 }) {
@@ -2455,19 +2511,21 @@ function ChapterStructureTree({
     const found = grouped.find((group) => group.beats.some((beat) => beat.id === activeBeatId));
     return found?.act.id ?? null;
   }, [grouped, activeBeatId]);
+  const structureLabel = isSerial ? '회차 구조' : '원고 구조';
+  const unitWord = isSerial ? '회차' : '원고';
 
   return (
-    <section className="sx-panel ex-structure-card" aria-label="회차 구조">
+    <section className="sx-panel ex-structure-card" aria-label={structureLabel}>
       <div className="ex-rail-section-head">
-        <span className="ex-rail-label">회차 구조</span>
+        <span className="ex-rail-label">{structureLabel}</span>
         <span className="ex-structure-scheme">
           기승전결<span className="ex-structure-scheme-by"> · 에이전트 선택</span>
         </span>
       </div>
       {!chapter ? (
-        <p className="ex-beats-empty">첫 초안을 생성하면 회차 구조가 여기에 채워집니다.</p>
+        <p className="ex-beats-empty">첫 초안을 생성하면 {unitWord} 구조가 여기에 채워집니다.</p>
       ) : beats.length === 0 ? (
-        <p className="ex-beats-empty">이 회차에는 아직 구성이 없습니다. 다음 초안 생성부터 구조가 함께 만들어집니다.</p>
+        <p className="ex-beats-empty">이 {unitWord}에는 아직 구성이 없습니다. 다음 초안 생성부터 구조가 함께 만들어집니다.</p>
       ) : (
         <div className="ex-structure-tree">
           {grouped.map((group) => {
@@ -2694,6 +2752,9 @@ function PublishingStudio({
 }) {
   const latestChapter = project.chapters[project.chapters.length - 1] ?? null;
   const isLatestLocked = latestChapter?.locked === true;
+  // 연재형은 "N화", 단독 완결형은 "원고"로 출간 단위를 표기한다.
+  const publishIsSerial = isSerialFormat(blueprint.format);
+  const publishUnitLabel = (chapter: Chapter) => (publishIsSerial ? `${chapter.episode}화` : '원고');
 
   return (
     <section className="sx-publishing-studio" aria-label="출간 준비">
@@ -2710,19 +2771,20 @@ function PublishingStudio({
         <aside>
           <span>게시 위치</span>
           <strong>{blueprint.mediumLabel} · {blueprint.formatLabel}</strong>
-          <small>{latestChapter ? `${latestChapter.episode}화 기준` : '초안 생성 후 출간 스냅샷 생성'}</small>
+          <small>{latestChapter ? `${publishUnitLabel(latestChapter)} 기준` : '초안 생성 후 출간 스냅샷 생성'}</small>
           {latestChapter && (() => {
             const labels = getCreativeActionLabels(blueprint.medium);
+            const unit = publishUnitLabel(latestChapter);
             return (
               <button
                 type="button"
                 className="sx-primary-button"
                 disabled={isLatestLocked}
-                aria-label={isLatestLocked ? `${latestChapter.episode}화는 이미 ${labels.lock}됨` : `${latestChapter.episode}화 ${labels.lock}`}
+                aria-label={isLatestLocked ? `${unit}는 이미 ${labels.lock}됨` : `${unit} ${labels.lock}`}
                 onClick={() => onConfirmChapterLock(latestChapter.id)}
               >
                 <Lock size={15} />
-                {isLatestLocked ? labels.lockedChip : `${latestChapter.episode}화 ${labels.lock}`}
+                {isLatestLocked ? labels.lockedChip : `${unit} ${labels.lock}`}
               </button>
             );
           })()}
@@ -2944,6 +3006,7 @@ function BibleRulesAccordion({ sections }: { sections: SeriesProject['bibleOutli
 function DataLeftRail({
   project,
   latestChapter,
+  isSerial,
   canonHealth,
   approvalQueue,
   dataView,
@@ -2952,6 +3015,7 @@ function DataLeftRail({
 }: {
   project: SeriesProject;
   latestChapter: Chapter | null;
+  isSerial: boolean;
   canonHealth: number;
   approvalQueue: MemoryApprovalQueue;
   dataView: DataView;
@@ -2975,7 +3039,7 @@ function DataLeftRail({
         <div className="ex-rail-section-head">
           <span className="ex-rail-label">작품 상태</span>
         </div>
-        <WorkStateGrid project={project} latestChapter={latestChapter} />
+        <WorkStateGrid project={project} latestChapter={latestChapter} isSerial={isSerial} />
         <div className="ex-canon-health" title="캐논 건강도 — 회차 대비 확정 사실·규칙·인물의 밀도">
           <span className="ex-canon-health-label">캐논</span>
           <span className="ex-canon-health-track">
@@ -4246,6 +4310,8 @@ function StoryXStatusBar({
   );
 }
 
+// 열린 질문 — 작품이 아직 답하지 않은, 연속성을 위해 추적 중인 질문들.
+// 새 프로젝트는 비어 있는 게 정상이라, 차분한 빈 상태를 보여준다(샘플 떡밥을 끼워 넣지 않는다).
 function OpenThreadsCard({ threads }: { threads: string[] }) {
   return (
     <section className="sx-panel sx-open-threads-card" aria-label="열린 질문">
@@ -4253,11 +4319,17 @@ function OpenThreadsCard({ threads }: { threads: string[] }) {
         <ListChecks size={16} />
         <h2>열린 질문</h2>
       </div>
-      <ul className="sx-thread-list">
-        {threads.map((thread) => (
-          <li key={thread}>{thread}</li>
-        ))}
-      </ul>
+      {threads.length > 0 ? (
+        <ul className="sx-thread-list">
+          {threads.map((thread) => (
+            <li key={thread}>{thread}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="sx-thread-empty">
+          아직 열린 질문이 없습니다. 작품이 아직 답하지 않은 질문이 생기면, 연속성을 위해 이곳에 모입니다.
+        </p>
+      )}
     </section>
   );
 }
@@ -4836,7 +4908,9 @@ function CreativeStage({
         <div className="sx-stage-toolbar">{expandButton}</div>
         {chapter ? (
           <article className="sx-writing-page">
-            <p className="sx-eyebrow">Episode {chapter.episode}</p>
+            <p className="sx-eyebrow">
+              {isSerialFormat(blueprint.format) ? `Episode ${chapter.episode}` : '원고'}
+            </p>
             <h2>{chapter.title}</h2>
             <p className="sx-writing-hook">{chapter.hook}</p>
             <div className="sx-outline-strip">

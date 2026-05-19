@@ -138,6 +138,8 @@ export default defineConfig({
       'claude',
       '--medium',
       String(input.medium ?? 'novel'),
+      '--format',
+      String(input.format ?? 'long-novel'),
       '--freewrite',
       String(input.freewrite ?? '')
     ]),

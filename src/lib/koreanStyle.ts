@@ -138,13 +138,14 @@ export function evaluateKoreanProse(text: string): KoreanStyleReport {
   return { score, level, sentenceCount: sentences.length, issues };
 }
 
+// 문체 등급 한 단어 라벨 — 호출부에서 "문체"를 앞에 붙이므로 여기서는 등급만 돌려준다.
 export function describeKoreanStyleLevel(level: KoreanStyleLevel): string {
   switch (level) {
     case 'clean':
-      return '문체 양호';
+      return '양호';
     case 'review':
-      return '문체 점검 권장';
+      return '점검 권장';
     default:
-      return '문체 손질 필요';
+      return '손질 필요';
   }
 }

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildCreativeBlueprint, getFormatOptions } from './projectBlueprint';
+import {
+  buildCreativeBlueprint,
+  getFormatOptions,
+  getWorkUnitNoun,
+  isSerialFormat
+} from './projectBlueprint';
 
 describe('projectBlueprint', () => {
   it('maps a long novel selection to serial continuity operations', () => {
@@ -98,6 +103,25 @@ describe('projectBlueprint', () => {
     expect(blueprint.projectRoomSubtitle).toContain('그래픽노블');
     expect(blueprint.managementFocus).toContain('동화책 페이지');
     expect(blueprint.managementFocus).toContain('그래픽노블 톤');
+  });
+
+  it('classifies serial formats and standalone formats apart', () => {
+    // 연재형 — 회차가 누적된다
+    expect(isSerialFormat('long-novel')).toBe(true);
+    expect(isSerialFormat('medium-novel')).toBe(true);
+    expect(isSerialFormat('essay-series')).toBe(true);
+    expect(isSerialFormat('serial-webtoon')).toBe(true);
+    // 단독 완결형 — 한 편으로 끝난다
+    expect(isSerialFormat('short-novel')).toBe(false);
+    expect(isSerialFormat('personal-essay')).toBe(false);
+    expect(isSerialFormat('short-comic')).toBe(false);
+  });
+
+  it('uses 회차 for serial formats and 원고 for standalone formats', () => {
+    expect(getWorkUnitNoun('long-novel')).toBe('회차');
+    expect(getWorkUnitNoun('medium-novel')).toBe('회차');
+    expect(getWorkUnitNoun('short-novel')).toBe('원고');
+    expect(getWorkUnitNoun('personal-essay')).toBe('원고');
   });
 
   it('maps a four-cut insta-toon selection to fixed quadrant and speech bubble operations', () => {

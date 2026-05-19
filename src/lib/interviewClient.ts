@@ -17,6 +17,8 @@ const KNOWN_AGENT_IDS: IntakeAgentId[] = [
 
 export interface InterviewRequestInput {
   medium: string;
+  /** 포맷 — 연재형/단독 완결형 구분. 단편은 회차 가정 없는 질문을 만들게 한다. */
+  format: string;
   freewrite: string;
 }
 

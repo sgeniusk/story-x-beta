@@ -7,6 +7,14 @@ const [, , command = 'help', ...args] = process.argv;
 const providerCommandHints = ['claude --print', 'codex exec'];
 void providerCommandHints;
 
+// 연재형 포맷 — 회차(N화)가 누적되는 형식. src/lib/projectBlueprint.ts 의 serialFormats 와 같은 목록.
+// 나머지(단편·단독 완결형)는 한 편으로 완결되며, 인터뷰·초안 프롬프트가 회차를 가정하지 않는다.
+const SERIAL_FORMATS = new Set(['long-novel', 'medium-novel', 'essay-series', 'serial-webtoon', 'insta-toon']);
+
+function isSerialFormat(format) {
+  return SERIAL_FORMATS.has(format);
+}
+
 // 검토 에이전트 id → .claude/agents/ 페르소나 파일명
 const agentFileMap = {
   showrunner: 'serial-showrunner',
@@ -324,8 +332,9 @@ if (command === 'review-data') {
 if (command === 'interview') {
   const provider = readFlag(args, '--provider', 'mock');
   const medium = readFlag(args, '--medium', 'novel');
+  const format = readFlag(args, '--format', 'long-novel');
   const freewrite = readFlag(args, '--freewrite', '');
-  const prompt = buildInterviewPrompt({ medium, freewrite });
+  const prompt = buildInterviewPrompt({ medium, format, freewrite });
 
   if (provider === 'mock') {
     printJson({ provider, medium, mode: 'interview', status: 'complete', questions: [] });
@@ -530,21 +539,25 @@ function buildAgentReviewPrompt({ agentId, persona, target, medium, context }) {
   ].join('\n');
 }
 
-function buildInterviewPrompt({ medium, freewrite }) {
+function buildInterviewPrompt({ medium, format, freewrite }) {
   const isEssay = medium === 'essay';
+  const isSerial = isSerialFormat(format);
 
   return [
     'Story X 작가 인터뷰 질문 생성 요청.',
-    `매체: ${medium}`,
+    `매체: ${medium} / 포맷: ${format}`,
+    isSerial
+      ? '구조: 회차가 누적되는 연재형 작품입니다.'
+      : '구조: 한 편으로 완결되는 단독 작품입니다. 회차·연재·다음 화를 가정하지 마세요.',
     '',
     '## 작가가 쓴 자유 서술',
-    freewrite || '(자유 서술 없음 — 매체만으로 일반적인 세팅 질문 6개를 만드세요.)',
+    freewrite || '(자유 서술 없음 — 매체와 포맷만으로 일반적인 세팅 질문 6개를 만드세요.)',
     '',
     '## 역할',
     '당신은 Story X의 작가 인터뷰 설계자입니다. 위 자유 서술을 읽고, 이 작가가 작품을 시작하기 전에 스스로 정해야 할 핵심 결정 6~8가지를 객관식 질문으로 만듭니다.',
     '',
     '## 인터뷰어 — 각 질문을 누가 묻는지 agentId로 지정',
-    '- showrunner: 후크와 연재 구조',
+    isSerial ? '- showrunner: 후크와 연재 구조' : '- showrunner: 후크와 한 편의 완결 구조',
     '- character-custodian: 인물의 욕망과 모순',
     '- world-keeper: 세계 규칙과 그 대가',
     '- voice-curator: 문체와 목소리',
@@ -558,6 +571,9 @@ function buildInterviewPrompt({ medium, freewrite }) {
     isEssay
       ? '- 에세이이므로 essay-interviewer를 반드시 포함하고, 작가가 적지 않은 사실을 지어내는 선택지는 만들지 않습니다.'
       : '- 매체와 자유 서술에 맞는 인터뷰어를 고릅니다.',
+    isSerial
+      ? '- 연재형이므로 회차 후킹, 다음 화로 이어지는 약속을 묻는 질문을 포함할 수 있습니다.'
+      : '- 단독 완결형이므로 회차·연재·다음 화를 전제한 질문은 만들지 않습니다. 하나의 효과·정서·반전으로 완결되는 한 편을 묻습니다.',
     '- 6~8개의 질문을 만듭니다. 인터뷰어를 한 명에게 몰지 말고, 쇼러너·캐릭터·배경·문체·연속성이 각자 자기 시선에서 최소 한 가지씩 묻게 분산합니다.',
     '- 핵심 갈등, 결말 방향, 작가가 가장 자신 없는 부분처럼 이야기가 자유 서술의 핵심에서 엇나가지 않도록 방향을 좁히는 질문을 포함합니다.',
     '- 한국어로 자연스럽게 씁니다.',
@@ -628,10 +644,13 @@ function normalizeDataReviewNotes(value) {
 
 function buildDraftPrompt({ medium, format, freewrite, title, context }) {
   const isEssay = medium === 'essay';
+  const isSerial = isSerialFormat(format);
 
   const role = isEssay
     ? '당신은 Story X의 에세이 집필 동반자입니다. 에세이 인터뷰어(작가의 실제 경험을 더 깊이 묻기), 문체 큐레이터(담담하고 선명한 한국어), 실제 인물 보호(주변 인물 익명화와 감정 거리), 연속성 감수자의 시선으로, 작가가 자유 서술에 적은 경험만으로 에세이 한 편을 씁니다.'
-    : '당신은 Story X의 소설 생성 엔진입니다. 쇼러너(회차 약속과 클리프행어), 캐릭터 큐레이터(욕망·상처·말투·관계), 배경 설계자(세계 규칙과 비용), 연속성 감수자(캐논 일관성)의 시선을 모두 적용해 회차 초안을 만듭니다.';
+    : isSerial
+      ? '당신은 Story X의 소설 생성 엔진입니다. 쇼러너(회차 약속과 클리프행어), 캐릭터 큐레이터(욕망·상처·말투·관계), 배경 설계자(세계 규칙과 비용), 연속성 감수자(캐논 일관성)의 시선을 모두 적용해 회차 초안을 만듭니다.'
+      : '당신은 Story X의 소설 생성 엔진입니다. 쇼러너(하나의 효과와 마지막 반전), 캐릭터 큐레이터(욕망·상처·말투·관계), 배경 설계자(세계 규칙과 비용), 연속성 감수자(캐논 일관성)의 시선을 모두 적용해, 한 편으로 완결되는 단편 원고 초안을 만듭니다.';
 
   const rules = isEssay
     ? [
@@ -642,15 +661,26 @@ function buildDraftPrompt({ medium, format, freewrite, title, context }) {
         '- 기존 작품 맥락이 있으면 앞 편에서 다룬 사실·인물과 어긋나지 않게 이어 씁니다.',
         '- prose는 1500~3000자 분량의 실제 본문입니다.'
       ]
-    : [
-        '- 한국어로 작성하고, 작가 자유 서술의 어휘와 의도를 존중합니다.',
-        '- 기존 작품 맥락이 있으면 그 캐논·인물·세계 규칙을 절대 어기지 말고, 이번 회차는 그 다음 회차로 자연스럽게 이어집니다.',
-        '- 한 회차는 하나의 질문에 답하고 더 날카로운 질문을 엽니다.',
-        '- prose는 1500~3000자 분량의 실제 본문입니다.'
-      ];
+    : isSerial
+      ? [
+          '- 한국어로 작성하고, 작가 자유 서술의 어휘와 의도를 존중합니다.',
+          '- 기존 작품 맥락이 있으면 그 캐논·인물·세계 규칙을 절대 어기지 말고, 이번 회차는 그 다음 회차로 자연스럽게 이어집니다.',
+          '- 한 회차는 하나의 질문에 답하고 더 날카로운 질문을 엽니다.',
+          '- prose는 1500~3000자 분량의 실제 본문입니다.'
+        ]
+      : [
+          '- 한국어로 작성하고, 작가 자유 서술의 어휘와 의도를 존중합니다.',
+          '- 한 편으로 완결되는 단편입니다. 회차·연재·다음 화를 가정하지 말고, 하나의 정서와 하나의 반전으로 또렷하게 끝맺습니다.',
+          '- 불필요한 인물과 배경을 덜어내고, 마지막 문장이 오래 남도록 씁니다.',
+          '- prose는 1500~3000자 분량의 실제 본문입니다.'
+        ];
 
   return [
-    isEssay ? 'Story X 에세이 초안 생성 요청.' : 'Story X 회차 초안 생성 요청.',
+    isEssay
+      ? 'Story X 에세이 초안 생성 요청.'
+      : isSerial
+        ? 'Story X 회차 초안 생성 요청.'
+        : 'Story X 단편 원고 초안 생성 요청.',
     `매체: ${medium} / 포맷: ${format}`,
     title ? `작품 제목: ${title}` : '작품 제목: 미정',
     '',
@@ -666,23 +696,33 @@ function buildDraftPrompt({ medium, format, freewrite, title, context }) {
     '## 규칙',
     ...rules,
     '',
-    '## 회차 구성(beats)',
+    isSerial ? '## 회차 구성(beats)' : '## 원고 구성(beats)',
     isEssay
       ? '- beats는 이 글의 흐름을 4~8개의 의미 단위로 나눈 구성표입니다. 각 단위는 짧은 label과 한 문장 summary로 적습니다.'
-      : '- beats는 이 회차의 이야기 흐름을 4~8개의 의미 단위로 나눈 구성표입니다. 각 단위는 짧은 label과 한 문장 summary로 적습니다.',
+      : isSerial
+        ? '- beats는 이 회차의 이야기 흐름을 4~8개의 의미 단위로 나눈 구성표입니다. 각 단위는 짧은 label과 한 문장 summary로 적습니다.'
+        : '- beats는 이 단편의 이야기 흐름을 4~8개의 의미 단위로 나눈 구성표입니다. 각 단위는 짧은 label과 한 문장 summary로 적습니다.',
     '- beats는 prose 본문의 실제 전개 순서를 그대로 따라야 하며, prose를 대체하지 않는 계획층입니다.',
-    '- 각 beat에는 tension을 0~100 정수로 적습니다. 이 회차에서 계획한 극적 긴장 강도이며, 도입은 낮게 시작해 클라이맥스에서 가장 높고 마무리에서 다시 풀리는 곡선을 그립니다.',
+    isSerial
+      ? '- 각 beat에는 tension을 0~100 정수로 적습니다. 이 회차에서 계획한 극적 긴장 강도이며, 도입은 낮게 시작해 클라이맥스에서 가장 높고 마무리에서 다시 풀리는 곡선을 그립니다.'
+      : '- 각 beat에는 tension을 0~100 정수로 적습니다. 이 원고에서 계획한 극적 긴장 강도이며, 도입은 낮게 시작해 클라이맥스에서 가장 높고 마무리에서 다시 풀리는 곡선을 그립니다.',
     '',
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',
     '  "title": "제목",',
-    isEssay ? '  "hook": "글을 닫는 한 줄 — 독자에게 남는 울림",' : '  "hook": "다음 회차로 이어지는 한 줄 후크",',
+    isEssay
+      ? '  "hook": "글을 닫는 한 줄 — 독자에게 남는 울림",'
+      : isSerial
+        ? '  "hook": "다음 회차로 이어지는 한 줄 후크",'
+        : '  "hook": "원고를 닫는 한 줄 — 독자에게 남는 울림",',
     '  "outline": ["장면/단락 비트 1", "비트 2", "비트 3"],',
     '  "beats": [{ "label": "구성 단위 이름", "summary": "이 단위에서 일어나는 일 한 문장", "tension": 0 }],',
     '  "prose": "본문",',
     isEssay
       ? '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 글에서 확정된 사실 — 작가가 말한 경험만" }]'
-      : '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 회차에서 확정된 새 사실" }]',
+      : isSerial
+        ? '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 회차에서 확정된 새 사실" }]'
+        : '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 원고에서 확정된 새 사실" }]',
     '}'
   ].join('\n');
 }
