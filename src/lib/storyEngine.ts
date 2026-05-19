@@ -899,6 +899,195 @@ export function buildProjectContextDigest(project: SeriesProject): string {
   return lines.join('\n');
 }
 
+// 데이터 모드 캐논 분야 — 데이터 검토가 다루는 5종.
+export type CanonReviewCategory = 'characters' | 'places' | 'objects' | 'events' | 'timeline';
+
+const canonReviewCategoryLabels: Record<CanonReviewCategory, string> = {
+  characters: '인물',
+  places: '장소',
+  objects: '사물',
+  events: '사건',
+  timeline: '시간선'
+};
+
+// 데이터 검토용 분야 라벨을 돌려준다 — 인물/장소/사물/사건/시간선.
+export function getCanonReviewCategoryLabel(category: CanonReviewCategory): string {
+  return canonReviewCategoryLabels[category];
+}
+
+function describeCanonStatus(status: CanonStatus, conflict?: string): string {
+  if (status === 'conflict') {
+    return conflict ? `충돌 — ${conflict}` : '충돌';
+  }
+  if (status === 'unverified') {
+    return '미확인 — 아직 본문에 등장하지 않음';
+  }
+  return '정합 확인됨';
+}
+
+// 한 캐논 분야의 엔티티를 LLM 데이터 검토에 넘길 텍스트로 직렬화한다.
+// 인물은 욕망·상처·관계까지, 장소/사물/사건은 사실·등장 회차·상태, 시간선은 연도·계절·라벨을 담는다.
+export function serializeCanonCategory(project: SeriesProject, category: CanonReviewCategory): string {
+  const lines: string[] = [`분야: ${getCanonReviewCategoryLabel(category)}`];
+
+  if (category === 'characters') {
+    if (project.characters.length === 0) {
+      lines.push('(등록된 인물이 없습니다.)');
+      return lines.join('\n');
+    }
+    project.characters.forEach((character) => {
+      lines.push('', `- ${character.name} (${character.role})`);
+      lines.push(`  · 욕망: ${character.desire}`);
+      lines.push(`  · 상처: ${character.wound}`);
+      lines.push(`  · 현재 상태: ${character.currentState}`);
+      if (character.relations.length > 0) {
+        const relationText = character.relations
+          .map((relation) => {
+            const target = project.characters.find((item) => item.id === relation.targetId);
+            const targetName = target ? target.name : relation.targetId;
+            return `${targetName}(${relation.label}${relation.dashed ? ', 잠정' : ''})`;
+          })
+          .join(', ');
+        lines.push(`  · 관계: ${relationText}`);
+      }
+    });
+    return lines.join('\n');
+  }
+
+  if (category === 'timeline') {
+    if (project.timeline.length === 0) {
+      lines.push('(등록된 시간선 항목이 없습니다.)');
+      return lines.join('\n');
+    }
+    project.timeline.forEach((entry) => {
+      lines.push(
+        '',
+        `- ${entry.year}년 ${entry.season} · ${entry.label} [${describeCanonStatus(entry.status)}]`
+      );
+      if (entry.note) {
+        lines.push(`  · 메모: ${entry.note}`);
+      }
+    });
+    return lines.join('\n');
+  }
+
+  const entities = category === 'places' ? project.places : category === 'objects' ? project.objects : project.events;
+  if (entities.length === 0) {
+    lines.push(`(등록된 ${getCanonReviewCategoryLabel(category)} 엔티티가 없습니다.)`);
+    return lines.join('\n');
+  }
+  entities.forEach((entity) => {
+    lines.push('', `- ${entity.name}${entity.sub ? ` (${entity.sub})` : ''} [${describeCanonStatus(entity.status, entity.conflict)}]`);
+    entity.facts.forEach((fact) => lines.push(`  · 사실: ${fact}`));
+    if (entity.appearedIn.length > 0) {
+      lines.push(`  · 등장 회차: ${entity.appearedIn.join(', ')}`);
+    }
+  });
+  return lines.join('\n');
+}
+
+// 데이터 검토 노트 한 건 — 정합(consistency check) 또는 제안(strengthening idea).
+export interface DataReviewNoteRecord {
+  kind: '정합' | '제안';
+  title: string;
+  body: string;
+}
+
+export interface DeterministicDataReview {
+  summary: string;
+  notes: DataReviewNoteRecord[];
+}
+
+// 브리지 미연결·오프라인일 때 쓰는 deterministic 데이터 검토 — 실제 엔티티 상태에서 정합/제안 노트를 만든다.
+export function buildDeterministicDataReview(
+  project: SeriesProject,
+  category: CanonReviewCategory
+): DeterministicDataReview {
+  const label = getCanonReviewCategoryLabel(category);
+  const notes: DataReviewNoteRecord[] = [];
+
+  if (category === 'characters') {
+    const count = project.characters.length;
+    const noRelations = project.characters.filter((character) => character.relations.length === 0);
+    notes.push({
+      kind: '정합',
+      title: `${label} ${count}명의 욕망·상처 정합`,
+      body:
+        count > 0
+          ? `등록된 인물 ${count}명의 욕망과 상처가 서로 모순되지 않는지 확인했습니다. 회차가 쌓이면 현재 상태와 캐논 사실의 어긋남을 다시 점검하세요.`
+          : '아직 등록된 인물이 없어 정합을 확인할 대상이 없습니다.'
+    });
+    notes.push({
+      kind: '제안',
+      title: noRelations.length > 0 ? '관계가 비어 있는 인물 보강' : '인물 관계 심화',
+      body:
+        noRelations.length > 0
+          ? `${noRelations.map((character) => character.name).join(', ')}의 관계가 비어 있습니다. 다른 인물과의 관계를 한 줄이라도 채우면 관계도가 살아납니다.`
+          : '관계도의 잠정(점선) 관계 중 회차에서 확정할 만한 것을 골라 굵은 선으로 올리면 인물 망이 단단해집니다.'
+    });
+    return {
+      summary: `${label} 분야 deterministic 검토 — 인물 ${count}명의 정합과 보강 지점을 정리했습니다. 실제 검토는 Claude 구독으로 실행하세요.`,
+      notes
+    };
+  }
+
+  if (category === 'timeline') {
+    const entries = project.timeline;
+    const flagged = entries.filter((entry) => entry.status !== 'ok');
+    notes.push({
+      kind: '정합',
+      title: flagged.length > 0 ? `시간선 미확정 ${flagged.length}건` : '시간선 연도 정합',
+      body:
+        flagged.length > 0
+          ? `${flagged.map((entry) => `${entry.year}년 ${entry.label}`).join(', ')} 항목이 아직 확정되지 않았습니다. 본문과 대조해 연도·계절을 확정하세요.`
+          : '등록된 시간선 항목의 연도 순서와 계절이 서로 어긋나지 않습니다.'
+    });
+    notes.push({
+      kind: '제안',
+      title: '시간선 공백 보강',
+      body:
+        entries.length > 1
+          ? '연속된 두 항목 사이의 간격이 큰 구간이 있으면, 그 사이를 메우는 사건 한 줄을 더하면 연표가 촘촘해집니다.'
+          : '시간선 항목이 부족합니다. 핵심 사건의 연도를 두세 개 더 등록하면 회차 간 시점 검증이 쉬워집니다.'
+    });
+    return {
+      summary: `${label} 분야 deterministic 검토 — 시간선 ${entries.length}개 항목의 정합과 공백을 정리했습니다. 실제 검토는 Claude 구독으로 실행하세요.`,
+      notes
+    };
+  }
+
+  const entities = category === 'places' ? project.places : category === 'objects' ? project.objects : project.events;
+  const conflicts = entities.filter((entity) => entity.status === 'conflict');
+  const unverified = entities.filter((entity) => entity.status === 'unverified');
+  notes.push({
+    kind: '정합',
+    title:
+      conflicts.length > 0
+        ? `${label} 충돌 ${conflicts.length}건`
+        : unverified.length > 0
+          ? `${label} 미확인 ${unverified.length}건`
+          : `${label} 사실 정합`,
+    body:
+      conflicts.length > 0
+        ? `${conflicts.map((entity) => entity.name).join(', ')}의 사실이 본문과 어긋납니다. 충돌 내용을 확인하고 사실 또는 본문을 맞추세요.`
+        : unverified.length > 0
+          ? `${unverified.map((entity) => entity.name).join(', ')}이(가) 아직 본문에 등장하지 않았습니다. 등장 회차를 채우거나 사용 계획을 정하세요.`
+          : `등록된 ${label} 엔티티의 사실과 등장 회차가 서로 어긋나지 않습니다.`
+  });
+  notes.push({
+    kind: '제안',
+    title: `${label} 활용 보강`,
+    body:
+      entities.length > 0
+        ? `등록된 ${label} 중 등장 회차가 하나뿐인 엔티티는 다음 회차에서 다시 불러 쓰면 작품의 밀도가 올라갑니다.`
+        : `아직 등록된 ${label} 엔티티가 없습니다. 작품에 이미 나온 ${label}을(를) 캐논으로 등록하면 연속성 검증이 가능해집니다.`
+  });
+  return {
+    summary: `${label} 분야 deterministic 검토 — ${label} ${entities.length}개 엔티티의 정합과 보강을 정리했습니다. 실제 검토는 Claude 구독으로 실행하세요.`,
+    notes
+  };
+}
+
 export interface ApprovedMemoryInput {
   id: string;
   owner: string;

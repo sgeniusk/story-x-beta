@@ -39,6 +39,33 @@ describe('storyx CLI script', () => {
     expect(saved).toContain('approvalRequiredBeforeSync');
   });
 
+  it('exposes a review-data command for per-category canon review', () => {
+    expect(cli).toContain("command === 'review-data'");
+    expect(cli).toContain('buildDataReviewPrompt');
+    expect(cli).toContain('normalizeDataReviewNotes');
+  });
+
+  it('runs a mock data review and returns 정합/제안 notes', () => {
+    const result = spawnSync(
+      'node',
+      [cliPath, 'review-data', '--provider', 'mock', '--category', '인물', '--target', '- 한서윤: 욕망'],
+      { encoding: 'utf8' }
+    );
+    const payload = JSON.parse(result.stdout) as {
+      mode: string;
+      category: string;
+      status: string;
+      notes: Array<{ kind: string; title: string; body: string }>;
+    };
+
+    expect(result.status).toBe(0);
+    expect(payload.mode).toBe('review-data');
+    expect(payload.category).toBe('인물');
+    expect(payload.status).toBe('complete');
+    expect(payload.notes.some((note) => note.kind === '정합')).toBe(true);
+    expect(payload.notes.some((note) => note.kind === '제안')).toBe(true);
+  });
+
   it('normalizes provider raw output into a pending review file', () => {
     const outDir = mkdtempSync(resolve(tmpdir(), 'storyx-cli-'));
     const rawPath = resolve(outDir, 'claude-raw.txt');

@@ -154,6 +154,20 @@ export default defineConfig({
       String(input.medium ?? 'novel'),
       '--context',
       String(input.context ?? '')
+    ]),
+    storyxBridge('/api/review-data', (input) => [
+      'tools/storyx.mjs',
+      'review-data',
+      '--provider',
+      'claude',
+      '--category',
+      String(input.category ?? '인물'),
+      '--target',
+      String(input.target ?? ''),
+      '--medium',
+      String(input.medium ?? 'novel'),
+      '--context',
+      String(input.context ?? '')
     ])
   ]
 });

@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyApprovedMemory,
+  buildDeterministicDataReview,
   buildStoryEditorWorkspace,
   chapterFromDraftPayload,
   createSeedProject,
+  getCanonReviewCategoryLabel,
   lockChapter,
   normalizeChapterBeats,
   produceNextChapter,
+  serializeCanonCategory,
   unlockChapter,
   validateContinuity
 } from './storyEngine';
@@ -382,5 +385,43 @@ describe('storyEngine', () => {
     );
     expect(workspace.continuitySummary.blocked).toBe(2);
     expect(workspace.continuitySummary.status).toBe('blocked');
+  });
+
+  it('serializeCanonCategory renders characters with desire, wound, and relations', () => {
+    const project = createSeedProject();
+
+    const serialized = serializeCanonCategory(project, 'characters');
+
+    expect(serialized).toContain('분야: 인물');
+    expect(serialized).toContain(project.characters[0].name);
+    expect(serialized).toContain('욕망:');
+    expect(serialized).toContain('상처:');
+  });
+
+  it('serializeCanonCategory renders entity facts, appearances, and timeline years', () => {
+    const project = createSeedProject();
+
+    const places = serializeCanonCategory(project, 'places');
+    expect(places).toContain('분야: 장소');
+    expect(places).toContain(project.places[0].name);
+
+    const timeline = serializeCanonCategory(project, 'timeline');
+    expect(timeline).toContain('분야: 시간선');
+    expect(timeline).toContain(`${project.timeline[0].year}년`);
+  });
+
+  it('buildDeterministicDataReview returns consistency and suggestion notes for every category', () => {
+    const project = createSeedProject();
+    const categories = ['characters', 'places', 'objects', 'events', 'timeline'] as const;
+
+    for (const category of categories) {
+      const review = buildDeterministicDataReview(project, category);
+
+      expect(review.summary).toContain(getCanonReviewCategoryLabel(category));
+      expect(review.notes.length).toBeGreaterThan(0);
+      expect(review.notes.some((note) => note.kind === '정합')).toBe(true);
+      expect(review.notes.some((note) => note.kind === '제안')).toBe(true);
+      expect(review.notes.every((note) => note.body.trim().length > 0)).toBe(true);
+    }
   });
 });

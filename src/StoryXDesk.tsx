@@ -36,19 +36,23 @@ import {
 } from './lib/projectBlueprint';
 import {
   applyApprovedMemory,
+  buildDeterministicDataReview,
   buildProjectContextDigest,
   buildStoryEditorWorkspace,
   chapterFromDraftPayload,
   createSeedProject,
   describeCreativeWeight,
+  getCanonReviewCategoryLabel,
   getGenreProfiles,
   lockChapter,
   produceNextChapter,
+  serializeCanonCategory,
   type AgentRun,
   type Chapter,
   type ChapterBeat,
   type AgentId,
   type CanonEntity,
+  type CanonReviewCategory,
   type CharacterProfile,
   type CreativeWeight,
   type DraftChapterPayload,
@@ -60,6 +64,7 @@ import {
 } from './lib/storyEngine';
 import { requestLlmDraft } from './lib/draftClient';
 import { requestAgentReview } from './lib/reviewClient';
+import { requestDataReview, type DataReviewNote } from './lib/dataReviewClient';
 import { describeKoreanStyleLevel, evaluateKoreanProse } from './lib/koreanStyle';
 import { diffProseBlocks } from './lib/proseDiff';
 import {
@@ -124,6 +129,13 @@ const canonCategories: Array<{ id: CanonCategory; label: string }> = [
   { id: 'events', label: '사건' },
   { id: 'timeline', label: '시간선' }
 ];
+
+// 데이터 모드 우레일에 채워지는 분야별 검토 결과 — summary와 정합/제안 노트, 그리고 출처(브리지/기본).
+interface DataReviewView {
+  summary: string;
+  notes: DataReviewNote[];
+  source: 'claude' | 'fallback';
+}
 
 const genreProfiles = getGenreProfiles();
 const mediumOptions = getMediumOptions();
@@ -678,6 +690,9 @@ export function StoryXDesk({
   const [canonChanges, setCanonChanges] = useState<CanonChangeEntry[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
+  // 데이터 모드 분야별 검토 — 결과는 분야 id로 캐싱하고, 검토 중인 분야는 따로 표시한다.
+  const [dataReviewResults, setDataReviewResults] = useState<Partial<Record<CanonCategory, DataReviewView>>>({});
+  const [dataReviewingCategory, setDataReviewingCategory] = useState<CanonCategory | null>(null);
   const [generationNote, setGenerationNote] = useState<string | null>(null);
   const [projectSnapshots, setProjectSnapshots] = useState<ProjectSnapshot[]>(() => loadProjectSnapshots());
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -1423,6 +1438,56 @@ export function StoryXDesk({
     setDataView({ kind: 'bible', section: 'approval' });
   }
 
+  // 데이터 모드 분야별 검토 — 현재 분야의 실제 엔티티를 직렬화해 LLM 검토를 요청하고, 정합/제안 노트를 우레일에 채운다.
+  // 브리지 미연결·실패 시 deterministic 검토로 폴백해 오프라인에서도 결과가 나온다.
+  async function runDataReview(category: CanonCategory) {
+    if (dataReviewingCategory) {
+      return;
+    }
+
+    setDataReviewingCategory(category);
+
+    try {
+      const reviewCategory = category as CanonReviewCategory;
+      const llm = await requestDataReview({
+        category: getCanonReviewCategoryLabel(reviewCategory),
+        target: serializeCanonCategory(project, reviewCategory),
+        medium: blueprint.medium,
+        context: buildProjectContextDigest(project)
+      });
+
+      if (llm.ok && llm.notes && llm.notes.length > 0) {
+        setDataReviewResults((current) => ({
+          ...current,
+          [category]: {
+            summary: llm.summary ?? '',
+            notes: llm.notes ?? [],
+            source: 'claude'
+          }
+        }));
+        setGenerationNote('Claude 구독으로 데이터 검토를 마쳤습니다.');
+        return;
+      }
+
+      const fallback = buildDeterministicDataReview(project, reviewCategory);
+      setDataReviewResults((current) => ({
+        ...current,
+        [category]: {
+          summary: fallback.summary,
+          notes: fallback.notes,
+          source: 'fallback'
+        }
+      }));
+      setGenerationNote(
+        llm.reason
+          ? `데이터 검토 브리지를 쓰지 못해 기본 검토로 대체했습니다. (${llm.reason})`
+          : '기본 데이터 검토로 결과를 만들었습니다.'
+      );
+    } finally {
+      setDataReviewingCategory(null);
+    }
+  }
+
   // 데이터 모드 좌레일·진입점에서 바이블 작업장(개요·캐논·문체·승인)을 연다.
   function openBibleSection(section: BibleSection) {
     setDataView({ kind: 'bible', section });
@@ -1973,10 +2038,12 @@ export function StoryXDesk({
         <aside className="sx-codex-rail sx-focused-assist-rail" aria-label={isBibleMode ? '조수진과 바이블 검토' : '작가진과 열린 질문'}>
           {isBibleMode ? (
             dataView.kind === 'canon' ? (
-              /* P3 — 데이터 모드: 분야별 데이터 검토 레일. 검토 데이터는 4단계에서 연결한다 */
+              /* P4 — 데이터 모드: 분야별 데이터 검토 레일. 실제 엔티티 검토 결과를 정합/제안으로 보여준다 */
               <DataReviewRail
                 category={dataView.category}
-                onRequestReview={requestBibleReview}
+                review={dataReviewResults[dataView.category] ?? null}
+                isReviewing={dataReviewingCategory === dataView.category}
+                onRequestReview={() => runDataReview(dataView.category)}
                 onOpenApprovalQueue={() => openBibleSection('approval')}
               />
             ) : (
@@ -3293,17 +3360,23 @@ function CanonCanvas({
   );
 }
 
-// 데이터 모드 우레일 — 분야별 데이터 검토. 분야별 검토 데이터는 4단계에서 연결하므로 지금은 빈 상태와 트리거만.
+// 데이터 모드 우레일 — 분야별 데이터 검토. 검토를 실행하면 연속성 감수자가 정합/제안 노트를 채운다.
 function DataReviewRail({
   category,
+  review,
+  isReviewing,
   onRequestReview,
   onOpenApprovalQueue
 }: {
   category: CanonCategory;
+  review: DataReviewView | null;
+  isReviewing: boolean;
   onRequestReview: () => void;
   onOpenApprovalQueue: () => void;
 }) {
   const categoryLabel = canonCategories.find((item) => item.id === category)?.label ?? '캐논';
+  const consistencyNotes = review ? review.notes.filter((note) => note.kind === '정합') : [];
+  const suggestionNotes = review ? review.notes.filter((note) => note.kind === '제안') : [];
 
   return (
     <section className="sx-panel sx-data-review-rail" aria-label={`${categoryLabel} 데이터 검토`}>
@@ -3314,15 +3387,58 @@ function DataReviewRail({
       <p className="ex-data-review-intro">
         {categoryLabel} 데이터의 정합과 제안을 분야별로 모읍니다. 검토를 실행하면 결과가 여기에 쌓입니다.
       </p>
-      <div className="ex-data-review-empty">
-        <span className="ex-data-review-empty-dot" aria-hidden="true" />
-        <strong>아직 검토 없음</strong>
-        <p>이 분야에 대한 에이전트 의견이 아직 없습니다. 데이터 검토를 실행해 정합·제안을 받아보세요.</p>
-      </div>
+
+      {isReviewing ? (
+        <div className="ex-data-review-empty" aria-live="polite">
+          <span className="ex-data-review-empty-dot" aria-hidden="true" />
+          <strong>검토하는 중…</strong>
+          <p>연속성 감수자가 {categoryLabel} 데이터의 회차 간 정합을 읽고 있습니다.</p>
+        </div>
+      ) : review ? (
+        <div className="ex-data-review-result">
+          {review.summary ? <p className="ex-data-review-summary">{review.summary}</p> : null}
+          {review.source === 'fallback' ? (
+            <p className="ex-data-review-source">브리지를 쓰지 못해 기본 검토로 만든 결과입니다.</p>
+          ) : null}
+
+          {consistencyNotes.length > 0 ? (
+            <div className="ex-data-review-group">
+              <h3>정합 점검 ({consistencyNotes.length})</h3>
+              {consistencyNotes.map((note, index) => (
+                <article key={`정합-${index}`} className="ex-data-review-note ex-data-review-note--consistency">
+                  <span className="ex-data-review-note-kind">정합</span>
+                  {note.title ? <strong>{note.title}</strong> : null}
+                  <p>{note.body}</p>
+                </article>
+              ))}
+            </div>
+          ) : null}
+
+          {suggestionNotes.length > 0 ? (
+            <div className="ex-data-review-group">
+              <h3>보강 제안 ({suggestionNotes.length})</h3>
+              {suggestionNotes.map((note, index) => (
+                <article key={`제안-${index}`} className="ex-data-review-note ex-data-review-note--suggestion">
+                  <span className="ex-data-review-note-kind">제안</span>
+                  {note.title ? <strong>{note.title}</strong> : null}
+                  <p>{note.body}</p>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <div className="ex-data-review-empty">
+          <span className="ex-data-review-empty-dot" aria-hidden="true" />
+          <strong>아직 검토 없음</strong>
+          <p>이 분야에 대한 에이전트 의견이 아직 없습니다. 데이터 검토를 실행해 정합·제안을 받아보세요.</p>
+        </div>
+      )}
+
       <div className="ex-data-review-actions">
-        <button type="button" className="sx-primary-button" onClick={onRequestReview}>
+        <button type="button" className="sx-primary-button" onClick={onRequestReview} disabled={isReviewing}>
           <ClipboardCheck size={15} />
-          데이터 검토 실행
+          {isReviewing ? '검토하는 중…' : review ? '데이터 검토 다시 실행' : '데이터 검토 실행'}
         </button>
         <button type="button" className="sx-secondary-button" onClick={onOpenApprovalQueue}>
           승인 대기 열기

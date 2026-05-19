@@ -208,8 +208,10 @@ if (command === 'draft') {
       hook: 'mock 후크 — 실제 생성은 --provider claude로 실행하세요.',
       outline: ['mock 장면 비트 1', 'mock 장면 비트 2'],
       beats: [
-        { label: 'mock 도입', summary: 'mock 구성 — 실제 생성은 --provider claude로 실행하세요.' },
-        { label: 'mock 전개', summary: 'mock 구성 — 자리표시 데이터입니다.' }
+        { label: 'mock 도입', summary: 'mock 구성 — 실제 생성은 --provider claude로 실행하세요.', tension: 28 },
+        { label: 'mock 전개', summary: 'mock 구성 — 자리표시 데이터입니다.', tension: 56 },
+        { label: 'mock 절정', summary: 'mock 구성 — 긴장이 가장 높은 자리표시 단위입니다.', tension: 84 },
+        { label: 'mock 마무리', summary: 'mock 구성 — 긴장을 풀고 다음 회차로 넘기는 자리표시 단위입니다.', tension: 40 }
       ],
       prose: 'mock 초안입니다. 실제 claude 호출 없이 만든 자리표시 텍스트라 작품 평가에는 쓰지 마세요.',
       newCanonFacts: [],
@@ -251,6 +253,59 @@ if (command === 'draft') {
     warning: 'Actual Claude/Codex runs spend tokens. Remove --dry-run only after confirming medium, format, and freewrite.'
   });
   process.exit(0);
+}
+
+if (command === 'review-data') {
+  const provider = readFlag(args, '--provider', 'mock');
+  const category = readFlag(args, '--category', '인물');
+  const target = readFlag(args, '--target', '');
+  const medium = readFlag(args, '--medium', 'novel');
+  const context = readFlag(args, '--context', '');
+  const prompt = buildDataReviewPrompt({ category, target, medium, context });
+
+  if (provider === 'mock') {
+    printJson({
+      provider,
+      category,
+      mode: 'review-data',
+      status: 'complete',
+      summary: `mock 데이터 검토 — "${category}" 분야의 정합·제안 자리표시 결과입니다. 실제 검토는 --provider claude로 실행하세요.`,
+      notes: [
+        {
+          kind: '정합',
+          title: `${category} 분야 등장 회차 정합`,
+          body: `mock 검토 — "${category}" 엔티티의 사실과 등장 회차가 서로 어긋나지 않는지 확인하는 자리표시 항목입니다.`
+        },
+        {
+          kind: '제안',
+          title: `${category} 보강 아이디어`,
+          body: `mock 검토 — "${category}" 분야를 더 단단하게 만들 보강 아이디어가 들어갈 자리표시 항목입니다.`
+        }
+      ]
+    });
+    process.exit(0);
+  }
+
+  const commandPreview =
+    provider === 'claude'
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', '--model', 'sonnet', prompt]
+      : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
+
+  const providerResult = runProvider(commandPreview);
+  const rawOutput = providerResult.stdout || providerResult.stderr;
+  const parsed = parseProviderJson(rawOutput);
+
+  printJson({
+    provider,
+    category,
+    mode: 'review-data',
+    status: providerResult.status === 0 ? 'complete' : 'failed',
+    exitCode: providerResult.status,
+    summary: readString(parsed?.summary),
+    notes: normalizeDataReviewNotes(parsed?.notes),
+    warning: providerResult.status === 0 ? undefined : 'provider 호출이 실패했습니다.'
+  });
+  process.exit(providerResult.status === 0 ? 0 : 1);
 }
 
 if (command === 'interview') {
@@ -326,6 +381,7 @@ printJson({
     'npm run storyx -- draft --provider claude --medium novel --format long-novel --freewrite "쓰고 싶은 이야기" --dry-run',
     'npm run storyx -- review --provider mock --scale small --dry-run',
     'npm run storyx -- review --provider claude --scale small --dry-run',
+    'npm run storyx -- review-data --provider mock --category 인물 --target "<직렬화된 엔티티>"',
     'npm run storyx -- normalize-provider-output --provider claude --scale small --raw-file ./provider-output.txt'
   ]
 });
@@ -504,6 +560,56 @@ function buildInterviewPrompt({ medium, freewrite }) {
   ].join('\n');
 }
 
+// 데이터 모드 분야별 검토 프롬프트 — 한 캐논 분야(인물/장소/사물/사건/시간선)의 작품 내 정합과 보강 제안을 묻는다.
+function buildDataReviewPrompt({ category, target, medium, context }) {
+  return [
+    'Story X 데이터 검토 요청 — 한 캐논 분야의 작품 내 정합성을 점검합니다.',
+    `매체: ${medium}`,
+    `검토 분야: ${category}`,
+    '',
+    '## 작품 계약과 바이블 맥락 (검토 기준)',
+    context || '(맥락 없음)',
+    '',
+    `## 검토 대상 — "${category}" 분야의 캐논 데이터`,
+    target || `(${category} 데이터가 전달되지 않았습니다 — 검토할 수 없음을 summary에 명시하세요.)`,
+    '',
+    '## 역할',
+    `당신은 Story X의 연속성 감수자입니다. "${category}" 분야의 엔티티들이 회차를 가로질러, 그리고 작품 안에서 서로 어긋나지 않는지 점검합니다.`,
+    '',
+    '## 지시',
+    '- 회차 간/작품 내 정합성을 본다 — 한 엔티티의 사실들이 서로 모순되지 않는지, 등장 회차와 사실이 어긋나지 않는지, 분야 안의 다른 엔티티와 충돌하지 않는지.',
+    '- 두 종류의 노트만 남긴다.',
+    '  - 정합(consistency): 어긋남·충돌·미확인 항목을 짚는다. 문제가 없으면 정합이 확인된 항목이라고 적는다.',
+    '  - 제안(suggestion): 이 분야를 더 단단하게 만들 보강 아이디어. 예 — "이 사건이 약하다", "이런 사물이 하나 있으면 복선이 산다", "이 인물 관계가 비어 있다".',
+    '- 새 엔티티를 확정하거나 캐논을 임의로 바꾸지 않는다. 제안은 어디까지나 아이디어로 남긴다.',
+    '- 한국어로 쓰고, 번역투와 과한 AI식 설명을 피한다.',
+    '',
+    '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
+    '{',
+    `  "summary": "${category} 분야 검토 총평 한 단락",`,
+    '  "notes": [',
+    '    { "kind": "정합|제안", "title": "노트 제목", "body": "노트 본문 — 근거와 함께" }',
+    '  ]',
+    '}'
+  ].join('\n');
+}
+
+// provider 응답의 데이터 검토 notes 배열을 { kind, title, body }로 정규화한다. kind는 정합/제안만 허용.
+function normalizeDataReviewNotes(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(isRecord)
+    .map((note) => ({
+      kind: readString(note.kind) === '제안' ? '제안' : '정합',
+      title: readString(note.title) || readString(note.label),
+      body: readString(note.body) || readString(note.note) || readString(note.detail)
+    }))
+    .filter((note) => note.title || note.body);
+}
+
 function buildDraftPrompt({ medium, format, freewrite, title, context }) {
   const isEssay = medium === 'essay';
 
@@ -549,13 +655,14 @@ function buildDraftPrompt({ medium, format, freewrite, title, context }) {
       ? '- beats는 이 글의 흐름을 4~8개의 의미 단위로 나눈 구성표입니다. 각 단위는 짧은 label과 한 문장 summary로 적습니다.'
       : '- beats는 이 회차의 이야기 흐름을 4~8개의 의미 단위로 나눈 구성표입니다. 각 단위는 짧은 label과 한 문장 summary로 적습니다.',
     '- beats는 prose 본문의 실제 전개 순서를 그대로 따라야 하며, prose를 대체하지 않는 계획층입니다.',
+    '- 각 beat에는 tension을 0~100 정수로 적습니다. 이 회차에서 계획한 극적 긴장 강도이며, 도입은 낮게 시작해 클라이맥스에서 가장 높고 마무리에서 다시 풀리는 곡선을 그립니다.',
     '',
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',
     '  "title": "제목",',
     isEssay ? '  "hook": "글을 닫는 한 줄 — 독자에게 남는 울림",' : '  "hook": "다음 회차로 이어지는 한 줄 후크",',
     '  "outline": ["장면/단락 비트 1", "비트 2", "비트 3"],',
-    '  "beats": [{ "label": "구성 단위 이름", "summary": "이 단위에서 일어나는 일 한 문장" }],',
+    '  "beats": [{ "label": "구성 단위 이름", "summary": "이 단위에서 일어나는 일 한 문장", "tension": 0 }],',
     '  "prose": "본문",',
     isEssay
       ? '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 글에서 확정된 사실 — 작가가 말한 경험만" }]'
@@ -583,7 +690,8 @@ function normalizeDraftOutput(rawOutput, options) {
   };
 }
 
-// provider 응답의 beats 배열을 { label, summary } 쌍으로 정규화한다. 빈 항목·구버전 응답은 버린다.
+// provider 응답의 beats 배열을 { label, summary, tension? } 쌍으로 정규화한다. 빈 항목·구버전 응답은 버린다.
+// tension은 숫자일 때만 0~100 정수로 보정해 통과시키고, 누락 시 키 자체를 빼 프런트엔드 기본값 보정에 맡긴다.
 function normalizeDraftBeats(value) {
   if (!Array.isArray(value)) {
     return [];
@@ -591,11 +699,27 @@ function normalizeDraftBeats(value) {
 
   return value
     .filter(isRecord)
-    .map((beat) => ({
-      label: readString(beat.label) || readString(beat.title),
-      summary: readString(beat.summary) || readString(beat.note) || readString(beat.detail)
-    }))
+    .map((beat) => {
+      const normalized = {
+        label: readString(beat.label) || readString(beat.title),
+        summary: readString(beat.summary) || readString(beat.note) || readString(beat.detail)
+      };
+      const tension = readBeatTension(beat.tension);
+      if (tension !== null) {
+        normalized.tension = tension;
+      }
+      return normalized;
+    })
     .filter((beat) => beat.label || beat.summary);
+}
+
+// beat의 tension 값을 0~100 정수로 보정한다. 숫자가 아니면 null을 반환해 호출 측이 키를 생략하게 한다.
+function readBeatTension(value) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return null;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 function normalizeDraftCanonFacts(value) {
