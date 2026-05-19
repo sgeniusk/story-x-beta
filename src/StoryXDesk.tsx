@@ -1574,7 +1574,8 @@ export function StoryXDesk({
             {saveLabel}
           </span>
         </div>
-        <nav className="sx-track-tabs ex-workbar-modes" aria-label="작업 트랙">
+        {/* P2-A — 편집/데이터 두 PRIMARY 모드 탭. 출간은 우측의 secondary 버튼으로 유지한다 */}
+        <nav className="sx-track-tabs ex-workbar-modes ex-mode-pair" aria-label="작업 모드">
           <button
             type="button"
             className={isDraftMode ? 'is-active' : ''}
@@ -1590,19 +1591,9 @@ export function StoryXDesk({
             onClick={() => switchToTrack('bible')}
           >
             <Database size={15} />
-            바이블
+            데이터
             <em className="ex-mode-meta">캐논</em>
             {bibleAlertCount > 0 && <span className="sx-bible-alert-badge">{bibleAlertCount}</span>}
-          </button>
-          <button
-            type="button"
-            className={`sx-publish-button ${isPublishingMode ? 'is-active' : ''}`}
-            data-active={isPublishingMode ? 'true' : 'false'}
-            onClick={openPublishingMode}
-          >
-            <FileText size={15} />
-            출간
-            <em className="ex-mode-meta">게시</em>
           </button>
         </nav>
         <div className="sx-topbar-actions ex-workbar-right">
@@ -1672,6 +1663,17 @@ export function StoryXDesk({
               <span className="ex-workbar-pending-count">{pendingApprovalCount}</span>
             </button>
           )}
+          {/* 출간은 PRIMARY 탭에서 빠졌지만 우측 secondary 버튼으로 항상 도달 가능하다 */}
+          <button
+            type="button"
+            className={`sx-publish-button ex-workbar-publish ${isPublishingMode ? 'is-active' : ''}`}
+            data-active={isPublishingMode ? 'true' : 'false'}
+            onClick={openPublishingMode}
+            title="출간 준비 — 릴리즈 게이트와 출간 스냅샷"
+          >
+            <FileText size={15} />
+            출간
+          </button>
           <button
             type="button"
             className={`sx-primary-button ex-workbar-action ${isPublishingMode ? 'is-publish' : ''}`}
@@ -1749,84 +1751,88 @@ export function StoryXDesk({
 
       <section className="sx-desk-grid">
         <aside className="sx-project-rail" aria-label="프로젝트 대시보드">
-          <ProjectStateCard
-            project={project}
-            canonHealth={canonHealth}
-            pendingApprovals={approvalQueue.items.filter((item) => item.status !== 'approved').length}
-            onJumpToBible={(section) => {
-              setActiveTrack('bible');
-              setActiveBibleSection(section);
-              setIsPublishingMode(false);
-              setIsMediaPanelOpen(false);
-            }}
-          />
-
           {isPublishingMode ? (
-            <PublishingIndexCard plan={publishingPlan} />
+            <>
+              <ProjectStateCard
+                project={project}
+                canonHealth={canonHealth}
+                pendingApprovals={approvalQueue.items.filter((item) => item.status !== 'approved').length}
+                onJumpToBible={(section) => {
+                  setActiveTrack('bible');
+                  setActiveBibleSection(section);
+                  setIsPublishingMode(false);
+                  setIsMediaPanelOpen(false);
+                }}
+              />
+              <PublishingIndexCard plan={publishingPlan} />
+            </>
           ) : activeTrack === 'draft' ? (
             <>
-              {/* P1 — '이번 회차 의도' 입력을 중앙 작업대에서 좌측 레일 접이식 섹션으로 옮긴다 */}
-              <section className="ex-intent-card" aria-label="이번 회차 의도">
-                <button
-                  type="button"
-                  className="ex-intent-toggle"
-                  aria-expanded={isIntentOpen}
-                  onClick={() => setIsIntentOpen((current) => !current)}
-                >
-                  <span>{latestChapter ? '다음 회차 의도' : '이번 회차 의도'}</span>
-                  <ChevronDown
-                    size={14}
-                    className="ex-intent-chevron"
-                    data-open={isIntentOpen ? 'true' : 'false'}
-                    aria-hidden="true"
-                  />
-                </button>
-                {isIntentOpen && (
-                  <div className="ex-intent-body">
-                    <textarea
-                      className="ex-intent-textarea"
-                      name="draft-prompt"
-                      aria-label={latestChapter ? '다음 회차에 담을 주요 내용' : '이번 회차에 담을 주요 내용'}
-                      value={draftPrompt}
-                      onChange={(event) => updateDraftPrompt(event.target.value)}
-                      placeholder={draftPromptPlaceholder}
-                      rows={4}
-                    />
-                    {isLatestLocked && latestChapter && (
-                      <p className="ex-intent-lock">
-                        <Lock size={11} aria-hidden="true" />
-                        <span>{latestChapter.episode}화는 출간 확정됨. 수정 대신 다음 회차로 진행합니다.</span>
-                      </p>
-                    )}
-                    {generationNote && (
-                      <p className="ex-intent-note" role="status">
-                        {generationNote}
-                      </p>
-                    )}
-                    {(editorText || latestChapter) && (
-                      <p className={`sx-style-chip is-${styleReport.level}`} role="status">
-                        문체 {describeKoreanStyleLevel(styleReport.level)} · {styleReport.score}점
-                        {styleReport.issues.length > 0 &&
-                          ` · ${styleReport.issues[0].label} ${styleReport.issues[0].count}`}
-                      </p>
-                    )}
-                  </div>
-                )}
+              {/* P2-B — 편집 모드 좌레일: 작품 상태(4셀) / 회차 의도(에이전트) / 회차 구조 트리 / 긴장 곡선 */}
+              <section className="sx-panel ex-workstate-card" aria-label="작품 상태">
+                <div className="ex-rail-section-head">
+                  <span className="ex-rail-label">작품 상태</span>
+                </div>
+                <WorkStateGrid project={project} latestChapter={latestChapter} />
+                <div className="ex-canon-health" title="캐논 건강도 — 회차 대비 확정 사실·규칙·인물의 밀도">
+                  <span className="ex-canon-health-label">캐논</span>
+                  <span className="ex-canon-health-track">
+                    <i className="ex-canon-health-fill" style={{ width: `${canonHealth}%` }} />
+                  </span>
+                  <span className="ex-canon-health-pct">{canonHealth}%</span>
+                </div>
               </section>
-              <ChapterBeatsCard
+              <AgentIntentCard
+                latestChapter={latestChapter}
+                draftPrompt={draftPrompt}
+                isOpen={isIntentOpen}
+                onToggleOpen={() => setIsIntentOpen((current) => !current)}
+                onChangeDraftPrompt={updateDraftPrompt}
+                draftPromptPlaceholder={draftPromptPlaceholder}
+                isLatestLocked={isLatestLocked}
+                generationNote={generationNote}
+                styleChip={
+                  (editorText || latestChapter) ? (
+                    <p className={`sx-style-chip is-${styleReport.level}`} role="status">
+                      문체 {describeKoreanStyleLevel(styleReport.level)} · {styleReport.score}점
+                      {styleReport.issues.length > 0 &&
+                        ` · ${styleReport.issues[0].label} ${styleReport.issues[0].count}`}
+                    </p>
+                  ) : null
+                }
+              />
+              <ChapterStructureTree
+                chapter={latestChapter}
+                activeBeatId={activeBeatId}
+                onSelectBeat={selectBeat}
+              />
+              <TensionShareChart
                 chapter={latestChapter}
                 activeBeatId={activeBeatId}
                 onSelectBeat={selectBeat}
               />
             </>
           ) : (
-            <BibleIndexCard
-              project={project}
-              bank={memoryBank}
-              approvalQueue={approvalQueue}
-              activeSection={activeBibleSection}
-              onSelectSection={setActiveBibleSection}
-            />
+            <>
+              <ProjectStateCard
+                project={project}
+                canonHealth={canonHealth}
+                pendingApprovals={approvalQueue.items.filter((item) => item.status !== 'approved').length}
+                onJumpToBible={(section) => {
+                  setActiveTrack('bible');
+                  setActiveBibleSection(section);
+                  setIsPublishingMode(false);
+                  setIsMediaPanelOpen(false);
+                }}
+              />
+              <BibleIndexCard
+                project={project}
+                bank={memoryBank}
+                approvalQueue={approvalQueue}
+                activeSection={activeBibleSection}
+                onSelectSection={setActiveBibleSection}
+              />
+            </>
           )}
         </aside>
 
@@ -2178,9 +2184,243 @@ function VersionLogDialog({
   );
 }
 
-// 현재 회차의 구성(beat) 목록 — 좌측 레일의 네비게이션·체크리스트 오버레이.
-// 회차 카드 목록을 대체한다(회차 이동은 상단바 회차 선택기로 옮겼다).
-function ChapterBeatsCard({
+// 작품 상태 4셀 그리드 — 총 분량 / 회차 / 이번 회차 분량 / 진행 %. 실제 프로젝트 데이터로 채운다.
+function WorkStateGrid({ project, latestChapter }: { project: SeriesProject; latestChapter: Chapter | null }) {
+  const totalChars = project.chapters.reduce(
+    (sum, chapter) => sum + chapter.prose.replace(/\s/g, '').length,
+    0
+  );
+  const chapterCount = project.chapters.length;
+  const currentChars = (latestChapter?.prose ?? '').replace(/\s/g, '').length;
+  // 진행 % — 이번 회차 분량을 한 회차 목표 5,000자와 비교한 비율
+  const progressPct = Math.min(100, Math.round((currentChars / 5000) * 100));
+
+  return (
+    <div className="ex-work-state" aria-label="작품 상태">
+      <div>
+        <span className="ex-work-state-label">총 분량</span>
+        <span className="ex-work-state-value">
+          {totalChars.toLocaleString()}
+          <small>자</small>
+        </span>
+      </div>
+      <div>
+        <span className="ex-work-state-label">회차</span>
+        <span className="ex-work-state-value">
+          {chapterCount}
+          <small>화</small>
+        </span>
+      </div>
+      <div>
+        <span className="ex-work-state-label">이번 회차 분량</span>
+        <span className="ex-work-state-value">
+          {currentChars.toLocaleString()}
+          <small>자</small>
+        </span>
+      </div>
+      <div>
+        <span className="ex-work-state-label">진행</span>
+        <span className="ex-work-state-value">
+          {progressPct}
+          <small>%</small>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// 이번 회차 의도 — AI 에이전트(쇼러너)가 잡은 프레이밍. 작가는 textarea에서 직접 조정한다.
+function AgentIntentCard({
+  latestChapter,
+  draftPrompt,
+  isOpen,
+  onToggleOpen,
+  onChangeDraftPrompt,
+  draftPromptPlaceholder,
+  isLatestLocked,
+  generationNote,
+  styleChip
+}: {
+  latestChapter: Chapter | null;
+  draftPrompt: string;
+  isOpen: boolean;
+  onToggleOpen: () => void;
+  onChangeDraftPrompt: (value: string) => void;
+  draftPromptPlaceholder: string;
+  isLatestLocked: boolean;
+  generationNote: string | null;
+  styleChip: React.ReactNode;
+}) {
+  const persona = agentPersonas.showrunner;
+  const intentLabel = latestChapter ? '다음 회차 의도' : '이번 회차 의도';
+
+  return (
+    <section className="sx-panel ex-intent-card" aria-label={intentLabel}>
+      <button
+        type="button"
+        className="ex-intent-toggle"
+        aria-expanded={isOpen}
+        onClick={onToggleOpen}
+      >
+        <span className="ex-intent-by">
+          <span className="ex-intent-avatar" aria-hidden="true">
+            {persona.title.slice(0, 1)}
+          </span>
+          <span className="ex-intent-by-text">
+            {persona.title}가 잡은 {intentLabel}
+          </span>
+        </span>
+        <ChevronDown
+          size={14}
+          className="ex-intent-chevron"
+          data-open={isOpen ? 'true' : 'false'}
+          aria-hidden="true"
+        />
+      </button>
+      {isOpen && (
+        <div className="ex-intent-body">
+          <p className="ex-intent-frame">에이전트의 프레이밍입니다. 아래에서 직접 조정할 수 있어요.</p>
+          <textarea
+            className="ex-intent-textarea"
+            name="draft-prompt"
+            aria-label={latestChapter ? '다음 회차에 담을 주요 내용' : '이번 회차에 담을 주요 내용'}
+            value={draftPrompt}
+            onChange={(event) => onChangeDraftPrompt(event.target.value)}
+            placeholder={draftPromptPlaceholder}
+            rows={4}
+          />
+          {isLatestLocked && latestChapter && (
+            <p className="ex-intent-lock">
+              <Lock size={11} aria-hidden="true" />
+              <span>{latestChapter.episode}화는 출간 확정됨. 수정 대신 다음 회차로 진행합니다.</span>
+            </p>
+          )}
+          {generationNote && (
+            <p className="ex-intent-note" role="status">
+              {generationNote}
+            </p>
+          )}
+          {styleChip}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// 회차 구조 — 평탄한 beat 목록을 위치 기준 기·승·전·결 4막으로 묶어 트리로 보여준다.
+// beats는 순서가 있는 평탄한 리스트이므로 act 묶음은 순번으로 유도한다(에이전트가 고른 스킴).
+const STRUCTURE_ACTS: Array<{ id: string; glyph: string; label: string }> = [
+  { id: 'gi', glyph: '기', label: '기 — 도입' },
+  { id: 'seung', glyph: '승', label: '승 — 전개' },
+  { id: 'jeon', glyph: '전', label: '전 — 전환' },
+  { id: 'gyeol', glyph: '결', label: '결 — 결말' }
+];
+
+// 평탄한 beat 목록을 4막에 균등 분배한다. beat 수가 4 미만이면 앞 막부터 채운다.
+function groupBeatsIntoActs(beats: ChapterBeat[]): Array<{
+  act: (typeof STRUCTURE_ACTS)[number];
+  beats: ChapterBeat[];
+}> {
+  const total = beats.length;
+  const result = STRUCTURE_ACTS.map((act) => ({ act, beats: [] as ChapterBeat[] }));
+  if (total === 0) {
+    return result;
+  }
+  beats.forEach((beat, index) => {
+    const actIndex = Math.min(STRUCTURE_ACTS.length - 1, Math.floor((index * STRUCTURE_ACTS.length) / total));
+    result[actIndex].beats.push(beat);
+  });
+  return result;
+}
+
+function ChapterStructureTree({
+  chapter,
+  activeBeatId,
+  onSelectBeat
+}: {
+  chapter: Chapter | null;
+  activeBeatId: string | null;
+  onSelectBeat: (beat: ChapterBeat) => void;
+}) {
+  const beats = chapter?.beats ?? [];
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const grouped = useMemo(() => groupBeatsIntoActs(beats), [beats]);
+  const activeActId = useMemo(() => {
+    const found = grouped.find((group) => group.beats.some((beat) => beat.id === activeBeatId));
+    return found?.act.id ?? null;
+  }, [grouped, activeBeatId]);
+
+  return (
+    <section className="sx-panel ex-structure-card" aria-label="회차 구조">
+      <div className="ex-rail-section-head">
+        <span className="ex-rail-label">회차 구조</span>
+        <span className="ex-structure-scheme">
+          기승전결<span className="ex-structure-scheme-by"> · 에이전트 선택</span>
+        </span>
+      </div>
+      {!chapter ? (
+        <p className="ex-beats-empty">첫 초안을 생성하면 회차 구조가 여기에 채워집니다.</p>
+      ) : beats.length === 0 ? (
+        <p className="ex-beats-empty">이 회차에는 아직 구성이 없습니다. 다음 초안 생성부터 구조가 함께 만들어집니다.</p>
+      ) : (
+        <div className="ex-structure-tree">
+          {grouped.map((group) => {
+            const isCollapsed = !!collapsed[group.act.id];
+            const isActiveAct = activeActId === group.act.id;
+
+            return (
+              <div className="ex-act" key={group.act.id}>
+                <button
+                  type="button"
+                  className={`ex-act-head ${isCollapsed ? 'is-collapsed' : ''} ${isActiveAct ? 'is-active' : ''}`}
+                  aria-expanded={!isCollapsed}
+                  onClick={() =>
+                    setCollapsed((current) => ({ ...current, [group.act.id]: !current[group.act.id] }))
+                  }
+                >
+                  <ChevronDown size={13} className="ex-act-caret" aria-hidden="true" />
+                  <span className="ex-act-glyph" aria-hidden="true">
+                    {group.act.glyph}
+                  </span>
+                  <span className="ex-act-title">{group.act.label}</span>
+                  <span className="ex-act-count">{group.beats.length}</span>
+                </button>
+                {!isCollapsed && group.beats.length > 0 && (
+                  <div className="ex-act-body">
+                    {group.beats.map((beat) => {
+                      const isActive = beat.id === activeBeatId;
+
+                      return (
+                        <button
+                          key={beat.id}
+                          type="button"
+                          className={`ex-scene ${isActive ? 'is-active' : ''}`}
+                          aria-current={isActive ? 'true' : undefined}
+                          aria-label={`구성 ${beat.no} — ${beat.label}`}
+                          onClick={() => onSelectBeat(beat)}
+                        >
+                          <span className="ex-scene-no">{String(beat.no).padStart(2, '0')}</span>
+                          <span className="ex-scene-title">{beat.label}</span>
+                          <span className="ex-scene-marker" title={`긴장 강도 ${beat.tension}`}>
+                            긴장 {beat.tension}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// 긴장 · 분량 곡선 — beat별 SVG 라인차트.
+// 긴장 강도는 beat.tension(실제 값), 분량 비중은 beat.summary 길이를 프록시로 쓴 계획 값이다.
+function TensionShareChart({
   chapter,
   activeBeatId,
   onSelectBeat
@@ -2191,40 +2431,121 @@ function ChapterBeatsCard({
 }) {
   const beats = chapter?.beats ?? [];
 
-  return (
-    <section className="sx-panel ex-beats-card" aria-label="회차 구성">
-      <div className="ex-rail-section-head">
-        <span className="ex-rail-label">회차 구성 · {beats.length}</span>
-      </div>
-      {!chapter ? (
-        <p className="ex-beats-empty">첫 초안을 생성하면 회차 구성이 여기에 채워집니다.</p>
-      ) : beats.length === 0 ? (
-        <p className="ex-beats-empty">이 회차에는 아직 구성이 없습니다. 다음 초안 생성부터 구성이 함께 만들어집니다.</p>
-      ) : (
-        <ol className="ex-beats-list">
-          {beats.map((beat) => {
-            const isActive = beat.id === activeBeatId;
+  if (!chapter || beats.length === 0) {
+    return (
+      <section className="sx-panel ex-chart-card" aria-label="긴장 · 분량 곡선">
+        <div className="ex-rail-section-head">
+          <span className="ex-rail-label">긴장 · 분량 곡선</span>
+        </div>
+        <p className="ex-beats-empty">초안을 생성하면 회차별 긴장 곡선이 여기에 그려집니다.</p>
+      </section>
+    );
+  }
 
-            return (
-              <li key={beat.id}>
-                <button
-                  type="button"
-                  className={`ex-beat-item ${isActive ? 'is-active' : ''}`}
-                  aria-current={isActive ? 'true' : undefined}
-                  aria-label={`구성 ${beat.no} — ${beat.label}`}
-                  onClick={() => onSelectBeat(beat)}
-                >
-                  <span className="ex-beat-no">{String(beat.no).padStart(2, '0')}</span>
-                  <span className="ex-beat-body">
-                    <span className="ex-beat-label">{beat.label}</span>
-                    {beat.summary && <span className="ex-beat-summary">{beat.summary}</span>}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      )}
+  const W = 248;
+  const H = 116;
+  const P = { t: 14, r: 8, b: 24, l: 8 };
+  const innerW = W - P.l - P.r;
+  const innerH = H - P.t - P.b;
+  const n = beats.length;
+  const xs = beats.map((_, i) => (n > 1 ? P.l + (innerW * i) / (n - 1) : P.l + innerW / 2));
+
+  const tensionY = (t: number) => P.t + innerH * (1 - Math.max(0, Math.min(100, t)) / 100);
+
+  // 분량 비중 — 실제 회차별 글자 수가 없어(원고가 단일 textarea), summary 길이를 계획 프록시로 쓴다
+  const summaryLens = beats.map((beat) => beat.summary.length || 1);
+  const totalSummary = summaryLens.reduce((sum, len) => sum + len, 0) || 1;
+  const shares = summaryLens.map((len) => (len / totalSummary) * 100);
+  const maxShare = Math.max(...shares, 1);
+  const shareY = (s: number) => P.t + innerH * (1 - s / Math.max(maxShare * 1.15, 10));
+
+  const linePath = (yOf: (i: number) => number) =>
+    beats.map((_, i) => `${i === 0 ? 'M' : 'L'} ${xs[i].toFixed(1)} ${yOf(i).toFixed(1)}`).join(' ');
+
+  const tensionPath = linePath((i) => tensionY(beats[i].tension));
+  const sharePath = linePath((i) => shareY(shares[i]));
+  const activeIndex = beats.findIndex((beat) => beat.id === activeBeatId);
+
+  return (
+    <section className="sx-panel ex-chart-card" aria-label="긴장 · 분량 곡선">
+      <div className="ex-rail-section-head">
+        <span className="ex-rail-label">긴장 · 분량 곡선</span>
+        <span className="ex-chart-hint">비트별</span>
+      </div>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="ex-chart-svg"
+        width="100%"
+        height={H}
+        role="img"
+        aria-label="긴장 강도와 분량 비중을 비트별로 보여주는 선 그래프"
+      >
+        {[0.25, 0.5, 0.75].map((g) => (
+          <line
+            key={g}
+            x1={P.l}
+            x2={W - P.r}
+            y1={P.t + innerH * g}
+            y2={P.t + innerH * g}
+            className="ex-chart-grid"
+          />
+        ))}
+        {activeIndex >= 0 && (
+          <line
+            x1={xs[activeIndex]}
+            x2={xs[activeIndex]}
+            y1={P.t}
+            y2={P.t + innerH}
+            className="ex-chart-guide"
+          />
+        )}
+        <path d={sharePath} className="ex-chart-line ex-chart-line--share" fill="none" />
+        <path d={tensionPath} className="ex-chart-line ex-chart-line--tension" fill="none" />
+        {beats.map((beat, i) => {
+          const isActive = beat.id === activeBeatId;
+
+          return (
+            <g
+              key={beat.id}
+              className="ex-chart-dotgroup"
+              onClick={() => onSelectBeat(beat)}
+              role="button"
+              tabIndex={0}
+              aria-label={`구성 ${beat.no} — ${beat.label}`}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onSelectBeat(beat);
+                }
+              }}
+            >
+              <circle
+                cx={xs[i]}
+                cy={tensionY(beat.tension)}
+                r={isActive ? 4 : 2.6}
+                className={`ex-chart-dot ${isActive ? 'is-active' : ''}`}
+              />
+              <text
+                x={xs[i]}
+                y={H - 6}
+                className={`ex-chart-xlabel ${isActive ? 'is-active' : ''}`}
+                textAnchor="middle"
+              >
+                {beat.no}
+              </text>
+              <rect x={xs[i] - 14} y={P.t} width={28} height={innerH} fill="transparent" />
+            </g>
+          );
+        })}
+      </svg>
+      <div className="ex-chart-legend">
+        <span>
+          <i className="ex-chart-swatch ex-chart-swatch--tension" /> 긴장 강도
+        </span>
+        <span>
+          <i className="ex-chart-swatch ex-chart-swatch--share" /> 분량 비중 · 계획
+        </span>
+      </div>
     </section>
   );
 }
@@ -3294,6 +3615,71 @@ function AgentStageTimeline({ runs }: { runs: AgentRun[] }) {
   );
 }
 
+// P2-C — 작가진 검토 행 하나. 카드 장식을 줄이고 글 중심으로: 얇은 구분선,
+// 인물·역할·단계가 한 줄, 검토 의견은 2줄 클램프 + 펼치기/접기, 클릭하면 대화창이 열린다.
+function AgentReviewRow({
+  run,
+  persona,
+  expanded,
+  onToggleExpand,
+  onOpenDialog
+}: {
+  run: AgentRun;
+  persona: AgentPersona;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onOpenDialog: () => void;
+}) {
+  return (
+    <article
+      className={`ex-review-row ex-review-row--${run.status}`}
+      role="button"
+      tabIndex={0}
+      aria-label={`${persona.title} ${agentStatusLabel(run.status)} — 자세한 검토 열기`}
+      onClick={onOpenDialog}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpenDialog();
+        }
+      }}
+    >
+      <header className="ex-review-head">
+        <AgentPixelPortrait persona={persona} />
+        <span className="ex-review-name">{persona.title}</span>
+        <span className="ex-review-role">{persona.subtitle}</span>
+        <span className={`ex-review-stage ex-review-stage--${run.status}`}>
+          {agentStatusLabel(run.status)}
+        </span>
+      </header>
+      <p className={`ex-review-opinion ${expanded ? '' : 'is-clamped'}`}>{run.output}</p>
+      <footer className="ex-review-foot">
+        <button
+          type="button"
+          className="ex-review-expand"
+          aria-expanded={expanded}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleExpand();
+          }}
+        >
+          {expanded ? '접기' : '펼치기'}
+        </button>
+        <span
+          className="ex-review-talk"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenDialog();
+          }}
+        >
+          <MessageCircle size={12} />
+          대화하기
+        </span>
+      </footer>
+    </article>
+  );
+}
+
 function AgentSidebar({
   runs,
   onSelectAgent
@@ -3301,7 +3687,9 @@ function AgentSidebar({
   runs: AgentRun[];
   onSelectAgent: (run: AgentRun, persona: AgentPersona) => void;
 }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const doneCount = runs.filter((run) => run.status === 'pass' || run.status === 'complete').length;
+
   return (
     <section className="sx-panel sx-agent-sidebar ex-crew-rail" aria-label="AI 작가진">
       <div className="sx-panel-heading ex-crew-head">
@@ -3313,44 +3701,20 @@ function AgentSidebar({
         </span>
       </div>
       <AgentStageTimeline runs={runs} />
-      <div>
+      <div className="ex-review-list">
         {runs.map((run) => {
           const persona = getAgentPersona(run);
+          const rowKey = `${run.agentId}-${run.title}`;
 
           return (
-            <button
-              key={`${run.agentId}-${run.title}`}
-              type="button"
-              className={`sx-agent-card sx-agent-card--${run.status}`}
-              aria-label={`${persona.title} ${agentStatusLabel(run.status)} 상태, 자세한 지시사항 열기`}
-              onClick={() => onSelectAgent(run, persona)}
-            >
-              <span
-                className="sx-agent-status-cluster"
-                role="status"
-                aria-label={`상태 ${agentStatusLabel(run.status)}`}
-              >
-                <span className={`sx-agent-status sx-agent-status--${run.status}`} aria-hidden="true" />
-                {(run.status === 'revise' || run.status === 'block') && (
-                  <span className={`sx-agent-status-label sx-agent-status-label--${run.status}`}>
-                    {agentStatusLabel(run.status)}
-                  </span>
-                )}
-              </span>
-              <AgentPixelPortrait persona={persona} />
-              <div>
-                <span>{persona.subtitle}</span>
-                <strong>{persona.title}</strong>
-                <span className={`ex-crew-stage-pill ex-crew-stage-pill--${run.status}`}>
-                  {agentStatusLabel(run.status)}
-                </span>
-                <p>{run.output}</p>
-                <small>
-                  <MessageCircle size={13} />
-                  대화하기
-                </small>
-              </div>
-            </button>
+            <AgentReviewRow
+              key={rowKey}
+              run={run}
+              persona={persona}
+              expanded={expandedId === rowKey}
+              onToggleExpand={() => setExpandedId((current) => (current === rowKey ? null : rowKey))}
+              onOpenDialog={() => onSelectAgent(run, persona)}
+            />
           );
         })}
       </div>

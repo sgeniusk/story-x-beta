@@ -1855,6 +1855,31 @@ body {
   box-shadow: 0 0 0 4px color-mix(in oklch, var(--sx-accent) 14%, transparent), 0 14px 30px rgba(45, 38, 30, 0.14);
 }
 
+/* P2-A — 출간은 PRIMARY 탭에서 빠져 우측 존의 compact secondary 버튼이 된다 */
+.sx-topbar .ex-workbar-publish {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--sx-line-2);
+  border-radius: 7px;
+  background: var(--sx-card);
+  color: var(--sx-ink-2);
+  font-size: 0.82rem;
+  font-weight: var(--sx-weight-medium);
+  box-shadow: none;
+}
+
+.sx-topbar .ex-workbar-publish:hover {
+  border-color: var(--sx-line-strong);
+  color: var(--sx-ink);
+}
+
+.sx-topbar .ex-workbar-publish[data-active='true'] {
+  border-color: color-mix(in srgb, var(--nx-primary, #6448d3) 45%, var(--sx-line-2));
+  background: var(--sx-brand-tint);
+  color: var(--sx-brand-ink);
+  box-shadow: none;
+}
+
 .sx-media-change-button {
   display: inline-flex;
   align-items: center;
@@ -5542,7 +5567,7 @@ body {
   text-transform: uppercase;
 }
 
-/* ── 회차 구성(beat) 목록 — 좌측 레일의 네비게이션·체크리스트 오버레이 ── */
+/* ── 회차 구조 / 곡선 빈 상태 ── */
 .sx-desk .ex-beats-empty {
   margin: 0;
   padding: 12px 12px;
@@ -5554,72 +5579,461 @@ body {
   line-height: 1.55;
 }
 
-.sx-desk .ex-beats-list {
+/* ── P2-B 작품 상태 — 4셀 그리드 ── */
+.sx-desk .ex-work-state {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 10px;
+  padding: 10px 11px;
+  border: 1px solid var(--sx-line);
+  border-radius: var(--sx-radius-sm);
+  background: var(--sx-paper);
+}
+
+.sx-desk .ex-work-state > div {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: none;
-}
-
-.sx-desk .ex-beat-item {
-  display: grid;
-  grid-template-columns: 26px minmax(0, 1fr);
-  gap: var(--sx-space-2);
-  align-items: start;
-  width: 100%;
-  padding: 9px 11px;
-  border: 1px solid var(--sx-line);
-  border-radius: var(--sx-radius-md);
-  text-align: left;
-  background: var(--sx-paper);
-  color: var(--sx-ink);
-  transition: border-color 120ms ease, background 120ms ease;
-}
-
-.sx-desk .ex-beat-item:hover {
-  border-color: var(--sx-line-2);
-  background: var(--sx-paper-2);
-}
-
-.sx-desk .ex-beat-item.is-active {
-  border-color: color-mix(in srgb, var(--nx-primary, #6448d3) 42%, var(--sx-line));
-  background: color-mix(in srgb, var(--nx-primary, #6448d3) 12%, var(--sx-paper));
-}
-
-.sx-desk .ex-beat-no {
-  font-family: 'Noto Serif KR', serif;
-  font-size: 0.92rem;
-  font-weight: var(--sx-weight-bold);
-  line-height: 1.4;
-  text-align: center;
-  color: var(--sx-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.sx-desk .ex-beat-item.is-active .ex-beat-no {
-  color: var(--nx-primary, #6448d3);
-}
-
-.sx-desk .ex-beat-body {
-  display: grid;
-  gap: 3px;
+  gap: 1px;
   min-width: 0;
 }
 
-.sx-desk .ex-beat-label {
+.sx-desk .ex-work-state-label {
+  color: var(--sx-muted);
+  font-size: 0.64rem;
+  letter-spacing: 0.03em;
+}
+
+.sx-desk .ex-work-state-value {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 0.96rem;
+  font-weight: var(--sx-weight-semibold);
+  color: var(--sx-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.sx-desk .ex-work-state-value small {
+  margin-left: 3px;
+  font-family: inherit;
+  font-size: 0.66rem;
+  font-weight: var(--sx-weight-regular);
+  color: var(--sx-muted);
+}
+
+/* ── P2-B 회차 의도 — 에이전트 발언 ── */
+.sx-desk .ex-intent-by {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--sx-ink);
+}
+
+.sx-desk .ex-intent-by-text {
+  overflow: hidden;
+  font-size: 0.78rem;
+  font-weight: var(--sx-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sx-desk .ex-intent-avatar {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  border-radius: var(--sx-radius-pill);
+  background: var(--sx-brand-tint);
+  color: var(--sx-brand-ink);
+  font-family: 'Noto Serif KR', serif;
+  font-size: 0.68rem;
+  font-weight: var(--sx-weight-bold);
+}
+
+.sx-desk .ex-intent-frame {
+  margin: 0;
+  color: var(--sx-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+/* ── P2-B 회차 구조 트리 ── */
+.sx-desk .ex-structure-card .ex-rail-section-head {
+  margin-bottom: 8px;
+}
+
+.sx-desk .ex-structure-scheme {
+  color: var(--sx-ink-2);
+  font-size: 0.7rem;
+  font-weight: var(--sx-weight-semibold);
+}
+
+.sx-desk .ex-structure-scheme-by {
+  color: var(--sx-muted);
+  font-weight: var(--sx-weight-regular);
+}
+
+.sx-desk .ex-structure-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sx-desk .ex-act-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 6px 7px;
+  border: 0;
+  border-radius: var(--sx-radius-xs);
+  background: transparent;
+  color: var(--sx-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.sx-desk .ex-act-head:hover {
+  background: var(--sx-paper-2);
+}
+
+.sx-desk .ex-act-head.is-active {
+  background: color-mix(in srgb, var(--nx-primary, #6448d3) 8%, var(--sx-paper));
+}
+
+.sx-desk .ex-act-caret {
+  flex: 0 0 auto;
+  color: var(--sx-muted);
+  transition: transform 130ms ease;
+}
+
+.sx-desk .ex-act-head.is-collapsed .ex-act-caret {
+  transform: rotate(-90deg);
+}
+
+.sx-desk .ex-act-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--sx-radius-xs);
+  background: var(--sx-surface-strong);
+  color: var(--sx-ink);
+  font-family: 'Noto Serif KR', serif;
+  font-size: 0.72rem;
+  font-weight: var(--sx-weight-bold);
+}
+
+.sx-desk .ex-act-head.is-active .ex-act-glyph {
+  background: var(--sx-brand-tint);
+  color: var(--sx-brand-ink);
+}
+
+.sx-desk .ex-act-title {
+  flex: 1;
+  font-size: 0.78rem;
+  font-weight: var(--sx-weight-semibold);
+}
+
+.sx-desk .ex-act-count {
+  flex: 0 0 auto;
+  color: var(--sx-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sx-desk .ex-act-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 2px 9px;
+  padding-left: 10px;
+  border-left: 1px solid var(--sx-line-2);
+}
+
+.sx-desk .ex-scene {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--sx-radius-xs);
+  background: transparent;
+  color: var(--sx-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background 110ms ease, border-color 110ms ease;
+}
+
+.sx-desk .ex-scene:hover {
+  background: var(--sx-paper-2);
+}
+
+.sx-desk .ex-scene.is-active {
+  border-color: color-mix(in srgb, var(--nx-primary, #6448d3) 38%, var(--sx-line));
+  background: color-mix(in srgb, var(--nx-primary, #6448d3) 11%, var(--sx-paper));
+}
+
+.sx-desk .ex-scene-no {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--sx-muted);
+  text-align: center;
+}
+
+.sx-desk .ex-scene.is-active .ex-scene-no {
+  color: var(--nx-primary, #6448d3);
+}
+
+.sx-desk .ex-scene-title {
+  overflow: hidden;
+  font-size: 0.77rem;
+  font-weight: var(--sx-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sx-desk .ex-scene-marker {
+  flex: 0 0 auto;
+  color: var(--sx-muted);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  white-space: nowrap;
+}
+
+/* ── P2-B 긴장 · 분량 곡선 차트 ── */
+.sx-desk .ex-chart-hint {
+  color: var(--sx-muted);
+  font-size: 0.66rem;
+}
+
+.sx-desk .ex-chart-svg {
+  display: block;
+  margin-top: 2px;
+}
+
+.sx-desk .ex-chart-grid {
+  stroke: var(--sx-line-2);
+  stroke-width: 0.5;
+  opacity: 0.7;
+}
+
+.sx-desk .ex-chart-guide {
+  stroke: var(--nx-primary, #6448d3);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  opacity: 0.55;
+}
+
+.sx-desk .ex-chart-line {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sx-desk .ex-chart-line--tension {
+  stroke: var(--nx-primary, #6448d3);
+  stroke-width: 1.85;
+}
+
+.sx-desk .ex-chart-line--share {
+  stroke: var(--sx-warn);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+  opacity: 0.85;
+}
+
+.sx-desk .ex-chart-dotgroup {
+  cursor: pointer;
+}
+
+.sx-desk .ex-chart-dot {
+  fill: var(--nx-primary, #6448d3);
+  stroke: transparent;
+  stroke-width: 1;
+}
+
+.sx-desk .ex-chart-dot.is-active {
+  fill: var(--sx-card);
+  stroke: var(--nx-primary, #6448d3);
+  stroke-width: 2;
+}
+
+.sx-desk .ex-chart-xlabel {
+  fill: var(--sx-faint);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+}
+
+.sx-desk .ex-chart-xlabel.is-active {
+  fill: var(--nx-primary, #6448d3);
+  font-weight: var(--sx-weight-bold);
+}
+
+.sx-desk .ex-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+  color: var(--sx-muted);
+  font-size: 0.66rem;
+}
+
+.sx-desk .ex-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sx-desk .ex-chart-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  margin-right: 5px;
+  border-radius: 2px;
+}
+
+.sx-desk .ex-chart-swatch--tension {
+  background: var(--nx-primary, #6448d3);
+}
+
+.sx-desk .ex-chart-swatch--share {
+  background:
+    repeating-linear-gradient(90deg, var(--sx-warn) 0 3px, transparent 3px 6px);
+}
+
+/* ── P2-C 작가진 검토 레일 — 글 중심의 lean 행 ── */
+.sx-desk .ex-review-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.sx-desk .ex-review-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 11px 4px 12px;
+  border: 0;
+  border-top: 1px solid var(--sx-line);
+  background: transparent;
+  cursor: pointer;
+  transition: background 110ms ease;
+}
+
+.sx-desk .ex-review-row:first-child {
+  border-top: 0;
+}
+
+.sx-desk .ex-review-row:hover {
+  background: var(--sx-paper-2);
+}
+
+.sx-desk .ex-review-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.sx-desk .ex-review-head .pixel-agent {
+  flex: 0 0 auto;
+  transform: scale(0.62);
+  transform-origin: left center;
+  margin-right: -10px;
+}
+
+.sx-desk .ex-review-name {
+  flex: 0 0 auto;
   color: var(--sx-ink);
   font-size: 0.82rem;
   font-weight: var(--sx-weight-semibold);
-  line-height: 1.35;
 }
 
-.sx-desk .ex-beat-summary {
+.sx-desk .ex-review-role {
+  overflow: hidden;
+  flex: 1;
   color: var(--sx-muted);
-  font-size: 0.71rem;
+  font-size: 0.69rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sx-desk .ex-review-stage {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: var(--sx-radius-pill);
+  background: var(--sx-surface-strong);
+  color: var(--sx-ink);
+  font-size: 0.58rem;
+  font-weight: var(--sx-weight-bold);
+  letter-spacing: 0.04em;
+}
+
+.sx-desk .ex-review-stage--pass,
+.sx-desk .ex-review-stage--complete {
+  background: var(--sx-stage-done);
+  color: #fff;
+}
+
+.sx-desk .ex-review-stage--revise {
+  background: var(--sx-stage-mark);
+  color: #20402a;
+}
+
+.sx-desk .ex-review-stage--block {
+  background: var(--sx-stage-write);
+  color: var(--sx-brand-ink);
+}
+
+.sx-desk .ex-review-opinion {
+  margin: 0;
+  color: var(--sx-ink-2);
+  font-size: 0.8rem;
   line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.sx-desk .ex-review-opinion.is-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sx-desk .ex-review-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sx-desk .ex-review-expand {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--sx-muted);
+  font-size: 0.7rem;
+  font-weight: var(--sx-weight-semibold);
+  cursor: pointer;
+}
+
+.sx-desk .ex-review-expand:hover {
+  color: var(--sx-ink);
+}
+
+.sx-desk .ex-review-talk {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: var(--sx-accent);
+  font-size: 0.7rem;
+  font-weight: var(--sx-weight-semibold);
+  cursor: pointer;
 }
 
 /* ── 바이블 목차 — 갤러리 카드 그리드 ── */

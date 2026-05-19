@@ -64,8 +64,9 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('const [editedSinceReview, setEditedSinceReview]');
     expect(desk).toContain('function reviewDraft');
     expect(desk).toContain('바이블 열기');
-    // P1 — '이번 회차 의도' 입력은 좌측 레일의 접이식 카드(ex-intent-card)로 이동했다
-    expect(desk).toContain('className="ex-intent-card"');
+    // P2-B — '이번 회차 의도'는 좌측 레일의 AgentIntentCard(ex-intent-card)에 에이전트 발언으로 들어간다
+    expect(desk).toContain('ex-intent-card');
+    expect(desk).toContain('function AgentIntentCard');
     expect(desk).toContain('className="ex-intent-textarea"');
     expect(desk).toContain('aria-label="원고 편집기"');
     expect(desk).toContain('const [isFocusMode, setIsFocusMode]');
@@ -77,9 +78,11 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('수정됨');
     // 회차 이동은 상단바 회차 선택기로 일원화했다
     expect(desk).toContain('aria-label="회차 이동"');
-    // 좌측 레일은 회차 카드 목록 대신 현재 회차의 구성(beat) 목록을 보여준다
-    expect(desk).toContain('ChapterBeatsCard');
-    expect(desk).toContain('회차 구성');
+    // P2-B — 좌측 레일은 평탄한 beat 목록 대신 기승전결 구조 트리를 보여준다
+    expect(desk).toContain('function ChapterStructureTree');
+    expect(desk).toContain('회차 구조');
+    expect(desk).toContain('function groupBeatsIntoActs');
+    expect(desk).not.toContain('function ChapterBeatsCard');
     expect(desk).not.toContain('function ChapterTreeCard');
     expect(desk).toContain('검토');
     expect(css).toContain('.sx-manuscript-editor');
@@ -87,7 +90,7 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-desk.is-focus-mode .sx-project-rail');
     expect(css).toContain('.sx-expand-editor-button');
     expect(css).toContain('.sx-manuscript-editor.is-edited');
-    expect(css).toContain('.sx-desk .ex-beat-item');
+    expect(css).toContain('.sx-desk .ex-scene');
   });
 
   it('P1 — keeps the manuscript as the protagonist with a thin toolstrip above it', () => {
@@ -313,6 +316,52 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-approval-summary');
     expect(css).toContain('.sx-approval-source-pill');
     expect(css).toContain('.sx-approval-impact-tags');
+  });
+
+  it('P2 — uses 편집/데이터 primary tabs and keeps 출간 reachable as a secondary action', () => {
+    // 편집/데이터 두 PRIMARY 모드 탭 (디자인의 Workbar 편집/데이터)
+    expect(desk).toContain('className="sx-track-tabs ex-workbar-modes ex-mode-pair"');
+    expect(desk).toContain('aria-label="작업 모드"');
+    expect(desk).toContain('데이터');
+    // 출간은 탭에서 빠지고 우측 존의 secondary 버튼으로 유지된다
+    expect(desk).toContain('ex-workbar-publish');
+    expect(desk).toContain('openPublishingMode');
+    expect(css).toContain('.sx-topbar .ex-workbar-publish');
+  });
+
+  it('P2-B — rebuilds the edit-mode left rail with work state, agent intent, structure tree and tension chart', () => {
+    // 작품 상태 4셀 그리드 (마감 없음)
+    expect(desk).toContain('function WorkStateGrid');
+    expect(desk).toContain('총 분량');
+    expect(desk).toContain('이번 회차 분량');
+    expect(desk).not.toContain('마감');
+    // 회차 의도는 AI 에이전트 발언으로 명시된다
+    expect(desk).toContain('가 잡은 ');
+    expect(desk).toContain('className="ex-intent-by"');
+    // 회차 구조 트리 — 기승전결 act 묶음, 에이전트 선택 스킴
+    expect(desk).toContain('STRUCTURE_ACTS');
+    expect(desk).toContain('· 에이전트 선택');
+    expect(desk).toContain('className="ex-act-body"');
+    // 긴장 · 분량 곡선 — SVG 라인차트, 분량 비중은 계획값으로 라벨링
+    expect(desk).toContain('function TensionShareChart');
+    expect(desk).toContain('분량 비중 · 계획');
+    expect(desk).toContain('beat.tension');
+    expect(css).toContain('.sx-desk .ex-work-state');
+    expect(css).toContain('.sx-desk .ex-structure-tree');
+    expect(css).toContain('.sx-desk .ex-chart-svg');
+  });
+
+  it('P2-C — slims the review rail into lean text-focused rows with expand toggle', () => {
+    expect(desk).toContain('function AgentReviewRow');
+    expect(desk).toContain('ex-review-row ex-review-row--');
+    expect(desk).toContain('ex-review-opinion');
+    expect(desk).toContain('is-clamped');
+    expect(desk).toContain('펼치기');
+    expect(desk).toContain('접기');
+    // 검토 행 클릭으로 에이전트 대화창이 열린다
+    expect(desk).toContain('onOpenDialog');
+    expect(css).toContain('.sx-desk .ex-review-row');
+    expect(css).toContain('.sx-desk .ex-review-opinion.is-clamped');
   });
 
   it('surfaces the one-project vertical slice inside the editor approval flow', () => {
