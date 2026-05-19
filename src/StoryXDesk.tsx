@@ -48,12 +48,15 @@ import {
   type Chapter,
   type ChapterBeat,
   type AgentId,
+  type CanonEntity,
+  type CharacterProfile,
   type CreativeWeight,
   type DraftChapterPayload,
   type GenreId,
   type ProductionRequest,
   type ProductionResult,
-  type SeriesProject
+  type SeriesProject,
+  type TimelineEntry
 } from './lib/storyEngine';
 import { requestLlmDraft } from './lib/draftClient';
 import { requestAgentReview } from './lib/reviewClient';
@@ -106,6 +109,21 @@ import {
 type DeskTrack = 'draft' | 'bible';
 type BibleSection = 'overview' | 'characters' | 'world' | 'canon' | 'voice' | 'approval';
 type ApprovalDecision = MemoryApprovalDecision;
+
+// 데이터 모드 캐논 분야 — 좌레일 캐논 nav가 고르는 5종. 가운데 캔버스가 이 단위로 바뀐다.
+type CanonCategory = 'characters' | 'places' | 'objects' | 'events' | 'timeline';
+// 데이터 모드 가운데 캔버스에 무엇을 띄울지 — 캐논 분야 5종 또는 바이블 작업장(MemoryBankStudio) 진입점.
+type DataView =
+  | { kind: 'canon'; category: CanonCategory }
+  | { kind: 'bible'; section: BibleSection };
+
+const canonCategories: Array<{ id: CanonCategory; label: string }> = [
+  { id: 'characters', label: '인물' },
+  { id: 'places', label: '장소' },
+  { id: 'objects', label: '사물' },
+  { id: 'events', label: '사건' },
+  { id: 'timeline', label: '시간선' }
+];
 
 const genreProfiles = getGenreProfiles();
 const mediumOptions = getMediumOptions();
@@ -642,7 +660,8 @@ export function StoryXDesk({
   const [activeTrack, setActiveTrack] = useState<DeskTrack>('draft');
   const [isWorkbenchFading, setIsWorkbenchFading] = useState(false);
   const [isIntentOpen, setIsIntentOpen] = useState(true);
-  const [activeBibleSection, setActiveBibleSection] = useState<BibleSection>('overview');
+  // 데이터 모드 — 가운데 캔버스가 보여줄 것. 기본은 인물 관계도. 바이블 작업장 진입점도 여기로 표현한다.
+  const [dataView, setDataView] = useState<DataView>({ kind: 'canon', category: 'characters' });
   const [approvalDecisions, setApprovalDecisions] = useState<Record<string, ApprovalDecision>>({});
   const [approvalStatementOverrides, setApprovalStatementOverrides] = useState<Record<string, string>>({});
   const [syncedCandidateIds, setSyncedCandidateIds] = useState<string[]>([]);
@@ -842,7 +861,7 @@ export function StoryXDesk({
         description: '캐릭터, 세계관, 캐논, 문체를 편집하는 작업장으로 이동합니다.',
         run: () => {
           setActiveTrack('bible');
-          setActiveBibleSection('overview');
+          openBibleSection('overview');
           setIsPublishingMode(false);
           setIsMediaPanelOpen(false);
         }
@@ -854,7 +873,7 @@ export function StoryXDesk({
         description: `${approvalQueue.summary.total}개 기억 후보를 확인하고 canon 반영 여부를 결정합니다.`,
         run: () => {
           setActiveTrack('bible');
-          setActiveBibleSection('approval');
+          openBibleSection('approval');
           setIsPublishingMode(false);
           setIsMediaPanelOpen(false);
         }
@@ -1401,7 +1420,12 @@ export function StoryXDesk({
     runAiReview([project.logline, canonRefactorPlan.summary, changeLog].join('\n\n'));
     setActiveTrack('bible');
     setIsPublishingMode(false);
-    setActiveBibleSection('approval');
+    setDataView({ kind: 'bible', section: 'approval' });
+  }
+
+  // 데이터 모드 좌레일·진입점에서 바이블 작업장(개요·캐논·문체·승인)을 연다.
+  function openBibleSection(section: BibleSection) {
+    setDataView({ kind: 'bible', section });
   }
 
   function updateEditorText(value: string) {
@@ -1428,7 +1452,7 @@ export function StoryXDesk({
     setEditorText('');
     setEditedSinceReview(false);
     setActiveTrack('draft');
-    setActiveBibleSection('overview');
+    setDataView({ kind: 'canon', category: 'characters' });
     setApprovalDecisions({});
     setApprovalStatementOverrides({});
     setSyncedCandidateIds([]);
@@ -1655,7 +1679,7 @@ export function StoryXDesk({
                 setActiveTrack('bible');
                 setIsPublishingMode(false);
                 setIsMediaPanelOpen(false);
-                setActiveBibleSection('approval');
+                openBibleSection('approval');
               }}
             >
               <ClipboardCheck size={13} />
@@ -1759,7 +1783,7 @@ export function StoryXDesk({
                 pendingApprovals={approvalQueue.items.filter((item) => item.status !== 'approved').length}
                 onJumpToBible={(section) => {
                   setActiveTrack('bible');
-                  setActiveBibleSection(section);
+                  openBibleSection(section);
                   setIsPublishingMode(false);
                   setIsMediaPanelOpen(false);
                 }}
@@ -1813,26 +1837,16 @@ export function StoryXDesk({
               />
             </>
           ) : (
-            <>
-              <ProjectStateCard
-                project={project}
-                canonHealth={canonHealth}
-                pendingApprovals={approvalQueue.items.filter((item) => item.status !== 'approved').length}
-                onJumpToBible={(section) => {
-                  setActiveTrack('bible');
-                  setActiveBibleSection(section);
-                  setIsPublishingMode(false);
-                  setIsMediaPanelOpen(false);
-                }}
-              />
-              <BibleIndexCard
-                project={project}
-                bank={memoryBank}
-                approvalQueue={approvalQueue}
-                activeSection={activeBibleSection}
-                onSelectSection={setActiveBibleSection}
-              />
-            </>
+            /* P3 — 데이터 모드 좌레일: 작품 상태 4셀 + 캐논 nav 5종 + 바이블 규칙 아코디언 + 작품 데이터 진입점 */
+            <DataLeftRail
+              project={project}
+              latestChapter={latestChapter}
+              canonHealth={canonHealth}
+              approvalQueue={approvalQueue}
+              dataView={dataView}
+              onSelectCategory={(category) => setDataView({ kind: 'canon', category })}
+              onSelectBibleSection={openBibleSection}
+            />
           )}
         </aside>
 
@@ -1849,7 +1863,7 @@ export function StoryXDesk({
               plan={publishingPlan}
               onBackToEditor={closePublishingMode}
               onOpenBible={() => {
-                setActiveBibleSection('approval');
+                openBibleSection('approval');
                 runWithWorkbenchFade(() => {
                   setIsPublishingMode(false);
                   setActiveTrack('bible');
@@ -1920,16 +1934,24 @@ export function StoryXDesk({
                   setActiveTrack('bible');
                   setIsPublishingMode(false);
                   setIsMediaPanelOpen(false);
-                  setActiveBibleSection('approval');
+                  openBibleSection('approval');
                 }}
                 onToggleFocusMode={() => setIsFocusMode((current) => !current)}
               />
             </>
+          ) : dataView.kind === 'canon' ? (
+            /* P3 — 데이터 모드 가운데 캔버스: 분야별로 관계도/카드/타임라인이 바뀐다 */
+            <CanonCanvas
+              category={dataView.category}
+              project={project}
+              onUpdateCharacter={updateCharacterMemory}
+              onOpenBibleSection={openBibleSection}
+            />
           ) : (
             <MemoryBankStudio
               project={project}
               bank={memoryBank}
-              activeSection={activeBibleSection}
+              activeSection={dataView.section}
               onUpdateCharacter={updateCharacterMemory}
               onUpdateWorldRule={updateWorldMemory}
               onUpdateCanon={updateCanonMemory}
@@ -1950,11 +1972,20 @@ export function StoryXDesk({
 
         <aside className="sx-codex-rail sx-focused-assist-rail" aria-label={isBibleMode ? '조수진과 바이블 검토' : '작가진과 열린 질문'}>
           {isBibleMode ? (
-            <BibleAssistantSidebar
-              runs={bibleAssistantRuns}
-              activeSection={activeBibleSection}
-              onSelectAgent={(run, persona) => setSelectedAgent({ run, persona })}
-            />
+            dataView.kind === 'canon' ? (
+              /* P3 — 데이터 모드: 분야별 데이터 검토 레일. 검토 데이터는 4단계에서 연결한다 */
+              <DataReviewRail
+                category={dataView.category}
+                onRequestReview={requestBibleReview}
+                onOpenApprovalQueue={() => openBibleSection('approval')}
+              />
+            ) : (
+              <BibleAssistantSidebar
+                runs={bibleAssistantRuns}
+                activeSection={dataView.section}
+                onSelectAgent={(run, persona) => setSelectedAgent({ run, persona })}
+              />
+            )
           ) : (
             <>
               <AgentSidebar
@@ -2550,78 +2581,6 @@ function TensionShareChart({
   );
 }
 
-function BibleIndexCard({
-  project,
-  bank,
-  approvalQueue,
-  activeSection,
-  onSelectSection
-}: {
-  project: SeriesProject;
-  bank: StoryMemoryBank;
-  approvalQueue: MemoryApprovalQueue;
-  activeSection: BibleSection;
-  onSelectSection: (section: BibleSection) => void;
-}) {
-  const pendingCount = approvalQueue.summary.total;
-  const sectionMeta: Record<BibleSection, { glyph: string; tone: string; count: string }> = {
-    overview: { glyph: '⬡', tone: 'overview', count: `${bank.syncableFiles.length} 기억` },
-    characters: { glyph: '◑', tone: 'characters', count: `${project.characters.length}명` },
-    world: { glyph: '◉', tone: 'world', count: `${project.worldRules.length} 규칙` },
-    canon: { glyph: '◈', tone: 'canon', count: `${project.canonFacts.length} 사실` },
-    voice: {
-      glyph: '◇',
-      tone: 'voice',
-      count: `${project.characters.flatMap((character) => character.voiceRules).length} 규칙`
-    },
-    approval: { glyph: '⚑', tone: 'approval', count: `${pendingCount}개` }
-  };
-
-  return (
-    <section className="sx-panel sx-bible-index-card ex-bible-toc-card" aria-label="작품 바이블 목차">
-      <div className="ex-rail-section-head">
-        <span className="ex-rail-label">바이블 목차</span>
-      </div>
-      <div className="ex-bible-toc-grid">
-        {bibleSections.map((section) => {
-          const meta = sectionMeta[section.id];
-          const isActive = activeSection === section.id;
-          const hasPending = section.id === 'approval' && pendingCount > 0;
-
-          return (
-            <button
-              key={section.id}
-              type="button"
-              className={`ex-btc ex-btc-${meta.tone} ${isActive ? 'is-active' : ''}${
-                hasPending ? ' ex-btc-pending' : ''
-              }`}
-              aria-current={isActive ? 'true' : undefined}
-              aria-label={`${section.label} — ${meta.count}`}
-              onClick={() => onSelectSection(section.id)}
-            >
-              <span className="ex-btc-glyph" aria-hidden="true">
-                {meta.glyph}
-              </span>
-              <span className="ex-btc-label">{section.label}</span>
-              <span className="ex-btc-meta">
-                <span className="ex-btc-count">{meta.count}</span>
-              </span>
-              {hasPending && (
-                <span className="ex-btc-badge" aria-hidden="true">
-                  {pendingCount}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-      <small className="ex-bible-toc-note">
-        원고에서 생긴 새 사실은 바로 저장하지 않고 승인 대기 목록으로 보냅니다.
-      </small>
-    </section>
-  );
-}
-
 function PublishingIndexCard({ plan }: { plan: PublishingPlan }) {
   return (
     <section className="sx-panel sx-publishing-index-card" aria-label="출간 준비 목차">
@@ -2774,6 +2733,600 @@ function PublishingStudio({
             {plan.releaseLock.label}
           </button>
         </article>
+      </div>
+    </section>
+  );
+}
+
+/* ── P3 데이터 모드 — 좌레일 / 캔버스 / 우레일 ─────────────────────────── */
+
+const canonStatusLabels: Record<CanonEntity['status'], string> = {
+  ok: '정합',
+  conflict: '충돌',
+  unverified: '미확인'
+};
+
+// 캐논 엔티티·시간선 항목의 정합 상태 배지. ok는 배지를 그리지 않는다.
+function CanonStatusBadge({ status }: { status: CanonEntity['status'] }) {
+  if (status === 'ok') {
+    return null;
+  }
+
+  return (
+    <span className={`ex-canon-badge ex-canon-badge--${status}`}>
+      <i aria-hidden="true" />
+      {canonStatusLabels[status]}
+    </span>
+  );
+}
+
+// 한 캐논 분야의 엔티티 목록을 분야 id로 돌려준다. 시간선은 별도 형태라 여기서 제외한다.
+function getCategoryEntities(project: SeriesProject, category: CanonCategory): CanonEntity[] {
+  switch (category) {
+    case 'places':
+      return project.places;
+    case 'objects':
+      return project.objects;
+    case 'events':
+      return project.events;
+    default:
+      return [];
+  }
+}
+
+// 분야에 충돌·미확인 엔티티가 하나라도 있으면 좌레일 nav에 플래그를 띄운다.
+function categoryHasFlag(project: SeriesProject, category: CanonCategory): boolean {
+  if (category === 'characters') {
+    return false;
+  }
+  if (category === 'timeline') {
+    return project.timeline.some((entry) => entry.status !== 'ok');
+  }
+
+  return getCategoryEntities(project, category).some((entity) => entity.status !== 'ok');
+}
+
+function categoryCount(project: SeriesProject, category: CanonCategory): number {
+  if (category === 'characters') {
+    return project.characters.length;
+  }
+  if (category === 'timeline') {
+    return project.timeline.length;
+  }
+
+  return getCategoryEntities(project, category).length;
+}
+
+// 데이터 모드 좌레일 캐논 nav — 분야 5종, 분야별 개수와 충돌 플래그를 보여준다.
+function CanonNav({
+  project,
+  activeCategory,
+  onSelectCategory
+}: {
+  project: SeriesProject;
+  activeCategory: CanonCategory | null;
+  onSelectCategory: (category: CanonCategory) => void;
+}) {
+  return (
+    <nav className="ex-canon-nav" aria-label="캐논 분야">
+      {canonCategories.map((category) => {
+        const isActive = activeCategory === category.id;
+        const hasFlag = categoryHasFlag(project, category.id);
+
+        return (
+          <button
+            key={category.id}
+            type="button"
+            className={`ex-canon-nav-item ${isActive ? 'is-active' : ''}`}
+            aria-current={isActive ? 'true' : undefined}
+            onClick={() => onSelectCategory(category.id)}
+          >
+            <span className="ex-canon-nav-name">{category.label}</span>
+            <span className="ex-canon-nav-count">{categoryCount(project, category.id)}</span>
+            {hasFlag && (
+              <span className="ex-canon-nav-flag" title="충돌·미확인 항목 있음" aria-label="충돌·미확인 항목 있음" />
+            )}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+// 바이블 규칙 5섹션 아코디언 — project.bibleOutline의 실제 본문을 펼쳐 읽는다.
+function BibleRulesAccordion({ sections }: { sections: SeriesProject['bibleOutline'] }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  if (sections.length === 0) {
+    return <p className="ex-beats-empty">바이블 규칙이 아직 비어 있습니다.</p>;
+  }
+
+  return (
+    <div className="ex-bible-rules">
+      {sections.map((section) => {
+        const isOpen = openId === section.id;
+
+        return (
+          <div key={section.id} className={`ex-bible-rule ${isOpen ? 'is-open' : ''}`}>
+            <button
+              type="button"
+              className="ex-bible-rule-head"
+              aria-expanded={isOpen}
+              onClick={() => setOpenId((current) => (current === section.id ? null : section.id))}
+            >
+              <span className="ex-bible-rule-title">{section.title}</span>
+              <ChevronDown size={13} className="ex-bible-rule-caret" aria-hidden="true" />
+            </button>
+            {isOpen && <p className="ex-bible-rule-body">{section.body}</p>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// 데이터 모드 좌레일 — 작품 상태 + 캐논 nav + 바이블 규칙 + 작품 데이터(개요·캐논·문체·승인) 진입점.
+function DataLeftRail({
+  project,
+  latestChapter,
+  canonHealth,
+  approvalQueue,
+  dataView,
+  onSelectCategory,
+  onSelectBibleSection
+}: {
+  project: SeriesProject;
+  latestChapter: Chapter | null;
+  canonHealth: number;
+  approvalQueue: MemoryApprovalQueue;
+  dataView: DataView;
+  onSelectCategory: (category: CanonCategory) => void;
+  onSelectBibleSection: (section: BibleSection) => void;
+}) {
+  const activeCategory = dataView.kind === 'canon' ? dataView.category : null;
+  const activeBibleSection = dataView.kind === 'bible' ? dataView.section : null;
+  const pendingCount = approvalQueue.items.filter((item) => item.status !== 'approved').length;
+  // 캐논 분야 5종 밖의 바이블 작업장 진입점 — 옛 바이블 트랙의 기능을 데이터 모드에서 그대로 이어 쓴다.
+  const bibleEntries: Array<{ id: BibleSection; label: string; meta: string }> = [
+    { id: 'overview', label: '작품 계약', meta: '약속·질문·형식' },
+    { id: 'canon', label: '캐논 원장', meta: `${project.canonFacts.length}개 사실` },
+    { id: 'voice', label: '문체 바이블', meta: '톤·시각·오디오' },
+    { id: 'approval', label: '승인 대기', meta: `${pendingCount}개 대기` }
+  ];
+
+  return (
+    <>
+      <section className="sx-panel ex-workstate-card" aria-label="작품 상태">
+        <div className="ex-rail-section-head">
+          <span className="ex-rail-label">작품 상태</span>
+        </div>
+        <WorkStateGrid project={project} latestChapter={latestChapter} />
+        <div className="ex-canon-health" title="캐논 건강도 — 회차 대비 확정 사실·규칙·인물의 밀도">
+          <span className="ex-canon-health-label">캐논</span>
+          <span className="ex-canon-health-track">
+            <i className="ex-canon-health-fill" style={{ width: `${canonHealth}%` }} />
+          </span>
+          <span className="ex-canon-health-pct">{canonHealth}%</span>
+        </div>
+      </section>
+
+      <section className="sx-panel ex-canon-nav-card" aria-label="캐논 분야">
+        <div className="ex-rail-section-head">
+          <span className="ex-rail-label">캐논</span>
+        </div>
+        <CanonNav project={project} activeCategory={activeCategory} onSelectCategory={onSelectCategory} />
+      </section>
+
+      <section className="sx-panel ex-data-bible-card" aria-label="작품 데이터">
+        <div className="ex-rail-section-head">
+          <span className="ex-rail-label">작품 데이터</span>
+        </div>
+        <div className="ex-data-bible-list">
+          {bibleEntries.map((entry) => {
+            const isActive = activeBibleSection === entry.id;
+            const isApproval = entry.id === 'approval';
+
+            return (
+              <button
+                key={entry.id}
+                type="button"
+                className={`ex-data-bible-item ${isActive ? 'is-active' : ''}${
+                  isApproval && pendingCount > 0 ? ' is-pending' : ''
+                }`}
+                aria-current={isActive ? 'true' : undefined}
+                onClick={() => onSelectBibleSection(entry.id)}
+              >
+                <span className="ex-data-bible-name">{entry.label}</span>
+                <span className="ex-data-bible-meta">{entry.meta}</span>
+                {isApproval && pendingCount > 0 && (
+                  <span className="ex-data-bible-badge">{pendingCount}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="sx-panel ex-bible-rules-card" aria-label="바이블 규칙">
+        <div className="ex-rail-section-head">
+          <span className="ex-rail-label">바이블 규칙</span>
+        </div>
+        <BibleRulesAccordion sections={project.bibleOutline} />
+      </section>
+    </>
+  );
+}
+
+// 인물 관계도 — 캐논 인물 노드와 character.relations 엣지를 SVG로 배치한다.
+function CharacterGraph({
+  characters,
+  pickedId,
+  onPick
+}: {
+  characters: CharacterProfile[];
+  pickedId: string;
+  onPick: (id: string) => void;
+}) {
+  const W = 640;
+  const H = 380;
+  // 노드를 원형으로 균등 배치한다 — 인물 수와 무관하게 안정적으로 펼쳐진다.
+  const layout = useMemo(() => {
+    const cx = W / 2;
+    const cy = H / 2;
+    const radius = characters.length <= 1 ? 0 : Math.min(W, H) * 0.32;
+    const map = new Map<string, { x: number; y: number }>();
+    characters.forEach((character, index) => {
+      if (characters.length === 1) {
+        map.set(character.id, { x: cx, y: cy });
+        return;
+      }
+      const angle = (index / characters.length) * Math.PI * 2 - Math.PI / 2;
+      map.set(character.id, {
+        x: cx + radius * Math.cos(angle),
+        y: cy + radius * Math.sin(angle)
+      });
+    });
+    return map;
+  }, [characters]);
+
+  // relations는 방향이 있지만 시각적으로는 한 쌍을 한 선으로 그린다 — 중복 엣지를 제거한다.
+  const edges = useMemo(() => {
+    const seen = new Set<string>();
+    const list: Array<{ a: string; b: string; label: string; strong: boolean; dashed: boolean }> = [];
+    characters.forEach((character) => {
+      character.relations.forEach((relation) => {
+        if (!layout.has(relation.targetId)) {
+          return;
+        }
+        const key = [character.id, relation.targetId].sort().join('::');
+        if (seen.has(key)) {
+          return;
+        }
+        seen.add(key);
+        list.push({
+          a: character.id,
+          b: relation.targetId,
+          label: relation.label,
+          strong: relation.strong === true,
+          dashed: relation.dashed === true
+        });
+      });
+    });
+    return list;
+  }, [characters, layout]);
+
+  if (characters.length === 0) {
+    return <p className="ex-beats-empty">아직 등록된 인물이 없습니다.</p>;
+  }
+
+  return (
+    <div className="ex-char-graph">
+      <svg viewBox={`0 0 ${W} ${H}`} className="ex-char-graph-svg" role="img" aria-label="인물 관계도">
+        {edges.map((edge, index) => {
+          const a = layout.get(edge.a)!;
+          const b = layout.get(edge.b)!;
+          const mx = (a.x + b.x) / 2;
+          const my = (a.y + b.y) / 2;
+
+          return (
+            <g key={index} className={`ex-char-edge ${edge.strong ? 'is-strong' : ''}`}>
+              <line
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
+                className={`ex-char-edge-line ${edge.strong ? 'is-strong' : ''} ${edge.dashed ? 'is-dashed' : ''}`}
+              />
+              {edge.label && (
+                <text x={mx} y={my - 6} className="ex-char-edge-label" textAnchor="middle">
+                  {edge.label}
+                </text>
+              )}
+            </g>
+          );
+        })}
+        {characters.map((character) => {
+          const pos = layout.get(character.id)!;
+          const isPicked = character.id === pickedId;
+
+          return (
+            <g
+              key={character.id}
+              className={`ex-char-node ${isPicked ? 'is-picked' : ''}`}
+              transform={`translate(${pos.x}, ${pos.y})`}
+              role="button"
+              tabIndex={0}
+              aria-label={`${character.name} — ${character.role}`}
+              aria-pressed={isPicked}
+              onClick={() => onPick(character.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onPick(character.id);
+                }
+              }}
+            >
+              <circle r={34} className="ex-char-node-circle" />
+              <text y={5} textAnchor="middle" className="ex-char-node-name">
+                {character.name}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="ex-char-graph-legend">
+        <span>
+          <i className="ex-char-legend-line is-strong" /> 핵심 관계
+        </span>
+        <span>
+          <i className="ex-char-legend-line is-dashed" /> 잠정·미확정
+        </span>
+        <span className="ex-char-graph-hint">노드를 누르면 옆에서 인물 상세를 봅니다.</span>
+      </div>
+    </div>
+  );
+}
+
+// 인물 관계도에서 고른 인물의 상세 — 욕망·상처·현재 상태를 직접 편집한다.
+function CharacterDetailPanel({
+  character,
+  onUpdateCharacter
+}: {
+  character: CharacterProfile;
+  onUpdateCharacter: (characterId: string, field: 'desire' | 'wound' | 'currentState', value: string) => void;
+}) {
+  return (
+    <div className="ex-canon-detail">
+      <header className="ex-canon-detail-head">
+        <span className="ex-canon-detail-type">인물</span>
+        <h3>{character.name}</h3>
+        <span className="ex-canon-detail-sub">{character.role}</span>
+      </header>
+      <label className="ex-canon-detail-field">
+        <small>욕망</small>
+        <textarea
+          value={character.desire}
+          onChange={(event) => onUpdateCharacter(character.id, 'desire', event.target.value)}
+          rows={2}
+        />
+      </label>
+      <label className="ex-canon-detail-field">
+        <small>상처</small>
+        <textarea
+          value={character.wound}
+          onChange={(event) => onUpdateCharacter(character.id, 'wound', event.target.value)}
+          rows={2}
+        />
+      </label>
+      <label className="ex-canon-detail-field">
+        <small>현재 상태</small>
+        <textarea
+          value={character.currentState}
+          onChange={(event) => onUpdateCharacter(character.id, 'currentState', event.target.value)}
+          rows={3}
+        />
+      </label>
+      {character.canonAnchors.length > 0 && (
+        <div className="ex-canon-detail-anchors" aria-label="캐논 앵커">
+          {character.canonAnchors.map((anchor) => (
+            <em key={anchor}>{anchor}</em>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 장소·사물·사건 카드 그리드 — 캐논 엔티티를 읽고, 충돌이면 충돌 텍스트와 해결 진입점을 보여준다.
+function CanonCardGrid({
+  entries,
+  typeLabel,
+  onResolveConflict
+}: {
+  entries: CanonEntity[];
+  typeLabel: string;
+  onResolveConflict: () => void;
+}) {
+  if (entries.length === 0) {
+    return <p className="ex-beats-empty">아직 등록된 {typeLabel}이(가) 없습니다.</p>;
+  }
+
+  return (
+    <div className="ex-canon-card-grid">
+      {entries.map((entry) => (
+        <article key={entry.id} className={`ex-canon-card ex-canon-card--${entry.status}`}>
+          <header className="ex-canon-card-head">
+            <span className="ex-canon-card-type">{typeLabel}</span>
+            <h3>{entry.name}</h3>
+            {entry.sub && <span className="ex-canon-card-sub">{entry.sub}</span>}
+            <CanonStatusBadge status={entry.status} />
+          </header>
+          {entry.facts.length > 0 && (
+            <ul className="ex-canon-card-facts">
+              {entry.facts.map((fact, index) => (
+                <li key={index}>{fact}</li>
+              ))}
+            </ul>
+          )}
+          {entry.status === 'conflict' && entry.conflict && (
+            <div className="ex-canon-card-conflict">
+              <span className="ex-canon-card-conflict-label">충돌</span>
+              <p>{entry.conflict}</p>
+              <button type="button" className="ex-canon-card-resolve" onClick={onResolveConflict}>
+                캐논 원장에서 해결
+              </button>
+            </div>
+          )}
+          {entry.appearedIn.length > 0 && (
+            <div className="ex-canon-card-where">
+              <span>등장</span>
+              {entry.appearedIn.map((where) => (
+                <code key={where}>{where}</code>
+              ))}
+            </div>
+          )}
+        </article>
+      ))}
+    </div>
+  );
+}
+
+// 시간선 — project.timeline 항목을 세로 타임라인으로 보여준다.
+function CanonTimeline({ entries }: { entries: TimelineEntry[] }) {
+  if (entries.length === 0) {
+    return <p className="ex-beats-empty">아직 시간선 항목이 없습니다.</p>;
+  }
+
+  return (
+    <div className="ex-timeline">
+      {entries.map((entry) => (
+        <div key={entry.id} className={`ex-timeline-tick ex-timeline-tick--${entry.status}`}>
+          <span className="ex-timeline-mark" aria-hidden="true" />
+          <div className="ex-timeline-when">
+            <strong>{entry.season}</strong>
+          </div>
+          <div className="ex-timeline-body">
+            <h4>{entry.label}</h4>
+            <p>{entry.note}</p>
+            <CanonStatusBadge status={entry.status} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// 데이터 모드 가운데 캔버스 — 고른 캐논 분야에 따라 관계도/카드/타임라인을 띄운다.
+function CanonCanvas({
+  category,
+  project,
+  onUpdateCharacter,
+  onOpenBibleSection
+}: {
+  category: CanonCategory;
+  project: SeriesProject;
+  onUpdateCharacter: (characterId: string, field: 'desire' | 'wound' | 'currentState', value: string) => void;
+  onOpenBibleSection: (section: BibleSection) => void;
+}) {
+  const categoryLabel = canonCategories.find((item) => item.id === category)?.label ?? '캐논';
+  const [pickedCharacterId, setPickedCharacterId] = useState<string>(project.characters[0]?.id ?? '');
+  const pickedCharacter =
+    project.characters.find((character) => character.id === pickedCharacterId) ?? project.characters[0] ?? null;
+  // canon 분야 안내 — 분야별 한 줄 설명.
+  const categoryHint: Record<CanonCategory, string> = {
+    characters: '인물 관계도. 노드를 눌러 욕망·상처·현재 상태를 바로 고칩니다.',
+    places: '작품 속 장소 카드. 충돌 항목은 캐논 원장에서 해결합니다.',
+    objects: '작품 속 사물 카드. 충돌 항목은 캐논 원장에서 해결합니다.',
+    events: '작품 속 사건 카드. 충돌 항목은 캐논 원장에서 해결합니다.',
+    timeline: '작품 연표. 미확인 시점은 캐논 원장에서 확정합니다.'
+  };
+
+  let body: JSX.Element;
+  if (category === 'characters') {
+    body = (
+      <div className="ex-canon-pane ex-canon-pane--graph">
+        <CharacterGraph
+          characters={project.characters}
+          pickedId={pickedCharacterId || (project.characters[0]?.id ?? '')}
+          onPick={setPickedCharacterId}
+        />
+        <div className="ex-canon-pane-aside">
+          {pickedCharacter ? (
+            <CharacterDetailPanel character={pickedCharacter} onUpdateCharacter={onUpdateCharacter} />
+          ) : (
+            <p className="ex-beats-empty">인물을 먼저 등록하면 상세가 여기에 표시됩니다.</p>
+          )}
+        </div>
+      </div>
+    );
+  } else if (category === 'timeline') {
+    body = <CanonTimeline entries={project.timeline} />;
+  } else {
+    body = (
+      <CanonCardGrid
+        entries={getCategoryEntities(project, category)}
+        typeLabel={categoryLabel}
+        onResolveConflict={() => onOpenBibleSection('canon')}
+      />
+    );
+  }
+
+  return (
+    <section className="sx-canon-canvas" aria-label={`${categoryLabel} 데이터`}>
+      <header className="ex-canon-canvas-head">
+        <div className="ex-canon-canvas-crumbs">
+          <span>데이터</span>
+          <ChevronRight size={12} aria-hidden="true" />
+          <em>{categoryLabel}</em>
+        </div>
+        <h2 className="ex-canon-canvas-title">{categoryLabel}</h2>
+        <p className="ex-canon-canvas-hint">{categoryHint[category]}</p>
+        <div className="ex-canon-canvas-actions">
+          <button type="button" className="sx-secondary-button" onClick={() => onOpenBibleSection('canon')}>
+            <GitBranch size={14} />
+            캐논 원장 열기
+          </button>
+        </div>
+      </header>
+      <div className="ex-canon-canvas-body">{body}</div>
+    </section>
+  );
+}
+
+// 데이터 모드 우레일 — 분야별 데이터 검토. 분야별 검토 데이터는 4단계에서 연결하므로 지금은 빈 상태와 트리거만.
+function DataReviewRail({
+  category,
+  onRequestReview,
+  onOpenApprovalQueue
+}: {
+  category: CanonCategory;
+  onRequestReview: () => void;
+  onOpenApprovalQueue: () => void;
+}) {
+  const categoryLabel = canonCategories.find((item) => item.id === category)?.label ?? '캐논';
+
+  return (
+    <section className="sx-panel sx-data-review-rail" aria-label={`${categoryLabel} 데이터 검토`}>
+      <div className="sx-panel-heading">
+        <ClipboardCheck size={16} />
+        <h2>{categoryLabel} 검토</h2>
+      </div>
+      <p className="ex-data-review-intro">
+        {categoryLabel} 데이터의 정합과 제안을 분야별로 모읍니다. 검토를 실행하면 결과가 여기에 쌓입니다.
+      </p>
+      <div className="ex-data-review-empty">
+        <span className="ex-data-review-empty-dot" aria-hidden="true" />
+        <strong>아직 검토 없음</strong>
+        <p>이 분야에 대한 에이전트 의견이 아직 없습니다. 데이터 검토를 실행해 정합·제안을 받아보세요.</p>
+      </div>
+      <div className="ex-data-review-actions">
+        <button type="button" className="sx-primary-button" onClick={onRequestReview}>
+          <ClipboardCheck size={15} />
+          데이터 검토 실행
+        </button>
+        <button type="button" className="sx-secondary-button" onClick={onOpenApprovalQueue}>
+          승인 대기 열기
+        </button>
       </div>
     </section>
   );

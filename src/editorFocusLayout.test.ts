@@ -155,7 +155,8 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain("type BibleSection = 'overview' | 'characters' | 'world' | 'canon' | 'voice' | 'approval'");
     expect(desk).toContain('const [activeTrack, setActiveTrack]');
     expect(desk).toContain('const [isPublishingMode, setIsPublishingMode]');
-    expect(desk).toContain('const [activeBibleSection, setActiveBibleSection]');
+    // P3 — 데이터 모드는 단일 dataView 상태로 캐논 분야/바이블 작업장 진입점을 함께 표현한다
+    expect(desk).toContain('const [dataView, setDataView]');
     expect(desk).toContain('const [approvalDecisions, setApprovalDecisions]');
     expect(desk).toContain('const [isMediaPanelOpen, setIsMediaPanelOpen]');
     expect(desk).toContain('원고 편집');
@@ -171,8 +172,9 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('function updateWorldMemory');
     expect(desk).toContain('function updateCanonMemory');
     expect(desk).toContain('function setApprovalDecision');
-    expect(desk).toContain('activeSection={activeBibleSection}');
-    expect(desk).toContain('onSelectSection={setActiveBibleSection}');
+    // P3 — 데이터 모드 가운데 캔버스는 dataView가 가리키는 분야/섹션을 받는다
+    expect(desk).toContain('activeSection={dataView.section}');
+    expect(desk).toContain('onSelectBibleSection={openBibleSection}');
     expect(css).toContain('flex-wrap: wrap');
     expect(desk).toContain('승인됨');
     expect(desk).toContain('수정 요청됨');
@@ -378,5 +380,44 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-vertical-slice-panel');
     expect(css).toContain('.sx-vertical-slice-artifacts');
     expect(css).toContain('.sx-vertical-slice-ledger');
+  });
+
+  it('P3 — rebuilds the data mode with a canon nav left rail, a category canvas and a per-category review rail', () => {
+    // 데이터 모드는 캐논 분야 5종 또는 바이블 작업장을 가리키는 dataView 하나로 라우팅된다
+    expect(desk).toContain("type CanonCategory = 'characters' | 'places' | 'objects' | 'events' | 'timeline'");
+    expect(desk).toContain('type DataView');
+    expect(desk).toContain('function openBibleSection');
+    // 좌레일 — 작품 상태(편집 모드와 공유) + 캐논 nav 5종 + 바이블 규칙 아코디언 + 작품 데이터 진입점
+    expect(desk).toContain('function DataLeftRail');
+    expect(desk).toContain('function CanonNav');
+    expect(desk).toContain('function BibleRulesAccordion');
+    expect(desk).toContain('project.bibleOutline');
+    expect(desk).toContain('캐논 분야');
+    expect(desk).toContain('바이블 규칙');
+    // 가운데 캔버스 — 인물 관계도 / 장소·사물·사건 카드 / 시간선
+    expect(desk).toContain('function CanonCanvas');
+    expect(desk).toContain('function CharacterGraph');
+    expect(desk).toContain('function CharacterDetailPanel');
+    expect(desk).toContain('function CanonCardGrid');
+    expect(desk).toContain('function CanonTimeline');
+    expect(desk).toContain('character.relations');
+    expect(desk).toContain('project.timeline');
+    // 우레일 — 분야별 데이터 검토, 4단계 전까지는 빈 상태와 트리거만
+    expect(desk).toContain('function DataReviewRail');
+    expect(desk).toContain('아직 검토 없음');
+    expect(desk).toContain('데이터 검토 실행');
+    // 옛 바이블 트랙의 기능 보존 — MemoryBankStudio·승인 대기·캐논 원장은 데이터 모드에서 그대로 도달한다
+    expect(desk).toContain('function MemoryBankStudio');
+    expect(desk).toContain('작품 데이터');
+    expect(desk).toContain('승인 대기');
+    expect(desk).toContain('캐논 원장');
+    expect(desk).not.toContain('function BibleIndexCard');
+    expect(css).toContain('.sx-canon-canvas');
+    expect(css).toContain('.sx-desk .ex-canon-nav');
+    expect(css).toContain('.sx-desk .ex-char-graph-svg');
+    expect(css).toContain('.sx-desk .ex-canon-card-grid');
+    expect(css).toContain('.sx-desk .ex-timeline-tick');
+    expect(css).toContain('.sx-data-review-rail');
+    expect(css).toContain('.sx-desk .ex-bible-rules');
   });
 });
