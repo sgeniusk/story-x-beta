@@ -16,15 +16,17 @@ describe('Story X page experience', () => {
     expect(app).not.toContain('className="editor-return-bar"');
   });
 
-  it('renders the landing on the Notion design system — navy hero band and pastel feature cards', () => {
+  it('renders the landing on the Linear design system — dark command-center with product mockup and Neon Lime CTA', () => {
     expect(app).toContain('function MarketingLanding');
     expect(app).toContain('function LandingBrand');
     expect(app).toContain('className="landing-page"');
     expect(app).toContain('className="hero-band"');
-    expect(app).toContain('조용하게 이야기를');
-    expect(app).toContain('feature-card ${feature.tint}');
+    expect(app).toContain('끝까지 데려가는 시스템');
+    expect(app).toContain('className="feature-card"');
     expect(app).toContain('className="lx-bridge-section"');
-    expect(css).toContain('--nx-primary: #6448d3');
+    expect(app).toContain('className="hero-showcase"');
+    expect(css).toContain('--lc-lime: #e4f222');
+    expect(css).toContain('--lc-pitch: #08090a');
     expect(css).toContain('.landing-page .hero-band');
     expect(css).toContain('.landing-page .feature-card');
     expect(css).toContain('.landing-page .lx-bridge-section');

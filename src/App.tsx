@@ -192,32 +192,24 @@ function MarketingLanding({
 }) {
   const features = [
     {
-      sym: '⌀',
-      title: '캐논이 흔들리지 않습니다',
-      body: '30화가 쌓여도 1화의 규칙이 그대로입니다. 세계관, 캐릭터, 사건이 충돌하면 AI가 아닌 내가 결정합니다.',
-      tint: 'tint-lavender'
+      no: '01',
+      title: '캐논은 흔들리지 않습니다',
+      body: '30화가 쌓여도 1화의 규칙이 그대로 남습니다. 세계관·캐릭터·사건이 충돌하면, AI가 아니라 작가가 결정합니다.'
     },
     {
-      sym: '◉',
-      title: '캐릭터는 같은 사람이어야 합니다',
-      body: '매 회차마다 욕망, 상처, 말버릇이 동일한 기준으로 점검됩니다. 설정이 바뀌면 영향 범위를 먼저 보여줍니다.',
-      tint: 'tint-mint'
+      no: '02',
+      title: '캐릭터는 같은 사람입니다',
+      body: '욕망, 상처, 말버릇이 매 회차 같은 기준으로 점검됩니다. 설정을 바꾸면 영향 범위를 먼저 펼쳐 보여줍니다.'
     },
     {
-      sym: '◈',
+      no: '03',
       title: '승인은 작가가 합니다',
-      body: 'AI가 생성한 내용은 즉시 작품에 들어가지 않습니다. 승인 대기함에 쌓이고, 내가 확인한 것만 캐논이 됩니다.',
-      tint: 'tint-peach'
+      body: 'AI가 만든 문장은 곧바로 작품이 되지 않습니다. 승인 대기함에 머물고, 작가가 확인한 것만 캐논으로 굳습니다.'
     }
   ];
   const navLinks = [
     { label: '핵심 원칙', target: 'features' },
     { label: '매체 전환', target: 'media-bridge' }
-  ];
-  const mockAgents: Array<[string, string]> = [
-    ['쇼러너', 'pass'],
-    ['캐릭터', 'revise'],
-    ['연속성', 'block']
   ];
 
   return (
@@ -230,6 +222,10 @@ function MarketingLanding({
               {link.label}
             </a>
           ))}
+          <span className="lx-nav-divider" aria-hidden="true" />
+          <button type="button" className="lx-nav-link" onClick={onOpenProjects}>
+            프로젝트 목록
+          </button>
         </div>
         <button type="button" className="btn-primary" onClick={onOpenHome}>
           창작 시작
@@ -238,86 +234,198 @@ function MarketingLanding({
 
       <section className="hero-band" aria-labelledby="landing-title">
         <div className="hero-inner">
-          <div className="hero-eyebrow">
-            <Sparkles size={12} />
-            이야기 창작 시스템
-          </div>
           <h1 id="landing-title" className="hero-title">
-            조용하게 이야기를
+            한국어 장편 연재를
             <br />
-            만드는 방법.
+            끝까지 데려가는 시스템.
           </h1>
-          <p className="hero-sub">
-            소설에서 시작한 이야기가 웹툰, 동화책, 오디오북으로 이어질 때도 캐릭터, 세계관, 문체가
-            흔들리지 않도록 지켜줍니다.
-          </p>
-          <div className="hero-cta-row">
-            <button type="button" className="btn-primary btn-primary-lg" onClick={onOpenHome}>
-              창작 시작 — 무료
-            </button>
-            <button type="button" className="btn-secondary-on-dark" onClick={onOpenHome}>
-              데모 둘러보기
-            </button>
+          <div className="hero-meta">
+            <p className="hero-sub">
+              소설에서 시작한 이야기가 웹툰·동화책·오디오북으로 옮겨가도 캐릭터의 욕망도, 세계의
+              규칙도, 30화 뒤까지 같은 얼굴로 남습니다.
+            </p>
+            <div className="hero-status">
+              <span className="hero-status-dot" aria-hidden="true" />
+              <span className="hero-status-label">Alpha v0.10 · 캐논 시스템 점검 중</span>
+              <button type="button" className="hero-status-link" onClick={onOpenHome}>
+                창작 시작 →
+              </button>
+            </div>
           </div>
-          <p className="hero-already">
-            이미 프로젝트가 있나요?&nbsp;
-            <button type="button" className="link-btn" onClick={onOpenProjects}>
-              프로젝트 목록 →
-            </button>
-          </p>
         </div>
 
-        <div className="hero-mockup" role="img" aria-label="Story X 에디터 미리보기">
-          <div className="hv-topbar">
-            <span className="hv-brand">
-              <Sparkles size={11} /> Story X
+        <div className="hero-showcase" role="img" aria-label="Story X 에디터 미리보기">
+          <div className="hm-titlebar">
+            <span className="hm-traffic">
+              <i />
+              <i />
+              <i />
             </span>
-            <div className="hv-tabs">
-              <span className="hv-tab active">편집</span>
-              <span className="hv-tab">바이블</span>
+            <div className="hm-tab-row">
+              <span className="hm-tab is-active">달의 탑 아래서</span>
+              <span className="hm-tab">기억의 필사관</span>
+              <span className="hm-tab hm-tab-add">＋</span>
             </div>
-            <span className="hv-pub">출간</span>
+            <span className="hm-status-pill">
+              <span className="hm-pill-dot" />
+              2화 작업 중
+            </span>
           </div>
-          <div className="hv-body">
-            <div className="hv-rail">
-              <div className="hv-rail-proj">달의 탑 아래서</div>
-              <div className="hv-rail-ep">1화 · 마르지 않는 잉크</div>
-              <div className="hv-rail-ep active">2화 · 달의 수문장</div>
-              <div className="hv-rail-ep">3화 · 역방향의 시간</div>
-            </div>
-            <div className="hv-prose">
-              <div className="hv-prose-bar">2화 · 달의 수문장</div>
-              <div className="hv-prose-text">
-                탑의 입구에는 빛이 없었다. 달만이 돌계단을 희미하게 비추고 있었다. 서아가 첫 번째
-                계단에 발을 올려놓았을 때, 그림자 속에서 목소리가 들렸다.
-                <br />
-                <br />
-                “이서아. 드디어 왔군.”
+          <div className="hm-body">
+            <aside className="hm-sidebar">
+              <div className="hm-search">⌘K · 명령·검색</div>
+              <div className="hm-sb-section">
+                <span className="hm-sb-label">에피소드 · 3</span>
+                <div className="hm-sb-item">
+                  <span className="hm-sb-no">01</span>
+                  마르지 않는 잉크
+                </div>
+                <div className="hm-sb-item is-active">
+                  <span className="hm-sb-no">02</span>
+                  달의 수문장
+                </div>
+                <div className="hm-sb-item">
+                  <span className="hm-sb-no">03</span>
+                  역방향의 시간
+                </div>
+              </div>
+              <div className="hm-sb-section">
+                <span className="hm-sb-label">바이블</span>
+                <div className="hm-sb-item">세계관 · 규칙 11</div>
+                <div className="hm-sb-item">캐릭터 · 3명</div>
+                <div className="hm-sb-item">캐논 레저 · 38</div>
+              </div>
+              <div className="hm-sb-section">
+                <span className="hm-sb-label">매체</span>
+                <div className="hm-sb-item">소설 · 장편</div>
+                <div className="hm-sb-item hm-sb-muted">웹툰 변환 대기</div>
+                <div className="hm-sb-item hm-sb-muted">오디오북 대기</div>
+              </div>
+            </aside>
+            <div className="hm-main">
+              <div className="hm-main-head">
+                <div className="hm-chap">
+                  <span className="hm-chap-no">2화</span>
+                  <span className="hm-chap-title">달의 수문장</span>
+                </div>
+                <div className="hm-chap-meta">
+                  <span>4,820자</span>
+                  <span className="hm-dot-sep" />
+                  <span>비트 4 / 7</span>
+                  <span className="hm-dot-sep" />
+                  <span className="hm-saved">저장됨</span>
+                </div>
+              </div>
+              <div className="hm-prose">
+                <p>
+                  탑의 입구에는 빛이 없었다. 달만이 돌계단을 희미하게 비추고 있었다. 서아가 첫 번째
+                  계단에 발을 올려놓았을 때, 그림자 속에서 목소리가 들렸다.
+                </p>
+                <p className="hm-prose-dialog">“이서아. 드디어 왔군.”</p>
+                <p>
+                  목소리는 차가웠다. 한 번도 들어본 적이 없는 음색이었지만, 분명히 자신의 이름을
+                  알고 있었다.
+                </p>
+                <p className="hm-prose-caret">
+                  서아는 가방 안의 잉크병을 더듬었다.
+                  <span className="hm-caret" />
+                </p>
+              </div>
+              <div className="hm-canon-line">
+                <span className="hm-canon-label">캐논 적용</span>
+                <span className="hm-canon-chip">서아 · 잉크병</span>
+                <span className="hm-canon-chip">탑 · 수문장 규칙</span>
+                <span className="hm-canon-chip hm-canon-new">+1 새 사실</span>
               </div>
             </div>
-            <div className="hv-agents">
-              <div className="hv-agent-label">작가진</div>
-              {mockAgents.map(([name, state]) => (
-                <div key={name} className="hv-agent">
-                  <span className={`hv-dot hv-dot-${state}`} />
-                  <span>{name}</span>
+            <aside className="hm-rail">
+              <div className="hm-rail-section">
+                <div className="hm-rail-head">
+                  <span>작가진 검토</span>
+                  <span className="hm-rail-count">5</span>
                 </div>
-              ))}
-            </div>
+                <div className="hm-agent">
+                  <span className="hm-dot pass" />
+                  <span className="hm-agent-name">쇼러너</span>
+                  <span className="hm-agent-state">통과</span>
+                </div>
+                <div className="hm-agent">
+                  <span className="hm-dot revise" />
+                  <span className="hm-agent-name">캐릭터 큐레이터</span>
+                  <span className="hm-agent-state">수정 요청</span>
+                </div>
+                <div className="hm-agent">
+                  <span className="hm-dot block" />
+                  <span className="hm-agent-name">연속성 감수</span>
+                  <span className="hm-agent-state">차단</span>
+                </div>
+                <div className="hm-agent hm-agent-muted">
+                  <span className="hm-dot queued" />
+                  <span className="hm-agent-name">세계관 지킴이</span>
+                  <span className="hm-agent-state">대기</span>
+                </div>
+                <div className="hm-agent hm-agent-muted">
+                  <span className="hm-dot queued" />
+                  <span className="hm-agent-name">문체 큐레이터</span>
+                  <span className="hm-agent-state">대기</span>
+                </div>
+              </div>
+              <div className="hm-rail-section">
+                <div className="hm-rail-head">
+                  <span>승인 대기</span>
+                  <span className="hm-rail-count hm-rail-count-accent">2</span>
+                </div>
+                <div className="hm-approve">
+                  <span className="hm-approve-title">서아 · 새 잉크병 출처</span>
+                  <span className="hm-approve-meta">캐릭터 큐레이터 · 2화</span>
+                </div>
+                <div className="hm-approve">
+                  <span className="hm-approve-title">탑 · 수문장 규칙</span>
+                  <span className="hm-approve-meta">세계관 지킴이 · 2화</span>
+                </div>
+              </div>
+            </aside>
+          </div>
+          <div className="hm-footer">
+            <span className="hm-foot-item">
+              <span className="hm-foot-key">⌘K</span>
+              명령
+            </span>
+            <span className="hm-foot-item">
+              <span className="hm-foot-key">⌘.</span>
+              집중 모드
+            </span>
+            <span className="hm-foot-item">
+              <span className="hm-foot-key">⌘↵</span>
+              초안 생성
+            </span>
+            <span className="hm-foot-spacer" />
+            <span className="hm-foot-item hm-foot-item-good">
+              <span className="hm-foot-bullet" />
+              알파 셀프체크 63%
+            </span>
           </div>
         </div>
       </section>
 
       <section className="feature-section" id="features" aria-label="핵심 원칙">
         <div className="feature-section-inner">
-          <div className="feature-eyebrow">왜 Story X인가요</div>
-          <div className="feature-grid">
+          <span className="lx-eyebrow">왜 Story X인가</span>
+          <h2 className="section-h2">
+            이야기를 지키는 일은
+            <br />
+            세 가지 약속에서 시작합니다.
+          </h2>
+          <div className="feature-list">
             {features.map((feature) => (
-              <div key={feature.title} className={`feature-card ${feature.tint}`}>
-                <div className="feature-sym">{feature.sym}</div>
-                <div className="feature-title">{feature.title}</div>
-                <p className="feature-body">{feature.body}</p>
-              </div>
+              <article key={feature.title} className="feature-card">
+                <span className="feature-no">{feature.no}</span>
+                <div className="feature-text">
+                  <div className="feature-title">{feature.title}</div>
+                  <p className="feature-body">{feature.body}</p>
+                </div>
+                <ChevronRight size={14} className="feature-arrow" />
+              </article>
             ))}
           </div>
         </div>
@@ -325,9 +433,7 @@ function MarketingLanding({
 
       <section className="lx-bridge-section" id="media-bridge" aria-label="매체 전환">
         <div className="lx-bridge-inner">
-          <p className="lx-eyebrow" style={{ marginBottom: 14 }}>
-            Media Bridge
-          </p>
+          <span className="lx-eyebrow">Media Bridge</span>
           <h2 className="section-h2">
             이야기가 먼저이고,
             <br />
@@ -359,14 +465,17 @@ function MarketingLanding({
       </section>
 
       <section className="landing-closing">
-        <h2>
-          어떤 형태로 바뀌어도
-          <br />
-          살아남는 이야기로 시작하세요.
-        </h2>
-        <button type="button" className="btn-primary btn-primary-lg" onClick={onOpenHome}>
-          창작 시작 — 무료
-        </button>
+        <div className="landing-closing-inner">
+          <span className="lx-eyebrow">Story X</span>
+          <h2>
+            어떤 매체로 바뀌어도
+            <br />
+            같은 이야기로 남습니다.
+          </h2>
+          <button type="button" className="btn-primary btn-primary-lg" onClick={onOpenHome}>
+            창작 시작
+          </button>
+        </div>
       </section>
     </div>
   );

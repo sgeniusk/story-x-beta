@@ -20,13 +20,13 @@ describe('Story X Montage design tokens', () => {
     expect(css).toContain('--control-radius: var(--wds-component-button-radius-medium)');
   });
 
-  it('scopes the editor (.sx-desk) to the design3 Editorial DS palette', () => {
-    // 편집기는 자체 표면을 쓴다 — warm cream 캔버스 + dark manuscript + 보라 brand
-    expect(css).toContain('--sx-ink: #26251e');
-    expect(css).toContain('--sx-card: #ffffff');
-    expect(css).toContain('--sx-paper: #f7f7f4');
-    expect(css).toContain('--sx-brand: #6448d3');
-    expect(css).toContain('--sx-page: #1c1a17');
+  it('scopes the editor (.sx-desk) to the Linear dark command-center palette', () => {
+    // 편집기는 Linear 다크 — pitch black 캔버스 + graphite/slate 카드 + lime brand
+    expect(css).toContain('--sx-ink: #f7f8f8');
+    expect(css).toContain('--sx-card: #0f1011');
+    expect(css).toContain('--sx-paper: #08090a');
+    expect(css).toContain('--sx-brand: #e4f222');
+    expect(css).toContain('--sx-page: #161718');
     // AI-stage 파스텔 토큰
     expect(css).toContain('--sx-stage-think: #dfa88f');
     expect(css).toContain('--sx-stage-read: #9fbbe0');
