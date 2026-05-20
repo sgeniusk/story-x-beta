@@ -1,0 +1,75 @@
+{
+  "schema": "harness/feature-list/v1",
+  "project": "Story X — 한국어 장편 연재 스튜디오",
+  "active": "M3-editor-polish",
+  "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
+  "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
+  "features": [
+    {
+      "id": "M1-harness-design-doc",
+      "name": "스토리 하네스 통합 설계 문서",
+      "description": "현재 코드·온톨로지 계획·창작원리 리서치 3자산을 하나의 하네스 아키텍처로 통합한 docs/storyx-harness-architecture.md 작성. 8레이어 파이프라인·모듈 처분 결정·리서치 13/16/12 항목 매핑·12개 갭 처리·M4 청크 시퀀스 포함.",
+      "status": "done",
+      "dependencies": [],
+      "done_criteria": "docs/storyx-harness-architecture.md 7개 절 모두 채워짐, 모듈별 유지/리팩터/신설/폐기 결정 명시",
+      "evidence": "docs/storyx-harness-architecture.md · commit e7a971a · branch design/linear-dark"
+    },
+    {
+      "id": "M2-linear-dark-landing",
+      "name": "Linear 다크 커맨드센터 랜딩 재작성",
+      "description": "랜딩 페이지를 Linear 다크 디자인 시스템으로 완전 재작성. 88px 디스플레이 헤드라인·풀폭 product mockup hero·흰색 pill nav CTA·Inter Variable + Berkeley Mono. nx-* / sx-* 토큰 값을 Linear 등가로 cascade.",
+      "status": "done",
+      "dependencies": [],
+      "done_criteria": "랜딩 Linear 다크 전환, nx-*·sx-* 토큰 cascade, 28/149 테스트 + 빌드 통과",
+      "evidence": "src/App.tsx MarketingLanding v4, src/styles.css LINEAR 블록, commit e7a971a"
+    },
+    {
+      "id": "M3-editor-polish",
+      "name": "에디터·보조 화면 Linear 폴리시",
+      "description": "토큰 cascade로 60~70% 다크가 됐지만 리터럴 색을 박은 셀렉터가 남아 어색한 부분을 다듬는다. 에디터(StoryXDesk.tsx 193KB)의 상단 토픽바·작가진 패널·'대기' 배지 등. 홈/프로젝트/로그인 화면의 디테일도 함께 마무리.",
+      "status": "in_progress",
+      "dependencies": ["M2-linear-dark-landing"],
+      "done_criteria": "리터럴 색 박스 제거, 4화면 Playwright 캡처로 다크 톤 일관성 확인",
+      "owner": "design-handoff (클로드 디자인 의뢰)",
+      "files": ["src/StoryXDesk.tsx", "src/styles.css (.sx-desk · .hx- · .pjx- · .lgx-)"],
+      "evidence": null
+    },
+    {
+      "id": "M4-story-harness-implementation",
+      "name": "스토리 하네스 모듈 구현 (Layer 0~7)",
+      "description": "docs/storyx-harness-architecture.md 청크 A~H를 TDD 순서로 구현. storyOntology·storyHarness·continuityContract·koreanVoiceGate·mediaProjection·qualityGates·agentRunEngine 신설. canon owner 통일, validateContinuity 리팩터, agentOrchestration 폐기.",
+      "status": "blocked",
+      "dependencies": ["M1-harness-design-doc"],
+      "blocked_reason": "M3 디자인 폴리시 마무리 후 착수",
+      "done_criteria": "청크 A~H 완료, Acceptance Criteria 12개 충족, npm test 전체 통과",
+      "evidence": null
+    },
+    {
+      "id": "M5-vercel-functions",
+      "name": "서버측 LLM Vercel Functions",
+      "description": "/api/draft, /api/review-agent, /api/interview, /api/review-data 4개 라우트를 Vercel Functions로 구현. 공유 요청/응답 스키마 명시. 배포본에서 실제 Claude 호출.",
+      "status": "todo",
+      "dependencies": ["M4-story-harness-implementation"],
+      "done_criteria": "4개 라우트 production 배포본에서 실제 LLM 응답, mock 폴백 안전",
+      "evidence": null
+    },
+    {
+      "id": "M6-persistence-memory-sync",
+      "name": "영속성·메모리 싱크",
+      "description": "localStorage에서 파일·클라우드 영속으로 확장. storyx init/serve/memory sync CLI 명령 추가. evolutionMemory 누적 저장.",
+      "status": "todo",
+      "dependencies": ["M5-vercel-functions"],
+      "done_criteria": "storyx CLI 명령 동작, 프로젝트 영속성 검증",
+      "evidence": null
+    },
+    {
+      "id": "M7-alpha-1.0",
+      "name": "v1.0.0-alpha 완성 루프",
+      "description": "소설·에세이 완성 루프가 끝까지 이어진다. 30화 회귀 통과. 모드 가중치(commercialWeight / literaryWeight) 게이트 실 동작.",
+      "status": "todo",
+      "dependencies": ["M4-story-harness-implementation", "M5-vercel-functions", "M6-persistence-memory-sync"],
+      "done_criteria": "30화 시리즈 회귀 통과, 완성 루프 데모 가능",
+      "evidence": null
+    }
+  ]
+}

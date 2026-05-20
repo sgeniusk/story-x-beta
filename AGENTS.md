@@ -2,6 +2,44 @@
 
 Story X is a React/Vite app plus a local story-continuity, voice-consistency, and audio/video planning engine.
 
+## Startup Workflow
+
+Before writing code in a new session, the agent must read state files in this order so context is reconstructed without relying on chat history.
+
+1. `progress.md` — Last Updated · Current Objective · Recommended Next Step · Files To Touch · Blockers.
+2. `feature_list.json` — every milestone (M1~M7) with `id`, `name`, `description`, `status`, `dependencies`.
+3. `session-handoff.md` — most recent handoff at top, including "Files NOT To Touch".
+4. Run `bash init.sh` to confirm the environment, types, build, and tests pass before any change. Re-run before claiming done.
+5. This file plus `CLAUDE.md` for domain and design rules.
+
+The master roadmap lives at `~/.claude/plans/x-zippy-graham.md`.
+
+## Definition of Done
+
+A unit of work is done only when all of the following hold.
+
+- `npm test` — 28 files / 149+ tests pass.
+- `npm run build` — `tsc --noEmit && vite build` succeeds.
+- The active feature in `progress.md` is updated with evidence (commit SHA, file paths, capture path).
+- New generation behavior was preceded by a test update in `src/lib/storyEngine.test.ts`.
+- Linear "Midnight Command Center" dark tokens are preserved (`--lc-*` / `--nx-*` / `--sx-*` values intact).
+- `session-handoff.md` gets a fresh entry at the top before the session ends.
+
+## Stay in Scope · Completion Gate
+
+- One feature at a time. The `active` field in `feature_list.json` names the single in-flight milestone. Do not touch other milestones in the same session.
+- Scope is the union of `files` listed in the active feature plus the touched paths in `progress.md`. Anything outside that list is out of scope.
+- Closing a feature requires the Definition of Done above — no exceptions, no "I'll add tests later".
+
+## End of Session · Before Ending
+
+Before stopping work, in this exact order.
+
+1. Re-run `bash init.sh` and capture the result line in `progress.md` under "Verification Evidence".
+2. Update `progress.md` Current State + Recommended Next Step + Last Updated timestamp.
+3. Prepend a new handoff block to `session-handoff.md` using the template at the bottom of that file.
+4. Commit on the active branch with the milestone id in the subject (e.g. `M3-editor-polish: ...`).
+
 ## Development
 
 - Run `npm test` before and after story-engine changes.
