@@ -19,7 +19,8 @@ describe('Story X page experience', () => {
   it('renders the landing on the Linear design system — dark command-center with product mockup and Neon Lime CTA', () => {
     expect(app).toContain('function MarketingLanding');
     expect(app).toContain('function LandingBrand');
-    expect(app).toContain('className="landing-page"');
+    expect(app).toMatch(/className=.*landing-page/);
+    expect(app).toContain('is-light');
     expect(app).toContain('className="hero-band"');
     expect(app).toContain('끝까지 데려가는 시스템');
     expect(app).toContain('className="feature-card"');

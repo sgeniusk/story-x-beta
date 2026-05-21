@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type RefObject } from 'react';
 import { getAgentValidationProcess } from './lib/agentReviewProcess';
-import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
+import storyXSymbol from './assets/brand/story-x-symbol-light.svg';
 import {
   buildCreativeBlueprint,
   getFormatOptions,

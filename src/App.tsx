@@ -5,9 +5,11 @@ import {
   Feather,
   FileText,
   Lock,
+  Moon,
   PanelsTopLeft,
   Plus,
-  Sparkles
+  Sparkles,
+  Sun
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -30,6 +32,7 @@ import { loadProject } from './lib/storage';
 import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
 import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
+import storyXSymbolLight from './assets/brand/story-x-symbol-light.svg';
 
 const mediumOptions = getMediumOptions();
 
@@ -172,11 +175,21 @@ function App() {
   return <MarketingLanding onOpenHome={() => setStage('home')} onOpenProjects={() => setStage('projects')} />;
 }
 
-function LandingBrand({ onClick }: { onClick: () => void }) {
+function LandingBrand({
+  onClick,
+  theme = 'dark'
+}: {
+  onClick: () => void;
+  theme?: 'dark' | 'light';
+}) {
   return (
     <button type="button" className="landing-brand" onClick={onClick}>
       <span className="lx-brandmark" aria-hidden="true">
-        <img className="nx-brand-symbol" src={storyXSymbol} alt="" />
+        <img
+          className="nx-brand-symbol"
+          src={theme === 'dark' ? storyXSymbolLight : storyXSymbol}
+          alt=""
+        />
       </span>
       <span>Story X</span>
     </button>
@@ -212,10 +225,28 @@ function MarketingLanding({
     { label: '매체 전환', target: 'media-bridge' }
   ];
 
+  // 낮/밤 토글 — localStorage 'storyx.landingTheme' 에 저장. 기본은 밤(다크).
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof window === 'undefined') return 'dark';
+    try {
+      return window.localStorage.getItem('storyx.landingTheme') === 'light' ? 'light' : 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('storyx.landingTheme', theme);
+    } catch {
+      /* silent */
+    }
+  }, [theme]);
+  const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
+
   return (
-    <div className="landing-page">
+    <div className={`landing-page${theme === 'light' ? ' is-light' : ''}`}>
       <nav className="lx-nav" aria-label="Story X">
-        <LandingBrand onClick={onOpenHome} />
+        <LandingBrand onClick={onOpenHome} theme={theme} />
         <div className="lx-nav-links">
           {navLinks.map((link) => (
             <a key={link.target} href={`#${link.target}`} className="lx-nav-link">
@@ -227,9 +258,20 @@ function MarketingLanding({
             프로젝트 목록
           </button>
         </div>
-        <button type="button" className="btn-primary" onClick={onOpenHome}>
-          창작 시작
-        </button>
+        <div className="lx-nav-actions">
+          <button
+            type="button"
+            className="lx-theme-toggle"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? '낮 모드로 전환' : '밤 모드로 전환'}
+            title={theme === 'dark' ? '낮 모드로 전환' : '밤 모드로 전환'}
+          >
+            {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
+          <button type="button" className="btn-primary" onClick={onOpenHome}>
+            창작 시작
+          </button>
+        </div>
       </nav>
 
       <section className="hero-band" aria-labelledby="landing-title">
