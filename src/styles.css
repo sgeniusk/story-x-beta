@@ -568,6 +568,9 @@ body {
   --sx-shadow: rgba(0, 0, 0, 0.4) 0px 2px 4px 0px;
   --button-bg: var(--sx-ink);
   --button-bg-hover: #d0d6e0;
+  /* .sx-desk 안에서 var(--nx-primary, ...) 폴백을 쓰는 모든 셀렉터가 사용자 트윅 색을 따라오도록 매핑 */
+  --nx-primary: var(--sx-brand);
+  --nx-primary-hover: var(--sx-brand-press);
   --font-serif: 'Source Serif Pro', 'Noto Serif KR', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'Menlo', monospace;
   min-height: 100vh;
