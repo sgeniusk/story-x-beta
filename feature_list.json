@@ -1,7 +1,7 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M3.5-studio-settings",
+  "active": "M3.7-editor-literal-color-polish",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
   "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
   "features": [
@@ -36,9 +36,18 @@
       "id": "M3.5-studio-settings",
       "name": "스튜디오 편집기 설정 패널 (트윅·캔버스)",
       "description": "스튜디오 안에 사용자가 강조색(트윅)과 창 배경색(캔버스)을 바꿀 수 있는 설정 패널 추가. localStorage에 저장.",
-      "status": "todo",
+      "status": "done",
       "dependencies": ["M3-four-part-architecture"],
-      "done_criteria": "설정 패널 UI · 트윅 컬러 피커 · 캔버스 토널 선택 · 영속 저장",
+      "done_criteria": "설정 패널 UI · 트윅 5색(라임·바이올렛·에메랄드·코랄·앰버) · 캔버스 3톤(피치·그래파이트·인디고) · localStorage 영속 · 라이브 적용",
+      "evidence": "src/StoryXDesk.tsx 설정 토글 + 패널 + state hooks, src/styles.css .sx-studio-settings-panel/.sx-accent-chip/.sx-canvas-chip 추가, .sx-desk 인라인 --sx-brand·--sx-page 오버라이드"
+    },
+    {
+      "id": "M3.7-editor-literal-color-polish",
+      "name": "에디터 리터럴 색 박스 정리",
+      "description": "토픽바의 sx-app-breadcrumb·저장 칩, '쇼러너가 잡은 이번' 카드, 알파 셀프체크 바, prose 영역 textarea 등에 남은 라이트 톤·회색 박스를 토큰 기반으로 정리.",
+      "status": "todo",
+      "dependencies": ["M3.5-studio-settings"],
+      "done_criteria": "리터럴 #fff·라이트 회색 셀렉터 제거, 5색 트윅 + 3톤 캔버스 어느 조합에서도 톤 일관성 유지",
       "evidence": null
     },
     {

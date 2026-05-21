@@ -1,50 +1,48 @@
 # Story X — Progress
 
-> Last Updated: 2026-05-21 11:46 KST · Branch: `design/linear-dark`
+> Last Updated: 2026-05-21 13:30 KST · Branch: `design/linear-dark`
 
 ## Current Objective
 
-**M3.5 — 스튜디오 편집기 설정 패널 (트윅·캔버스)** (`todo`)
+**M3.7 — 에디터 리터럴 색 박스 정리** (`todo`)
 
-스튜디오 안에 사용자가 강조색(트윅)과 창 배경색(캔버스)을 바꿀 수 있는 편집기 설정 패널을 추가한다. localStorage에 저장. M3 4파트 구조가 확정되었으니 이제 스튜디오 안의 사용자 커스터마이즈를 붙인다.
+스튜디오 안에 남은 라이트 회색 박스 셀렉터들을 토큰 기반으로 정리한다. 트윅 5색 × 캔버스 3톤의 어떤 조합에서도 톤이 일관되려면 토픽바 회색 박스, "쇼러너가 잡은 이번" 카드 배경, 알파 셀프체크 바, prose textarea 같은 곳의 리터럴 색을 제거해야 한다.
 
 ## Current State
 
-- 활성 feature — `M3.5-studio-settings` (`feature_list.json` 참조)
-- 직전 마일스톤 — M3 완료, 4파트 구조 확정 (랜딩 낮↔밤 / 브릿지 라이트 / 스튜디오 다크 / 퍼블리시 신설 대기)
-- 마지막 통과 검증 — `bash init.sh` 28 files / 149 tests · 빌드 성공 (2026-05-21 11:46)
+- 활성 feature — `M3.7-editor-literal-color-polish` (`feature_list.json` 참조)
+- 직전 마일스톤 — M3.5 완료, 스튜디오 안에서 트윅(강조색)·캔버스(원고 배경) 라이브 변경 가능
+- 마지막 통과 검증 — `npm run build` 성공 · `npx tsc --noEmit` exit 0 · 28 files / 149 tests 통과 (2026-05-21 13:30)
 - 브랜치 — `design/linear-dark` (origin 푸시 진행 예정)
 
 ## What Was Done in the Last Session
 
-1. design 패키지 fetch 시도 — 바이너리(gzip 107KB), 프로젝트 외부 캐시라 classifier 차단. 사용자가 "로고 외에는 그대로 진행" 결정
-2. 흰 로고 변형 생성 — `src/assets/brand/story-x-symbol-light.svg`, `story-x-logo-lockup-light.svg`
-3. 4파트 구조 분리
-   - `:root --nx-*` 라이트로 복원 → 브릿지(로그인·프로젝트·홈) 다시 흰 배경
-   - 랜딩에 낮↔밤 토글 추가 (`useState` + `localStorage 'storyx.landingTheme'`)
-   - 토글 UI — nav 우측에 Sun/Moon 아이콘 32px 버튼
-   - `.landing-page.is-light` 오버라이드 — 토큰을 라이트 등가로 재정의
-   - `.landing-page.is-light .hero-showcase` — mockup은 항상 다크 (스튜디오 미리보기)
-   - `LandingBrand` `theme` prop 추가 → 다크 컨텍스트는 흰 SVG, 라이트는 검정 SVG
-   - `StoryXDesk` 로고 import를 흰 변형으로 교체
-   - CSS `filter: brightness(0) invert(1)` 해킹 제거
-4. 코드 하네스 산출물(`feature_list.json` · `progress.md` · `session-handoff.md`) 갱신
+1. 미사용 `src/assets/story-x-hero-forest-wind.png` (3MB) 제거
+2. 스튜디오 편집기 설정 패널 신설 (M3.5)
+   - `StoryXDesk.tsx` 에 `Settings` 톱니 토글 + 펼침 패널
+   - 트윅 5색 chip — 라임·바이올렛·에메랄드·코랄·앰버
+   - 캔버스 3톤 chip — 피치 블랙·그래파이트·인디고 슬레이트
+   - state hook + `localStorage 'storyx.studio.accent'` · `'storyx.studio.canvas'`
+   - `<main className="sx-desk">` 에 인라인 `style={{ --sx-brand, --sx-brand-press, --sx-page, --sx-page-soft }}` 오버라이드
+   - 라이브 변경 — 캐논 진척률 바·CTA·Quick 토글·헤더 액센트가 즉시 적용됨
+3. `styles.css` 에 `.sx-studio-settings-toggle` · `.sx-studio-settings-panel` · `.sx-accent-chip` · `.sx-canvas-chip` · `.sx-accent-dot` · `.sx-canvas-swatch` 스타일 추가
+4. `Settings` lucide 아이콘 import 추가, `CSSProperties` 타입 import 추가
 
 ## Recommended Next Step
 
-스튜디오(에디터) 우측 패널 또는 헤더 영역에 "편집기 설정" 드롭다운/모달을 추가하고, 트윅(`--sx-brand`) 컬러 피커 + 캔버스(`--sx-page` / `--sx-paper`) 토널 선택 + localStorage 저장. 한 컴포넌트씩 하고 `bash init.sh` 통과 후 다음.
+라임 + 피치 블랙 외의 조합으로 스튜디오를 열어 보고, 그때 눈에 띄게 어색해지는 리터럴 색 박스를 토큰 기반으로 교체. 우선 후보 — 토픽바 `sx-app-breadcrumb`/`sx-save-chip` 영역, "쇼러너가 잡은 이번..." 카드 배경, 알파 셀프체크 바, prose `<textarea>` 영역.
 
 ## Files To Touch
 
-- `src/StoryXDesk.tsx` — 설정 모달/드롭다운 컴포넌트 + state hook
-- `src/styles.css` `.sx-desk` 영역 — 설정 패널 스타일
-- `src/lib/storage.ts` — 설정 영속화 헬퍼 추가 (선택)
+- `src/StoryXDesk.tsx` — JSX 내 인라인 색이 있다면 토큰으로
+- `src/styles.css` `.sx-desk` 하위의 리터럴 hex/회색 셀렉터 — `var(--sx-page)` · `var(--sx-paper)` · `var(--sx-card)` 등으로 교체
 
 ## Files NOT To Touch
 
 - `src/App.tsx` MarketingLanding, LandingBrand
 - `src/styles.css` `.landing-page` 영역
-- `src/styles.css` `:root --nx-*` 라이트 토큰 (브릿지)
+- `:root --nx-*` 라이트 토큰
+- `.sx-desk` 토큰 정의 자체 (인라인 오버라이드 메커니즘은 유지)
 - 149 테스트 통과 상태
 
 ## Blockers
@@ -58,6 +56,7 @@
 | M1 | 스토리 하네스 통합 설계 문서 | 2026-05-19 | `docs/storyx-harness-architecture.md`, commit `e7a971a` |
 | M2 | Linear 다크 랜딩 재작성 | 2026-05-21 | `src/App.tsx` MarketingLanding v4, commit `e7a971a` |
 | M3 | 4파트 구조 + 랜딩 낮↔밤 토글 | 2026-05-21 | 흰 로고 변형, theme prop, `.landing-page.is-light` 오버라이드, nx-* 라이트 복원 |
+| M3.5 | 스튜디오 편집기 설정 패널 (트윅·캔버스) | 2026-05-21 | `StoryXDesk` 설정 토글 + 패널, `--sx-brand`/`--sx-page` 인라인 오버라이드, localStorage 영속 |
 
 ## Blocked Work
 

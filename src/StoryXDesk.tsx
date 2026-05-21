@@ -20,11 +20,20 @@ import {
   RotateCcw,
   Save,
   Send,
+  Settings,
   ShieldAlert,
   WandSparkles,
   X
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type FormEvent, type RefObject } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type RefObject
+} from 'react';
 import { getAgentValidationProcess } from './lib/agentReviewProcess';
 import storyXSymbol from './assets/brand/story-x-symbol-light.svg';
 import {
@@ -642,6 +651,23 @@ function buildBibleSectionState({
   };
 }
 
+// 편집기 설정 옵션 — 트윅(강조색) · 캔버스(원고 배경 톤). 사용자가 설정에서 고른다.
+const STUDIO_ACCENT_VALUES = {
+  lime: { value: '#e4f222', label: '라임' },
+  aether: { value: '#5e6ad2', label: '바이올렛' },
+  emerald: { value: '#27a644', label: '에메랄드' },
+  coral: { value: '#eb5757', label: '코랄' },
+  amber: { value: '#d4a94d', label: '앰버' }
+} as const;
+type StudioAccent = keyof typeof STUDIO_ACCENT_VALUES;
+
+const STUDIO_CANVAS_VALUES = {
+  pitch: { page: '#161718', soft: '#1a1b1c', label: '피치 블랙' },
+  graphite: { page: '#0f1011', soft: '#161718', label: '그래파이트' },
+  indigo: { page: '#1d1d2a', soft: '#222230', label: '인디고 슬레이트' }
+} as const;
+type StudioCanvas = keyof typeof STUDIO_CANVAS_VALUES;
+
 interface StoryXDeskProps {
   initialMedium?: CreativeMedium;
   initialFormat?: CreativeFormat;
@@ -701,6 +727,40 @@ export function StoryXDesk({
   const [projectSnapshots, setProjectSnapshots] = useState<ProjectSnapshot[]>(() => loadProjectSnapshots());
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [activeBeatId, setActiveBeatId] = useState<string | null>(null);
+  // 편집기 설정 — 트윅(강조색) · 캔버스(원고 배경 톤). localStorage 영속.
+  const [isStudioSettingsOpen, setIsStudioSettingsOpen] = useState(false);
+  const [studioAccent, setStudioAccent] = useState<StudioAccent>(() => {
+    if (typeof window === 'undefined') return 'lime';
+    try {
+      const saved = window.localStorage.getItem('storyx.studio.accent');
+      return saved && saved in STUDIO_ACCENT_VALUES ? (saved as StudioAccent) : 'lime';
+    } catch {
+      return 'lime';
+    }
+  });
+  const [studioCanvas, setStudioCanvas] = useState<StudioCanvas>(() => {
+    if (typeof window === 'undefined') return 'pitch';
+    try {
+      const saved = window.localStorage.getItem('storyx.studio.canvas');
+      return saved && saved in STUDIO_CANVAS_VALUES ? (saved as StudioCanvas) : 'pitch';
+    } catch {
+      return 'pitch';
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('storyx.studio.accent', studioAccent);
+    } catch {
+      /* silent */
+    }
+  }, [studioAccent]);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('storyx.studio.canvas', studioCanvas);
+    } catch {
+      /* silent */
+    }
+  }, [studioCanvas]);
   const draftBootRef = useRef(false);
   const manuscriptRef = useRef<HTMLTextAreaElement>(null);
 
@@ -1584,7 +1644,17 @@ export function StoryXDesk({
   }
 
   return (
-    <main className={`sx-desk sx-genre-${request.genre} ${isFocusMode ? 'is-focus-mode' : ''}`}>
+    <main
+      className={`sx-desk sx-genre-${request.genre} ${isFocusMode ? 'is-focus-mode' : ''}`}
+      style={
+        {
+          '--sx-brand': STUDIO_ACCENT_VALUES[studioAccent].value,
+          '--sx-brand-press': STUDIO_ACCENT_VALUES[studioAccent].value,
+          '--sx-page': STUDIO_CANVAS_VALUES[studioCanvas].page,
+          '--sx-page-soft': STUDIO_CANVAS_VALUES[studioCanvas].soft
+        } as CSSProperties
+      }
+    >
       {/* 일하는 바 — design의 dense 56px 3-zone working bar.
           좌: 워드마크·작품·회차 빵부스러기 + (편집) 현재 작업 지점 칩 + 저장 상태
           중앙: 편집/바이블/출간 모드 탭
@@ -1768,6 +1838,17 @@ export function StoryXDesk({
               <span className="ex-workbar-pending-count">{pendingApprovalCount}</span>
             </button>
           )}
+          {/* 편집기 설정 — 트윅(강조색)·캔버스(원고 배경) */}
+          <button
+            type="button"
+            className={`sx-studio-settings-toggle ex-workbar-settings${isStudioSettingsOpen ? ' is-open' : ''}`}
+            onClick={() => setIsStudioSettingsOpen((v) => !v)}
+            aria-label="편집기 설정"
+            aria-expanded={isStudioSettingsOpen}
+            title="편집기 설정 — 트윅·캔버스"
+          >
+            <Settings size={14} />
+          </button>
           {/* 출간은 PRIMARY 탭에서 빠졌지만 우측 secondary 버튼으로 항상 도달 가능하다 */}
           <button
             type="button"
@@ -1799,6 +1880,59 @@ export function StoryXDesk({
           </button>
         </div>
       </header>
+
+      {isStudioSettingsOpen && (
+        <section
+          className="sx-studio-settings-panel"
+          aria-label="편집기 설정"
+          role="dialog"
+        >
+          <div className="sx-studio-settings-group">
+            <p className="sx-eyebrow">트윅 · 강조색</p>
+            <div className="sx-studio-settings-row">
+              {(Object.keys(STUDIO_ACCENT_VALUES) as StudioAccent[]).map((key) => {
+                const opt = STUDIO_ACCENT_VALUES[key];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`sx-accent-chip${studioAccent === key ? ' is-active' : ''}`}
+                    onClick={() => setStudioAccent(key)}
+                    style={{ '--sx-chip-color': opt.value } as CSSProperties}
+                    title={opt.label}
+                  >
+                    <span className="sx-accent-dot" aria-hidden="true" />
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="sx-studio-settings-group">
+            <p className="sx-eyebrow">캔버스 · 원고 배경</p>
+            <div className="sx-studio-settings-row">
+              {(Object.keys(STUDIO_CANVAS_VALUES) as StudioCanvas[]).map((key) => {
+                const opt = STUDIO_CANVAS_VALUES[key];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`sx-canvas-chip${studioCanvas === key ? ' is-active' : ''}`}
+                    onClick={() => setStudioCanvas(key)}
+                    style={{ '--sx-chip-bg': opt.page } as CSSProperties}
+                  >
+                    <span className="sx-canvas-swatch" aria-hidden="true" />
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <p className="sx-studio-settings-hint">
+            선택은 브라우저에 자동 저장됩니다. 스튜디오는 언제나 다크 톤을 유지합니다.
+          </p>
+        </section>
+      )}
 
       {isMediaPanelOpen && (
         <section className="sx-media-change-panel" aria-label="매체 변경">

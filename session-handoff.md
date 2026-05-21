@@ -4,6 +4,55 @@
 
 ---
 
+## 2026-05-21 13:30 — M3.5 스튜디오 설정 패널 완료, M3.7 리터럴 색 정리로 인계
+
+> Last Updated: 2026-05-21 13:30 KST
+
+### Current Objective
+M3.7 — 에디터 안의 리터럴 색 박스 정리. 트윅 5색 × 캔버스 3톤 조합 어디서나 톤 일관.
+
+### Recommended Next Step
+라임 + 피치 블랙이 아닌 조합(예 — 바이올렛 + 인디고)을 띄워 가장 어색해지는 셀렉터부터. 우선 후보 — `sx-app-breadcrumb` 영역, `sx-save-chip`, "쇼러너가 잡은 이번" 카드 배경, 알파 셀프체크 바, prose textarea. 리터럴 hex를 `var(--sx-page)`·`var(--sx-paper)`·`var(--sx-card)` 등으로 교체.
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark` (origin 푸시 예정)
+- Verification — `npx tsc --noEmit` 통과 · `npm run build` 성공 · 28 files / 149 tests 통과
+- 캡처 — `.playwright-mcp/studio-settings-default.jpeg` (라임+피치) · `studio-settings-aether-indigo.jpeg` (바이올렛+인디고)
+
+### What the Last Session Did
+1. 미사용 `src/assets/story-x-hero-forest-wind.png` 제거
+2. 스튜디오 편집기 설정 패널 신설 (M3.5)
+   - 토픽바 우측에 `Settings` 톱니 토글
+   - 펼침 패널 — 트윅 chip 5색·캔버스 chip 3톤
+   - state + `localStorage 'storyx.studio.accent'`·`'storyx.studio.canvas'`
+   - `<main className="sx-desk">` 인라인 style 로 `--sx-brand`/`--sx-page` 등 오버라이드 → 라이브 적용
+3. 관련 lucide·CSSProperties import 정리, 토큰 정의 모듈 레벨 상수로 분리
+
+### Files To Touch (this milestone)
+- `src/StoryXDesk.tsx` — 인라인 색이 있다면 토큰으로
+- `src/styles.css` `.sx-desk` 하위 — 리터럴 hex·rgba를 토큰 호출로
+
+### Files NOT To Touch
+- `src/App.tsx` MarketingLanding, LandingBrand
+- `src/styles.css` `.landing-page` 영역
+- `:root --nx-*` 라이트 토큰
+- `.sx-desk` 토큰 정의 (인라인 오버라이드 메커니즘 유지)
+- 149 테스트 통과 상태
+
+### Blockers
+없음.
+
+### Known Issues
+- design 패키지 README/index.html은 텍스트로 받기 전까지 보류
+- 멀티 dev 서버 잔존 가능 — 새 세션 전 `pkill -f vite` 권장
+
+### Reference Documents
+- `~/.claude/plans/x-zippy-graham.md` — 마스터 로드맵
+- `docs/storyx-harness-architecture.md` — 스토리 하네스 정본
+- `progress.md` · `feature_list.json` — 코드 하네스 상태
+
+---
+
 ## 2026-05-21 11:46 — M3 4파트 구조 완료, M3.5 스튜디오 설정으로 인계
 
 > Last Updated: 2026-05-21 11:46 KST
