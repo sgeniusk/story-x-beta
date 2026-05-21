@@ -761,6 +761,27 @@ export function StoryXDesk({
       /* silent */
     }
   }, [studioCanvas]);
+  // 편집기 옵션 팝오버 — 바깥 클릭 / Escape 로 닫힌다
+  const studioSettingsWrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isStudioSettingsOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (studioSettingsWrapRef.current && !studioSettingsWrapRef.current.contains(target)) {
+        setIsStudioSettingsOpen(false);
+      }
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsStudioSettingsOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [isStudioSettingsOpen]);
   const draftBootRef = useRef(false);
   const manuscriptRef = useRef<HTMLTextAreaElement>(null);
 
@@ -1838,17 +1859,72 @@ export function StoryXDesk({
               <span className="ex-workbar-pending-count">{pendingApprovalCount}</span>
             </button>
           )}
-          {/* 편집기 설정 — 트윅(강조색)·캔버스(원고 배경) */}
-          <button
-            type="button"
-            className={`sx-studio-settings-toggle ex-workbar-settings${isStudioSettingsOpen ? ' is-open' : ''}`}
-            onClick={() => setIsStudioSettingsOpen((v) => !v)}
-            aria-label="편집기 설정"
-            aria-expanded={isStudioSettingsOpen}
-            title="편집기 설정 — 트윅·캔버스"
-          >
-            <Settings size={14} />
-          </button>
+          {/* 편집기 설정 — 옵션 버튼 클릭 시 팝오버. 트윅(강조색)·캔버스(원고 배경) 외에도 곧 다른 옵션이 모인다 */}
+          <div className="sx-studio-settings-wrap" ref={studioSettingsWrapRef}>
+            <button
+              type="button"
+              className={`sx-studio-settings-toggle ex-workbar-settings${isStudioSettingsOpen ? ' is-open' : ''}`}
+              onClick={() => setIsStudioSettingsOpen((v) => !v)}
+              aria-label="편집기 옵션"
+              aria-expanded={isStudioSettingsOpen}
+              aria-haspopup="dialog"
+              title="편집기 옵션 — 트윅·캔버스"
+            >
+              <Settings size={14} />
+            </button>
+            {isStudioSettingsOpen && (
+              <div
+                className="sx-studio-settings-popover"
+                role="dialog"
+                aria-label="편집기 옵션"
+              >
+                <div className="sx-studio-settings-group">
+                  <p className="sx-eyebrow">트윅 · 강조색</p>
+                  <div className="sx-studio-settings-row">
+                    {(Object.keys(STUDIO_ACCENT_VALUES) as StudioAccent[]).map((key) => {
+                      const opt = STUDIO_ACCENT_VALUES[key];
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          className={`sx-accent-chip${studioAccent === key ? ' is-active' : ''}`}
+                          onClick={() => setStudioAccent(key)}
+                          style={{ '--sx-chip-color': opt.value } as CSSProperties}
+                          title={opt.label}
+                        >
+                          <span className="sx-accent-dot" aria-hidden="true" />
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="sx-studio-settings-group">
+                  <p className="sx-eyebrow">캔버스 · 원고 배경</p>
+                  <div className="sx-studio-settings-row">
+                    {(Object.keys(STUDIO_CANVAS_VALUES) as StudioCanvas[]).map((key) => {
+                      const opt = STUDIO_CANVAS_VALUES[key];
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          className={`sx-canvas-chip${studioCanvas === key ? ' is-active' : ''}`}
+                          onClick={() => setStudioCanvas(key)}
+                          style={{ '--sx-chip-bg': opt.page } as CSSProperties}
+                        >
+                          <span className="sx-canvas-swatch" aria-hidden="true" />
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <p className="sx-studio-settings-hint">
+                  선택은 자동 저장됩니다. 다른 편집기 옵션도 곧 여기로 모입니다.
+                </p>
+              </div>
+            )}
+          </div>
           {/* 출간은 PRIMARY 탭에서 빠졌지만 우측 secondary 버튼으로 항상 도달 가능하다 */}
           <button
             type="button"
@@ -1880,59 +1956,6 @@ export function StoryXDesk({
           </button>
         </div>
       </header>
-
-      {isStudioSettingsOpen && (
-        <section
-          className="sx-studio-settings-panel"
-          aria-label="편집기 설정"
-          role="dialog"
-        >
-          <div className="sx-studio-settings-group">
-            <p className="sx-eyebrow">트윅 · 강조색</p>
-            <div className="sx-studio-settings-row">
-              {(Object.keys(STUDIO_ACCENT_VALUES) as StudioAccent[]).map((key) => {
-                const opt = STUDIO_ACCENT_VALUES[key];
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`sx-accent-chip${studioAccent === key ? ' is-active' : ''}`}
-                    onClick={() => setStudioAccent(key)}
-                    style={{ '--sx-chip-color': opt.value } as CSSProperties}
-                    title={opt.label}
-                  >
-                    <span className="sx-accent-dot" aria-hidden="true" />
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="sx-studio-settings-group">
-            <p className="sx-eyebrow">캔버스 · 원고 배경</p>
-            <div className="sx-studio-settings-row">
-              {(Object.keys(STUDIO_CANVAS_VALUES) as StudioCanvas[]).map((key) => {
-                const opt = STUDIO_CANVAS_VALUES[key];
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`sx-canvas-chip${studioCanvas === key ? ' is-active' : ''}`}
-                    onClick={() => setStudioCanvas(key)}
-                    style={{ '--sx-chip-bg': opt.page } as CSSProperties}
-                  >
-                    <span className="sx-canvas-swatch" aria-hidden="true" />
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <p className="sx-studio-settings-hint">
-            선택은 브라우저에 자동 저장됩니다. 스튜디오는 언제나 다크 톤을 유지합니다.
-          </p>
-        </section>
-      )}
 
       {isMediaPanelOpen && (
         <section className="sx-media-change-panel" aria-label="매체 변경">

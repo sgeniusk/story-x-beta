@@ -1937,15 +1937,37 @@ body {
   border-color: var(--sx-brand);
   color: var(--sx-brand);
 }
-.sx-studio-settings-panel {
+.sx-studio-settings-wrap {
+  position: relative;
+  display: inline-flex;
+  margin-right: 4px;
+}
+.sx-studio-settings-wrap .sx-studio-settings-toggle {
+  margin-right: 0;
+}
+.sx-studio-settings-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-width: 1540px;
-  margin: 0 auto;
-  padding: 18px 24px 20px;
-  border-bottom: 1px solid var(--sx-line);
-  background: var(--sx-paper-soft);
+  min-width: 320px;
+  max-width: 360px;
+  padding: 16px;
+  border: 1px solid var(--sx-line-strong);
+  border-radius: var(--sx-radius-md);
+  background: var(--sx-card);
+  box-shadow:
+    rgba(0, 0, 0, 0.6) 0 16px 40px,
+    rgba(0, 0, 0, 0.4) 0 2px 8px,
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  animation: sxStudioSettingsPopIn 140ms ease-out;
+}
+@keyframes sxStudioSettingsPopIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .sx-studio-settings-group {
   display: flex;
