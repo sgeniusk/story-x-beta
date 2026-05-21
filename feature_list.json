@@ -1,7 +1,7 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M4-essay-studio-agents",
+  "active": "M5-vercel-functions",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
   "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
   "features": [
@@ -52,13 +52,12 @@
     },
     {
       "id": "M4-essay-studio-agents",
-      "name": "스튜디오 단계 1차 신설 에이전트 6명 (에세이 우선)",
-      "description": "랜딩→브릿지→스튜디오→출판 4단계 × 매체별 에이전트 매트릭스의 스튜디오 단계 코어 6명을 신설한다 — canon-librarian, timeline-keeper, bible-curator, critic-reviewer, essay-curator, memory-evolution-keeper. 매체 1순위는 에세이. 페르소나 실명/가공 혼합 정책으로 에세이 인터뷰어 풀(한강·박완서·김연수·김애란·신형철 + 가공 1명)도 같이 박는다.",
-      "status": "in_progress",
+      "name": "4단계 × 매체별 에이전트 매트릭스 + 신설 12명 + 매체 풀 4개",
+      "description": "랜딩→브릿지→스튜디오→출판 4단계 × 매체별 에이전트 매트릭스 + 신설 에이전트 12명 + 매체별 페르소나 풀 4개 + UI 페르소나 통합. ValidationAgentId 23개, .claude/agents/ 32개 .md.",
+      "status": "done",
       "dependencies": ["M3.5-studio-settings"],
-      "done_criteria": "6개 .claude/agents/*.md + ValidationAgentId 21개 + validationProcesses 21개 + Stage × Media Matrix 박힘 + 에세이 인터뷰어 페르소나 풀 문서화 + 149/149 통과",
-      "files": [".claude/agents/canon-librarian.md", ".claude/agents/timeline-keeper.md", ".claude/agents/bible-curator.md", ".claude/agents/critic-reviewer.md", ".claude/agents/essay-curator.md", ".claude/agents/memory-evolution-keeper.md", "src/lib/agentReviewProcess.ts", "AGENTS.md", "docs/essay-interviewer-personas.md (예정)", "src/lib/projectIntake.ts (예정)"],
-      "evidence": null
+      "done_criteria": "신설 12 에이전트(스튜디오 6 + 랜딩 1 + 브릿지 1 + 출판 4) + 매체 풀 4개(에세이·소설·만화·오디오북 각 6명) + UI 페르소나·픽셀 매핑 8 추가 + Stage × Media Matrix 박힘 + 30 files / 164 tests 통과",
+      "evidence": "commits effba1a · f5c2baf · 251518a · a3da8b7 · dc65884 · 739d1e0 · cfb65c6 · 8b82c26"
     },
     {
       "id": "M3.6-publish-screen",

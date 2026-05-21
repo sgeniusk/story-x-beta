@@ -4,6 +4,64 @@
 
 ---
 
+## 2026-05-21 19:43 — M4 (4단계 매트릭스 + 신설 12명 + 매체 풀 4개) 완료, M5 Vercel Functions로 인계
+
+> Last Updated: 2026-05-21 19:43 KST
+
+### Current Objective
+M5 — 서버측 LLM Vercel Functions. 배포본 Vercel 에서 mock 폴백이 아닌 실제 LLM 응답.
+
+### Recommended Next Step
+`vite.config.ts` 의 5개 `storyxBridge` 미들웨어를 Vercel Functions(`/api/draft`, `/api/review-agent`, `/api/interview`, `/api/review-data`, `/api/data-review`)로 마이그레이션. 공유 요청/응답 스키마를 `src/lib/aiBridgeContract.ts` 같은 곳에 박고, 클라이언트 4개 모듈이 그 스키마를 임포트하도록.
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `bash init.sh` 30 files / 164 tests · 빌드 성공
+- M4 8 커밋 — effba1a · f5c2baf · 251518a · a3da8b7 · dc65884 · 739d1e0 · cfb65c6 · 8b82c26
+
+### What the Last Session Did
+1. 스튜디오 단계 신설 6명 — canon-librarian · timeline-keeper · bible-curator · critic-reviewer · essay-curator · memory-evolution-keeper
+2. 랜딩 단계 신설 — studio-architect
+3. 브릿지 단계 신설 — interview-curator
+4. 출판 단계 신설 4명 — book-designer · pr-specialist · platform-curator · business-strategist (service ops 카테고리, ValidationAgentId 미등록)
+5. 에세이 페르소나 풀 6명 (한강·박완서·김연수·김애란·신형철 + 가공) — docs + 런타임 + 테스트
+6. 소설·만화·오디오북 페르소나 풀 각 6명 — 매체별 license-safety 정책 차등 (소설 5+1, 만화 3가공, 오디오북 전부 가공)
+7. UI 통합 — StoryXDesk agentPersonas 에 8명 매핑 + 8개 pixel-agent CSS 클래스
+8. AGENTS.md Stage × Media Matrix 전 셀 박힘
+
+### 자산 현황
+- 작가진 풀 — `.claude/agents/` 32 파일
+- ValidationAgentId — 23개 (스토리 craft 15 + 신설 8: 6 스튜디오 + 1 랜딩 + 1 브릿지)
+- 매체 페르소나 풀 — 4 매체 × 6명 = 24명
+- 30 files / 164 tests
+
+### Files To Touch (M5)
+- `vite.config.ts` 의 `storyxBridge()` 5 미들웨어
+- 신설 `/api/*.ts` Vercel Functions (Next.js App Router 또는 vanilla Vercel Function 형태)
+- `src/lib/aiBridgeContract.ts` (신설 권장) — 공유 요청/응답 스키마
+- `src/lib/draftClient.ts` · `reviewClient.ts` · `interviewClient.ts` · `dataReviewClient.ts` — 새 스키마 import
+
+### Files NOT To Touch
+- `src/StoryXDesk.tsx` agentPersonas (M4 완성본)
+- `.claude/agents/*.md` (M4 완성본)
+- `src/lib/agentReviewProcess.ts` validationProcesses (M4 완성본)
+- `src/lib/{essay,novel,comic,audiobook}Personas.ts` (M4 완성본)
+
+### Blockers
+없음.
+
+### Known Issues
+- Vercel 환경변수 `ANTHROPIC_API_KEY` 필요 — M5 시작 시 사용자 확인
+- AI Gateway 사용 가능 (`provider/model` 스트링 권장 — Vercel knowledge update)
+
+### Reference Documents
+- `~/.claude/plans/x-zippy-graham.md` — 마스터 로드맵 (M5 라인업)
+- `docs/storyx-harness-architecture.md` — 스토리 하네스 정본
+- `docs/essay-interviewer-personas.md` — 에세이 페르소나
+- `AGENTS.md` — Stage × Media Matrix 정본
+
+---
+
 ## 2026-05-21 13:30 — M3.5 스튜디오 설정 패널 완료, M3.7 리터럴 색 정리로 인계
 
 > Last Updated: 2026-05-21 13:30 KST
