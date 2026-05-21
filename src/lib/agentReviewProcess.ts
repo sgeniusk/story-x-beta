@@ -24,7 +24,9 @@ export type ValidationAgentId =
   | 'essay-curator'
   | 'memory-evolution-keeper'
   // M4-stage-agents 2차 — 랜딩 1명
-  | 'studio-architect';
+  | 'studio-architect'
+  // M4-stage-agents 3차 — 브릿지 1명
+  | 'interview-curator';
 
 export interface PersonaReviewScale {
   id: PersonaReviewScaleId;
@@ -322,6 +324,17 @@ export const validationProcesses: AgentValidationProcess[] = [
     outputFormat: ['갱신된 에이전트', '압축된 원칙', 'drift 경고', 'ledger 상태'],
     evolutionMemory: ['장기적으로 가치 있었던 학습 패턴', '잘못 학습돼 폐기된 원칙'],
     blockingSignals: ['ledger가 캐논·캐릭터 시트를 직접 수정하려 함 (역할 침범)']
+  },
+  // ── M4-stage-agents 3차 — 브릿지 단계 ──
+  {
+    agentId: 'interview-curator',
+    label: '인터뷰 큐레이터',
+    agenda: '브릿지 단계에서 자유글·매체·길이를 보고 매체별 페르소나 풀에서 3~5명 라인업을 짜고, 8~14개 질문 시퀀스를 구성합니다.',
+    independentChecks: ['라인업이 매체·자유글 키워드와 일치하는가', '실명 + 가공이 혼합되었는가 (사용자 명시적 거절이 아닐 때)', '질문 순서가 trust → 감각 → 도약 → 자기반박 → 노출 윤리로 흐르는가', '자유글에서 추출 가능한 disclosure ledger 후보를 빠짐없이 표면화했는가'],
+    evidenceTargets: ['user freewrite', 'medium', 'target length', 'persona pool (docs/essay-interviewer-personas.md)', 'studio config'],
+    outputFormat: ['제안된 라인업 (id + 라벨 + 선정 이유)', '질문 시퀀스 (≥8, ≤14)', 'stop condition', 'disclosure ledger 시드', '다음 핸드오프'],
+    evolutionMemory: ['사용자가 좋아한 페르소나 조합', '인터뷰 도중 거절된 페르소나', '자유글 패턴별 질문 시퀀스의 성공 사례'],
+    blockingSignals: ['자유글이 200자 미만 — 한 질문으로 명확화 요청', '풀에 없는 페르소나 발명 시도', '실명 페르소나에 사적 영역 재현 요구']
   },
   // ── M4-stage-agents 2차 — 랜딩 단계 ──
   {

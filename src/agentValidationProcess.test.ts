@@ -48,6 +48,8 @@ describe('persona validation process', () => {
       'critic-reviewer',
       'essay-curator',
       'memory-evolution-keeper',
+      // M4-stage-agents 3차 — 브릿지 1명
+      'interview-curator',
       // M4-stage-agents 2차 — 랜딩 1명
       'studio-architect'
     ]);
