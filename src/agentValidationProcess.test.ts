@@ -40,7 +40,14 @@ describe('persona validation process', () => {
       'speech-bubble-agent',
       'keyframe-art-director',
       'da-vinci',
-      'frame-assembly-agent'
+      'frame-assembly-agent',
+      // M4-essay-studio-agents 1차 신설 — 스튜디오 단계 코어 6명
+      'canon-librarian',
+      'timeline-keeper',
+      'bible-curator',
+      'critic-reviewer',
+      'essay-curator',
+      'memory-evolution-keeper'
     ]);
 
     const characterProcess = getAgentValidationProcess('character-custodian');

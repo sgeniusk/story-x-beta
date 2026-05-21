@@ -15,7 +15,14 @@ export type ValidationAgentId =
   | 'speech-bubble-agent'
   | 'keyframe-art-director'
   | 'da-vinci'
-  | 'frame-assembly-agent';
+  | 'frame-assembly-agent'
+  // M4-essay-studio-agents 1차 신설 — 스튜디오 단계 코어 6명
+  | 'canon-librarian'
+  | 'timeline-keeper'
+  | 'bible-curator'
+  | 'critic-reviewer'
+  | 'essay-curator'
+  | 'memory-evolution-keeper';
 
 export interface PersonaReviewScale {
   id: PersonaReviewScaleId;
@@ -72,7 +79,7 @@ export const reviewScales: Record<PersonaReviewScaleId, PersonaReviewScale> = {
     id: 'deep',
     label: 'Deep',
     tokenProfile: '높음',
-    agentLimit: 15,
+    agentLimit: 21,
     rounds: 3,
     askBeforeRun: true,
     bestFor: '장편 설계, 시즌 전환, 매체 변환, 유료 산출물 직전의 정밀 검토',
@@ -83,7 +90,13 @@ export const reviewScales: Record<PersonaReviewScaleId, PersonaReviewScale> = {
       'genre-stylist',
       'continuity-editor',
       'essay-interviewer',
+      'essay-curator',
       'voice-curator',
+      'critic-reviewer',
+      'canon-librarian',
+      'timeline-keeper',
+      'bible-curator',
+      'memory-evolution-keeper',
       'audio-narration-director',
       'education-video-architect',
       'sound-music-agent',
@@ -246,6 +259,67 @@ export const validationProcesses: AgentValidationProcess[] = [
     outputFormat: ['통과', '수정', '차단', '조립 문제', 'export 수정안'],
     evolutionMemory: ['플랫폼별 좋은 여백 기준', '재사용한 파일명 규칙', '실패한 조립 패턴'],
     blockingSignals: ['게시 비율이 맞지 않음', '컷 순서가 이야기 순서를 깨뜨림']
+  },
+  // ── M4-essay-studio-agents 1차 신설 ──
+  {
+    agentId: 'canon-librarian',
+    label: '캐논 라이브러리언',
+    agenda: '캐논 사실·캐릭터 시트·세계관 카드·관계 엣지를 3계층(Hard / Living / Soft)로 분류하고, 변경 요청의 영향과 승인 게이트를 결정합니다.',
+    independentChecks: ['새 사실이 Hard / Living / Soft 중 어디인가', '기존 캐논과 모순되는가', '변경의 영향 범위(앞·뒤 회차)가 잡혀 있는가'],
+    evidenceTargets: ['canon ledger', 'character sheet', 'world card', 'relationship edge'],
+    outputFormat: ['통과', '수정', '차단', '계층 분류', '영향 범위', '승인 게이트 상태'],
+    evolutionMemory: ['승인된 retcon 패턴', '자주 충돌한 캐논 영역', '작가가 살린 Soft 신호'],
+    blockingSignals: ['Hard 캐논과 모순', '근거 회차가 명시되지 않은 사실 주장']
+  },
+  {
+    agentId: 'timeline-keeper',
+    label: '타임라인 키퍼',
+    agenda: '사건 × 스레드 × 회차 grid를 운영하며 설정-페이오프 짝, 회상 안전성, 미해결 떡밥 부하를 점검합니다.',
+    independentChecks: ['사건 순서가 의존성을 위반하지 않는가', '미해결 떡밥이 5개를 넘지 않는가', '회상이 그 회차의 living state와 충돌하지 않는가', '페이오프 회차가 설정 회차의 ±3 안에 있는가'],
+    evidenceTargets: ['event card', 'thread density', 'foreshadowing ledger', 'payoff schedule'],
+    outputFormat: ['통과', '수정', '차단', '시간 순 충돌', '스레드 건강도', '재배치 제안'],
+    evolutionMemory: ['반응이 좋았던 떡밥 회수 거리', '실패한 회상 패턴', '작가가 선호한 스레드 분포'],
+    blockingSignals: ['페이오프가 설정보다 먼저 등장', '미해결 떡밥 과부하']
+  },
+  {
+    agentId: 'bible-curator',
+    label: '바이블 큐레이터',
+    agenda: '6개 바이블 카테고리(캐릭터·세계관·타임라인·문체 규칙·보이스 프로파일·관계도)를 큐레이션하고, 에이전트가 필요한 카드만 짧게 묶어 전달합니다.',
+    independentChecks: ['요청자가 실제로 필요한 카테고리/카드만 골라졌는가', '패킷이 600단어 이하인가', 'PINNED 항목이 적절히 노출되는가', '주장 중 바이블에 없는 참조가 있는가'],
+    evidenceTargets: ['bible packet', 'pinned cards', 'stale entries', 'missing references'],
+    outputFormat: ['요청 카테고리', '선택 카드 id', '구성 패킷', '핀 항목', '검토 권고'],
+    evolutionMemory: ['자주 함께 호출되는 카드 묶음', '오래 손대지 않은 stale 카드', '작가가 핀해 둔 패턴'],
+    blockingSignals: ['요청자가 전체 바이블 덤프를 요구', '존재하지 않는 카드 id 참조']
+  },
+  {
+    agentId: 'critic-reviewer',
+    label: '작품성 평론가',
+    agenda: '결말·핵심 결정 장면에서 양가성, 윤리적 비용, 침묵, 모티프 변주, 상징의 층, 내면 모순을 점검합니다 (대중성을 막지 않고 보조).',
+    independentChecks: ['결말에 대안 해석이 1개 이상 가능한가', '핵심 결정의 대안 비용이 명시되는가', '중심 사건의 묘사 직접성이 1~5 중 적절한가', '3회 이상 등장 모티프가 의미 변주되는가'],
+    evidenceTargets: ['ending', 'decision scene', 'motif ledger', 'symbol layers', 'narrator card'],
+    outputFormat: ['통과', '권고', '대안 해석', '윤리 비용 표', '모티프 변주 리포트', '재작성 권고'],
+    evolutionMemory: ['작가가 채택한 양가성 패턴', '효과적이었던 침묵 사례', '실패한 모티프 변주'],
+    blockingSignals: ['결말이 한 줄 요약으로 닫힘', '핵심 결정의 대안 비용이 0']
+  },
+  {
+    agentId: 'essay-curator',
+    label: '에세이 큐레이터',
+    agenda: '에세이의 진실 계약, 사적→보편 도약, 자기반박, 노출 윤리, 호흡 설계, GOMI 자연스러움을 점검합니다.',
+    independentChecks: ['화자가 자기 한계를 인정하는가', '사적→보편 도약 문장이 있는가', '1,500자+ 꼭지에 자기반박 단락이 있는가', '등장 타인의 노출 범위가 사전 합의 안인가', '문장 호흡이 평탄·급함 신호를 보이는가', 'AI 어휘·쉼표 과다·명사 과다가 있는가'],
+    evidenceTargets: ['persona card', 'leap sentence', 'reversal paragraph', 'disclosure ledger', 'voice rhythm', 'gomi-writing alignment'],
+    outputFormat: ['통과', '수정', '차단', '단락별 점수', '도약 지점', '자기반박 위치', '노출 ledger'],
+    evolutionMemory: ['작가가 살린 도약 패턴', '효과적이었던 자기반박 위치', '거절된 노출 범위'],
+    blockingSignals: ['타인 노출 범위 초과', '도약 0회 (일기 경고)', '자기 권위만 주장']
+  },
+  {
+    agentId: 'memory-evolution-keeper',
+    label: '메모리 성장 키퍼',
+    agenda: 'evolutionMemory를 작품 수명 동안 영속화·압축·드러내기. 각 에이전트의 학습한 원칙을 다음 호출에 가이드로 제공합니다.',
+    independentChecks: ['이번 결정에서 어떤 에이전트의 ledger를 갱신해야 하는가', '30개를 넘은 ledger가 learned_principles로 압축되었는가', '최근 결정이 학습된 원칙과 어긋나는 drift가 있는가'],
+    evidenceTargets: ['agent evolution ledger', 'learned principles', 'drift detection', 'ledger health'],
+    outputFormat: ['갱신된 에이전트', '압축된 원칙', 'drift 경고', 'ledger 상태'],
+    evolutionMemory: ['장기적으로 가치 있었던 학습 패턴', '잘못 학습돼 폐기된 원칙'],
+    blockingSignals: ['ledger가 캐논·캐릭터 시트를 직접 수정하려 함 (역할 침범)']
   }
 ];
 

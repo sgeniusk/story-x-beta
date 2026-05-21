@@ -1,7 +1,7 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M3.7-editor-literal-color-polish",
+  "active": "M4-essay-studio-agents",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
   "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
   "features": [
@@ -45,9 +45,19 @@
       "id": "M3.7-editor-literal-color-polish",
       "name": "에디터 리터럴 색 박스 정리",
       "description": "토픽바의 sx-app-breadcrumb·저장 칩, '쇼러너가 잡은 이번' 카드, 알파 셀프체크 바, prose 영역 textarea 등에 남은 라이트 톤·회색 박스를 토큰 기반으로 정리.",
-      "status": "todo",
+      "status": "done",
       "dependencies": ["M3.5-studio-settings"],
-      "done_criteria": "리터럴 #fff·라이트 회색 셀렉터 제거, 5색 트윅 + 3톤 캔버스 어느 조합에서도 톤 일관성 유지",
+      "done_criteria": "토픽바·statusbar·command palette·갈등 배지·comic canvas 리터럴 색 제거. .sx-desk 안에서 --nx-primary를 --sx-brand로 cascade. 캔버스 톤 패밀리(shell·card·page·paper2·surface)로 좌·우 레일도 변경 추종.",
+      "evidence": "commits 3e4c9bb · 97e7aa3 · 0539817 · cd03b5b · 5695a2b · 59432a2 · 416c372 · e835a9b"
+    },
+    {
+      "id": "M4-essay-studio-agents",
+      "name": "스튜디오 단계 1차 신설 에이전트 6명 (에세이 우선)",
+      "description": "랜딩→브릿지→스튜디오→출판 4단계 × 매체별 에이전트 매트릭스의 스튜디오 단계 코어 6명을 신설한다 — canon-librarian, timeline-keeper, bible-curator, critic-reviewer, essay-curator, memory-evolution-keeper. 매체 1순위는 에세이. 페르소나 실명/가공 혼합 정책으로 에세이 인터뷰어 풀(한강·박완서·김연수·김애란·신형철 + 가공 1명)도 같이 박는다.",
+      "status": "in_progress",
+      "dependencies": ["M3.5-studio-settings"],
+      "done_criteria": "6개 .claude/agents/*.md + ValidationAgentId 21개 + validationProcesses 21개 + Stage × Media Matrix 박힘 + 에세이 인터뷰어 페르소나 풀 문서화 + 149/149 통과",
+      "files": [".claude/agents/canon-librarian.md", ".claude/agents/timeline-keeper.md", ".claude/agents/bible-curator.md", ".claude/agents/critic-reviewer.md", ".claude/agents/essay-curator.md", ".claude/agents/memory-evolution-keeper.md", "src/lib/agentReviewProcess.ts", "AGENTS.md", "docs/essay-interviewer-personas.md (예정)", "src/lib/projectIntake.ts (예정)"],
       "evidence": null
     },
     {

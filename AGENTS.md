@@ -62,6 +62,30 @@ The system models a writers' room:
 - Sound music agent protects hooks, motifs, music cues, and children's repetition.
 - Continuity editor blocks contradictions and writes new canon facts.
 
+## Studio Data Agents (M4 — 1차 신설)
+
+스튜디오 단계의 데이터·작품성·메타 학습을 담당하는 6명. 매체별 편집 에이전트와 함께 작가진을 구성한다.
+
+- Canon librarian (`canon-librarian`) — 캐논 사실을 3계층(Hard / Living / Soft)으로 분류하고 승인 게이트를 운영한다.
+- Timeline keeper (`timeline-keeper`) — 사건 × 스레드 × 회차 grid, 페이오프 스케줄, 미해결 떡밥 부하를 관리한다.
+- Bible curator (`bible-curator`) — 6개 카테고리(캐릭터·세계관·타임라인·문체 규칙·보이스 프로파일·관계도) 큐레이션과 PINNED·stale 감지.
+- Critic reviewer (`critic-reviewer`) — 작품성 트랙: 양가성·윤리적 비용·침묵·모티프 변주·상징의 층·내면 모순.
+- Essay curator (`essay-curator`) — 에세이 진실 계약: 도약, 자기반박, 노출 윤리, 호흡, GOMI 자연스러움.
+- Memory evolution keeper (`memory-evolution-keeper`) — `evolutionMemory` 영속화, 학습된 원칙 표면화, drift 감지.
+
+## Stage × Media Matrix
+
+작가진은 4단계(랜딩 / 브릿지 / 스튜디오 / 출판) × 매체(소설 · 에세이 · 만화 · 오디오북)로 분리된다. 스튜디오 단계 1차 매핑.
+
+| 단계 | 역할 | 공통 에이전트 | 매체 전용 추가 |
+|---|---|---|---|
+| 랜딩 | 첫 만남 · 의도 설계 | `brand-homepage-director` · `onboarding-architect` · `creative-coach` | `studio-architect` (예정) |
+| 브릿지 | 인터뷰 · 자유글 분석 | `essay-interviewer` · `creative-coach` | `interview-curator` (예정) + 페르소나 풀 (`docs/essay-interviewer-personas.md` 예정) |
+| 스튜디오 | 편집 + 데이터 + 작품성 | 데이터 4명(`canon-librarian` · `timeline-keeper` · `bible-curator` · `memory-evolution-keeper`) + 작품성 1명(`critic-reviewer`) | 소설 — `showrunner` · `character-custodian` · `world-keeper` · `genre-stylist` · `voice-curator` · `continuity-editor` / 에세이 — `essay-interviewer` · `essay-curator` · `voice-curator` / 만화 — `storyboard-agent` · `speech-bubble-agent` · `keyframe-art-director` · `da-vinci` · `frame-assembly-agent` · `continuity-editor` / 오디오북 — `audio-narration-director` · `sound-music-agent` · `voice-curator` · `education-video-architect` |
+| 출판 | 배포 · 사업 · 홍보 | `publishing-distribution-manager` · `monetization-strategist` · `insights-analyst` · `work-library-manager` | `book-designer` · `pr-specialist` · `platform-curator` · `business-strategist` (모두 예정) |
+
+매체 1순위는 **에세이**. M4 1차 작업은 위 표의 스튜디오 단계 공통 5명 + 에세이 매체 전용 3명을 우선 구현한다.
+
 ## Service Operations Workflow
 
 The product also models a service operations room outside the creative editor:
