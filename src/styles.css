@@ -1156,10 +1156,9 @@ body {
   display: inline-flex;
   gap: var(--sx-space-2);
   padding: var(--sx-space-1);
-  border: 1px solid rgba(32, 32, 30, 0.08);
+  border: 1px solid var(--sx-line);
   border-radius: var(--sx-radius-md);
-  background: rgba(255, 255, 255, 0.46);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+  background: var(--sx-paper-2);
 }
 
 .sx-topbar-actions {
@@ -1177,7 +1176,7 @@ body {
   padding: var(--sx-space-1);
   border: 1px solid var(--sx-line);
   border-radius: var(--sx-radius-md);
-  background: rgba(255, 255, 255, 0.42);
+  background: var(--sx-paper-2);
 }
 
 .sx-app-nav-links button,
@@ -1206,7 +1205,7 @@ body {
 .sx-command-k {
   min-width: 54px;
   border-color: var(--sx-line);
-  background: rgba(255, 255, 255, 0.48);
+  background: var(--sx-paper-2);
   color: var(--sx-ink-2);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.78rem;
@@ -1228,14 +1227,12 @@ body {
 .sx-command-palette {
   width: min(640px, 100%);
   overflow: hidden;
-  border: 1px solid rgba(32, 32, 30, 0.12);
+  border: 1px solid var(--sx-line);
   border-radius: var(--sx-radius-lg);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.62)),
-    var(--sx-card);
+  background: var(--sx-card);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.82),
-    0 30px 80px rgba(22, 20, 17, 0.24);
+    rgba(0, 0, 0, 0.6) 0 4px 32px,
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .sx-command-palette header {
@@ -1261,7 +1258,7 @@ body {
   height: 36px;
   border: 1px solid var(--sx-line);
   border-radius: var(--sx-radius-md);
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--sx-paper-2);
   color: var(--sx-ink-2);
 }
 
@@ -1286,7 +1283,7 @@ body {
   padding: 0 14px;
   border: 1px solid var(--sx-line);
   border-radius: var(--sx-radius-md);
-  background: rgba(255, 255, 255, 0.74);
+  background: var(--sx-paper-2);
   color: var(--sx-ink);
   font: inherit;
   font-size: 0.96rem;
