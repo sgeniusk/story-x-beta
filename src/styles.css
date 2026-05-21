@@ -5100,6 +5100,48 @@ body {
   --shirt: #e0564e;
 }
 
+/* ── M4 신설 8명 픽셀 아바타 ── */
+.pixel-agent.is-canon {
+  --skin: #cf9c80;
+  --hair: #0f1011;
+  --shirt: #e4f222;
+}
+.pixel-agent.is-timeline {
+  --skin: #d4a48a;
+  --hair: #122a3d;
+  --shirt: #02b8cc;
+}
+.pixel-agent.is-bible {
+  --skin: #e1ad8e;
+  --hair: #2a1640;
+  --shirt: #8b5cf6;
+}
+.pixel-agent.is-critic {
+  --skin: #c9967b;
+  --hair: #1f3024;
+  --shirt: #27a644;
+}
+.pixel-agent.is-essay-curator {
+  --skin: #efbf9e;
+  --hair: #4a3220;
+  --shirt: #d4a94d;
+}
+.pixel-agent.is-memory {
+  --skin: #b88c72;
+  --hair: #0e0e1e;
+  --shirt: #5e6ad2;
+}
+.pixel-agent.is-studio {
+  --skin: #dfa88f;
+  --hair: #1d1d2a;
+  --shirt: #d0d6e0;
+}
+.pixel-agent.is-interview {
+  --skin: #e8b4a0;
+  --hair: #3d1c2c;
+  --shirt: #ff4fb8;
+}
+
 .agent-dialog-backdrop {
   position: fixed;
   inset: 0;
