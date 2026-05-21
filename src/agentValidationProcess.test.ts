@@ -47,7 +47,9 @@ describe('persona validation process', () => {
       'bible-curator',
       'critic-reviewer',
       'essay-curator',
-      'memory-evolution-keeper'
+      'memory-evolution-keeper',
+      // M4-stage-agents 2차 — 랜딩 1명
+      'studio-architect'
     ]);
 
     const characterProcess = getAgentValidationProcess('character-custodian');

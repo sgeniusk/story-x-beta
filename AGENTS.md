@@ -79,7 +79,7 @@ The system models a writers' room:
 
 | 단계 | 역할 | 공통 에이전트 | 매체 전용 추가 |
 |---|---|---|---|
-| 랜딩 | 첫 만남 · 의도 설계 | `brand-homepage-director` · `onboarding-architect` · `creative-coach` | `studio-architect` (예정) |
+| 랜딩 | 첫 만남 · 의도 설계 | `brand-homepage-director` · `onboarding-architect` · `creative-coach` · `studio-architect` | — |
 | 브릿지 | 인터뷰 · 자유글 분석 | `essay-interviewer` · `creative-coach` | `interview-curator` (예정) + 페르소나 풀 (`docs/essay-interviewer-personas.md` 예정) |
 | 스튜디오 | 편집 + 데이터 + 작품성 | 데이터 4명(`canon-librarian` · `timeline-keeper` · `bible-curator` · `memory-evolution-keeper`) + 작품성 1명(`critic-reviewer`) | 소설 — `showrunner` · `character-custodian` · `world-keeper` · `genre-stylist` · `voice-curator` · `continuity-editor` / 에세이 — `essay-interviewer` · `essay-curator` · `voice-curator` / 만화 — `storyboard-agent` · `speech-bubble-agent` · `keyframe-art-director` · `da-vinci` · `frame-assembly-agent` · `continuity-editor` / 오디오북 — `audio-narration-director` · `sound-music-agent` · `voice-curator` · `education-video-architect` |
 | 출판 | 배포 · 사업 · 홍보 | `publishing-distribution-manager` · `monetization-strategist` · `insights-analyst` · `work-library-manager` | `book-designer` · `pr-specialist` · `platform-curator` · `business-strategist` (모두 예정) |

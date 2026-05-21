@@ -22,7 +22,9 @@ export type ValidationAgentId =
   | 'bible-curator'
   | 'critic-reviewer'
   | 'essay-curator'
-  | 'memory-evolution-keeper';
+  | 'memory-evolution-keeper'
+  // M4-stage-agents 2차 — 랜딩 1명
+  | 'studio-architect';
 
 export interface PersonaReviewScale {
   id: PersonaReviewScaleId;
@@ -320,6 +322,17 @@ export const validationProcesses: AgentValidationProcess[] = [
     outputFormat: ['갱신된 에이전트', '압축된 원칙', 'drift 경고', 'ledger 상태'],
     evolutionMemory: ['장기적으로 가치 있었던 학습 패턴', '잘못 학습돼 폐기된 원칙'],
     blockingSignals: ['ledger가 캐논·캐릭터 시트를 직접 수정하려 함 (역할 침범)']
+  },
+  // ── M4-stage-agents 2차 — 랜딩 단계 ──
+  {
+    agentId: 'studio-architect',
+    label: '스튜디오 아키텍트',
+    agenda: '랜딩 단계에서 사용자의 자유글·매체·길이를 받아 적합한 스튜디오 구성(매체·형식·작가진 풀·바이블 카테고리·캐논 정책·첫 주 산출물)을 제안합니다.',
+    independentChecks: ['자유글의 톤이 선언한 매체와 일치하는가', '제안한 작가진이 매체·길이에 합리적인가', '바이블 카테고리가 첫 1~2 세션에 필요한 것만으로 좁혀졌는가', '캐논 정책이 사용자 의도와 너무 어긋나지 않는가'],
+    evidenceTargets: ['user freewrite', 'declared medium', 'target length', 'genre hint', 'Stage × Media matrix in AGENTS.md'],
+    outputFormat: ['제안된 studio config', '근거', '대안 1~2', 'onboarding 다음 단계', '주의 사항'],
+    evolutionMemory: ['승인된 스튜디오 구성 패턴', '사용자가 거절한 제안 이유', '매체 추천이 실제 사용자 선택과 어긋난 사례'],
+    blockingSignals: ['자유글이 너무 얇아 제안 불가 — 정확히 한 질문으로 명확화 요청', '캐논 정책이 사용자 기대와 정면 충돌']
   }
 ];
 
