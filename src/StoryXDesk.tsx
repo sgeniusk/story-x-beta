@@ -661,10 +661,33 @@ const STUDIO_ACCENT_VALUES = {
 } as const;
 type StudioAccent = keyof typeof STUDIO_ACCENT_VALUES;
 
+// 캔버스 = 스튜디오 창의 배경 톤 패밀리.
+// shell: 바깥 페이지 / card: 좌·우 레일 카드 / page: 원고 영역 / paper2: 카드 안 셀·인풋
 const STUDIO_CANVAS_VALUES = {
-  pitch: { page: '#161718', soft: '#1a1b1c', label: '피치 블랙' },
-  graphite: { page: '#0f1011', soft: '#161718', label: '그래파이트' },
-  indigo: { page: '#1d1d2a', soft: '#222230', label: '인디고 슬레이트' }
+  pitch: {
+    shell: '#08090a',
+    card: '#0f1011',
+    page: '#161718',
+    paper2: '#161718',
+    surface: '#23252a',
+    label: '피치 블랙'
+  },
+  graphite: {
+    shell: '#0f1011',
+    card: '#161718',
+    page: '#1c1d1e',
+    paper2: '#1c1d1e',
+    surface: '#2a2c2e',
+    label: '그래파이트'
+  },
+  indigo: {
+    shell: '#14142a',
+    card: '#18182f',
+    page: '#1d1d2a',
+    paper2: '#222230',
+    surface: '#2a2a3d',
+    label: '인디고 슬레이트'
+  }
 } as const;
 type StudioCanvas = keyof typeof STUDIO_CANVAS_VALUES;
 
@@ -1671,8 +1694,13 @@ export function StoryXDesk({
         {
           '--sx-brand': STUDIO_ACCENT_VALUES[studioAccent].value,
           '--sx-brand-press': STUDIO_ACCENT_VALUES[studioAccent].value,
+          '--sx-paper': STUDIO_CANVAS_VALUES[studioCanvas].shell,
+          '--sx-paper-soft': STUDIO_CANVAS_VALUES[studioCanvas].card,
+          '--sx-paper-2': STUDIO_CANVAS_VALUES[studioCanvas].paper2,
+          '--sx-card': STUDIO_CANVAS_VALUES[studioCanvas].card,
+          '--sx-surface-strong': STUDIO_CANVAS_VALUES[studioCanvas].surface,
           '--sx-page': STUDIO_CANVAS_VALUES[studioCanvas].page,
-          '--sx-page-soft': STUDIO_CANVAS_VALUES[studioCanvas].soft
+          '--sx-page-soft': STUDIO_CANVAS_VALUES[studioCanvas].paper2
         } as CSSProperties
       }
     >
