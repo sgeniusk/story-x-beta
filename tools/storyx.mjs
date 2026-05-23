@@ -28,7 +28,23 @@ const agentFileMap = {
   'speech-bubble-agent': 'speech-bubble-agent',
   'keyframe-art-director': 'keyframe-art-director',
   'da-vinci': 'davinci-image-agent',
-  'frame-assembly-agent': 'frame-assembly-agent'
+  'frame-assembly-agent': 'frame-assembly-agent',
+  // M4 신설 스튜디오 단계 6명
+  'canon-librarian': 'canon-librarian',
+  'timeline-keeper': 'timeline-keeper',
+  'bible-curator': 'bible-curator',
+  'critic-reviewer': 'critic-reviewer',
+  'essay-curator': 'essay-curator',
+  'memory-evolution-keeper': 'memory-evolution-keeper',
+  // M4 신설 랜딩 1명
+  'studio-architect': 'studio-architect',
+  // M4 신설 브릿지 1명
+  'interview-curator': 'interview-curator',
+  // M4 신설 출판 4명 — review-agent 흐름으로 호출 가능
+  'book-designer': 'book-designer',
+  'pr-specialist': 'pr-specialist',
+  'platform-curator': 'platform-curator',
+  'business-strategist': 'business-strategist'
 };
 
 if (command === 'doctor') {
@@ -334,7 +350,15 @@ if (command === 'interview') {
   const medium = readFlag(args, '--medium', 'novel');
   const format = readFlag(args, '--format', 'long-novel');
   const freewrite = readFlag(args, '--freewrite', '');
-  const prompt = buildInterviewPrompt({ medium, format, freewrite });
+  const personasJson = readFlag(args, '--personas-json', '[]');
+  let personas = [];
+  try {
+    const parsedPersonas = JSON.parse(personasJson);
+    if (Array.isArray(parsedPersonas)) personas = parsedPersonas;
+  } catch {
+    personas = [];
+  }
+  const prompt = buildInterviewPrompt({ medium, format, freewrite, personas });
 
   if (provider === 'mock') {
     printJson({ provider, medium, mode: 'interview', status: 'complete', questions: [] });
@@ -539,9 +563,31 @@ function buildAgentReviewPrompt({ agentId, persona, target, medium, context }) {
   ].join('\n');
 }
 
-function buildInterviewPrompt({ medium, format, freewrite }) {
+function buildInterviewPrompt({ medium, format, freewrite, personas = [] }) {
   const isEssay = medium === 'essay';
   const isSerial = isSerialFormat(format);
+
+  // 매체별 페르소나 풀에서 선별된 라인업을 LLM 프롬프트에 톤 가이드로 주입.
+  // 라인업이 비어 있어도 동작하며, 있으면 각 페르소나의 tone/questionStarters/blockingSignals 를 참고해 질문의 결을 맞추도록 지시.
+  const personaSection = Array.isArray(personas) && personas.length > 0
+    ? [
+        '',
+        '## 페르소나 톤 가이드 — 이 라인업의 결을 따르세요',
+        '이번 인터뷰는 아래 페르소나들의 톤·관심·금기 신호를 참고해서 질문의 결을 맞춥니다. 각 페르소나의 questionStarters 를 그대로 베끼지는 말되, 그 결을 살린 질문을 만들도록 합니다.',
+        ...personas.map((p, idx) => {
+          const label = typeof p?.label === 'string' ? p.label : `페르소나 ${idx + 1}`;
+          const tone = typeof p?.tone === 'string' ? p.tone : '';
+          const starters = Array.isArray(p?.questionStarters) ? p.questionStarters.slice(0, 3) : [];
+          const blocking = Array.isArray(p?.blockingSignals) ? p.blockingSignals.slice(0, 2) : [];
+          return [
+            `### ${label}`,
+            tone ? `- 톤: ${tone}` : null,
+            starters.length > 0 ? `- 질문 결 예시: ${starters.map((q) => `"${q}"`).join(' / ')}` : null,
+            blocking.length > 0 ? `- 피해야 할 신호: ${blocking.join(' / ')}` : null
+          ].filter(Boolean).join('\n');
+        })
+      ]
+    : [];
 
   return [
     'Story X 작가 인터뷰 질문 생성 요청.',
@@ -552,6 +598,7 @@ function buildInterviewPrompt({ medium, format, freewrite }) {
     '',
     '## 작가가 쓴 자유 서술',
     freewrite || '(자유 서술 없음 — 매체와 포맷만으로 일반적인 세팅 질문 6개를 만드세요.)',
+    ...personaSection,
     '',
     '## 역할',
     '당신은 Story X의 작가 인터뷰 설계자입니다. 위 자유 서술을 읽고, 이 작가가 작품을 시작하기 전에 스스로 정해야 할 핵심 결정 6~8가지를 객관식 질문으로 만듭니다.',

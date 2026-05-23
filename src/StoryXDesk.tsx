@@ -7,6 +7,7 @@ import {
   ChevronRight,
   ClipboardCheck,
   Database,
+  Download,
   FileText,
   GitBranch,
   Info,
@@ -22,6 +23,7 @@ import {
   Send,
   Settings,
   ShieldAlert,
+  Upload,
   WandSparkles,
   X
 } from 'lucide-react';
@@ -36,6 +38,7 @@ import {
 } from 'react';
 import { getAgentValidationProcess } from './lib/agentReviewProcess';
 import storyXSymbol from './assets/brand/story-x-symbol-light.svg';
+import { AiStatusBadge } from './components/AiStatusBadge';
 import {
   buildCreativeBlueprint,
   getFormatOptions,
@@ -117,6 +120,8 @@ import {
 import {
   clearProject,
   clearProjectSnapshots,
+  exportAllData,
+  importAllData,
   loadProject,
   loadProjectSnapshots,
   pushProjectSnapshot,
@@ -778,6 +783,8 @@ interface StoryXDeskProps {
   initialDraftPayload?: DraftChapterPayload | null;
   onOpenProjects?: () => void;
   onOpenLanding?: () => void;
+  /** 출간 버튼을 누르면 4파트 중 마지막 퍼블리시 stage 로 빠진다. */
+  onOpenPublish?: () => void;
 }
 
 export function StoryXDesk({
@@ -785,7 +792,8 @@ export function StoryXDesk({
   initialFormat = 'long-novel',
   initialDraftPayload = null,
   onOpenProjects,
-  onOpenLanding
+  onOpenLanding,
+  onOpenPublish
 }: StoryXDeskProps) {
   const defaultEpisodeIntent = '용사와 외계인이 처음 충돌하는 장면으로 시작한다';
   const [medium, setMedium] = useState<CreativeMedium>(initialMedium);
@@ -865,6 +873,41 @@ export function StoryXDesk({
       /* silent */
     }
   }, [studioCanvas]);
+  // 프로젝트 데이터 내보내기/가져오기 — 백업·다른 기기 이동·공유에 쓰는 단일 JSON 단위
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const handleExportProject = () => {
+    const payload = exportAllData();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `storyx-export-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!window.confirm('현재 작품과 스냅샷·환경설정을 모두 덮어씁니다. 진행 전에 먼저 내보내기를 권장합니다. 계속할까요?')) {
+      return;
+    }
+    try {
+      const text = await file.text();
+      const result = importAllData(text);
+      window.alert(result.message);
+      if (result.ok) {
+        window.location.reload();
+      }
+    } catch (error) {
+      window.alert(error instanceof Error ? `파일 읽기 실패 — ${error.message}` : '파일 읽기 실패.');
+    }
+  };
   // 편집기 옵션 팝오버 — 바깥 클릭 / Escape 로 닫힌다
   const studioSettingsWrapRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -1902,6 +1945,7 @@ export function StoryXDesk({
           </button>
         </nav>
         <div className="sx-topbar-actions ex-workbar-right">
+          <AiStatusBadge />
           {isDraftMode && (
             <button
               type="button"
@@ -2028,19 +2072,50 @@ export function StoryXDesk({
                     })}
                   </div>
                 </div>
+                <div className="sx-studio-settings-group">
+                  <p className="sx-eyebrow">프로젝트 데이터</p>
+                  <div className="sx-studio-settings-row">
+                    <button
+                      type="button"
+                      className="sx-studio-data-action"
+                      onClick={handleExportProject}
+                      title="작품·스냅샷·환경설정을 한 JSON 파일로 저장합니다."
+                    >
+                      <Download size={12} />
+                      내보내기
+                    </button>
+                    <button
+                      type="button"
+                      className="sx-studio-data-action"
+                      onClick={handleImportClick}
+                      title="이전에 내보낸 JSON 파일을 불러옵니다. 현재 작품이 덮어써집니다."
+                    >
+                      <Upload size={12} />
+                      가져오기
+                    </button>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="application/json,.json"
+                    onChange={handleImportFile}
+                    style={{ display: 'none' }}
+                    aria-hidden="true"
+                  />
+                </div>
                 <p className="sx-studio-settings-hint">
-                  선택은 자동 저장됩니다. 다른 편집기 옵션도 곧 여기로 모입니다.
+                  선택은 자동 저장됩니다. 가져오기는 현재 작품을 덮어쓰니 먼저 내보내기를 권장합니다.
                 </p>
               </div>
             )}
           </div>
-          {/* 출간은 PRIMARY 탭에서 빠졌지만 우측 secondary 버튼으로 항상 도달 가능하다 */}
+          {/* 출간 버튼 — onOpenPublish 가 있으면 4번째 stage 로 빠진다. 없으면 스튜디오 내부 출간 모드(legacy) 로 폴백. */}
           <button
             type="button"
             className={`sx-publish-button ex-workbar-publish ${isPublishingMode ? 'is-active' : ''}`}
             data-active={isPublishingMode ? 'true' : 'false'}
-            onClick={openPublishingMode}
-            title="출간 준비 — 릴리즈 게이트와 출간 스냅샷"
+            onClick={onOpenPublish ?? openPublishingMode}
+            title={onOpenPublish ? '출간 준비 화면으로 이동' : '출간 준비 — 릴리즈 게이트와 출간 스냅샷'}
           >
             <FileText size={15} />
             출간

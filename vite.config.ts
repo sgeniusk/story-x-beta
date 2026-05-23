@@ -141,7 +141,9 @@ export default defineConfig({
       '--format',
       String(input.format ?? 'long-novel'),
       '--freewrite',
-      String(input.freewrite ?? '')
+      String(input.freewrite ?? ''),
+      '--personas-json',
+      JSON.stringify(Array.isArray(input.personaLineup) ? input.personaLineup : [])
     ]),
     storyxBridge('/api/review-agent', (input) => [
       'tools/storyx.mjs',

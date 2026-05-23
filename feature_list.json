@@ -1,7 +1,7 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M5-vercel-functions",
+  "active": "M6.2.1-evolution-history-ui",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
   "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
   "features": [
@@ -60,13 +60,31 @@
       "evidence": "commits effba1a · f5c2baf · 251518a · a3da8b7 · dc65884 · 739d1e0 · cfb65c6 · 8b82c26"
     },
     {
+      "id": "M4.5-persona-pool-wiring",
+      "name": "매체 페르소나 풀 ↔ 로컬 LLM 인터뷰 플로우 연결",
+      "description": "에세이·소설·만화·오디오북 4개 페르소나 풀을 로컬 /api/interview 흐름에 연결. interviewClient.ts 가 매체별 pick 함수로 상위 3명 선별 → vite.config.ts 가 --personas-json 인자로 storyx.mjs 에 전달 → buildInterviewPrompt 가 페르소나 톤 가이드 섹션을 LLM 프롬프트에 주입.",
+      "status": "done",
+      "dependencies": ["M4-essay-studio-agents"],
+      "done_criteria": "4개 매체 모두 페르소나 라인업이 LLM 프롬프트에 주입됨. 30 files / 164 tests 통과. mock provider 스모크 테스트 통과.",
+      "evidence": "src/lib/interviewClient.ts buildPersonaLineup + personaLineup POST body, vite.config.ts /api/interview --personas-json 인자, tools/storyx.mjs interview 커맨드 + buildInterviewPrompt personaSection"
+    },
+    {
       "id": "M3.6-publish-screen",
       "name": "퍼블리시 파트 신설",
-      "description": "스튜디오 출간 버튼 → 퍼블리시 전용 화면. 4번째 파트의 분위기·구성 정의.",
-      "status": "todo",
-      "dependencies": ["M3-four-part-architecture"],
-      "done_criteria": "출간 버튼이 퍼블리시 화면으로 이동. 출간 패키지 미리보기·다운로드·플랫폼 핸드오프 UI",
-      "evidence": null
+      "description": "스튜디오 출간 버튼 → 퍼블리시 전용 화면. 4번째 파트의 분위기·구성 정의. 1차 컷은 정적 4 카드(book-designer · pr-specialist · platform-curator · business-strategist). 실데이터 연동은 M3.6.1 로 분리.",
+      "status": "done",
+      "dependencies": ["M3-four-part-architecture", "M4-essay-studio-agents"],
+      "done_criteria": "출간 버튼이 새 stage 'publish' 로 이동. PublishScreen 4 카드 + 분위기(다크 + 앰버 액센트) + 뒤로가기. 30 files / 164 tests 통과 · 빌드 성공.",
+      "evidence": "src/components/PublishScreen.tsx 신설, src/App.tsx AppStage 'publish' 추가 + mediumDisplayLabel + 분기, src/StoryXDesk.tsx onOpenPublish prop + 출간 버튼 리라우팅"
+    },
+    {
+      "id": "M3.6.1-publish-screen-data",
+      "name": "퍼블리시 화면 실데이터 연동",
+      "description": "PublishScreen 4 카드가 buildPublishingPlan 결과 + 출판 에이전트 4명의 실제 LLM 호출 결과를 표시. 각 카드의 CTA 가 requestAgentReview 를 통해 실제 호출. 최종 잠금 버튼이 PublishingReleaseLock 의 canLock 에 연동.",
+      "status": "done",
+      "dependencies": ["M3.6-publish-screen"],
+      "done_criteria": "4 카드 모두 실데이터(매체별 deliverables)를 표시. publishingPlan 의 checklist · packaging · releaseLock 모두 노출. 카드 CTA → requestAgentReview LLM 호출 → 결과 인라인 표시 (pass/revise/blocked + strengths + issues). 잠금 버튼이 canLock 에 연동. agentFileMap 에 M4 신설 12명 추가.",
+      "evidence": "src/components/PublishScreen.tsx 실데이터 + CTA 호출 + 결과 패널, tools/storyx.mjs agentFileMap 에 신설 12명 추가, src/App.tsx PublishScreen 에 medium/format prop 전달"
     },
     {
       "id": "M4-story-harness-implementation",
@@ -81,19 +99,55 @@
     {
       "id": "M5-vercel-functions",
       "name": "서버측 LLM Vercel Functions",
-      "description": "/api/draft, /api/review-agent, /api/interview, /api/review-data 4개 라우트를 Vercel Functions로 구현. 공유 요청/응답 스키마 명시. 배포본에서 실제 Claude 호출.",
+      "description": "/api/draft, /api/review, /api/review-agent, /api/interview, /api/review-data 5개 라우트를 Vercel Functions로 구현. 공유 promptBuilders + llmRunner 헬퍼. AI Gateway 우선, Anthropic 직결 fallback, 키 없으면 mock. 배포본에서 실제 Claude 호출.",
+      "status": "done",
+      "dependencies": ["M3.6.1-publish-screen-data"],
+      "done_criteria": "5개 라우트 production 배포본에서 실제 LLM 응답, mock 폴백 안전, vercel.json includeFiles 로 페르소나 번들 포함, docs/vercel-env-setup.md 안내",
+      "evidence": "api/{draft,review,review-agent,review-data,interview}.ts, src/lib/server/{promptBuilders,llmRunner}.ts, vercel.json functions config, docs/vercel-env-setup.md"
+    },
+    {
+      "id": "M6.1-project-export-import",
+      "name": "프로젝트 export/import (JSON 파일)",
+      "description": "전체 작품 데이터(project + snapshots + preferences)를 한 JSON 파일로 내보내고 가져온다. 스튜디오 편집기 설정 패널에 진입점. schema='storyx/export/v1' 으로 버전 관리.",
+      "status": "done",
+      "dependencies": ["M5-vercel-functions"],
+      "done_criteria": "exportAllData/importAllData 함수 + UI 진입점(내보내기/가져오기 버튼) + confirm 안내 + 30 files / 164 tests 통과 · 빌드 성공",
+      "evidence": "src/lib/storage.ts exportAllData/importAllData/normalizeTheme, src/StoryXDesk.tsx 핸들러 + fileInputRef + 설정 패널 프로젝트 데이터 그룹, src/styles.css .sx-studio-data-action"
+    },
+    {
+      "id": "M6.2-evolution-memory-history",
+      "name": "evolutionMemory 누적 저장",
+      "description": "검토 결과·LLM 호출 이력을 시간순 history 로 누적. 향후 학습·분석 자산. 모든 LLM 호출이 aiStatus.reportAiCall 을 통해 자동 누적되도록 wired.",
+      "status": "done",
+      "dependencies": ["M6.1-project-export-import"],
+      "done_criteria": "evolutionMemory 신설 모듈 + reportAiCall 자동 누적 + export/import 페이로드 통합 + 30 files / 164 tests 통과",
+      "evidence": "src/lib/evolutionMemory.ts (신설, MAX 500개), src/lib/aiStatus.ts reportAiCall 에서 appendEvolutionEvent 호출, src/lib/storage.ts exportAllData/importAllData 에 evolutionHistory 포함"
+    },
+    {
+      "id": "M6.2.1-evolution-history-ui",
+      "name": "evolution history UI (AiStatusBadge popover)",
+      "description": "헤더 AiStatusBadge 를 클릭 가능한 button 으로 확장. 클릭 시 popover 에 최근 evolution event 시간순 리스트 + 비우기 버튼 + 빈 상태 안내. 작가가 자기 작품의 AI 활동 흐름을 한 곳에서 본다.",
+      "status": "done",
+      "dependencies": ["M6.2-evolution-memory-history"],
+      "done_criteria": "AiStatusBadge 클릭 popover + 이벤트 리스트 + 색 분기(성공/주의/실패) + 비우기 + 외부 클릭/Escape 닫기 + 30 files / 164 tests 통과",
+      "evidence": "src/components/AiStatusBadge.tsx 재작성 — popover + isOpen state + loadEvolutionHistory + clearEvolutionHistory + resolveEventTone"
+    },
+    {
+      "id": "M6.3-storyx-cli",
+      "name": "storyx CLI 확장 (init/serve/memory sync)",
+      "description": "npm run storyx -- init/serve/memory sync 명령 추가. 새 프로젝트 scaffold, dev 서버 띄우기, 파일/클라우드 동기화.",
       "status": "todo",
-      "dependencies": ["M4-story-harness-implementation"],
-      "done_criteria": "4개 라우트 production 배포본에서 실제 LLM 응답, mock 폴백 안전",
+      "dependencies": ["M6.1-project-export-import"],
+      "done_criteria": "init/serve/memory sync 3 명령 동작, README 안내",
       "evidence": null
     },
     {
       "id": "M6-persistence-memory-sync",
-      "name": "영속성·메모리 싱크",
-      "description": "localStorage에서 파일·클라우드 영속으로 확장. storyx init/serve/memory sync CLI 명령 추가. evolutionMemory 누적 저장.",
-      "status": "todo",
+      "name": "영속성·메모리 싱크 (전체 묶음)",
+      "description": "M6.1/M6.2/M6.3 의 상위 묶음. localStorage 한계를 넘어 파일·클라우드 영속까지.",
+      "status": "in_progress",
       "dependencies": ["M5-vercel-functions"],
-      "done_criteria": "storyx CLI 명령 동작, 프로젝트 영속성 검증",
+      "done_criteria": "M6.1·M6.2·M6.3 모두 done",
       "evidence": null
     },
     {

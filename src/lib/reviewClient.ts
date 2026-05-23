@@ -7,6 +7,8 @@ import {
   type AiCliReviewStatus
 } from './aiCliHarness';
 import type { ValidationAgentId } from './agentReviewProcess';
+import { reportAiCall } from './aiStatus';
+import { appendEvolutionEvent } from './evolutionMemory';
 
 export interface AgentReviewInput {
   agentId: string;
@@ -42,7 +44,31 @@ function toStringList(value: unknown): string[] {
 }
 
 // 에이전트 1명에게 분리 검토를 요청한다. 브리지 미연결·실패 시 ok:false로 떨어진다.
+// 호출 끝에 reportAiCall 로 글로벌 AI 상태 뱃지에 결과를 브로드캐스트.
+// 검토가 성공하면 verdict (pass/revise/blocked) 에 맞춰 evolution history 에 세분화 이벤트를 한 줄 더 누적한다.
+// 같은 호출에 llm-call + review-* 두 이벤트가 쌓이지만, kind 색이 다르고 source 라벨이 풍부해져 UX 가 더 또렷해진다.
 export async function requestAgentReview(input: AgentReviewInput): Promise<AgentReviewResult> {
+  const result = await _runAgentReview(input);
+  reportAiCall({ mode: 'review-agent', ok: result.ok, reason: result.reason });
+  if (result.ok && result.report) {
+    try {
+      const verdict = result.report.status;
+      const kind = verdict === 'revise' ? 'review-revise' : verdict === 'blocked' ? 'review-blocked' : 'review-pass';
+      const verdictLabel = verdict === 'revise' ? '수정 필요' : verdict === 'blocked' ? '잠금' : '통과';
+      appendEvolutionEvent({
+        kind,
+        source: input.agentId,
+        summary: `${result.report.label} 검토 ${verdictLabel}`,
+        detail: result.report.note?.slice(0, 120)
+      });
+    } catch {
+      /* silent — UI 흐름은 계속 */
+    }
+  }
+  return result;
+}
+
+async function _runAgentReview(input: AgentReviewInput): Promise<AgentReviewResult> {
   try {
     const response = await fetch('/api/review-agent', {
       method: 'POST',

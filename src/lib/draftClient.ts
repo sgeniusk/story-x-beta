@@ -1,5 +1,6 @@
 // storyx 로컬 브리지(/api/draft)에 회차 초안 LLM 생성을 요청하는 클라이언트
 import type { DraftChapterPayload } from './storyEngine';
+import { reportAiCall } from './aiStatus';
 
 export interface DraftRequestInput {
   medium: string;
@@ -18,7 +19,14 @@ export interface LlmDraftResult {
 
 // 로컬 dev 서버에만 존재하는 /api/draft 브리지를 호출한다.
 // 배포본(Vercel)이나 브리지 미연결 환경에서는 ok:false로 떨어지고, 호출 측이 deterministic 생성으로 폴백한다.
+// 호출 끝에 reportAiCall 로 글로벌 AI 상태 뱃지에 결과를 브로드캐스트.
 export async function requestLlmDraft(input: DraftRequestInput): Promise<LlmDraftResult> {
+  const result = await _runLlmDraft(input);
+  reportAiCall({ mode: 'draft', ok: result.ok, reason: result.reason });
+  return result;
+}
+
+async function _runLlmDraft(input: DraftRequestInput): Promise<LlmDraftResult> {
   try {
     const response = await fetch('/api/draft', {
       method: 'POST',

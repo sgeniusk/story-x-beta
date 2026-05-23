@@ -9,6 +9,7 @@ import {
   type TimelineEntry
 } from './storyEngine';
 import { getProjectLocalization } from './localization';
+import { loadEvolutionHistory, replaceEvolutionHistory, type EvolutionHistory } from './evolutionMemory';
 
 const storageKey = 'serial-story-studio/project';
 const snapshotsKey = 'serial-story-studio/snapshots';
@@ -102,6 +103,110 @@ export function pushProjectSnapshot(project: SeriesProject, label: string): Proj
 
 export function clearProjectSnapshots() {
   window.localStorage.removeItem(snapshotsKey);
+}
+
+// 전체 작품 데이터를 한 파일로 묶는 export 페이로드.
+// 사용자가 백업·다른 기기 이동·공유에 쓰는 단일 단위.
+export interface StoryXExportPayload {
+  schema: 'storyx/export/v1';
+  exportedAt: string;
+  project: SeriesProject;
+  snapshots: ProjectSnapshot[];
+  preferences: {
+    landingTheme?: 'light' | 'dark' | null;
+    studioAccent?: string | null;
+    studioCanvas?: string | null;
+  };
+  evolutionHistory?: EvolutionHistory;
+}
+
+export interface ImportOutcome {
+  ok: boolean;
+  /** 사용자에게 보여 줄 한 줄 사유. ok=false 면 reason, ok=true 면 요약(스냅샷 N개 등). */
+  message: string;
+}
+
+export function exportAllData(): StoryXExportPayload {
+  return {
+    schema: 'storyx/export/v1',
+    exportedAt: new Date().toISOString(),
+    project: loadProject(),
+    snapshots: loadProjectSnapshots(),
+    preferences: {
+      landingTheme: normalizeTheme(readPreference('storyx.landingTheme')),
+      studioAccent: readPreference('storyx.studio.accent'),
+      studioCanvas: readPreference('storyx.studio.canvas')
+    },
+    evolutionHistory: loadEvolutionHistory()
+  };
+}
+
+// JSON 문자열·객체 어느 쪽이든 받아 검증 후 전체 키를 덮어쓴다. 잘못된 스키마면 ok:false.
+// 호출 측은 import 전에 사용자 confirm 을 받아야 한다 — 이 함수는 즉시 덮어쓴다.
+export function importAllData(input: unknown): ImportOutcome {
+  let payload: unknown = input;
+  if (typeof input === 'string') {
+    try {
+      payload = JSON.parse(input);
+    } catch {
+      return { ok: false, message: 'JSON 파싱 실패 — 올바른 export 파일이 아닙니다.' };
+    }
+  }
+  if (!isRecord(payload)) {
+    return { ok: false, message: '루트가 객체가 아닙니다.' };
+  }
+  if (payload.schema !== 'storyx/export/v1') {
+    return { ok: false, message: `알 수 없는 스키마 — schema='${String(payload.schema)}'. storyx/export/v1 만 지원합니다.` };
+  }
+  if (!isRecord(payload.project)) {
+    return { ok: false, message: 'project 필드가 객체가 아닙니다.' };
+  }
+  const snapshots = Array.isArray(payload.snapshots) ? (payload.snapshots as ProjectSnapshot[]) : [];
+  const preferences = isRecord(payload.preferences) ? payload.preferences : {};
+
+  try {
+    saveProject(normalizeProject(payload.project as unknown as SeriesProject));
+    window.localStorage.setItem(snapshotsKey, JSON.stringify(snapshots));
+    writePreference('storyx.landingTheme', preferences.landingTheme);
+    writePreference('storyx.studio.accent', preferences.studioAccent);
+    writePreference('storyx.studio.canvas', preferences.studioCanvas);
+    // 진화 메모리 history 도 함께 복원 — 없으면 기존 값 유지.
+    let historyCount = 0;
+    if (payload.evolutionHistory && replaceEvolutionHistory(payload.evolutionHistory)) {
+      const hist = payload.evolutionHistory as EvolutionHistory;
+      historyCount = Array.isArray(hist.events) ? hist.events.length : 0;
+    }
+    return {
+      ok: true,
+      message: `프로젝트 복원 완료 — 스냅샷 ${snapshots.length}개, 진화 메모리 ${historyCount}개 포함.`
+    };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : '복원 중 알 수 없는 오류.' };
+  }
+}
+
+function readPreference(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writePreference(key: string, value: unknown): void {
+  if (typeof value === 'string' && value.length > 0) {
+    window.localStorage.setItem(key, value);
+  } else {
+    window.localStorage.removeItem(key);
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeTheme(value: string | null): 'dark' | 'light' | null {
+  return value === 'dark' || value === 'light' ? value : null;
 }
 
 // 데이터 모드 도입 이전 저장본을 위한 기본 바이블 5섹션. createSeedProject와 같은 id·제목을 쓴다.

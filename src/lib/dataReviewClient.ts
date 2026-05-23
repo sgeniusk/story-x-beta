@@ -1,5 +1,6 @@
 // storyx 로컬 브리지(/api/review-data)에 캐논 분야별 데이터 검토를 요청하는 클라이언트.
 // 한 분야(인물/장소/사물/사건/시간선)의 작품 내 정합과 보강 제안을 정합/제안 노트로 받아온다.
+import { reportAiCall } from './aiStatus';
 
 // 데이터 검토 노트 한 건 — 정합(consistency check) 또는 제안(strengthening idea).
 export type DataReviewNoteKind = '정합' | '제안';
@@ -42,7 +43,14 @@ function normalizeNotes(value: unknown): DataReviewNote[] {
 }
 
 // 캐논 분야 하나에 대한 데이터 검토를 요청한다. 브리지 미연결·실패 시 ok:false로 떨어지고 호출 측이 deterministic 결과로 폴백한다.
+// 호출 끝에 reportAiCall 로 글로벌 AI 상태 뱃지에 결과를 브로드캐스트.
 export async function requestDataReview(input: DataReviewInput): Promise<DataReviewResult> {
+  const result = await _runDataReview(input);
+  reportAiCall({ mode: 'review-data', ok: result.ok, reason: result.reason });
+  return result;
+}
+
+async function _runDataReview(input: DataReviewInput): Promise<DataReviewResult> {
   try {
     const response = await fetch('/api/review-data', {
       method: 'POST',

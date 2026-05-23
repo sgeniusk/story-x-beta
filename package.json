@@ -12,7 +12,10 @@
     "deploy": "bash tools/deploy.sh"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.78",
+    "@vercel/node": "^5.8.3",
     "@vitejs/plugin-react": "^5.0.0",
+    "ai": "^6.0.190",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

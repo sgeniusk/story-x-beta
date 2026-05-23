@@ -4,6 +4,398 @@
 
 ---
 
+## 2026-05-21 15:30 — M6.2.1 evolution history UI (AiStatusBadge popover) 완료
+
+> Last Updated: 2026-05-21 15:30 KST
+
+### Current Objective
+사용자가 헤더의 작은 AI 상태 뱃지를 클릭하면 popover 가 열리고, 작품 전체 AI 활동 이력을 시간순으로 본다. M6.2 의 인프라가 처음으로 가시화됨. 다음 자연스러운 작업 — M6.3 storyx CLI 또는 M4 스토리 하네스 (Layer 0~7) 또는 evolution 이벤트 종류 확장(검토 결과·메모리 결정 자동 누적).
+
+### Recommended Next Step
+1. dev 서버에서 자유서술 → 인터뷰 클릭 → 뱃지가 라임 "AI 활성" 또는 노란 "AI 폴백" 으로 변함 → 클릭 → popover 에 이벤트 노출 확인
+2. evolutionMemory 가 글로벌 한 키 — projectId 별 분리 또는 storyx CLI 작업 우선순위 결정
+3. M4 또는 M6.3 으로 진입
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npm run build` 529kb js · 175kb css (1.03s) · `npm test` 30 files / 164 tests · `tsc --noEmit` exit 0
+- 수정 — `src/components/AiStatusBadge.tsx` (재작성)
+- 하네스 — `feature_list.json` M6.2.1 신설 + active
+
+### What the Last Session Did
+1. **`AiStatusBadge.tsx` 재작성**
+   - `span` → `button` (클릭 가능), `cursor: pointer`
+   - `isOpen` state + 바깥 클릭 / Escape 닫기 hook
+   - `loadEvolutionHistory()` 으로 최근 이벤트 가져오기 (status 변경 시 자동 갱신)
+   - popover — 헤더(제목 + 카운터 + 비우기 + 닫기) + 이벤트 리스트
+2. **이벤트 표시**
+   - 색 분기 — 성공(라임) / 주의(앰버, review-revise·memory-revised·held) / 실패(빨강, review-blocked·memory-rejected·summary 에 "실패" 포함)
+   - 메타 — 상대 시간(초/분/시간/일) · source(mode label) · detail
+   - 빈 상태 안내 — "아직 누적된 AI 활동이 없습니다…"
+3. **비우기 버튼** — confirm 후 `clearEvolutionHistory()` + popover 닫기
+4. **닫기 X 버튼** — popover 만 닫기 (state 보존)
+5. **lucide 아이콘** — Activity (헤더) · Trash2 (비우기) · X (닫기)
+
+### Files To Touch (next milestone)
+- **M6.3 storyx CLI** — `tools/storyx.mjs` 또는 신규 CLI 에 init/serve/memory sync
+- **M4 스토리 하네스 Layer 0~7** — `docs/storyx-harness-architecture.md` 청크 A~H TDD
+- **(보강) evolution 이벤트 자동 누적 확장** — 메모리 큐 결정·검토 결과 등도 자동 append (현재는 llm-call 만)
+
+### Files NOT To Touch
+- `src/lib/evolutionMemory.ts` (M6.2 정본)
+- `src/lib/aiStatus.ts` (M6.2 정본)
+- `api/*.ts` (M5 완성본)
+- `.claude/agents/*.md` (페르소나 정본)
+
+### Blockers
+- (배포본 LLM) Vercel env 미설정 시 mock 폴백
+- (로컬 LLM) `claude` CLI 401
+
+### Known Issues
+- evolutionHistory 가 글로벌 한 키 — 여러 작품 간 이력이 섞임. projectId 별 분리 검토.
+- llm-call kind 만 자동 누적 — review-pass/revise/blocked 등 다른 kind 는 호출 측에서 명시적 append 가 필요. 현재는 reviewClient 가 reportAiCall 만 호출하므로 모든 검토가 llm-call 로 기록됨.
+- popover 가 width 340px 고정 — 모바일 미고려.
+
+### Reference Documents
+- `docs/vercel-env-setup.md`
+- `~/.claude/plans/x-zippy-graham.md`
+
+---
+
+## 2026-05-21 15:22 — M6.2 evolutionMemory 누적 저장 완료
+
+> Last Updated: 2026-05-21 15:22 KST
+
+### Current Objective
+모든 LLM 호출이 시간순 evolution history 에 자동 누적되고, export/import 페이로드에 포함되어 백업·이동 가능. 다음 자연스러운 작업 — M6.3 storyx CLI 확장 또는 M4 스토리 하네스 구현 (Layer 0~7) 또는 evolution history UI 노출.
+
+### Recommended Next Step
+1. dev 서버에서 LLM 호출 발생 → localStorage 의 `serial-story-studio/evolution-history` 누적 확인
+2. M6.1 내보내기 → JSON 파일에 `evolutionHistory.events` 포함 확인
+3. 그 뒤 M6.3 (CLI) 또는 evolution-history UI 패널 신설 (M6.2.1) 또는 M4 시작
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npm run build` 524kb js · 175kb css (1.22s) · `npm test` 30 files / 164 tests · `tsc --noEmit` exit 0
+- 신설 — `src/lib/evolutionMemory.ts`
+- 수정 — `src/lib/aiStatus.ts` · `src/lib/storage.ts` · `feature_list.json`
+
+### What the Last Session Did
+1. **`src/lib/evolutionMemory.ts` 신설**
+   - `EvolutionEventKind` — llm-call / review-pass·revise·blocked / memory-approved·revised·rejected·held / draft-generated / release-locked
+   - `EvolutionEvent` — { id, at, kind, source?, summary, detail? }
+   - `EvolutionHistory` — schema='storyx/evolution-history/v1' + events[]
+   - `loadEvolutionHistory` · `saveEvolutionHistory` · `clearEvolutionHistory`
+   - `appendEvolutionEvent` — id·at 자동 생성, MAX 500 trim
+   - `replaceEvolutionHistory` — import 페이로드 검증 + 통째 덮어쓰기
+2. **`src/lib/aiStatus.ts` 훅 추가**
+   - `reportAiCall` 에서 `appendEvolutionEvent({ kind: 'llm-call', source: mode, summary, detail: reason })` 자동 호출
+   - SSR · quota 실패 시 silent (UI 신호는 그대로 흐름)
+3. **`src/lib/storage.ts` export/import 페이로드 확장**
+   - `StoryXExportPayload` 에 `evolutionHistory?: EvolutionHistory` 추가
+   - `exportAllData` 에서 `loadEvolutionHistory()` 포함
+   - `importAllData` 에서 `replaceEvolutionHistory(payload.evolutionHistory)` 호출, message 에 "진화 메모리 N개 포함" 표시
+
+### Files To Touch (next milestone)
+- **M6.2.1 (선택) UI 노출** — 스튜디오 ⚙ 설정 또는 별도 패널에 최근 N개 이벤트 표시. 작가가 자기 작품의 학습 흐름을 본다.
+- **M6.3 storyx CLI** — `tools/storyx.mjs` 또는 신규 CLI 에 init/serve/memory sync. 파일 영속 (vault 모드).
+- **M4 스토리 하네스 (Layer 0~7)** — `docs/storyx-harness-architecture.md` 청크 A~H TDD.
+
+### Files NOT To Touch
+- `src/lib/agentReviewProcess.ts` 의 `evolutionMemory: string[]` 필드 (정적 카테고리 안내문 — 별개)
+- `src/lib/publishing.ts` (M3.6 완성본)
+- `api/*.ts` (M5 완성본)
+- `.claude/agents/*.md` (페르소나 정본)
+
+### Blockers
+- (배포본 LLM) Vercel env 미설정 시 mock 폴백
+- (로컬 LLM) `claude` CLI 401 — 사용자 액션 필요
+
+### Known Issues
+- evolution history 가 작품마다 분리 없이 글로벌 한 키 — 여러 작품 사이 누적이 섞임. M6.3 (또는 storage 확장)에서 projectId 별 분리 고려.
+- UI 노출 없음 — 백업/복원에는 즉시 가치, 작가가 history 를 보는 흐름은 다음 단계.
+
+### Reference Documents
+- `docs/vercel-env-setup.md` — env 설정 가이드
+- `~/.claude/plans/x-zippy-graham.md` — 마스터 로드맵
+
+---
+
+## 2026-05-21 15:18 — M6.1 프로젝트 export/import (JSON 파일) 완료
+
+> Last Updated: 2026-05-21 15:18 KST
+
+### Current Objective
+M6 영속성·메모리 싱크의 첫 컷 완료 — 사용자가 작품 전체(project + snapshots + preferences)를 한 JSON 으로 백업/복원할 수 있다. 다음 자연스러운 작업 — M6.2 evolutionMemory 누적 또는 M6.3 storyx CLI 확장.
+
+### Recommended Next Step
+1. dev 서버에서 스튜디오 → ⚙ 설정 → 프로젝트 데이터 → 내보내기 동작 확인
+2. 내보낸 JSON 을 다른 브라우저/계정에서 가져오기 시연
+3. 그 뒤 M6.2 (evolutionMemory) 또는 M4 (스토리 하네스 Layer 0~7) 우선순위 결정
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npm run build` 523kb js · 174kb css (847ms) · `npm test` 30 files / 164 tests · `tsc --noEmit` exit 0
+- 수정 — `src/lib/storage.ts` · `src/StoryXDesk.tsx` · `src/styles.css` · `feature_list.json`
+
+### What the Last Session Did
+1. **`src/lib/storage.ts` 확장**
+   - `StoryXExportPayload` 타입 (schema='storyx/export/v1', exportedAt, project, snapshots, preferences)
+   - `exportAllData()` — 5 localStorage 키(project · snapshots · landingTheme · studio.accent · studio.canvas) 한 묶음
+   - `importAllData(input)` — 문자열/객체 둘 다 받고 검증 후 덮어쓰기. ImportOutcome { ok, message } 반환
+   - `normalizeTheme` · `isRecord` · `readPreference` · `writePreference` 헬퍼
+2. **`src/StoryXDesk.tsx` 핸들러**
+   - `fileInputRef` + `handleExportProject` (Blob 다운로드) + `handleImportClick` + `handleImportFile` (confirm → 덮어쓰기 → reload)
+   - lucide import 에 `Download`, `Upload` 추가
+3. **설정 패널 확장**
+   - 트윅·캔버스 두 그룹 다음에 "프로젝트 데이터" 그룹 추가
+   - 내보내기/가져오기 두 버튼 + 숨김 file input
+   - hint 텍스트 갱신 — "가져오기는 현재 작품을 덮어쓰니 먼저 내보내기를 권장합니다."
+4. **`src/styles.css`** — `.sx-studio-data-action` 클래스 (기존 chip 톤과 일관)
+5. **TypeScript 두 곳 수정** — `landingTheme` 좁히기 + `payload.project as unknown as SeriesProject` 우회
+
+### Files To Touch (next milestone)
+- **M6.2 선택 시** — `src/lib/memoryBank.ts` 에 `evolutionMemory.history` 추가, `exportAllData` 페이로드에 포함
+- **M6.3 선택 시** — `tools/storyx.mjs` 또는 신규 `tools/storyx-cli.mjs` 에 init/serve/memory sync 명령
+- **M4 선택 시** — `docs/storyx-harness-architecture.md` 청크 A~H TDD
+
+### Files NOT To Touch
+- `src/lib/publishing.ts` (M3.6 완성본)
+- `api/*.ts` (M5 완성본)
+- `.claude/agents/*.md` (페르소나 정본)
+
+### Blockers
+- (배포본 LLM) Vercel env 미설정 시 mock 폴백. `docs/vercel-env-setup.md` 참고.
+- (로컬 LLM) `claude` CLI 401. 사용자 액션 필요.
+
+### Known Issues
+- 가져오기가 성공하면 즉시 `window.location.reload()` — 작업 중인 미저장 변경이 있으면 손실. M6.2 에서 dirty state 체크 추가 고려.
+- import 페이로드 검증이 schema 와 project 객체 여부만 — 깊은 필드 검증 없음. normalizeProject 가 누락 필드를 채우지만 악의적 입력엔 약함.
+
+### Reference Documents
+- `docs/vercel-env-setup.md` — env 설정 가이드
+- `~/.claude/plans/x-zippy-graham.md` — 마스터 로드맵
+- `docs/storyx-harness-architecture.md` — 스토리 하네스 정본
+
+---
+
+## 2026-05-21 15:58 — M5 Vercel Functions 5 라우트 완료
+
+> Last Updated: 2026-05-21 15:58 KST
+
+### Current Objective
+5 라우트(`/api/draft`·`/api/review`·`/api/review-agent`·`/api/review-data`·`/api/interview`) 가 production 배포본에서 직접 LLM 호출. dev 환경에서는 기존 storyxBridge 미들웨어가 같은 path 를 가로채 storyx.mjs 를 호출 (병행 유지).
+
+### Recommended Next Step
+1. 사용자가 Vercel Project Settings 에 `AI_GATEWAY_API_KEY` 또는 `ANTHROPIC_API_KEY` 설정
+2. `vercel deploy` 또는 git push 로 새 배포
+3. `curl POST .vercel.app/api/interview` 로 한 줄 검증 — `"provider": "ai-gateway"` / `"anthropic"` 응답 확인
+4. 다음 자연스러운 작업 — M6 영속성·메모리 싱크 또는 M4 스토리 하네스 구현(Layer 0~7)
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 30 files / 164 tests · `npm run build` 519kb js (963ms)
+- 새 파일 — `api/*.ts` 5개, `src/lib/server/{promptBuilders,llmRunner}.ts`, `docs/vercel-env-setup.md`
+- 수정 — `vercel.json` functions config, `feature_list.json` M5 done
+
+### What the Last Session Did
+1. **AI SDK 의존성 설치** — `ai` + `@ai-sdk/anthropic` + `@vercel/node`
+2. **공유 모듈 신설**
+   - `src/lib/server/promptBuilders.ts` — buildInterviewPrompt + buildDraftPrompt + buildReviewPrompt + buildAgentReviewPrompt + buildDataReviewPrompt + loadAgentPersona + parseLlmJson
+   - `src/lib/server/llmRunner.ts` — runLlmJson 헬퍼 (AI Gateway 우선, Anthropic 직결 fallback, 키 없으면 mock)
+3. **5 Vercel Functions 신설**
+   - `api/interview.ts` · `api/draft.ts` · `api/review.ts` · `api/review-agent.ts` · `api/review-data.ts`
+   - 모두 같은 패턴 — body 파싱 → prompt 빌드 → runLlmJson → 클라이언트 응답 형태로 정규화
+4. **`vercel.json` 갱신** — `functions.api/review-agent.ts.includeFiles: ".claude/agents/**"` 로 페르소나 .md 를 serverless 번들에 포함
+5. **`docs/vercel-env-setup.md` 신설** — env 변수 두 가지(`AI_GATEWAY_API_KEY` / `ANTHROPIC_API_KEY`), 로컬 vs 배포본 동작 차이, curl 검증 예시
+
+### Files To Touch (next milestone)
+- **M6 선택 시** — `src/lib/storage.ts` 확장으로 파일/클라우드 영속, `storyx` CLI 확장
+- **M4 (Layer 0~7) 선택 시** — `docs/storyx-harness-architecture.md` 청크 A~H TDD
+
+### Files NOT To Touch
+- `tools/storyx.mjs` (로컬 CLI 호환 — 같은 로직이 promptBuilders.ts 에 복제됐지만 양쪽 유지)
+- `vite.config.ts` storyxBridge (dev 전용)
+- `.claude/agents/*.md` (페르소나 정본)
+
+### Blockers
+- (배포본 LLM) `AI_GATEWAY_API_KEY` 또는 `ANTHROPIC_API_KEY` 가 Vercel Project Settings 에 없으면 mock 폴백
+- (로컬 LLM) `claude` CLI 401 — 사용자가 `claude login` 또는 ANTHROPIC_API_KEY 설정 필요
+
+### Known Issues
+- promptBuilders.ts 와 storyx.mjs 가 같은 로직 두 곳에 — 변경 시 양쪽 함께 수정 필요. 추후 storyx.mjs 를 .ts 마이그레이션 또는 promptBuilders 를 child_process 에서 import 하는 방식 고려.
+- `LanguageModel` 타입에 `'anthropic/...'` 문자열 직접 캐스팅. AI SDK v6 가 provider/model string 을 정식 지원하지만 타입 시그니처는 LanguageModel 인스턴스를 요구해서 `as unknown as LanguageModel` 우회.
+- 빌드 chunk 519kb (gzip 160kb) — 500kb 경고. M6 또는 별도 작업에서 manualChunks 또는 dynamic import 로 분할 고려.
+
+### Reference Documents
+- `docs/vercel-env-setup.md` — env 설정 + 배포 검증 안내
+- `~/.claude/plans/x-zippy-graham.md` — 마스터 로드맵
+- `docs/storyx-harness-architecture.md` — 스토리 하네스 정본
+
+---
+
+## 2026-05-21 15:48 — M3.6.1 퍼블리시 화면 실데이터 + 4 카드 CTA LLM 호출 + agentFileMap 확장 완료
+
+> Last Updated: 2026-05-21 15:48 KST
+
+### Current Objective
+퍼블리시 stage 가 정적 4 카드에서 진짜 출간 도구로 진화. 다음 자연스러운 작업은 M5 Vercel Functions 또는 M4 스토리 하네스 구현(Layer 0~7).
+
+### Recommended Next Step
+1. 사용자가 `claude login` 으로 401 블로커 해제
+2. dev 서버에서 스튜디오 → 출간 클릭 → PublishScreen 진입 → 4 카드 CTA 호출 → 결과 인라인 노출까지 end-to-end 검증
+3. 검증 후 M5 (Vercel Functions) 우선순위 결정
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 30 files / 164 tests · `npm run build` 519kb js (1.39s)
+- 추적 — 14 modified + 3 new
+
+### What the Last Session Did
+1. **PublishScreen 실데이터 표시**
+   - publishingPlan 의 모든 필드 노출 — title · releaseNotice · checklist · snapshotItems · changeLogReview · packageItems · platformProof · releaseLock
+   - 출간 게이트 영역에 status 색(ready=라임, review=앰버) + 아이콘
+2. **잠금 버튼 동작**
+   - `releaseLock.canLock` 에 연동, 토글 동작
+   - blocker 있으면 "N개 게이트가 아직 review 상태" 안내
+3. **4 카드 CTA → requestAgentReview LLM 호출**
+   - 4 상태 (idle / loading / success / failed) 인라인 렌더링
+   - 성공 시 status chip + note + strengths + issues 표시
+   - 실패 시 reason + "다시 호출" 버튼
+   - buildAgentContext 헬퍼로 컨텍스트 추출 (작품의 핵심 결만)
+4. **storyx.mjs agentFileMap 확장 — M4 신설 12명 모두 추가**
+   - 스튜디오 6 + 랜딩 1 + 브릿지 1 + 출판 4
+   - 출판 4명도 review-agent 흐름으로 호출 가능해짐
+5. **매체별 deliverables 변동** — essay/novel/comics/audiobook 에 따라 카드 산출물 리스트 다름
+
+### Files To Touch (next milestone)
+- **M5 선택 시** — `vite.config.ts` 의 5 storyxBridge 를 Vercel Functions 로. `api/draft.ts` · `api/review-agent.ts` · `api/interview.ts` · `api/review-data.ts` · `api/review.ts` 신설. agentFileMap 의 .md 페르소나를 serverless 번들에 포함해야 함.
+- **M4 선택 시** — `docs/storyx-harness-architecture.md` 청크 A~H 순서로 TDD.
+
+### Files NOT To Touch
+- `src/lib/publishing.ts` PublishingPlan 타입 (그대로 사용)
+- `src/lib/agentReviewProcess.ts` ValidationAgentId (craft 검토용으로 분리 유지)
+- `.claude/agents/*.md` (페르소나 정본)
+- `src/lib/{essay,novel,comic,audiobook}Personas.ts` (M4 완성본)
+
+### Blockers
+- `claude` CLI 401 — 사용자가 `claude login` 또는 `ANTHROPIC_API_KEY` 설정 필요
+
+### Known Issues
+- 빈 `ANTHROPIC_API_KEY=` 가 OAuth 토큰을 가릴 가능성 — `~/.zshrc` 점검 권장
+- Vercel 배포본 — 5 storyxBridge 가 Vite plugin 이라 production 에선 mock 폴백. M5 에서 해결.
+
+### Reference Documents
+- `~/.claude/plans/x-zippy-graham.md` — 마스터 로드맵
+- `docs/storyx-harness-architecture.md` — 스토리 하네스 정본
+- `AGENTS.md` — Stage × Media Matrix 정본
+
+---
+
+## 2026-05-22 15:18 — M3.6 퍼블리시 파트 신설 + AI 상태 표시기 + 인터뷰 폴백 신호 완료
+
+> Last Updated: 2026-05-22 15:18 KST
+
+### Current Objective
+4파트 구조의 마지막 파트(퍼블리시) 1차 컷 완료. 다음 자연스러운 작업은 (a) M3.6.1 PublishScreen 실데이터 연동 또는 (b) M5 Vercel Functions 중 사용자 선택.
+
+### Recommended Next Step
+사용자가 `claude login` 또는 `ANTHROPIC_API_KEY` 설정으로 인증 해제 → dev 서버에서 4파트 흐름 끝까지 확인. 그 뒤 M3.6.1(실데이터) 또는 M5(Vercel) 우선순위 결정.
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 30 files / 164 tests 통과 · `npm run build` 성공 (511kb js · 174kb css)
+- 추적 — 11 modified + 3 new + 1 new (PublishScreen)
+
+### What the Last Session Did
+1. **M3.6 퍼블리시 파트 신설**
+   - `src/components/PublishScreen.tsx` 신설 — 정적 4 카드 (book-designer · pr-specialist · platform-curator · business-strategist) + 분위기(다크 + 앰버 액센트)
+   - `src/App.tsx` AppStage 에 `'publish'` 추가, URL stageParam 파싱, mediumDisplayLabel 매핑, 분기 라우팅
+   - `src/StoryXDesk.tsx` onOpenPublish prop 추가, 출간 버튼이 prop 있으면 stage 전환 / 없으면 legacy 내부 모드 폴백
+2. **글로벌 AI 상태 표시기 (이전 작업)**
+   - `src/lib/aiStatus.ts` · `src/hooks/useAiStatus.ts` · `src/components/AiStatusBadge.tsx` 신설
+   - 4 클라이언트(draft · review-agent · review-data · interview)가 wrap 패턴으로 reportAiCall
+   - 헤더 두 곳(hx-nav · sx-topbar-actions)에 뱃지 노출
+3. **인터뷰 폴백 신호 + 라인업 띠 (이전 작업)**
+   - LLM 호출 실패 시 노란 띠 + claude login 안내
+   - 성공 시 라임 라인업 띠 (한강風 · 박완서風 …)
+   - 사전질문 자동선택 제거, 추천에는 점선 외곽선 + "추천" 뱃지
+
+### Files To Touch (next milestone)
+- (M3.6.1 선택 시) `src/components/PublishScreen.tsx` — props 확장으로 publishingPlan 전달
+- (M3.6.1 선택 시) `src/App.tsx` — stage 'publish' 분기에 project + blueprint 전달
+- (M5 선택 시) `vite.config.ts` 의 5 storyxBridge → Vercel Functions
+
+### Files NOT To Touch
+- `src/lib/publishing.ts` `PublishingPlan` 타입 (legacy 호환 유지)
+- `.claude/agents/*.md` (M4 완성본)
+- `src/lib/{essay,novel,comic,audiobook}Personas.ts` (M4 완성본)
+
+### Blockers
+- `claude` CLI 인증 401 — 사용자가 `claude login` 또는 `ANTHROPIC_API_KEY` 설정 필요. 코드 작업은 인증과 무관하게 진행 가능.
+
+### Known Issues
+- 빈 `ANTHROPIC_API_KEY=` export 가 OAuth 토큰을 가릴 가능성 — `~/.zshrc` 점검 권장
+- 멀티 dev 서버 잔존 가능 — 새 세션 전 `pkill -f vite` 권장
+- PublishScreen 의 CTA 4개 + 최종 잠금 버튼은 placeholder. M3.6.1 에서 실 연동.
+
+### Reference Documents
+- `~/.claude/plans/x-zippy-graham.md` — 마스터 로드맵
+- `docs/storyx-harness-architecture.md` — 스토리 하네스 정본
+- `AGENTS.md` — Stage × Media Matrix 정본
+
+---
+
+## 2026-05-21 20:21 — M4.5 매체 페르소나 풀 ↔ 로컬 LLM 인터뷰 플로우 연결 완료
+
+> Last Updated: 2026-05-21 20:21 KST
+
+### Current Objective
+로컬에서 4개 매체 인터뷰가 페르소나 톤 가이드와 함께 LLM 호출까지 정상 동작. 사용자 인증(`claude login` 또는 `ANTHROPIC_API_KEY`) 확인 후 실호출 테스트 → 그 뒤 M3.6 퍼블리시 화면 또는 M5 Vercel Functions 선택.
+
+### Recommended Next Step
+1. 사용자가 `claude login` 또는 `export ANTHROPIC_API_KEY=...` 실행해 401 블로커 해제
+2. dev 서버 (`npm run dev`) 띄우고 매체 = essay 로 자유 서술 입력 → 인터뷰 질문이 한강風·박완서風 등의 결로 생성되는지 확인
+3. 라인업 확인되면 `requestLlmInterview` 결과의 `personaLineup` 을 UI 에 표시할지 결정 — "오늘 인터뷰: 한강風 · 박완서風 · 김연수風" 같은 띠
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 30 files / 164 tests 통과
+- `node tools/storyx.mjs interview --provider mock --personas-json '[...]'` 스모크 OK
+
+### What the Last Session Did
+1. `src/lib/interviewClient.ts` 재작성 — 매체별 pick 함수 4개 import, `buildPersonaLineup(medium, freewrite)` 신설, POST body 에 `personaLineup` 추가, `LlmInterviewResult` 에 `personaLineup` 응답 필드 추가
+2. `vite.config.ts` `/api/interview` 브리지 — `--personas-json` 인자로 `JSON.stringify(input.personaLineup)` 전달
+3. `tools/storyx.mjs` interview 커맨드 — `--personas-json` 플래그 파싱, `buildInterviewPrompt({ medium, format, freewrite, personas })` 시그니처 확장
+4. `buildInterviewPrompt` — `personas.length > 0` 일 때 "## 페르소나 톤 가이드" 섹션 주입 (label · tone · questionStarters · blockingSignals)
+5. 30 files / 164 tests 통과 유지
+
+### Files To Touch (next milestone)
+- (선택) `src/StoryXDesk.tsx` 또는 인터뷰 화면 — `personaLineup` 표시 띠
+- (선택) `vite.config.ts` 나머지 4개 브리지를 Vercel Functions 로 이관 (M5)
+- (선택) 퍼블리시 화면 신설 (M3.6)
+
+### Files NOT To Touch
+- `src/lib/essayPersonas.ts` · `novelPersonas.ts` · `comicPersonas.ts` · `audiobookPersonas.ts` (정본)
+- `src/lib/mediaPersonas.ts` (정본)
+- `src/lib/agentReviewProcess.ts` validationProcesses (M4 완성본)
+- `.claude/agents/*.md` (M4 완성본)
+
+### Blockers
+- `claude` CLI 인증 401 — 사용자가 `claude login` 또는 `ANTHROPIC_API_KEY` 설정 필요. 코드 작업은 인증과 무관하게 완료.
+
+### Known Issues
+- 멀티 dev 서버 잔존 가능 — 새 세션 전 `pkill -f vite` 권장
+- EssayPersona 에 `category` 필드 없음 — interviewClient.ts 에서 `as unknown as MediaPersona[]` 캐스팅으로 우회. 향후 EssayPersona 에 `category: 'essay'` 추가하면 캐스트 제거 가능.
+
+### Reference Documents
+- `~/.claude/plans/x-zippy-graham.md` — 마스터 로드맵
+- `docs/storyx-harness-architecture.md` — 스토리 하네스 정본
+- `docs/essay-interviewer-personas.md` — 에세이 페르소나
+- `AGENTS.md` — Stage × Media Matrix 정본
+
+---
+
 ## 2026-05-21 19:43 — M4 (4단계 매트릭스 + 신설 12명 + 매체 풀 4개) 완료, M5 Vercel Functions로 인계
 
 > Last Updated: 2026-05-21 19:43 KST

@@ -27,6 +27,24 @@ import {
   type ProjectIntakeQuestion
 } from './lib/projectIntake';
 import { requestLlmInterview } from './lib/interviewClient';
+import { AiStatusBadge } from './components/AiStatusBadge';
+import { PublishScreen } from './components/PublishScreen';
+
+// 매체 코드를 사용자 표시용 한국어 라벨로 매핑. 헤더·퍼블리시 화면 등에 노출.
+function mediumDisplayLabel(medium: CreativeMedium): string {
+  switch (medium) {
+    case 'essay':
+      return '에세이';
+    case 'novel':
+      return '소설';
+    case 'comics':
+      return '만화';
+    case 'audiobook':
+      return '오디오북';
+    default:
+      return medium;
+  }
+}
 import { type DraftChapterPayload } from './lib/storyEngine';
 import { loadProject } from './lib/storage';
 import { requestLlmDraft } from './lib/draftClient';
@@ -98,7 +116,7 @@ const mediaBridgeRoutes = [
   }
 ];
 
-type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor';
+type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor' | 'publish';
 type HomeFlowStep = 'medium' | 'freewrite' | 'intake' | 'building';
 
 function App() {
@@ -110,7 +128,8 @@ function App() {
       stageParam === 'home' ||
       stageParam === 'projects' ||
       stageParam === 'login' ||
-      stageParam === 'landing'
+      stageParam === 'landing' ||
+      stageParam === 'publish'
     ) {
       return stageParam;
     }
@@ -137,6 +156,18 @@ function App() {
         initialDraftPayload={pendingDraft}
         onOpenProjects={() => setStage('projects')}
         onOpenLanding={() => setStage('landing')}
+        onOpenPublish={() => setStage('publish')}
+      />
+    );
+  }
+
+  if (stage === 'publish') {
+    return (
+      <PublishScreen
+        medium={medium}
+        format={format}
+        mediumLabel={mediumDisplayLabel(medium)}
+        onBack={() => setStage('editor')}
       />
     );
   }
@@ -640,11 +671,18 @@ function StoryXHome({
   const [llmIntakeQuestions, setLlmIntakeQuestions] = useState<ProjectIntakeQuestion[] | null>(null);
   const [isInterviewLoading, setIsInterviewLoading] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
+  // LLM 인터뷰 결과 메타 — 라인업 띠 / 폴백 안내에 쓴다
+  const [interviewPersonaLineup, setInterviewPersonaLineup] = useState<
+    Array<{ id: string; label: string; tone: string; category: string; isFictionalized: boolean }>
+  >([]);
+  const [interviewFallbackReason, setInterviewFallbackReason] = useState<string | null>(null);
   const effectiveIntakeQuestions = llmIntakeQuestions ?? intakePlan.questions;
 
-  // 자유 서술이나 매체가 바뀌면 LLM 인터뷰 질문 캐시를 비워 다음 진입 때 새로 생성한다
+  // 자유 서술이나 매체가 바뀌면 LLM 인터뷰 질문 캐시·라인업·폴백 사유를 비워 다음 진입 때 새로 생성한다
   useEffect(() => {
     setLlmIntakeQuestions(null);
+    setInterviewPersonaLineup([]);
+    setInterviewFallbackReason(null);
   }, [freewriteText, blueprint.medium]);
 
   // 인터뷰 단계로 진입 — 자유 서술이 있으면 그 작품에 맞는 질문을 LLM에 요청한다
@@ -655,15 +693,25 @@ function StoryXHome({
       return;
     }
     setIsInterviewLoading(true);
+    setInterviewFallbackReason(null);
     try {
       const result = await requestLlmInterview({
         medium: blueprint.medium,
         format: blueprint.format,
         freewrite: freewriteText
       });
+      if (result.personaLineup) {
+        setInterviewPersonaLineup(result.personaLineup);
+      }
       if (result.ok && result.questions) {
         setLlmIntakeQuestions(result.questions);
         setIntakeQuestionIndex(0);
+        setInterviewFallbackReason(null);
+      } else {
+        // LLM 실패 — 매체별 고정 질문으로 폴백된다는 신호를 UI 에 노출
+        const reason = result.reason ?? '알 수 없는 사유';
+        setInterviewFallbackReason(reason);
+        console.warn('[interview] LLM 호출 실패 → 기본 질문 폴백. reason:', reason);
       }
     } finally {
       setIsInterviewLoading(false);
@@ -749,9 +797,12 @@ function StoryXHome({
             );
           })}
         </div>
-        <button type="button" className="hx-btn" onClick={() => onOpenEditor()}>
-          에디터로 <ChevronRight size={13} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <AiStatusBadge />
+          <button type="button" className="hx-btn" onClick={() => onOpenEditor()}>
+            에디터로 <ChevronRight size={13} />
+          </button>
+        </div>
       </header>
 
       <div className="hx-track" style={{ transform: `translateX(-${homeFlowIndex * 100}%)` }}>
@@ -930,6 +981,54 @@ function StoryXHome({
               {intakePlan.summary} 선택은 언제든지 에디터에서 바꿀 수 있습니다. 변경이 기존
               {isSerial ? ' 회차와' : ' 원고와'} 충돌하면 영향 범위를 먼저 보여줍니다.
             </p>
+            {interviewFallbackReason && (
+              <div
+                className="hx-interview-fallback"
+                role="status"
+                aria-live="polite"
+                style={{
+                  margin: '12px 0',
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  background: 'rgba(255, 196, 0, 0.08)',
+                  border: '1px solid rgba(255, 196, 0, 0.35)',
+                  color: '#f3c95a',
+                  fontSize: 13,
+                  lineHeight: 1.5
+                }}
+              >
+                ⚠️ LLM 인터뷰 호출 실패 — 매체별 기본 질문으로 진행 중입니다. 사유 — {interviewFallbackReason}
+                <br />
+                <span style={{ opacity: 0.8 }}>
+                  터미널에서 <code>claude login</code> 또는 <code>export ANTHROPIC_API_KEY=…</code> 를 설정한 뒤 자유
+                  서술을 살짝 바꿔 다시 진입하면 작품 맞춤 질문이 생성됩니다.
+                </span>
+              </div>
+            )}
+            {!interviewFallbackReason && interviewPersonaLineup.length > 0 && (
+              <div
+                className="hx-interview-lineup"
+                aria-label="이번 인터뷰의 작가진 라인업"
+                style={{
+                  margin: '12px 0',
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  background: 'rgba(228, 242, 34, 0.06)',
+                  border: '1px solid rgba(228, 242, 34, 0.22)',
+                  color: '#d6e26b',
+                  fontSize: 13,
+                  lineHeight: 1.5
+                }}
+              >
+                <span style={{ opacity: 0.7, marginRight: 8 }}>오늘 인터뷰</span>
+                {interviewPersonaLineup.map((persona, idx) => (
+                  <span key={persona.id}>
+                    {idx > 0 && <span style={{ opacity: 0.4, margin: '0 6px' }}>·</span>}
+                    <strong style={{ fontWeight: 600 }}>{persona.label}</strong>
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="hx-progress" aria-label="질문 진행도">
               <span>
                 {intakeQuestionIndex + 1} / {effectiveIntakeQuestions.length}
@@ -941,8 +1040,10 @@ function StoryXHome({
             {(() => {
               const question = effectiveIntakeQuestions[intakeQuestionIndex];
               if (!question) return null;
-              const selectedOption = intakeAnswers[question.id] ?? question.recommendedOptionId;
+              // 사용자가 명시적으로 고른 옵션만 selected. 추천은 별도 뱃지로 표시.
+              const selectedOption = intakeAnswers[question.id];
               const persona = getIntakePersona(question.agentId);
+              const recommendedId = question.recommendedOptionId;
 
               return (
                 <article className="hx-intake-q" key={question.id}>
@@ -957,17 +1058,45 @@ function StoryXHome({
                   </div>
                   <h3 className="hx-intake-question-text">{question.question}</h3>
                   <div className="hx-intake-options">
-                    {question.options.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        className={`hx-intake-option ${selectedOption === option.id ? 'is-selected' : ''}`}
-                        onClick={() => setIntakeAnswers((current) => ({ ...current, [question.id]: option.id }))}
-                      >
-                        <strong>{option.label}</strong>
-                        <small>{option.impact}</small>
-                      </button>
-                    ))}
+                    {question.options.map((option) => {
+                      const isRecommended = option.id === recommendedId;
+                      const isSelected = selectedOption === option.id;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          className={`hx-intake-option ${isSelected ? 'is-selected' : ''}`}
+                          onClick={() => setIntakeAnswers((current) => ({ ...current, [question.id]: option.id }))}
+                          style={
+                            !isSelected && isRecommended
+                              ? { borderStyle: 'dashed', borderColor: 'rgba(228, 242, 34, 0.45)' }
+                              : undefined
+                          }
+                        >
+                          <strong>
+                            {option.label}
+                            {isRecommended && (
+                              <span
+                                style={{
+                                  marginLeft: 8,
+                                  padding: '2px 6px',
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  borderRadius: 4,
+                                  background: 'rgba(228, 242, 34, 0.12)',
+                                  color: '#d6e26b',
+                                  letterSpacing: 0.3,
+                                  verticalAlign: 'middle'
+                                }}
+                              >
+                                추천
+                              </span>
+                            )}
+                          </strong>
+                          <small>{option.impact}</small>
+                        </button>
+                      );
+                    })}
                     <button
                       type="button"
                       className={`hx-intake-option ${selectedOption === '_other' ? 'is-selected' : ''}`}
