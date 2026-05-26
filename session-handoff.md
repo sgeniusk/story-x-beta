@@ -4,6 +4,57 @@
 
 ---
 
+## 2026-05-21 23:31 — M4.D 한국어 문체 게이트 (Layer 4 일부) 완료
+
+> Last Updated: 2026-05-21 23:31 KST
+
+### Current Objective
+M4 청크 D 완료 — `inspectKoreanVoice` 가 generic AI 어휘·명사 과다·번역투·쉼표 과다·추상 감정어·voice signature mismatch 6 종 flag 를 산출. 기존 `koreanStyle.ts` 의 6 케이스는 보존(흡수 패턴, 폐기 아님). 다음 자연스러운 작업 — M4 청크 E (qualityGates 12개 + SeriesProject 13 바이블 카테고리).
+
+### Recommended Next Step
+1. M4 청크 E 시작 — `src/lib/qualityGates.ts` 신설 (12 게이트, modeRequirement, evaluate, onFail)
+2. `SeriesProject`/`CharacterProfile` 에 13개 바이블 카테고리 필드 추가 (5-1절)
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 34 files / 192 tests · `npm run build` 통과
+- 신설 — `src/lib/koreanVoiceGate.ts` + `.test.ts` (6 케이스)
+
+### What the Last Session Did
+1. **koreanVoiceGate.ts 신설** — Layer 4 일부 (한국어 문체 게이트)
+   - `inspectKoreanVoice(text, signatures?)` — 6 종 flag
+     · generic-ai-vocabulary (`핵심적·효과적·지속가능한·혁신적·다채로운·중요한 의미`)
+     · noun-heavy-sentence (`구조·시스템·요소·과정·방식·체계·관점·특성` ≥ 2)
+     · translation-ese / comma-overflow / abstract-emotion (koreanStyle 흡수)
+     · voice-signature-mismatch (forbiddenWords 발견 시)
+   - `VoiceSignature` 인터페이스 — ownerLabel + sentenceLength + forbiddenWords + preferredRegister + preserveTokens
+   - `createEmptyVoiceSignature` — 기본 preserveTokens 4개 (harness/ontology/prompt/canon)
+   - `revisedText` — generic AI 어휘 제거 + preserveTokens 는 보존
+   - `score` — 100 - flags×15 - mismatch×5
+2. **흡수 패턴** — koreanStyle.ts 의 evaluateKoreanProse 를 내부적으로 호출. 기존 API 와 6 테스트 보존.
+3. **TDD 6 케이스** — Task 5 generic + noun-heavy, clean text 100점, signature mismatch, preserveTokens, koreanStyle 흡수, createEmptyVoiceSignature 기본값
+
+### Files To Touch (next milestone — M4 청크 E)
+- 신설 `src/lib/qualityGates.ts` + `.test.ts` — 12개 게이트 (gate_hook_first_300 · gate_scene_sequel_balance · gate_voice_match_70 · gate_pressure_triangle_active · gate_ambiguity_at_finale · gate_ethical_cost_present · gate_motif_variation · gate_historical_density · gate_universal_leap · gate_self_reversal · gate_disclosure_scope)
+- 수정 `src/lib/storyEngine.ts` `SeriesProject`/`CharacterProfile` — 13 바이블 카테고리 필드 추가
+
+### Files NOT To Touch
+- `src/lib/koreanStyle.ts` 와 `.test.ts` (보존 — 흡수만, 폐기 아님)
+- M4.A · M4.B · M4.C 완성본
+
+### Blockers
+없음.
+
+### Known Issues
+- isNounHeavy 휴리스틱 — `구조/시스템/요소/과정/방식/체계/관점/특성` 패턴 카운트. 일반 한국어 문장에서도 가끔 잡을 가능성. 청크 H 통합에서 LLM 기반 정밀화.
+- VoiceSignature 가 아직 어디서도 build 되지 않음 — 다음 청크에서 SeriesProject 에 voice_signature 필드 추가하면서 연결.
+
+### Reference Documents
+- `docs/storyx-harness-architecture.md` § 5-3 (게이트 12개), § 7 청크 D
+- `docs/superpowers/plans/2026-05-12-story-ontology-harness.md` Chunk 3 Task 5
+
+---
+
 ## 2026-05-21 23:25 — M4.C 연속성 계약 (Layer 1) 완료
 
 > Last Updated: 2026-05-21 23:25 KST

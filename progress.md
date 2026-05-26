@@ -4,7 +4,15 @@
 
 ## Current Objective
 
-**M4.C — 연속성 계약 (Layer 1)** (`done` · 이번 세션)
+**M4.D — 한국어 문체 게이트 (Layer 4 일부)** (`done` · 이번 세션)
+
+M4 청크 D 완료. `koreanVoiceGate.ts` 신설 — `inspectKoreanVoice(text, signatures?)` 가 6 종 flag(generic AI vocab · noun-heavy · translation-ese · comma-overflow · abstract-emotion · signature mismatch) 산출. `VoiceSignature` 인터페이스로 작가/캐릭터별 톤 기준(sentenceLength · forbiddenWords · preferredRegister · preserveTokens) 도입. 기존 `koreanStyle.ts` 와 6 케이스는 흡수 패턴으로 보존 (폐기 아님). **34 files / 192 tests** 통과.
+
+다음 단계 — M4 청크 E (qualityGates 12개 + SeriesProject 13 바이블 카테고리, Layer 4).
+
+---
+
+## (직전) M4.C — 연속성 계약 (Layer 1) (`done`)
 
 M4 청크 C 1차 컷 완료. `continuityContract.ts` 신설 — 캐논 3계층(hard-canon / living-state / soft-signal) 분류, 성장 레저, 컨텍스트 팩, 리페어 제안. 한국어 명사 토큰 ≥ 2 공유 + 부정 마커 차이 휴리스틱으로 "반전" 감지. `memoryBank.ts` memoryBankTemplate 에 `evolution-memory.md` 슬롯 추가 (Gap 9). TDD 11 케이스, **33 files / 186 tests** 통과.
 

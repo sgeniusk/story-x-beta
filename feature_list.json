@@ -1,7 +1,7 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M4.C-continuity-contract",
+  "active": "M4.D-korean-voice-gate",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
   "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
   "features": [
@@ -121,6 +121,15 @@
       "dependencies": ["M4.B-story-ontology-harness"],
       "done_criteria": "continuityContract 8 export + 11 TDD 케이스 + memoryBankTemplate evolution-memory.md 추가 + 33 files / 186 tests 통과",
       "evidence": "src/lib/continuityContract.ts (classifyCanonChange + GrowthLedger + buildContextPack + proposeContinuityRepair), src/lib/continuityContract.test.ts 11 케이스, src/lib/memoryBank.ts memoryBankTemplate"
+    },
+    {
+      "id": "M4.D-korean-voice-gate",
+      "name": "M4 청크 D — 한국어 문체 게이트 (Layer 4 일부)",
+      "description": "koreanVoiceGate.ts 신설. inspectKoreanVoice (generic AI vocab + noun-heavy + translation-ese + comma-overflow + abstract-emotion + signature mismatch) + VoiceSignature(작가/캐릭터별 톤 기준). 기존 koreanStyle.ts 의 evaluateKoreanProse 결과를 흡수하되, koreanStyle 자체는 그대로 유지하여 기존 6 테스트 보존.",
+      "status": "done",
+      "dependencies": ["M4.C-continuity-contract"],
+      "done_criteria": "inspectKoreanVoice 6 flag + VoiceSignature + revisedText preserveTokens + 6 신규 케이스 + 6 기존 koreanStyle 케이스 보존",
+      "evidence": "src/lib/koreanVoiceGate.ts (inspectKoreanVoice + VoiceSignature + createEmptyVoiceSignature), src/lib/koreanVoiceGate.test.ts 6 케이스"
     },
     {
       "id": "M5-vercel-functions",
