@@ -4,7 +4,17 @@
 
 ## Current Objective
 
-**M4.B — 온톨로지 기반 (Layer 0)** (`done` · 이번 세션)
+**M4.C — 연속성 계약 (Layer 1)** (`done` · 이번 세션)
+
+M4 청크 C 1차 컷 완료. `continuityContract.ts` 신설 — 캐논 3계층(hard-canon / living-state / soft-signal) 분류, 성장 레저, 컨텍스트 팩, 리페어 제안. 한국어 명사 토큰 ≥ 2 공유 + 부정 마커 차이 휴리스틱으로 "반전" 감지. `memoryBank.ts` memoryBankTemplate 에 `evolution-memory.md` 슬롯 추가 (Gap 9). TDD 11 케이스, **33 files / 186 tests** 통과.
+
+`validateContinuity` 의 continuityContract 호출 리팩터는 기존 통과 테스트 보호를 위해 청크 H 통합 단계로 분리.
+
+다음 단계 — M4 청크 D (koreanVoiceGate, Layer 4 일부).
+
+---
+
+## (직전) M4.B — 온톨로지 기반 (Layer 0) (`done`)
 
 M4 청크 B 완료. `storyOntology.ts` + `storyHarness.ts` 두 모듈 신설. 작가 입력 → 작품 그래프(전제·인물·세계 규칙·갈등·플롯) → 6단계 스테이지 점수(100점) → readyForProduction 판정 흐름이 완성됨. TDD 9 케이스, **32 files / 175 tests** 통과.
 

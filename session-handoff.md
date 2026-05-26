@@ -4,6 +4,54 @@
 
 ---
 
+## 2026-05-21 23:25 — M4.C 연속성 계약 (Layer 1) 완료
+
+> Last Updated: 2026-05-21 23:25 KST
+
+### Current Objective
+M4 청크 C 1차 컷 완료 — 캐논 3계층 분류 + 성장 레저 + 컨텍스트 팩 + 리페어 제안 + evolution-memory.md 슬롯. 다음 자연스러운 작업 — M4 청크 D (koreanVoiceGate, Layer 4 일부).
+
+### Recommended Next Step
+1. M4 청크 D 시작 — `src/lib/koreanVoiceGate.ts` 신설, `koreanStyle.ts` 흡수, voice_signature 도입
+2. 기존 `koreanStyle.test.ts` 통과 유지 (보존 필수)
+3. 청크 H (통합 단계) 에서 `storyEngine.validateContinuity` 를 `continuityContract.classifyCanonChange` 로 리팩터
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 33 files / 186 tests · `npm run build` 923ms
+- 신설 — `src/lib/continuityContract.ts` + `.test.ts` (11 케이스)
+- 수정 — `src/lib/memoryBank.ts` memoryBankTemplate (Gap 9)
+
+### What the Last Session Did
+1. **4A 캐논 3계층 분류** — `classifyCanonChange(contract, claim, ctx)` 가 hard-canon/living-state/soft-signal/unrelated 중 하나로 layer 판정 + allowed/severity/requiredApproval/matchedSource 반환
+2. **4B 성장 레저** — `validateGrowthEntry` 가 필수 7 필드(특히 cost) 누락을 잡아낸다. `appendGrowthEntry` 는 불변(immutable) 패턴.
+3. **4C 컨텍스트 팩** — `buildContextPack` 가 작품 전체 원고 대신 압축된 결정-가능 상태만 담는다. `lastDeltas` 는 최근 3개로 자동 압축.
+4. **4D 리페어 제안** — `proposeContinuityRepair` 가 hard canon 위반에 두 가지 제안(보존 vs 의도적 변경) 산출. 침묵 리라이트 금지.
+5. **휴리스틱 (1차 컷)** — 한국어 명사 토큰 ≥ 2 공유 + 부정 마커 차이 → "반전". LLM 기반 정밀화는 청크 F·H 에서.
+6. **memoryBank evolution-memory.md** — memoryBankTemplate 의 context/ 폴더에 한 줄 추가 (Gap 9).
+
+### Files To Touch (next milestone — M4 청크 D)
+- 신설 `src/lib/koreanVoiceGate.ts` + `.test.ts` — voice_signature, 캐릭터 voice rule, GOMI/Humanizer-inspired Korean checks
+- 흡수 — `koreanStyle.ts` 의 기능을 koreanVoiceGate 가 노출. 기존 `koreanStyle.test.ts` 보존 (이름은 두고 내용만 유지).
+
+### Files NOT To Touch
+- M4.A · M4.B 완성본 (CanonFact owner, storyEngine seed, storyOntology, storyHarness)
+- `src/lib/koreanStyle.test.ts` 기존 케이스 (보존)
+- 기존 `storyEngine.validateContinuity` 흐름 (청크 H 에서 리팩터)
+
+### Blockers
+없음.
+
+### Known Issues
+- 한국어 명사 토큰 추출이 휴리스틱 — 조사 패턴(`은|는|이|가|을|를|...`) 정규식 기반. 형태소 분석기 없이 첫 컷. 청크 D 의 koreanVoiceGate 와 함께 점진 정밀화.
+- `validateContinuity` 가 아직 부분문자열 매칭 — 리팩터는 청크 H 에서. 1차 컷의 의도된 분리(기존 통과 테스트 보호).
+
+### Reference Documents
+- `docs/storyx-harness-architecture.md` § 3-4 (캐논 3계층), § 7 청크 C
+- `docs/superpowers/plans/2026-05-12-story-ontology-harness.md` Chunk 2.5 (Task 4A·4B·4C·4D)
+
+---
+
 ## 2026-05-21 21:53 — M4.B 온톨로지 기반 (Layer 0) 완료
 
 > Last Updated: 2026-05-21 21:53 KST

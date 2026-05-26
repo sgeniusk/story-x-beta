@@ -111,6 +111,7 @@ export const memoryBankTemplate = `memory-bank/storyx/{project_id}/
     canon.md
     timeline.md
     continuity-ledger.md
+    evolution-memory.md
     unresolved-questions.md
   characters/
     {character_id}.json

@@ -1,7 +1,7 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M4.B-story-ontology-harness",
+  "active": "M4.C-continuity-contract",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
   "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
   "features": [
@@ -112,6 +112,15 @@
       "dependencies": ["M4.A-canon-baseline-cleanup"],
       "done_criteria": "storyOntology · storyHarness 두 모듈 신설, TDD 9 케이스 추가, 32 files / 175 tests 통과",
       "evidence": "src/lib/storyOntology.ts (8 타입 + buildStoryOntology + validateStoryOntology), src/lib/storyHarness.ts (6 stage runner + 100점 점수), 각각의 .test.ts 5/4 케이스"
+    },
+    {
+      "id": "M4.C-continuity-contract",
+      "name": "M4 청크 C — 연속성 계약 (Layer 1)",
+      "description": "continuityContract.ts 신설 — 캐논 3계층(hard-canon/living-state/soft-signal) 분류, 성장 레저, 컨텍스트 팩, 리페어 제안. memoryBank.ts 의 memoryBankTemplate 에 evolution-memory.md 추가 (Gap 9). validateContinuity 의 storyEngine 통합은 호환성 유지를 위해 청크 H 통합 단계로 분리.",
+      "status": "done",
+      "dependencies": ["M4.B-story-ontology-harness"],
+      "done_criteria": "continuityContract 8 export + 11 TDD 케이스 + memoryBankTemplate evolution-memory.md 추가 + 33 files / 186 tests 통과",
+      "evidence": "src/lib/continuityContract.ts (classifyCanonChange + GrowthLedger + buildContextPack + proposeContinuityRepair), src/lib/continuityContract.test.ts 11 케이스, src/lib/memoryBank.ts memoryBankTemplate"
     },
     {
       "id": "M5-vercel-functions",
