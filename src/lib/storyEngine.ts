@@ -94,7 +94,9 @@ export interface WorldRule {
 export interface CanonFact {
   id: string;
   episode: number;
-  owner: 'character' | 'world' | 'plot';
+  // M4 청크 A — Gap 5: 매체별 owner(voice/visual/audio) 까지 통일.
+  // aiCliHarness · memoryBank 가 이미 6개로 받고 있어 다운캐스트 제거.
+  owner: 'character' | 'world' | 'plot' | 'voice' | 'visual' | 'audio';
   statement: string;
 }
 
@@ -758,67 +760,79 @@ export function validateContinuity(project: SeriesProject, claims: string[]): Co
 }
 
 export function produceNextChapter(project: SeriesProject, request: ProductionRequest): ProductionResult {
+  // M4 청크 A — Gap 7: 빈 프로젝트(인물 0명)에서도 안전하게 동작.
+  // 시드 모티프(달의 탑·오빠의 표식·이안)는 특정 작품에 묶이므로 제거. 대신 작가 입력(intent/pressure)과 장르 메타로만 산출.
+  // 이 함수는 LLM 응답이 없을 때의 deterministic fallback — 풍부함보다 안전함을 우선.
   const genre = genreProfiles[request.genre];
   const episode = project.currentEpisode + 1;
   const memoryAnchors = project.canonFacts.slice(0, 4).map((fact) => fact.statement);
   const continuityIssues = validateContinuity(project, [request.intent, request.pressure]);
-  const primaryCharacter = project.characters[0];
-  const partner = project.characters[1];
+  const primaryName = project.characters[0]?.name ?? '주인공';
+  const primaryDesire = project.characters[0]?.desire ?? '오래 미뤄 둔 결정에 직면하는 것';
+  const partnerName = project.characters[1]?.name ?? '동료';
+  const intent = request.intent.trim() || '오늘 일어난 가장 작은 결정';
+  const pressure = request.pressure.trim() || '낮은 감정선에서 조용히 밀고 들어오는 압력';
+
   const newCanonFacts: CanonFact[] = [
     {
       id: `canon-${episode.toString().padStart(3, '0')}-a`,
       episode,
       owner: 'plot',
-      statement: `${episode}화에서 ${primaryCharacter.name}은 금지된 탑의 하층 기록실에 오빠의 표식을 발견한다.`
+      statement: `${episode}화에서 ${primaryName}은 "${intent}"의 한복판에 선다.`
     },
     {
       id: `canon-${episode.toString().padStart(3, '0')}-b`,
       episode,
       owner: 'character',
-      statement: `${partner.name}은 ${primaryCharacter.name}에게 탑의 대가가 이름의 일부라는 사실을 아직 숨긴다.`
+      statement: `${partnerName}은 ${primaryName}에게 아직 한 가지 사실을 숨기고 있다.`
     }
   ];
   const outline = [
-    `${episode}화는 "${request.intent}"을 중심 사건으로 시작한다.`,
-    `${primaryCharacter.name}의 장기 동기인 "${primaryCharacter.desire}"를 대사보다 행동으로 확인시킨다.`,
+    `${episode}화는 "${intent}"을 중심 사건으로 시작한다.`,
+    `${primaryName}의 장기 동기인 "${primaryDesire}"를 대사보다 행동으로 확인시킨다.`,
     `${genre.beat}; 장면 질감은 ${genre.texture}로 통일한다.`,
     `마지막 장면은 ${genre.ending}.`
   ];
-  const prose = [
-    `${primaryCharacter.name}은 문서고에서 가져온 낡은 등잔을 들고 달의 탑 하층으로 내려갔다.`,
-    `벽에 묻은 은빛 먼지는 누군가 지운 이름처럼 손끝에 달라붙었다. ${memoryAnchors[0]}`,
-    `${partner.name}은 문 앞에서 웃었지만, 초대장의 빈칸을 손바닥으로 가렸다.`,
-    `"여기서부터는 기록보다 침묵이 더 정확합니다."`,
-    `그 순간 ${primaryCharacter.name}은 오빠가 쓰던 필압으로 새겨진 표식을 발견했다. 잉크는 마르지 않았고, 탑은 방금 누군가를 기억한 것처럼 낮게 울었다.`
-  ].join('\n\n');
+  const proseLines = [
+    `${primaryName}은 "${intent}"의 자리로 한 발 다가섰다.`,
+    `${pressure}가 등을 가볍게 밀었다.`
+  ];
+  if (memoryAnchors.length > 0) {
+    proseLines.push(`머릿속에 남아 있던 한 줄이 다시 떠올랐다 — ${memoryAnchors[0]}`);
+  }
+  proseLines.push(
+    `${partnerName}은 옆에서 한 박자 늦게 입을 열었지만, 정작 중요한 한 마디는 삼켰다.`,
+    `${primaryName}은 그 침묵의 무게를 읽으며, 다음 한 걸음을 어떻게 놓을지 골랐다.`
+  );
+  const prose = proseLines.join('\n\n');
 
   const beats = normalizeChapterBeats(episode, [
     {
-      label: '하층으로 내려가는 길',
-      summary: `${primaryCharacter.name}이 등잔을 들고 달의 탑 하층으로 들어선다.`,
+      label: '문턱에 선 한 사람',
+      summary: `${primaryName}이 "${intent}"의 자리로 한 발 다가선다.`,
       tension: 30
     },
     {
-      label: '지워진 이름의 흔적',
-      summary: '벽의 은빛 먼지에서 누군가 지운 이름의 자취를 읽는다.',
+      label: '낮은 압력',
+      summary: `${pressure}이 등 뒤에서 천천히 밀고 들어온다.`,
       tension: 52
     },
     {
-      label: `${partner.name}의 선택적 침묵`,
-      summary: `${partner.name}이 초대장의 빈칸을 가리며 규칙의 일부를 숨긴다.`,
+      label: `${partnerName}의 한 박자 늦은 침묵`,
+      summary: `${partnerName}이 중요한 한 마디를 삼키며 ${primaryName}의 시선을 흔든다.`,
       tension: 68
     },
     {
-      label: '마르지 않은 표식',
-      summary: `${primaryCharacter.name}이 오빠의 필압으로 새겨진 표식을 발견하고 탑이 낮게 운다.`,
+      label: '다음 한 걸음',
+      summary: `${primaryName}이 침묵의 무게를 읽고 다음 행동을 고른다.`,
       tension: 88
     }
   ]);
   const chapter: Chapter = {
     id: `episode-${episode}`,
     episode,
-    title: `${episode}화: 마르지 않은 이름`,
-    hook: '오빠의 표식이 방금 쓰인 것처럼 빛나고, 이안은 초대장의 대가를 숨긴다.',
+    title: `${episode}화: ${intent.slice(0, 18)}`,
+    hook: `${primaryName}은 "${intent}"의 한복판에서 ${partnerName}이 삼킨 한 마디의 무게를 가늠한다.`,
     outline,
     beats,
     prose,
@@ -879,7 +893,18 @@ export function chapterFromDraftPayload(
 }
 
 function normalizeCanonOwner(owner: string): CanonFact['owner'] {
-  return owner === 'character' || owner === 'world' || owner === 'plot' ? owner : 'plot';
+  // M4 청크 A — Gap 5: 6개 owner 모두 허용. 모르는 값은 plot 으로 폴백.
+  if (
+    owner === 'character' ||
+    owner === 'world' ||
+    owner === 'plot' ||
+    owner === 'voice' ||
+    owner === 'visual' ||
+    owner === 'audio'
+  ) {
+    return owner;
+  }
+  return 'plot';
 }
 
 const CONTEXT_CANON_LIMIT = 40;

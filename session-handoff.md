@@ -4,6 +4,54 @@
 
 ---
 
+## 2026-05-21 20:41 — M4.A 캐논 기반 정리 (선행) 완료
+
+> Last Updated: 2026-05-21 20:41 KST
+
+### Current Objective
+M4 스토리 하네스 구현의 청크 A (캐논 기반 정리) 완료 — CanonFact.owner 타입 통일 + produceNextChapter 시드 모티프 제거. 다음 자연스러운 작업 — M4 청크 B (storyOntology + storyHarness Layer 0 신설).
+
+### Recommended Next Step
+1. M4 청크 B 시작 — `src/lib/storyOntology.ts` + `storyHarness.ts` 신설 (TDD)
+2. 청크 B 의 6단계 스테이지 (진단·전제·온톨로지·압력·문체·매체) 와 점수 시스템
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 30 files / 166 tests · `npm run build` 성공
+- 신규 테스트 2개 (Gap 5 owner 통일, Gap 7 빈 프로젝트 가드)
+- 수정 — `src/lib/storyEngine.ts` 3곳, `src/lib/storyEngine.test.ts` 2 it 추가
+
+### What the Last Session Did
+1. **TDD — 테스트 우선 추가** (storyEngine.test.ts)
+   - "chapterFromDraftPayload 가 매체별 owner(voice/visual/audio) 를 plot 으로 다운캐스트하지 않는다" (Gap 5)
+   - "produceNextChapter 가 빈 프로젝트(인물 0명)에서도 throw 없이 chapter 를 만들고 시드 모티프를 새지 않는다" (Gap 7)
+2. **storyEngine.ts CanonFact.owner 6개 통일** — `'character'|'world'|'plot'|'voice'|'visual'|'audio'`. aiCliHarness·memoryBank 와 일관.
+3. **normalizeCanonOwner 6개 확장** — 6개 모두 통과시키고 모르는 값만 plot 폴백.
+4. **produceNextChapter 시드 모티프 제거**
+   - 작품 묶임 텍스트(달의 탑·오빠의 표식·이안) 모두 제거
+   - `project.characters[0]?.name ?? '주인공'`, `[1]?.name ?? '동료'` 가드
+   - intent/pressure trim + 빈 값 generic 대체 ("오래 미뤄 둔 결정에 직면하는 것" 등)
+   - hook·outline·prose·beats 모두 작가 입력 + 장르 메타로만 산출
+
+### Files To Touch (next milestone — M4 청크 B)
+- 신설 `src/lib/storyOntology.ts` + `.test.ts` — 엔티티·관계·검증자
+- 신설 `src/lib/storyHarness.ts` + `.test.ts` — 6단계 스테이지·점수
+
+### Files NOT To Touch
+- M3.6 / M4.5 / M5 / M6 완성본 (이전 세션들)
+- `.claude/agents/*.md` (페르소나 정본)
+
+### Blockers
+없음. M5 인증 블로커는 별개로 사용자 액션 영역.
+
+### Known Issues
+- 청크 A 의 produceNextChapter 가 deterministic fallback 으로 충분히 generic 화됐지만, 캐릭터·intent 가 모두 빈 경우 텍스트가 다소 평이함. LLM 응답이 정상 흐를 때는 사용되지 않는 경로라 1차 컷에서는 OK.
+
+### Reference Documents
+- `docs/storyx-harness-architecture.md` § 7 청크 A~H 정의
+
+---
+
 ## 2026-05-21 15:30 — M6.2.1 evolution history UI (AiStatusBadge popover) 완료
 
 > Last Updated: 2026-05-21 15:30 KST

@@ -1,7 +1,7 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M6.2.1-evolution-history-ui",
+  "active": "M4.A-canon-baseline-cleanup",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
   "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
   "features": [
@@ -90,11 +90,19 @@
       "id": "M4-story-harness-implementation",
       "name": "스토리 하네스 모듈 구현 (Layer 0~7)",
       "description": "docs/storyx-harness-architecture.md 청크 A~H를 TDD 순서로 구현. storyOntology·storyHarness·continuityContract·koreanVoiceGate·mediaProjection·qualityGates·agentRunEngine 신설. canon owner 통일, validateContinuity 리팩터, agentOrchestration 폐기.",
-      "status": "blocked",
+      "status": "in_progress",
       "dependencies": ["M1-harness-design-doc"],
-      "blocked_reason": "M3 디자인 폴리시 마무리 후 착수",
       "done_criteria": "청크 A~H 완료, Acceptance Criteria 12개 충족, npm test 전체 통과",
       "evidence": null
+    },
+    {
+      "id": "M4.A-canon-baseline-cleanup",
+      "name": "M4 청크 A — 캐논 기반 정리 (선행)",
+      "description": "CanonFact.owner 타입 통일 (Gap 5, voice/visual/audio 포함). produceNextChapter 시드 모티프 제거 + 빈 프로젝트 가드 (Gap 7). TDD — storyEngine.test.ts 에 두 케이스 먼저 추가.",
+      "status": "done",
+      "dependencies": ["M1-harness-design-doc"],
+      "done_criteria": "CanonFact.owner 6개 + normalizeCanonOwner 6개 확장 + produceNextChapter 시드 모티프 제거 + 30 files / 166 tests 통과",
+      "evidence": "src/lib/storyEngine.ts CanonFact·normalizeCanonOwner·produceNextChapter, src/lib/storyEngine.test.ts 두 신설 it"
     },
     {
       "id": "M5-vercel-functions",

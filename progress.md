@@ -4,7 +4,15 @@
 
 ## Current Objective
 
-**M6.2.1 — evolution history UI (AiStatusBadge popover)** (`done` · 이번 세션)
+**M4.A — 캐논 기반 정리 (선행)** (`done` · 이번 세션)
+
+M4 스토리 하네스 구현의 청크 A. Gap 5 — CanonFact.owner 타입 6개 통일 (voice/visual/audio 포함). Gap 7 — produceNextChapter 시드 모티프(달의 탑·오빠의 표식·이안) 제거 + 빈 프로젝트(인물 0명) 가드. TDD 순서로 storyEngine.test.ts 에 두 케이스 먼저 추가 → 30 files / **166 tests** 통과 (164 → 166).
+
+다음 단계 — M4 청크 B (storyOntology + storyHarness Layer 0 신설).
+
+---
+
+## (직전) M6.2.1 — evolution history UI (AiStatusBadge popover) (`done`)
 
 헤더의 작은 AI 상태 뱃지가 클릭 가능한 button 으로 확장. 클릭 시 popover 에 최근 evolution event 시간순 리스트가 펼쳐진다. 색 분기로 성공/주의/실패 한눈에. 비우기 버튼·닫기 버튼·외부 클릭/Escape 닫기. 작가가 자기 작품의 AI 활동 흐름을 한 곳에서 본다 — M6.2 의 누적 인프라가 처음으로 가시화됨.
 

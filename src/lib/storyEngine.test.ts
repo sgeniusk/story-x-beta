@@ -44,6 +44,49 @@ describe('storyEngine', () => {
     expect(createEmptyProject({ title: '   ' }).title).toBe('새 작품');
   });
 
+  // M4 청크 A — Gap 5: CanonFact.owner 타입 통일.
+  // visual/audio/voice 같은 매체별 owner 가 chapterFromDraftPayload 를 거쳐도 그대로 보존되어야 한다.
+  it('chapterFromDraftPayload 가 매체별 owner(voice/visual/audio) 를 plot 으로 다운캐스트하지 않는다 (Gap 5)', () => {
+    const empty = createEmptyProject({ title: '소설' });
+    const result = chapterFromDraftPayload(
+      empty,
+      {
+        title: '1화',
+        hook: '시작',
+        outline: ['들어간다.'],
+        beats: [{ label: 'a', summary: 'b' }],
+        prose: '본문.',
+        newCanonFacts: [
+          { owner: 'voice', statement: '낮은 톤' },
+          { owner: 'visual', statement: '회색 팔레트' },
+          { owner: 'audio', statement: '저주파 hum' },
+          { owner: 'character', statement: '인물 한 명' }
+        ]
+      },
+      { genre: 'urban-fantasy', intent: '시작', pressure: '' }
+    );
+    const owners = result.chapter.newCanonFacts.map((f) => f.owner);
+    expect(owners).toContain('voice');
+    expect(owners).toContain('visual');
+    expect(owners).toContain('audio');
+    expect(owners).toContain('character');
+  });
+
+  // M4 청크 A — Gap 7: produceNextChapter 시드 모티프 제거.
+  // 빈 프로젝트에서도 안전하게 동작하고, 작품과 무관한 시드 텍스트(달의 탑·오빠의 표식·이안)가 새지 않는다.
+  it('produceNextChapter 가 빈 프로젝트(인물 0명)에서도 throw 없이 chapter 를 만들고 시드 모티프를 새지 않는다 (Gap 7)', () => {
+    const empty = createEmptyProject({ title: '빈 작품' });
+    const result = produceNextChapter(empty, { genre: 'urban-fantasy', intent: '걷기', pressure: '바람' });
+    expect(result.chapter).toBeDefined();
+    expect(result.chapter.episode).toBe(1);
+    // 시드 모티프(달의 탑·오빠의 표식·이안 등)는 빈 프로젝트의 산출에 나타나지 않는다.
+    expect(result.chapter.prose).not.toContain('달의 탑');
+    expect(result.chapter.prose).not.toContain('오빠의 표식');
+    expect(result.chapter.prose).not.toContain('이안');
+    expect(result.chapter.hook).not.toContain('이안');
+    expect(result.chapter.hook).not.toContain('오빠');
+  });
+
   it('commitChapter no longer injects sample open threads into an empty project', () => {
     const empty = createEmptyProject({ title: '단편 하나' });
     const result = chapterFromDraftPayload(
