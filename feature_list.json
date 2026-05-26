@@ -1,7 +1,7 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M4.A-canon-baseline-cleanup",
+  "active": "M4.B-story-ontology-harness",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
   "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
   "features": [
@@ -103,6 +103,15 @@
       "dependencies": ["M1-harness-design-doc"],
       "done_criteria": "CanonFact.owner 6개 + normalizeCanonOwner 6개 확장 + produceNextChapter 시드 모티프 제거 + 30 files / 166 tests 통과",
       "evidence": "src/lib/storyEngine.ts CanonFact·normalizeCanonOwner·produceNextChapter, src/lib/storyEngine.test.ts 두 신설 it"
+    },
+    {
+      "id": "M4.B-story-ontology-harness",
+      "name": "M4 청크 B — 온톨로지 기반 (Layer 0)",
+      "description": "storyOntology.ts + storyHarness.ts 신설. 작가 입력(소재·스토리 씨앗·인물 씨앗·독자·제약)을 받아 작품 그래프(전제·인물·세계 규칙·갈등·플롯) 생성 + 6단계 스테이지(진단·전제·온톨로지·압력·문체·매체) 점수 합산 + readyForProduction 판정.",
+      "status": "done",
+      "dependencies": ["M4.A-canon-baseline-cleanup"],
+      "done_criteria": "storyOntology · storyHarness 두 모듈 신설, TDD 9 케이스 추가, 32 files / 175 tests 통과",
+      "evidence": "src/lib/storyOntology.ts (8 타입 + buildStoryOntology + validateStoryOntology), src/lib/storyHarness.ts (6 stage runner + 100점 점수), 각각의 .test.ts 5/4 케이스"
     },
     {
       "id": "M5-vercel-functions",

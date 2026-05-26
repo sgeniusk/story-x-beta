@@ -4,7 +4,15 @@
 
 ## Current Objective
 
-**M4.A — 캐논 기반 정리 (선행)** (`done` · 이번 세션)
+**M4.B — 온톨로지 기반 (Layer 0)** (`done` · 이번 세션)
+
+M4 청크 B 완료. `storyOntology.ts` + `storyHarness.ts` 두 모듈 신설. 작가 입력 → 작품 그래프(전제·인물·세계 규칙·갈등·플롯) → 6단계 스테이지 점수(100점) → readyForProduction 판정 흐름이 완성됨. TDD 9 케이스, **32 files / 175 tests** 통과.
+
+다음 단계 — M4 청크 C (Layer 1, continuityContract + validateContinuity 리팩터).
+
+---
+
+## (직전) M4.A — 캐논 기반 정리 (선행) (`done`)
 
 M4 스토리 하네스 구현의 청크 A. Gap 5 — CanonFact.owner 타입 6개 통일 (voice/visual/audio 포함). Gap 7 — produceNextChapter 시드 모티프(달의 탑·오빠의 표식·이안) 제거 + 빈 프로젝트(인물 0명) 가드. TDD 순서로 storyEngine.test.ts 에 두 케이스 먼저 추가 → 30 files / **166 tests** 통과 (164 → 166).
 

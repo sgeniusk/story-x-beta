@@ -4,6 +4,58 @@
 
 ---
 
+## 2026-05-21 21:53 — M4.B 온톨로지 기반 (Layer 0) 완료
+
+> Last Updated: 2026-05-21 21:53 KST
+
+### Current Objective
+M4 스토리 하네스 구현의 청크 B (Layer 0) 완료 — storyOntology 와 storyHarness 두 모듈이 작가 입력을 받아 작품 그래프 + 6단계 스테이지 점수를 산출. 다음 자연스러운 작업 — M4 청크 C (Layer 1, continuityContract 신설 + validateContinuity 리팩터).
+
+### Recommended Next Step
+1. M4 청크 C 시작 — `src/lib/continuityContract.ts` 신설 (3계층 — Hard Canon · Living State · Soft Signal)
+2. `storyEngine.validateContinuity` 를 `continuityContract` 호출로 리팩터 (Gap 3 — 부분문자열 매칭 폐기)
+3. `memoryBank.ts` 에 `evolution-memory.md` 영속 파일 추가 (Gap 9)
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 32 files / 175 tests · `npm run build` 성공 (901ms)
+- 신설 — `src/lib/storyOntology.ts` + `.test.ts` (5 케이스) · `src/lib/storyHarness.ts` + `.test.ts` (4 케이스)
+
+### What the Last Session Did
+1. **storyOntology.ts 신설** — 작가 입력을 받아 작품 그래프 첫 컷 생성
+   - 8 타입 — StoryPremise · ThemeClaim · CharacterNode · RelationshipEdge · WorldRuleNode · ConflictEngine · PlotThread · CanonSeed
+   - `buildStoryOntology(input)` — material/storySeed/characterSeed/audience/constraints 휴리스틱 구조화
+   - `validateStoryOntology(ontology)` — 6 종 경고 (missing-dramatic-question · missing-world-cost · thread-without-payoff · no-character · no-conflict · no-plot-thread) silent fix 금지
+2. **storyHarness.ts 신설** — 6단계 스테이지 점수 합산
+   - story-sense (10) · premise-forge (10) · ontology-builder (30) · pressure-test (25) · korean-voice-gate (10) · media-projection (10) = 100
+   - `runStoryHarness(input)` 호출 시 모든 stage 실행 + qualityScore ≥ 70 일 때 readyForProduction
+   - 각 stage 가 findings + requiredRepairs 산출 — 작가에게 다음 행동을 명시
+3. **TDD 9 케이스** — 모두 정본 Chunk 1·2 의 스켈레톤 + Task 2/4 검증 케이스
+   - storyOntology 5: 핵심 엔티티 채워짐 / 4종 누락 경고 케이스
+   - storyHarness 4: 6 stage 순서 + readyForProduction / 약한 스토리 미달 / 빈 입력 block / 매체 미지정 warning
+
+### Files To Touch (next milestone — M4 청크 C)
+- 신설 `src/lib/continuityContract.ts` + `.test.ts` — 캐논 3계층, growthLedger, 컨텍스트 팩, 리페어 제안
+- 수정 `src/lib/storyEngine.ts` `validateContinuity` — continuityContract 호출로 리팩터
+- 수정 `src/lib/memoryBank.ts` — `evolution-memory.md` 추가 (Gap 9)
+
+### Files NOT To Touch
+- M4.A 완성본 (storyEngine.ts CanonFact/normalizeCanonOwner/produceNextChapter)
+- 기존 통과 테스트들 (storyEngine.test.ts 의 다른 it)
+
+### Blockers
+없음.
+
+### Known Issues
+- buildStoryOntology 의 휴리스틱이 첫 컷 — 한국어 자연어 파싱 정밀도는 낮음. 다음 청크에서 LLM 기반 확장 또는 작가 직접 입력 폼 도입 검토.
+- 점수 분포가 정적 — 매체/모드 가중치(commercialWeight/literaryWeight) 별 동적 조정은 청크 E (qualityGates) 에서 도입.
+
+### Reference Documents
+- `docs/storyx-harness-architecture.md` § 3-1 (Layer 구조), § 7 청크 B
+- `docs/superpowers/plans/2026-05-12-story-ontology-harness.md` Chunk 1·2
+
+---
+
 ## 2026-05-21 20:41 — M4.A 캐논 기반 정리 (선행) 완료
 
 > Last Updated: 2026-05-21 20:41 KST
