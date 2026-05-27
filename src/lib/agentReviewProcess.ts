@@ -48,6 +48,8 @@ export interface AgentValidationProcess {
   outputFormat: string[];
   evolutionMemory: string[];
   blockingSignals: string[];
+  /** M4 청크 F · 5-2 — 16개 craft 검토 기준 키. agentRunEngine 이 참고. 신설 에이전트와 기존 핵심 5명이 채움. */
+  criteriaKeys?: string[];
 }
 
 export interface PersonaReviewProtocol {
@@ -122,7 +124,8 @@ export const validationProcesses: AgentValidationProcess[] = [
     evidenceTargets: ['로그라인', '독자 약속', '회차 후크', '마지막 장면'],
     outputFormat: ['통과', '수정', '차단', '가장 약한 독자 약속', '후크 강화안'],
     evolutionMemory: ['반응이 좋았던 후크 유형', '약했던 회차 약속 패턴', '사용자가 선호한 긴장 상승 방식'],
-    blockingSignals: ['마지막 질문이 다음 회차를 부르지 않음', '장기 약속과 현재 사건의 연결이 끊김']
+    blockingSignals: ['마지막 질문이 다음 회차를 부르지 않음', '장기 약속과 현재 사건의 연결이 끊김'],
+    criteriaKeys: ['chapter_one_hook_check', 'chapter_end_hook_check', 'stakes_progression_audit']
   },
   {
     agentId: 'character-custodian',
@@ -132,7 +135,8 @@ export const validationProcesses: AgentValidationProcess[] = [
     evidenceTargets: ['캐릭터 프로필', 'voiceRules', '이전 회차 관계 상태', '대사'],
     outputFormat: ['통과', '수정', '차단', '붕괴 위험 인물', '대체 행동 또는 대사'],
     evolutionMemory: ['반복해서 흔들린 말투와 행동 패턴', '사용자가 좋다고 한 인물 반응', '관계 변화의 승인된 새 기준'],
-    blockingSignals: ['핵심 욕망과 반대로 움직이는데 이유가 없음', '이전 회차 감정값을 무시함']
+    blockingSignals: ['핵심 욕망과 반대로 움직이는데 이유가 없음', '이전 회차 감정값을 무시함'],
+    criteriaKeys: ['pressure_triangle_validation', 'flat_character_warning']
   },
   {
     agentId: 'world-keeper',
@@ -142,7 +146,8 @@ export const validationProcesses: AgentValidationProcess[] = [
     evidenceTargets: ['worldRules', 'canonFacts', '시간표', '장소와 조직 설정'],
     outputFormat: ['통과', '수정', '차단', '충돌 규칙', '새 설정의 저장 위치'],
     evolutionMemory: ['자주 생긴 세계관 예외', '새로 승인된 비용 규칙', '사용자가 선호한 설정 밀도'],
-    blockingSignals: ['기존 세계 규칙을 무효화함', '비용 없이 문제를 해결함']
+    blockingSignals: ['기존 세계 규칙을 무효화함', '비용 없이 문제를 해결함'],
+    criteriaKeys: ['motif_variation_audit', 'historical_consistency_extended']
   },
   {
     agentId: 'genre-stylist',
@@ -152,7 +157,8 @@ export const validationProcesses: AgentValidationProcess[] = [
     evidenceTargets: ['genreProfile', '장면 비트', '문장 질감', '독자 보상'],
     outputFormat: ['통과', '수정', '차단', '살릴 장르 쾌감', '뻔함을 비트는 방법'],
     evolutionMemory: ['잘 먹힌 장르 비틀기', '사용자가 싫어한 클리셰', '작품 고유의 장르 리듬'],
-    blockingSignals: ['장르 약속이 사라짐', '멋진 문체가 사건 진행을 막음']
+    blockingSignals: ['장르 약속이 사라짐', '멋진 문체가 사건 진행을 막음'],
+    criteriaKeys: ['scene_sequel_ratio', 'voice_match_score', 'read_aloud_audit']
   },
   {
     agentId: 'continuity-editor',
@@ -162,7 +168,8 @@ export const validationProcesses: AgentValidationProcess[] = [
     evidenceTargets: ['canonFacts', 'forbiddenContradictions', 'newCanonFacts', 'memoryAnchors'],
     outputFormat: ['통과', '수정', '차단', '충돌 근거', '저장할 canon 후보'],
     evolutionMemory: ['반복되는 충돌 유형', '차단된 설정 변경', '승인된 canon 업데이트'],
-    blockingSignals: ['forbiddenContradictions를 직접 위반함', '새 설정의 출처가 없음']
+    blockingSignals: ['forbiddenContradictions를 직접 위반함', '새 설정의 출처가 없음'],
+    criteriaKeys: ['open_threads_overload']
   },
   {
     agentId: 'essay-interviewer',
@@ -303,7 +310,8 @@ export const validationProcesses: AgentValidationProcess[] = [
     evidenceTargets: ['ending', 'decision scene', 'motif ledger', 'symbol layers', 'narrator card'],
     outputFormat: ['통과', '권고', '대안 해석', '윤리 비용 표', '모티프 변주 리포트', '재작성 권고'],
     evolutionMemory: ['작가가 채택한 양가성 패턴', '효과적이었던 침묵 사례', '실패한 모티프 변주'],
-    blockingSignals: ['결말이 한 줄 요약으로 닫힘', '핵심 결정의 대안 비용이 0']
+    blockingSignals: ['결말이 한 줄 요약으로 닫힘', '핵심 결정의 대안 비용이 0'],
+    criteriaKeys: ['ambiguity_audit', 'ethical_pressure_test', 'silence_audit']
   },
   {
     agentId: 'essay-curator',
@@ -313,7 +321,8 @@ export const validationProcesses: AgentValidationProcess[] = [
     evidenceTargets: ['persona card', 'leap sentence', 'reversal paragraph', 'disclosure ledger', 'voice rhythm', 'gomi-writing alignment'],
     outputFormat: ['통과', '수정', '차단', '단락별 점수', '도약 지점', '자기반박 위치', '노출 ledger'],
     evolutionMemory: ['작가가 살린 도약 패턴', '효과적이었던 자기반박 위치', '거절된 노출 범위'],
-    blockingSignals: ['타인 노출 범위 초과', '도약 0회 (일기 경고)', '자기 권위만 주장']
+    blockingSignals: ['타인 노출 범위 초과', '도약 0회 (일기 경고)', '자기 권위만 주장'],
+    criteriaKeys: ['universal_leap_check', 'self_reversal_check', 'disclosure_scope_check']
   },
   {
     agentId: 'memory-evolution-keeper',

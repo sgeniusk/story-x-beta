@@ -4,6 +4,65 @@
 
 ---
 
+## 2026-05-22 15:27 — M4.F 에이전트 실행 엔진 (Layer 5) 완료
+
+> Last Updated: 2026-05-22 15:27 KST
+
+### Current Objective
+M4 청크 F 완료 — Layer 5 에이전트 실행 엔진. 4가지 변경(신설·교체·폐기·확장) 모두 적용. 다음 자연스러운 작업 — M4 청크 G (mediaProjection, Layer 7).
+
+### Recommended Next Step
+1. M4 청크 G 시작 — `src/lib/mediaProjection.ts` 신설 (소설/웹툰/인스타툰/네컷 투영, 온톨로지 핵심 보존)
+2. `verticalSlice.ts` 호출 연결
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 35 files / 210 tests · `npm run build` 통과
+- 신설 — `src/lib/agentRunEngine.ts` + `.test.ts` (8 케이스)
+- 폐기 — `src/lib/agentOrchestration.ts` + `.test.ts` 삭제 (Gap 2·11)
+- 수정 — `src/lib/storyEngine.ts` (buildAgentRuns wrapper 화 + AgentRun.agentId 타입), `src/lib/agentReviewProcess.ts` (criteriaKeys 신설 + 7곳)
+
+### What the Last Session Did
+1. **agentRunEngine.ts 신설** — Layer 5 검토 스케일별 에이전트 실행
+   - `planAgentRuns(input)` → `AgentRunPlan { scale, agents, runs }`
+   - 스케일 결정 — quick(3) / standard(5) / deep(21) 의 defaultAgents 또는 명시 requestedAgentIds
+   - agentLimit 으로 자동 자름 (token budget 보호)
+   - continuity-editor 만 issues 기반 block/revise/pass 분기. 나머지는 pass.
+   - 에이전트별 generic 출력 (showrunner/character-custodian/world-keeper/genre-stylist/continuity-editor 5명 + 그 외 18명은 agenda 그대로)
+2. **storyEngine.buildAgentRuns 교체** — Gap 4 — 하드코딩 5명을 `planAgentRuns(input).runs` 호출로 위임
+3. **agentOrchestration.ts + .test.ts 삭제** — Gap 2·11 — 선언만 있던 3계층 모델 폐기 (다른 import 없음 확인)
+4. **agentReviewProcess.ts criteriaKeys 추가**
+   - `AgentValidationProcess.criteriaKeys?: string[]` 신설 필드
+   - 7 에이전트에 16 craft 기준 키 채움
+     · showrunner: 3 (chapter_one_hook_check, chapter_end_hook_check, stakes_progression_audit)
+     · character-custodian: 2 (pressure_triangle_validation, flat_character_warning)
+     · world-keeper: 2 (motif_variation_audit, historical_consistency_extended)
+     · genre-stylist: 3 (scene_sequel_ratio, voice_match_score, read_aloud_audit)
+     · continuity-editor: 1 (open_threads_overload)
+     · critic-reviewer: 3 (ambiguity_audit, ethical_pressure_test, silence_audit)
+     · essay-curator: 3 (universal_leap_check, self_reversal_check, disclosure_scope_check)
+5. **AgentRun.agentId 타입 확장** — `AgentId` → `ValidationAgentId`. 신설 12 에이전트도 AgentRun 의 source 가 될 수 있게 통합.
+
+### Files To Touch (next milestone — M4 청크 G)
+- 신설 `src/lib/mediaProjection.ts` + `.test.ts` — 매체별 투영(소설/웹툰/인스타툰/네컷), 온톨로지 핵심 보존
+- 연결 `src/lib/verticalSlice.ts` 호출
+
+### Files NOT To Touch
+- M4.A · M4.B · M4.C · M4.D · M4.E 완성본
+- 기존 AgentId union (확장 안 함 — ValidationAgentId 와 분리 유지)
+
+### Blockers
+없음.
+
+### Known Issues
+- `describeAgentRun` 의 generic 출력은 결정론 — LLM 호출은 청크 H 통합 단계에서 도입.
+- buildAgentRuns wrapper 는 input 에 scale/requestedAgentIds 를 전달하지 않음 (standard 기본). 호출 흐름이 scale 을 전달하도록 청크 H 에서 storyEngine 확장.
+
+### Reference Documents
+- `docs/storyx-harness-architecture.md` § 7 청크 F, § 5-2 (16 검토 기준)
+
+---
+
 ## 2026-05-22 14:54 — M4.E 품질 게이트 12개 + 바이블 13 카테고리 완료
 
 > Last Updated: 2026-05-22 14:54 KST

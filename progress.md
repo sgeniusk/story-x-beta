@@ -4,7 +4,15 @@
 
 ## Current Objective
 
-**M4.E — 품질 게이트 12개 + 바이블 13 카테고리 (Layer 4)** (`done` · 이번 세션)
+**M4.F — 에이전트 실행 엔진 (Layer 5)** (`done` · 이번 세션)
+
+M4 청크 F 완료. 4가지 변경 — (1) `agentRunEngine.ts` 신설 (스케일별 AgentRun 산출), (2) `storyEngine.buildAgentRuns` 하드코딩 5명 → wrapper 로 교체 (Gap 4), (3) `agentOrchestration.ts` + `.test.ts` 삭제 (Gap 2·11), (4) `agentReviewProcess.ts` 에 `criteriaKeys` 필드 + 7 에이전트에 16 craft 기준 키 채움. `AgentRun.agentId` 를 `ValidationAgentId` 로 통합. TDD 8 케이스, **35 files / 210 tests** 통과.
+
+다음 단계 — M4 청크 G (mediaProjection, Layer 7).
+
+---
+
+## (직전) M4.E — 품질 게이트 12개 + 바이블 13 카테고리 (Layer 4) (`done`)
 
 M4 청크 E 완료. `qualityGates.ts` 신설 — 12 게이트(common/commercial/literary/essay 트랙) + StoryMode 가중치(commercialWeight/literaryWeight) 로 강제/권고 결정. `storyEngine.ts` SeriesProject/CharacterProfile/Chapter 에 13 바이블 카테고리 optional 필드(pressureTriangle, narratorCard, voiceSignatureId, motifLedger, symbolLayers, formalDesign, historicalAnchors, personaCard, disclosureLedger, stakesLedger, rewardArc) 추가. TDD 12 케이스, **35 files / 204 tests** 통과.
 

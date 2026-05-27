@@ -1,4 +1,7 @@
 import { createDefaultLocalizationPolicy, type LocalizationPolicy } from './localization';
+import { planAgentRuns } from './agentRunEngine';
+// M4 청크 F — AgentRun.agentId 를 ValidationAgentId 로 통합. 신설 12 에이전트도 AgentRun 의 source 가 될 수 있게.
+import type { ValidationAgentId } from './agentReviewProcess';
 
 export type AgentId =
   | 'showrunner'
@@ -307,7 +310,7 @@ export interface ProductionRequest {
 export type AgentRunStatus = 'idle' | 'pass' | 'revise' | 'block' | 'complete';
 
 export interface AgentRun {
-  agentId: AgentId;
+  agentId: ValidationAgentId;
   title: string;
   status: AgentRunStatus;
   output: string;
@@ -1524,54 +1527,13 @@ function countWords(text: string) {
     .filter(Boolean).length;
 }
 
+// M4 청크 F — 하드코딩 5명 폐기, agentRunEngine.planAgentRuns 로 위임 (Gap 4).
+// 검토 스케일·요청 에이전트 결정은 agentRunEngine 이 담당. 이 wrapper 는 기존 호출 시그니처 유지용.
 function buildAgentRuns(
   project: SeriesProject,
   request: ProductionRequest,
   chapter: Chapter,
   issues: ContinuityIssue[]
 ): AgentRun[] {
-  const genre = genreProfiles[request.genre];
-  const errorCount = issues.filter((issue) => issue.severity === 'error').length;
-  const warningCount = issues.filter((issue) => issue.severity === 'warning').length;
-
-  return [
-    {
-      agentId: 'showrunner',
-      title: '쇼러너 에이전트',
-      status: 'pass',
-      output: `${project.audiencePromise}를 기준으로 ${chapter.title}의 중심 사건과 다음 편 후크를 배치했습니다.`,
-      evidence: [request.intent, chapter.hook]
-    },
-    {
-      agentId: 'character-custodian',
-      title: '캐릭터 에이전트',
-      status: 'pass',
-      output: '장기 욕망, 상처, 말투 규칙을 회차 행동에 반영했습니다.',
-      evidence: project.characters.flatMap((character) => character.canonAnchors)
-    },
-    {
-      agentId: 'world-keeper',
-      title: '배경 에이전트',
-      status: 'pass',
-      output: '탑 출입 규칙과 기억 잉크의 한계를 유지했습니다.',
-      evidence: project.worldRules.map((rule) => rule.rule)
-    },
-    {
-      agentId: 'genre-stylist',
-      title: `${genre.label} 장르 에이전트`,
-      status: 'pass',
-      output: `${genre.beat}. ${request.pressure}`,
-      evidence: [genre.texture, genre.ending]
-    },
-    {
-      agentId: 'continuity-editor',
-      title: '연속성 감수 에이전트',
-      status: errorCount > 0 ? 'block' : warningCount > 0 ? 'revise' : 'pass',
-      output:
-        errorCount === 0
-          ? '치명적 캐논 충돌 없이 다음 회차를 승인했습니다.'
-          : '캐논 충돌이 있어 해당 회차는 수정이 필요합니다.',
-      evidence: chapter.memoryAnchors
-    }
-  ];
+  return planAgentRuns({ project, request, chapter, issues }).runs;
 }

@@ -1,7 +1,7 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M4.E-quality-gates-bible",
+  "active": "M4.F-agent-run-engine",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
   "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
   "features": [
@@ -139,6 +139,15 @@
       "dependencies": ["M4.D-korean-voice-gate"],
       "done_criteria": "qualityGates evaluateQualityGates + 9 케이스 + storyEngine 13 카테고리 + 3 케이스 + 35 files / 204 tests 통과",
       "evidence": "src/lib/qualityGates.ts (12 GATE_DEFS + resolveRequirement), src/lib/qualityGates.test.ts 9 케이스, src/lib/storyEngine.ts 11 신설 optional 필드 + 11 신설 타입"
+    },
+    {
+      "id": "M4.F-agent-run-engine",
+      "name": "M4 청크 F — 에이전트 실행 엔진 (Layer 5)",
+      "description": "agentRunEngine.ts 신설 — 검토 스케일(quick/standard/deep) 별 에이전트 실행, AgentRun[] 산출. storyEngine.buildAgentRuns 의 하드코딩 5명 폐기 (Gap 4). agentOrchestration.ts + .test.ts 삭제 (Gap 2·11). agentReviewProcess.ts AgentValidationProcess.criteriaKeys?: string[] 추가 + 7 에이전트(showrunner·character-custodian·world-keeper·genre-stylist·continuity-editor·critic-reviewer·essay-curator)에 16개 craft 검토 기준 키 채움. AgentRun.agentId 를 ValidationAgentId 로 통합 — 신설 12 에이전트도 AgentRun 의 source 가 될 수 있게.",
+      "status": "done",
+      "dependencies": ["M4.E-quality-gates-bible"],
+      "done_criteria": "agentRunEngine planAgentRuns + 8 케이스 + storyEngine.buildAgentRuns wrapper 화 + agentOrchestration 폐기 + criteriaKeys 7곳/16키 + 35 files / 210 tests 통과",
+      "evidence": "src/lib/agentRunEngine.ts (planAgentRuns + buildAgentRun + describeAgentRun), src/lib/storyEngine.ts buildAgentRuns wrapper + AgentRun.agentId 타입, src/lib/agentReviewProcess.ts criteriaKeys 7곳"
     },
     {
       "id": "M5-vercel-functions",
