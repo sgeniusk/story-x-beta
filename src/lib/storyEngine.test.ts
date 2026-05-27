@@ -44,6 +44,73 @@ describe('storyEngine', () => {
     expect(createEmptyProject({ title: '   ' }).title).toBe('새 작품');
   });
 
+  // M4 청크 E — 5-1 바이블 13 카테고리.
+  // 모든 신설 필드는 optional. 기존 프로젝트와 호환되며, 명시적으로 채울 때 보존된다.
+  it('CharacterProfile.pressureTriangle 이 보존된다 (want/desire/taboo)', () => {
+    const empty = createEmptyProject({ title: '소설' });
+    const withPressure = {
+      ...empty,
+      characters: [
+        {
+          id: 'c1',
+          name: '주인공',
+          role: '필사관',
+          desire: '진실 확인',
+          wound: '죄책감',
+          currentState: '의심',
+          voiceRules: [],
+          canonAnchors: [],
+          forbiddenContradictions: [],
+          relations: [],
+          pressureTriangle: {
+            want: '오빠를 찾는다',
+            desire: '잊고 살고 싶다',
+            taboo: '거짓을 캐논으로 적는 것'
+          }
+        }
+      ]
+    };
+    expect(withPressure.characters[0].pressureTriangle?.want).toContain('오빠');
+    expect(withPressure.characters[0].pressureTriangle?.desire).toContain('잊고');
+    expect(withPressure.characters[0].pressureTriangle?.taboo).toContain('거짓');
+  });
+
+  it('Chapter.stakesLedger / rewardArc 가 optional 로 보존된다', () => {
+    const empty = createEmptyProject({ title: '단편' });
+    const result = chapterFromDraftPayload(
+      empty,
+      {
+        title: '1화',
+        hook: '문이 열렸다',
+        outline: ['들어간다'],
+        beats: [{ label: 'a', summary: 'b' }],
+        prose: '본문.',
+        newCanonFacts: []
+      },
+      { genre: 'urban-fantasy', intent: '진입', pressure: '' }
+    );
+    const chapter = result.chapter;
+    const enriched = {
+      ...chapter,
+      stakesLedger: [{ stake: '신뢰', atRisk: '서윤', resolution: 'deferred' as const }],
+      rewardArc: [{ promise: '문의 비밀', payoff: '문 너머의 메모', intensity: 70 }]
+    };
+    expect(enriched.stakesLedger?.[0].stake).toBe('신뢰');
+    expect(enriched.rewardArc?.[0].intensity).toBe(70);
+  });
+
+  it('SeriesProject 의 8개 신설 optional 필드는 기본값이 undefined 이며 누락돼도 createEmptyProject 가 동작', () => {
+    const empty = createEmptyProject({ title: '빈 작품' });
+    expect(empty.narratorCard).toBeUndefined();
+    expect(empty.voiceSignatureId).toBeUndefined();
+    expect(empty.motifLedger).toBeUndefined();
+    expect(empty.symbolLayers).toBeUndefined();
+    expect(empty.formalDesign).toBeUndefined();
+    expect(empty.historicalAnchors).toBeUndefined();
+    expect(empty.personaCard).toBeUndefined();
+    expect(empty.disclosureLedger).toBeUndefined();
+  });
+
   // M4 청크 A — Gap 5: CanonFact.owner 타입 통일.
   // visual/audio/voice 같은 매체별 owner 가 chapterFromDraftPayload 를 거쳐도 그대로 보존되어야 한다.
   it('chapterFromDraftPayload 가 매체별 owner(voice/visual/audio) 를 plot 으로 다운캐스트하지 않는다 (Gap 5)', () => {

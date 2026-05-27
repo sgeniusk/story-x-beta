@@ -4,6 +4,66 @@
 
 ---
 
+## 2026-05-22 14:54 — M4.E 품질 게이트 12개 + 바이블 13 카테고리 완료
+
+> Last Updated: 2026-05-22 14:54 KST
+
+### Current Objective
+M4 청크 E 완료 — `qualityGates.ts` 가 12 게이트(common/commercial/literary/essay 트랙)를 `StoryMode` 가중치로 강제/권고 결정. `storyEngine.ts` 에 13 바이블 카테고리 optional 필드(pressureTriangle, narratorCard, voiceSignatureId, motifLedger, symbolLayers, formalDesign, historicalAnchors, personaCard, disclosureLedger, stakesLedger, rewardArc) 추가. 다음 자연스러운 작업 — M4 청크 F (agentRunEngine, Layer 5).
+
+### Recommended Next Step
+1. M4 청크 F 시작 — `src/lib/agentRunEngine.ts` 신설 (검토 스케일별 에이전트 실행, AgentRun[] 산출)
+2. `storyEngine.buildAgentRuns()` 를 `agentRunEngine` 호출로 교체 (Gap 4)
+3. `agentOrchestration.ts` 폐기 (Gap 2·11)
+4. `agentReviewProcess.ts` 에 `critic-reviewer`·`essay-curator` + 16개 검토 기준 추가
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 35 files / 204 tests · `npm run build` 954ms
+- 신설 — `src/lib/qualityGates.ts` + `.test.ts` (9 케이스)
+- 수정 — `src/lib/storyEngine.ts` (11 신설 타입 + 11 신설 optional 필드), `src/lib/storyEngine.test.ts` (3 신설 케이스)
+
+### What the Last Session Did
+1. **qualityGates.ts 신설** — Layer 4 품질 게이트 12개
+   - 12 GateKey + 4 GateTrack (common/commercial/literary/essay) + GateRequirement (blocking/advisory)
+   - StoryMode { commercialWeight, literaryWeight } 가중치로 강제/권고 분기
+     · common 게이트: 항상 blocking
+     · commercial 게이트: commercialWeight ≥ 0.5 면 blocking, 아니면 advisory
+     · literary 게이트: literaryWeight ≥ 0.5 면 blocking, 아니면 advisory
+     · essay 게이트: 에세이 매체에서만 평가, gate_disclosure_scope 만 항상 blocking
+   - 조건부 평가 — gate_hook_last_200 (serial 만), gate_ambiguity_at_finale (finale 만), essay 게이트 (essay 매체만)
+   - 휴리스틱 — gate_hook_first_300 (첫 300자 행동/긴장 token), gate_hook_last_200 (마지막 200자 cliff token)
+2. **storyEngine.ts 13 바이블 카테고리 확장** — 모두 optional
+   - CharacterProfile.pressureTriangle?: PressureTriangle (want/desire/taboo)
+   - SeriesProject — narratorCard, voiceSignatureId, motifLedger, symbolLayers, formalDesign, historicalAnchors, personaCard, disclosureLedger (8개)
+   - Chapter — stakesLedger, rewardArc (2개)
+   - 11 신설 타입(PressureTriangle, NarratorCard, MotifLedgerEntry, SymbolLayer, FormalDesign, HistoricalAnchor, PersonaCard, DisclosureEntry, StakesLedgerEntry, RewardArcEntry)
+   - 기존 createEmptyProject 와 호환 — 신설 필드는 undefined 기본
+3. **TDD 12 케이스** — qualityGates 9 (모드별 분기 + 트랙 분리 + 조건부 평가) + storyEngine 3 (pressureTriangle 보존, stakesLedger/rewardArc 보존, 8개 optional 필드 undefined 기본)
+
+### Files To Touch (next milestone — M4 청크 F)
+- 신설 `src/lib/agentRunEngine.ts` + `.test.ts` — 검토 스케일별 에이전트 실행, `AgentRun[]` 산출
+- 수정 `src/lib/storyEngine.ts` `buildAgentRuns()` — agentRunEngine 호출로 교체 (Gap 4)
+- 삭제 `src/lib/agentOrchestration.ts` + `.test.ts` (Gap 2·11)
+- 수정 `src/lib/agentReviewProcess.ts` — `critic-reviewer`·`essay-curator` + 16개 검토 기준 추가 (5-2절)
+
+### Files NOT To Touch
+- M4.A · M4.B · M4.C · M4.D 완성본
+- `src/lib/koreanStyle.ts` (흡수 패턴 유지)
+
+### Blockers
+없음.
+
+### Known Issues
+- qualityGates 의 휴리스틱(첫/마지막 token 매칭) 은 1차 컷 — 의미론적 정확도 낮음. 청크 F·H 에서 LLM 기반 정밀화.
+- voiceSignatureId 는 string id 만 — voiceSignature 본체 저장은 별도 모듈 (koreanVoiceGate.VoiceSignature) 에서 점진 연결.
+- storyEngine.buildAgentRuns 는 아직 하드코딩 (Gap 4 미해결). 청크 F 에서 교체.
+
+### Reference Documents
+- `docs/storyx-harness-architecture.md` § 5-1 (바이블 13), § 5-3 (게이트 12), § 7 청크 E
+
+---
+
 ## 2026-05-21 23:31 — M4.D 한국어 문체 게이트 (Layer 4 일부) 완료
 
 > Last Updated: 2026-05-21 23:31 KST

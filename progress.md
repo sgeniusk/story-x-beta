@@ -4,7 +4,15 @@
 
 ## Current Objective
 
-**M4.D — 한국어 문체 게이트 (Layer 4 일부)** (`done` · 이번 세션)
+**M4.E — 품질 게이트 12개 + 바이블 13 카테고리 (Layer 4)** (`done` · 이번 세션)
+
+M4 청크 E 완료. `qualityGates.ts` 신설 — 12 게이트(common/commercial/literary/essay 트랙) + StoryMode 가중치(commercialWeight/literaryWeight) 로 강제/권고 결정. `storyEngine.ts` SeriesProject/CharacterProfile/Chapter 에 13 바이블 카테고리 optional 필드(pressureTriangle, narratorCard, voiceSignatureId, motifLedger, symbolLayers, formalDesign, historicalAnchors, personaCard, disclosureLedger, stakesLedger, rewardArc) 추가. TDD 12 케이스, **35 files / 204 tests** 통과.
+
+다음 단계 — M4 청크 F (agentRunEngine, Layer 5).
+
+---
+
+## (직전) M4.D — 한국어 문체 게이트 (Layer 4 일부) (`done`)
 
 M4 청크 D 완료. `koreanVoiceGate.ts` 신설 — `inspectKoreanVoice(text, signatures?)` 가 6 종 flag(generic AI vocab · noun-heavy · translation-ese · comma-overflow · abstract-emotion · signature mismatch) 산출. `VoiceSignature` 인터페이스로 작가/캐릭터별 톤 기준(sentenceLength · forbiddenWords · preferredRegister · preserveTokens) 도입. 기존 `koreanStyle.ts` 와 6 케이스는 흡수 패턴으로 보존 (폐기 아님). **34 files / 192 tests** 통과.
 

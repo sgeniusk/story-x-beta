@@ -1,7 +1,7 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M4.D-korean-voice-gate",
+  "active": "M4.E-quality-gates-bible",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
   "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
   "features": [
@@ -130,6 +130,15 @@
       "dependencies": ["M4.C-continuity-contract"],
       "done_criteria": "inspectKoreanVoice 6 flag + VoiceSignature + revisedText preserveTokens + 6 신규 케이스 + 6 기존 koreanStyle 케이스 보존",
       "evidence": "src/lib/koreanVoiceGate.ts (inspectKoreanVoice + VoiceSignature + createEmptyVoiceSignature), src/lib/koreanVoiceGate.test.ts 6 케이스"
+    },
+    {
+      "id": "M4.E-quality-gates-bible",
+      "name": "M4 청크 E — 품질 게이트 12개 + 바이블 13 카테고리 (Layer 4)",
+      "description": "qualityGates.ts 신설 — 12 게이트 (common/commercial/literary/essay 트랙) + StoryMode 가중치(commercialWeight/literaryWeight) 로 강제/권고 결정. storyEngine.ts SeriesProject/CharacterProfile/Chapter 에 13 바이블 카테고리 optional 필드 추가 (pressureTriangle, narratorCard, voiceSignatureId, motifLedger, symbolLayers, formalDesign, historicalAnchors, personaCard, disclosureLedger, stakesLedger, rewardArc).",
+      "status": "done",
+      "dependencies": ["M4.D-korean-voice-gate"],
+      "done_criteria": "qualityGates evaluateQualityGates + 9 케이스 + storyEngine 13 카테고리 + 3 케이스 + 35 files / 204 tests 통과",
+      "evidence": "src/lib/qualityGates.ts (12 GATE_DEFS + resolveRequirement), src/lib/qualityGates.test.ts 9 케이스, src/lib/storyEngine.ts 11 신설 optional 필드 + 11 신설 타입"
     },
     {
       "id": "M5-vercel-functions",

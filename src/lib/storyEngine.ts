@@ -33,6 +33,15 @@ export interface CharacterRelation {
   dashed?: boolean;
 }
 
+// M4 청크 E · 5-1 — protagonist_pressure_triangle.
+// want = 의식이 원하는 것, desire = 무의식이 끌리는 것, taboo = 절대 못 넘는 선.
+// 세 축이 동시에 작동해야 인물 압력이 살아난다.
+export interface PressureTriangle {
+  want: string;
+  desire: string;
+  taboo: string;
+}
+
 export interface CharacterProfile {
   id: string;
   name: string;
@@ -48,6 +57,8 @@ export interface CharacterProfile {
   }>;
   /** 다른 인물과의 관계 — 관계도 엣지 목록 */
   relations: CharacterRelation[];
+  /** M4 청크 E — protagonist pressure triangle (want/desire/taboo). */
+  pressureTriangle?: PressureTriangle;
 }
 
 // 캐논 엔티티 정합 상태 — ok는 충돌 없음, conflict는 본문과 어긋남, unverified는 아직 본문에 미등장.
@@ -110,6 +121,25 @@ export interface ChapterBeat {
   tension: number;
 }
 
+// M4 청크 E · 5-1 — stakes_ledger (Chapter 메타).
+// 한 회차에서 누가 무엇을 잃을 위험에 놓이는가 — 압력의 명시.
+export interface StakesLedgerEntry {
+  stake: string;
+  /** 위험에 놓인 인물/요소. */
+  atRisk: string;
+  /** 결말 — 잃었는가, 지켰는가, 다음 회차로 미뤘는가. */
+  resolution?: 'lost' | 'kept' | 'deferred';
+}
+
+// M4 청크 E · 5-1 — reward_arc (Chapter 메타).
+// 회차가 약속한 보상을 어떻게 회수했는가 — 후크 ↔ 페이오프 추적.
+export interface RewardArcEntry {
+  promise: string;
+  payoff: string;
+  /** 회수 강도 0~100. */
+  intensity?: number;
+}
+
 export interface Chapter {
   id: string;
   episode: number;
@@ -122,6 +152,10 @@ export interface Chapter {
   memoryAnchors: string[];
   newCanonFacts: CanonFact[];
   locked?: boolean;
+  /** M4 청크 E — 이 회차의 stakes ledger. 누가 무엇을 잃을 위험인가. */
+  stakesLedger?: StakesLedgerEntry[];
+  /** M4 청크 E — 이 회차의 reward arc. 약속과 회수. */
+  rewardArc?: RewardArcEntry[];
 }
 
 export function lockChapter(project: SeriesProject, chapterId: string): SeriesProject {
@@ -156,6 +190,64 @@ export function describeCreativeWeight(weight: CreativeWeight): string {
   }
 }
 
+// M4 청크 E · 5-1 — narrator_card (SeriesProject 메타).
+export interface NarratorCard {
+  /** 시점 — first/third-close/third-omniscient 등 자유 라벨. */
+  pointOfView: string;
+  /** 화자와 인물 간 거리. */
+  distance: 'close' | 'medium' | 'omniscient';
+  tone: string;
+}
+
+// M4 청크 E · 5-1 — motif_ledger (SeriesProject 메타).
+export interface MotifLedgerEntry {
+  motifId: string;
+  /** 같은 모티프가 등장한 회차·맥락. variation 횟수 추적에 쓰임. */
+  occurrences: Array<{ episode: number; context: string }>;
+}
+
+// M4 청크 E · 5-1 — symbol_layers (SeriesProject 메타).
+export interface SymbolLayer {
+  symbol: string;
+  /** 한 상징이 작품 안에서 얻은 의미 층위들 — 시간이 흐르면서 누적. */
+  meanings: string[];
+}
+
+// M4 청크 E · 5-1 — formal_design (SeriesProject 메타).
+export interface FormalDesign {
+  structure: 'linear' | 'parallel' | 'frame' | 'nonlinear';
+  tense: 'past' | 'present' | 'mixed';
+  /** 시점 — narratorCard 의 pointOfView 와 일관. */
+  pov: string;
+}
+
+// M4 청크 E · 5-1 — historical_anchors (SeriesProject 메타).
+export interface HistoricalAnchor {
+  /** 시대 — 한 단어 또는 짧은 구절. */
+  era: string;
+  /** 그 시대의 구체 디테일. */
+  detail: string;
+}
+
+// M4 청크 E · 5-1 — persona_card (에세이 모드 SeriesProject 메타).
+export interface PersonaCard {
+  /** 에세이 화자 라벨. */
+  voiceLabel: string;
+  /** 화자와 사건 간 감정 거리. */
+  emotionalDistance: 'close' | 'medium' | 'distant';
+  /** 화자의 stance — 자기 글에 어떤 위치를 잡는가. */
+  stance: string;
+}
+
+// M4 청크 E · 5-1 — disclosure_ledger (에세이 모드 SeriesProject 메타).
+export interface DisclosureEntry {
+  /** 노출 대상 — 인물·장소·사건. */
+  subject: string;
+  /** 실제 인물 식별 위험. block 이면 출간 차단형. */
+  risk: 'safe' | 'caution' | 'block';
+  rationale: string;
+}
+
 export interface SeriesProject {
   id: string;
   title: string;
@@ -187,6 +279,23 @@ export interface SeriesProject {
   timeline: TimelineEntry[];
   /** 바이블 규칙 5섹션 — tone·rhythm·world·vocab·motif */
   bibleOutline: BibleSection[];
+  // M4 청크 E · 5-1 13개 바이블 카테고리 중 SeriesProject 에 배정된 7개. 모두 optional — 기존 프로젝트와 호환.
+  /** narrator_card — 시점·거리·톤. */
+  narratorCard?: NarratorCard;
+  /** voice_signature — koreanVoiceGate.VoiceSignature 와 1:1 (type-only import 로 순환 의존 회피). */
+  voiceSignatureId?: string;
+  /** motif_ledger — 모티프와 등장 회차. */
+  motifLedger?: MotifLedgerEntry[];
+  /** symbol_layers — 상징 층위. */
+  symbolLayers?: SymbolLayer[];
+  /** formal_design — 구조·시제·시점. */
+  formalDesign?: FormalDesign;
+  /** historical_anchors — 시대 닻. */
+  historicalAnchors?: HistoricalAnchor[];
+  /** persona_card — 에세이 모드 화자 페르소나. */
+  personaCard?: PersonaCard;
+  /** disclosure_ledger — 에세이 모드 실제 인물 노출 추적. */
+  disclosureLedger?: DisclosureEntry[];
 }
 
 export interface ProductionRequest {
