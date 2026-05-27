@@ -108,6 +108,10 @@ import { getCreativeActionLabels } from './lib/projectBlueprint';
 import { buildPublishingPlan, type PublishingPlan } from './lib/publishing';
 // M4 UI 통합 1차 컷 — 작가가 스튜디오 안에서 하네스 점수·6 스테이지·readyForProduction 을 본다.
 import { runStoryHarness, type StoryHarnessReport, type HarnessStageResult } from './lib/storyHarness';
+// M8 UI 통합 — Layer 0·4·7 결과를 좌레일에 노출.
+import { buildStoryOntology, type StoryOntology } from './lib/storyOntology';
+import { projectAllMedia, type MediaProjection } from './lib/mediaProjection';
+import { evaluateQualityGates, type GateResult, type QualityGatesReport, type StoryMode } from './lib/qualityGates';
 import { buildAlphaReadinessReport, type AlphaReadinessReport } from './lib/alphaReadiness';
 import { buildOneProjectVerticalSlice, type OneProjectVerticalSlice } from './lib/verticalSlice';
 import { STORYX_VERSION, storyxVersionLog } from './lib/version';
@@ -971,6 +975,32 @@ export function StoryXDesk({
   const evaluatorWorkflow = useMemo(() => buildTesterDrivenWorkflow(blueprint), [blueprint]);
   // M4 UI 통합 1차 컷 — project 의 logline/deepQuestion/character 를 storyHarness 입력으로 매핑.
   // 작가가 자기 작품의 6단계 스테이지 점수·readyForProduction 을 한눈에 본다.
+  // M8 UI 통합 — StoryMode 슬라이더 state (commercial/literary 가중치). localStorage 영속.
+  const [storyMode, setStoryMode] = useState<StoryMode>(() => {
+    if (typeof window === 'undefined') return { commercialWeight: 0.5, literaryWeight: 0.5 };
+    const saved = window.localStorage.getItem('storyx.studio.storyMode');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as StoryMode;
+        if (
+          typeof parsed.commercialWeight === 'number' &&
+          typeof parsed.literaryWeight === 'number'
+        ) {
+          return parsed;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    return { commercialWeight: 0.5, literaryWeight: 0.5 };
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('storyx.studio.storyMode', JSON.stringify(storyMode));
+    } catch {
+      /* silent */
+    }
+  }, [storyMode]);
   const harnessReport: StoryHarnessReport = useMemo(
     () =>
       runStoryHarness({
@@ -991,6 +1021,60 @@ export function StoryXDesk({
       project.deepQuestion,
       project.audiencePromise,
       project.characters
+    ]
+  );
+  // M8.4 — storyOntology useMemo. harnessReport 와 같은 입력 매핑.
+  const storyOntology: StoryOntology = useMemo(
+    () =>
+      buildStoryOntology({
+        material: project.logline || '',
+        storySeed: project.deepQuestion || project.audiencePromise || '',
+        characterSeed: project.characters[0]
+          ? `${project.characters[0].name}: ${project.characters[0].desire}`
+          : '',
+        audience: project.audiencePromise || '',
+        constraints: blueprint.formatLabel || ''
+      }),
+    [
+      blueprint.formatLabel,
+      project.logline,
+      project.deepQuestion,
+      project.audiencePromise,
+      project.characters
+    ]
+  );
+  // M8.3 — 5 매체 투영. storyOntology 의존.
+  const mediaProjections: MediaProjection[] = useMemo(() => projectAllMedia(storyOntology), [storyOntology]);
+  // M8.2 — 12 품질 게이트. project 데이터 + storyMode 가중치.
+  const qualityGatesReport: QualityGatesReport = useMemo(
+    () =>
+      evaluateQualityGates(
+        {
+          text: project.chapters[project.chapters.length - 1]?.prose || project.logline || '',
+          medium: blueprint.medium,
+          isSerial: isSerialFormat(blueprint.format),
+          voiceMatchScore: 75, // 1차 컷 — koreanVoiceGate 연결은 다음 단계
+          pressureTriangleActive: Boolean(project.characters[0]?.pressureTriangle),
+          sceneSequelRatio: 0.5,
+          isFinale: false,
+          ambiguityScore: 60,
+          ethicalCostPresent: false,
+          motifVariations: project.canonFacts.length >= 2 ? 2 : 0,
+          historicalDensity: 50,
+          universalLeapPresent: blueprint.medium === 'essay' ? false : undefined,
+          selfReversalCount: 0,
+          disclosureScopeSafe: true
+        },
+        storyMode
+      ),
+    [
+      project.chapters,
+      project.logline,
+      project.characters,
+      project.canonFacts.length,
+      blueprint.medium,
+      blueprint.format,
+      storyMode
     ]
   );
   const publishingPlan = useMemo(
@@ -2238,6 +2322,12 @@ export function StoryXDesk({
               />
               {/* M4 UI 통합 — 스토리 하네스 진단 카드. 6 스테이지 + qualityScore + readyForProduction */}
               <HarnessReportCard report={harnessReport} />
+              {/* M8.2 — 12 품질 게이트 그리드 + StoryMode 슬라이더 */}
+              <QualityGatesCard report={qualityGatesReport} mode={storyMode} onModeChange={setStoryMode} />
+              {/* M8.3 — 5 매체 투영 카드 */}
+              <MediaProjectionsCard projections={mediaProjections} />
+              {/* M8.4 — 온톨로지 4 카테고리 카드 */}
+              <OntologyCard ontology={storyOntology} />
               <PublishingIndexCard plan={publishingPlan} />
             </>
           ) : activeTrack === 'draft' ? (
@@ -3163,6 +3253,191 @@ function HarnessReportCard({ report }: { report: StoryHarnessReport }) {
             ))}
         </div>
       )}
+    </section>
+  );
+}
+
+// M8.2 — 12 품질 게이트 그리드 + StoryMode 슬라이더 (commercial/literary 가중치).
+// 작가가 슬라이더를 흔들면 게이트의 blocking/advisory 가 즉시 변한다.
+function QualityGatesCard({
+  report,
+  mode,
+  onModeChange
+}: {
+  report: QualityGatesReport;
+  mode: StoryMode;
+  onModeChange: (next: StoryMode) => void;
+}) {
+  const blocking = report.results.filter((r) => r.requirement === 'blocking');
+  const advisory = report.results.filter((r) => r.requirement === 'advisory');
+  const blockingFailed = blocking.filter((r) => !r.passed).length;
+  return (
+    <section className="sx-panel sx-quality-gates-card" aria-label="품질 게이트">
+      <div className="sx-panel-heading">
+        <ShieldAlert size={16} />
+        <h2>품질 게이트</h2>
+      </div>
+      <div style={{ display: 'flex', gap: 14, marginTop: 4, fontSize: 12, color: 'var(--sx-muted)' }}>
+        <span>
+          강제 <strong style={{ color: blockingFailed > 0 ? '#e76464' : '#7be37b' }}>{blocking.length - blockingFailed}/{blocking.length}</strong>
+        </span>
+        <span>
+          권고 <strong style={{ color: '#f3c95a' }}>{advisory.filter((r) => r.passed).length}/{advisory.length}</strong>
+        </span>
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--sx-muted)', marginBottom: 4 }}>
+          <span>대중성 {Math.round(mode.commercialWeight * 100)}%</span>
+          <span>작품성 {Math.round(mode.literaryWeight * 100)}%</span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={Math.round(mode.commercialWeight * 100)}
+          onChange={(e) => {
+            const c = Number(e.target.value) / 100;
+            onModeChange({ commercialWeight: c, literaryWeight: 1 - c });
+          }}
+          style={{ width: '100%', accentColor: 'var(--sx-brand)' }}
+          aria-label="작품 무게중심 (좌: 대중성 / 우: 작품성)"
+        />
+      </div>
+      <ul style={{ margin: '12px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {report.results.map((gate: GateResult) => {
+          const color = gate.passed ? 'rgba(123, 227, 123, 0.85)' : gate.requirement === 'blocking' ? '#e76464' : '#f3c95a';
+          return (
+            <li
+              key={gate.gate}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}
+              title={gate.reason}
+            >
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
+              <span style={{ flex: 1, color: 'var(--sx-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {gate.gate.replace(/^gate_/, '')}
+              </span>
+              <span style={{ fontSize: 10, color: 'var(--sx-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                {gate.requirement === 'blocking' ? '강제' : '권고'}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+// M8.3 — 5 매체 투영. 한 작품이 매체별로 어떻게 표현되는지 카드 5개.
+function MediaProjectionsCard({ projections }: { projections: MediaProjection[] }) {
+  const allPreserved = projections.every((p) => p.preservation.preserved);
+  return (
+    <section className="sx-panel sx-media-projections-card" aria-label="매체 투영">
+      <div className="sx-panel-heading">
+        <Database size={16} />
+        <h2>매체 투영</h2>
+      </div>
+      <p style={{ fontSize: 12, color: 'var(--sx-muted)', margin: '4px 0 10px' }}>
+        같은 온톨로지를 5 매체로 투영. 핵심 4 키(전제·욕망·세계 비용·플롯) 는 변하지 않습니다.
+        <span style={{ marginLeft: 6, color: allPreserved ? '#7be37b' : '#f3c95a', fontWeight: 600 }}>
+          {allPreserved ? '핵심 보존 OK' : '핵심 누락'}
+        </span>
+      </p>
+      <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {projections.map((projection) => {
+          const ok = projection.preservation.preserved;
+          const firstKey = Object.keys(projection.fields)[0];
+          const firstValue = projection.fields[firstKey] ?? '';
+          return (
+            <li
+              key={projection.target}
+              style={{
+                padding: '6px 10px',
+                background: ok ? 'rgba(123, 227, 123, 0.04)' : 'rgba(243, 201, 90, 0.05)',
+                border: `1px solid ${ok ? 'rgba(123, 227, 123, 0.18)' : 'rgba(243, 201, 90, 0.22)'}`,
+                borderRadius: 6
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--sx-ink)' }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: ok ? '#7be37b' : '#f3c95a' }} />
+                {projection.target}
+                <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--sx-muted)' }}>
+                  {Object.keys(projection.fields).length} 필드
+                </span>
+              </div>
+              <div
+                style={{
+                  fontSize: 11.5,
+                  color: 'var(--sx-muted)',
+                  marginTop: 2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+                title={firstValue}
+              >
+                {firstKey ? `${firstKey}: ${firstValue}` : ''}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+// M8.4 — 온톨로지 4 카테고리 (인물·세계·갈등·플롯) + 누락 경고.
+function OntologyCard({ ontology }: { ontology: StoryOntology }) {
+  const categories: Array<{ key: string; label: string; count: number; hint: string }> = [
+    { key: 'characters', label: '인물', count: ontology.characters.length, hint: ontology.characters[0]?.name ?? '' },
+    { key: 'worldRules', label: '세계 규칙', count: ontology.worldRules.length, hint: ontology.worldRules[0]?.rule ?? '' },
+    { key: 'conflict', label: '갈등', count: ontology.conflictEngines.length, hint: ontology.conflictEngines[0]?.detail ?? '' },
+    { key: 'plots', label: '플롯', count: ontology.plotThreads.length, hint: ontology.plotThreads[0]?.promise ?? '' }
+  ];
+  return (
+    <section className="sx-panel sx-ontology-card" aria-label="스토리 온톨로지">
+      <div className="sx-panel-heading">
+        <GitBranch size={16} />
+        <h2>온톨로지</h2>
+      </div>
+      <p style={{ fontSize: 12, color: 'var(--sx-muted)', margin: '4px 0 10px', lineHeight: 1.5 }}>
+        {ontology.premise.dramaticQuestion === '아직 정해지지 않은 중심 질문'
+          ? '중심 질문이 비어 있습니다. 소재 한 줄을 적어 주세요.'
+          : ontology.premise.dramaticQuestion}
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+        {categories.map((cat) => {
+          const ok = cat.count > 0;
+          return (
+            <div
+              key={cat.key}
+              style={{
+                padding: '8px 10px',
+                background: ok ? 'rgba(123, 227, 123, 0.04)' : 'rgba(231, 100, 100, 0.04)',
+                border: `1px solid ${ok ? 'rgba(123, 227, 123, 0.18)' : 'rgba(231, 100, 100, 0.22)'}`,
+                borderRadius: 6
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11, color: 'var(--sx-muted)' }}>
+                {cat.label}
+                <strong style={{ color: ok ? '#7be37b' : '#e76464', fontSize: 14, marginLeft: 'auto' }}>{cat.count}</strong>
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: 'var(--sx-ink)',
+                  marginTop: 4,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+                title={cat.hint}
+              >
+                {cat.hint || '비어 있음'}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }
