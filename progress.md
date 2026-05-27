@@ -4,7 +4,15 @@
 
 ## Current Objective
 
-**M4.G — 매체 투영 (Layer 7)** (`done` · 이번 세션)
+**M4.H — 통합·리팩터 (1차 컷 · 핵심 3 작업)** (`in_progress` · 이번 세션)
+
+M4 청크 H 의 핵심 3 작업 완료. (1) `aiCliHarness.buildHarnessPrompt` 에 16 craft 검토 기준 + 12 품질 게이트 라인 추가 (Gap 10). (2) `canonRefactor.findAffectedChapters` 가 `change.targetCanonId` ↔ `chapter.newCanonFacts.id` 직접 매칭 우선, 없으면 부분문자열 fallback (Gap 8). (3) `storyEngine.validateContinuity` 가 `continuityContract.classifyCanonChange` 호출 — hard-canon 위반만 추가 issue, dedup 으로 기존 흐름 보존 (Gap 3). **36 files / 219 tests** 통과.
+
+청크 H 후속 — `creativeDevelopment.ts` 통합, docs 갱신은 다음 묶음.
+
+---
+
+## (직전) M4.G — 매체 투영 (Layer 7) (`done`)
 
 M4 청크 G 완료. `mediaProjection.ts` 신설 — 같은 `StoryOntology` 가 5 매체(novel/essay/webtoon/insta-toon/four-cut) 로 투영. 매체별 필드는 다르지만 핵심 4 (premise.dramaticQuestion · characters[0].desire · worldRules[0].cost · plotThreads[0]) 는 변하지 않음 (PreservationReport 검증). `projectMedia` · `projectAllMedia` 함수. TDD 9 케이스, **36 files / 219 tests** 통과.
 

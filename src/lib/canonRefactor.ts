@@ -11,6 +11,8 @@ export interface CanonChangeEntryInput {
   before: string;
   after: string;
   origin: CanonChangeOrigin;
+  /** M4 청크 H — Gap 8: 변경 대상 캐논의 ID. 채워지면 chapter.newCanonFacts.id 와 직접 매칭, 없으면 부분문자열 fallback. */
+  targetCanonId?: string;
 }
 
 export interface CanonChangeEntry extends CanonChangeEntryInput {
@@ -147,8 +149,15 @@ function findAffectedChapters(chapters: Chapter[], changes: CanonChangeEntry[]):
     return [];
   }
 
+  // M4 청크 H — Gap 8: 엔티티 ID 링크 우선. change.targetCanonId 가 있으면 chapter.newCanonFacts.id 와 직접 매칭.
+  // ID 없으면 기존 부분문자열 fallback 으로 호환성 유지. 새 변경은 ID 를 채워 의미적 매칭으로 가도록.
   const matched = chapters.filter((chapter) =>
-    changes.some((change) => chapterContains(chapter, change.targetLabel) || chapterContains(chapter, change.before))
+    changes.some(
+      (change) =>
+        (change.targetCanonId && chapterReferencesCanonId(chapter, change.targetCanonId)) ||
+        chapterContains(chapter, change.targetLabel) ||
+        chapterContains(chapter, change.before)
+    )
   );
   const candidates = matched.length > 0 ? matched : chapters.slice(-3);
 
@@ -169,6 +178,14 @@ function chapterContains(chapter: Chapter, text: string) {
 
   const haystack = [chapter.title, chapter.hook, chapter.prose, ...chapter.outline, ...chapter.memoryAnchors].join(' ');
   return haystack.includes(needle);
+}
+
+// M4 청크 H — Gap 8: chapter.newCanonFacts.id 가 변경 대상 캐논 id 와 일치하면 영향받음.
+// 부분문자열 매칭이 잡지 못하던 의미적 영향(같은 사실을 다른 표현으로 언급) 을 직접 ID 링크로 잡는다.
+function chapterReferencesCanonId(chapter: Chapter, canonId: string): boolean {
+  const trimmed = canonId.trim();
+  if (trimmed.length === 0) return false;
+  return chapter.newCanonFacts.some((fact) => fact.id === trimmed);
 }
 
 function uniqueReviewSteps(steps: CanonRefactorReviewStep[]) {

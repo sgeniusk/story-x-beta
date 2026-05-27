@@ -2,6 +2,9 @@ import { createDefaultLocalizationPolicy, type LocalizationPolicy } from './loca
 import { planAgentRuns } from './agentRunEngine';
 // M4 청크 F — AgentRun.agentId 를 ValidationAgentId 로 통합. 신설 12 에이전트도 AgentRun 의 source 가 될 수 있게.
 import type { ValidationAgentId } from './agentReviewProcess';
+// M4 청크 H — validateContinuity 가 continuityContract.classifyCanonChange 로 의미적 충돌 감지를 보강.
+// 기존 forbiddenContradictions 흐름은 그대로 보존하고, hard-canon 위반만 추가 issue 로 노출.
+import { classifyCanonChange, createContinuityContract } from './continuityContract';
 
 export type AgentId =
   | 'showrunner'
@@ -868,7 +871,36 @@ export function validateContinuity(project: SeriesProject, claims: string[]): Co
         ]
       : [];
 
-  return [...characterIssues, ...worldIssues, ...missingAnchorWarning];
+  // M4 청크 H — Gap 3: 부분문자열 매칭을 넘어 의미적 충돌 감지.
+  // project.canonFacts 를 hard-canon 으로 매핑한 contract 에 대해 각 claim 을 classify.
+  // hard-canon 위반(반전 신호) 만 새 issue 로 추가. 기존 흐름은 보존.
+  // dedup — 같은 claim 이 이미 character/world issue 를 만들었으면 중복 추가하지 않는다.
+  const contract = createContinuityContract({
+    hardCanon: project.canonFacts.map((fact) => fact.statement)
+  });
+  const alreadyFlagged = new Set<string>();
+  for (const claim of claims) {
+    if (characterIssues.some((issue) => claim.includes(issue.claim)) ||
+        worldIssues.some((issue) => claim.includes(issue.claim))) {
+      alreadyFlagged.add(claim);
+    }
+  }
+  const contractIssues: ContinuityIssue[] = [];
+  for (const claim of claims) {
+    if (!claim || claim.trim().length === 0) continue;
+    if (alreadyFlagged.has(claim)) continue;
+    const result = classifyCanonChange(contract, claim);
+    if (!result.allowed && result.layer === 'hard-canon') {
+      contractIssues.push({
+        severity: 'error',
+        source: 'continuity-editor',
+        claim,
+        message: result.reason
+      });
+    }
+  }
+
+  return [...characterIssues, ...worldIssues, ...missingAnchorWarning, ...contractIssues];
 }
 
 export function produceNextChapter(project: SeriesProject, request: ProductionRequest): ProductionResult {

@@ -1,7 +1,7 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M4.G-media-projection",
+  "active": "M4.H-integration-refactor",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
   "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
   "features": [
@@ -157,6 +157,15 @@
       "dependencies": ["M4.F-agent-run-engine"],
       "done_criteria": "projectMedia + projectAllMedia + PreservationReport + 9 케이스 + 36 files / 219 tests 통과",
       "evidence": "src/lib/mediaProjection.ts (5 매체 buildFields + checkPreservation), src/lib/mediaProjection.test.ts 9 케이스"
+    },
+    {
+      "id": "M4.H-integration-refactor",
+      "name": "M4 청크 H — 통합·리팩터",
+      "description": "청크 H 핵심 3 작업 완료. (1) aiCliHarness.buildHarnessPrompt 에 16 craft 검토 기준 + 12 품질 게이트 라인 추가 (Gap 10 프롬프트측). (2) canonRefactor.findAffectedChapters 가 change.targetCanonId 와 chapter.newCanonFacts.id 의 직접 매칭 우선, 없으면 부분문자열 fallback (Gap 8). (3) storyEngine.validateContinuity 가 continuityContract.classifyCanonChange 호출 — hard-canon 위반만 추가 issue 로 노출, 기존 character/world/missing-anchor 흐름 보존 + dedup (Gap 3).",
+      "status": "in_progress",
+      "dependencies": ["M4.G-media-projection"],
+      "done_criteria": "buildHarnessPrompt 16 기준·12 게이트 + canonRefactor ID 링크 + validateContinuity classifyCanonChange 통합 + dedup + 36 files / 219 tests 통과. creativeDevelopment 통합·docs 갱신은 다음 묶음.",
+      "evidence": "src/lib/aiCliHarness.ts buildHarnessPrompt 16 기준/12 게이트, src/lib/canonRefactor.ts targetCanonId/chapterReferencesCanonId, src/lib/storyEngine.ts validateContinuity contractIssues+dedup"
     },
     {
       "id": "M5-vercel-functions",

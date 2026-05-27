@@ -4,6 +4,59 @@
 
 ---
 
+## 2026-05-22 20:50 — M4.H 통합·리팩터 핵심 3 작업 완료 (1차 컷)
+
+> Last Updated: 2026-05-22 20:50 KST
+
+### Current Objective
+M4 청크 H 의 핵심 3 작업 완료 — Gap 3·8·10 모두 해결. creativeDevelopment 통합·docs 갱신은 분량이 커 다음 묶음으로 분리. M4 청크 진행 7.5/8 (청크 H 60%).
+
+### Recommended Next Step
+1. M4 청크 H 후속 — creativeDevelopment.ts 통합 (storyOntology · harnessReport · mediaProjection)
+2. docs/agent-system.md · docs/codex-agent-manifest.md 신설 에이전트 반영
+3. 그 뒤 M4 완료, M7 v1.0-alpha 완성 루프
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 36 files / 219 tests · `npm run build` 통과
+- 수정 — `src/lib/aiCliHarness.ts` (buildHarnessPrompt), `src/lib/canonRefactor.ts` (ID 링크), `src/lib/storyEngine.ts` (validateContinuity)
+
+### What the Last Session Did
+1. **buildHarnessPrompt 16 기준 + 12 게이트 라인 추가** — Gap 10 프롬프트측
+   - 16 craft 검토 기준 키를 에이전트별로 노출 (showrunner 3 · character 2 · world 2 · genre 3 · continuity 1 · critic 3 · essay 3)
+   - 12 품질 게이트를 트랙별로 노출 (common 3 · commercial 2 · literary 4 · essay 3)
+   - StoryMode 가중치 강제/권고 분기 설명 포함
+2. **canonRefactor.findAffectedChapters ID 링크** — Gap 8
+   - `CanonChangeEntryInput.targetCanonId?: string` optional 필드 신설
+   - 새 helper `chapterReferencesCanonId` — chapter.newCanonFacts.id 직접 매칭
+   - ID 매칭 우선, 없으면 기존 chapterContains 부분문자열 fallback (호환성)
+3. **storyEngine.validateContinuity 의미적 충돌 감지** — Gap 3
+   - `createContinuityContract({ hardCanon: canonFacts.map(f => f.statement) })`
+   - 각 claim 에 `classifyCanonChange` 호출, hard-canon 위반(반전 신호)만 추가 issue
+   - dedup — character/world issue 가 이미 잡은 claim 은 contract issue 추가 안 함 (중복 방지)
+
+### Files To Touch (next milestone — M4 청크 H 후속)
+- 수정 `src/lib/creativeDevelopment.ts` — `developCreativeProject` 가 storyOntology · runStoryHarness · projectAllMedia 결과를 `CreativeDevelopmentPackage` 에 통합
+- 갱신 `docs/agent-system.md` — critic-reviewer · essay-curator 등 신설 에이전트 반영
+- 갱신 `docs/codex-agent-manifest.md` — 신설 12 에이전트 매트릭스
+
+### Files NOT To Touch
+- M4.A~G 완성본
+- `src/lib/storyEngine.test.ts` `surfaces continuity conflicts` 케이스 (dedup 으로 보존)
+
+### Blockers
+없음.
+
+### Known Issues
+- validateContinuity 의 contractIssues 가 기존 흐름과 dedup 됨 — character/world issue 가 잡힌 claim 은 hard-canon classify 결과를 무시. 두 시스템이 같은 claim 을 다르게 분류할 가능성 있음 (1차 컷에서 부분 매칭 호환성 우선).
+- canonRefactor 의 targetCanonId 가 채워지지 않은 기존 변경은 그대로 부분문자열 매칭 흐름 (점진 마이그레이션).
+- creativeDevelopment 통합 미완 — M4 완전 완료는 다음 묶음 후.
+
+### Reference Documents
+- `docs/storyx-harness-architecture.md` § 7 청크 H, § 6 Gap 12개
+
+---
+
 ## 2026-05-22 15:42 — M4.G 매체 투영 (Layer 7) 완료
 
 > Last Updated: 2026-05-22 15:42 KST
