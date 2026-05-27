@@ -89,11 +89,11 @@
     {
       "id": "M4-story-harness-implementation",
       "name": "스토리 하네스 모듈 구현 (Layer 0~7)",
-      "description": "docs/storyx-harness-architecture.md 청크 A~H를 TDD 순서로 구현. storyOntology·storyHarness·continuityContract·koreanVoiceGate·mediaProjection·qualityGates·agentRunEngine 신설. canon owner 통일, validateContinuity 리팩터, agentOrchestration 폐기.",
-      "status": "in_progress",
+      "description": "docs/storyx-harness-architecture.md 청크 A~H를 TDD 순서로 구현. storyOntology·storyHarness·continuityContract·koreanVoiceGate·mediaProjection·qualityGates·agentRunEngine 신설. canon owner 통일, validateContinuity 리팩터, agentOrchestration 폐기. 청크 A~H 8개 모두 완료.",
+      "status": "done",
       "dependencies": ["M1-harness-design-doc"],
       "done_criteria": "청크 A~H 완료, Acceptance Criteria 12개 충족, npm test 전체 통과",
-      "evidence": null
+      "evidence": "M4.A · M4.B · M4.C · M4.D · M4.E · M4.F · M4.G · M4.H 8 commits, 36 files / 220 tests"
     },
     {
       "id": "M4.A-canon-baseline-cleanup",
@@ -161,11 +161,11 @@
     {
       "id": "M4.H-integration-refactor",
       "name": "M4 청크 H — 통합·리팩터",
-      "description": "청크 H 핵심 3 작업 완료. (1) aiCliHarness.buildHarnessPrompt 에 16 craft 검토 기준 + 12 품질 게이트 라인 추가 (Gap 10 프롬프트측). (2) canonRefactor.findAffectedChapters 가 change.targetCanonId 와 chapter.newCanonFacts.id 의 직접 매칭 우선, 없으면 부분문자열 fallback (Gap 8). (3) storyEngine.validateContinuity 가 continuityContract.classifyCanonChange 호출 — hard-canon 위반만 추가 issue 로 노출, 기존 character/world/missing-anchor 흐름 보존 + dedup (Gap 3).",
-      "status": "in_progress",
+      "description": "5 작업 모두 완료. (1) aiCliHarness.buildHarnessPrompt 에 16 craft 검토 기준 + 12 품질 게이트 (Gap 10). (2) canonRefactor.findAffectedChapters ID 링크 우선 + fallback (Gap 8). (3) storyEngine.validateContinuity 가 continuityContract.classifyCanonChange 호출 + dedup (Gap 3). (4) creativeDevelopment.developCreativeProject 에 storyOntology · harnessReport · mediaProjections · continuityContract 4 신규 optional 필드 통합. (5) docs/agent-system.md 에 신설 12 에이전트 + 16 criteriaKeys 표 추가.",
+      "status": "done",
       "dependencies": ["M4.G-media-projection"],
-      "done_criteria": "buildHarnessPrompt 16 기준·12 게이트 + canonRefactor ID 링크 + validateContinuity classifyCanonChange 통합 + dedup + 36 files / 219 tests 통과. creativeDevelopment 통합·docs 갱신은 다음 묶음.",
-      "evidence": "src/lib/aiCliHarness.ts buildHarnessPrompt 16 기준/12 게이트, src/lib/canonRefactor.ts targetCanonId/chapterReferencesCanonId, src/lib/storyEngine.ts validateContinuity contractIssues+dedup"
+      "done_criteria": "5 작업 모두 완료 + 36 files / 220 tests 통과 + creativeDevelopment 통합 케이스 + agent-system.md 갱신",
+      "evidence": "src/lib/aiCliHarness.ts buildHarnessPrompt, src/lib/canonRefactor.ts ID 링크, src/lib/storyEngine.ts validateContinuity, src/lib/creativeDevelopment.ts CreativeDevelopmentPackage 4 신규 필드, docs/agent-system.md M4 신설 12 섹션"
     },
     {
       "id": "M5-vercel-functions",

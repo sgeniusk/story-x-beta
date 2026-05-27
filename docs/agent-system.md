@@ -56,7 +56,59 @@ flowchart LR
 ## State Model
 
 - `CreativeBlueprint`: medium, format, management focus, agent stack, skill stack, production phases
-- `CreativeDevelopmentPackage`: material, story arc, character cards, visual/prose plan, panel plan, image prompt plan, story contract, workflow board, quality gates, refactor impact preview, reference DNA cards, AI output autopsy, agent reports
+- `CreativeDevelopmentPackage`: material, story arc, character cards, visual/prose plan, panel plan, image prompt plan, story contract, workflow board, quality gates, refactor impact preview, reference DNA cards, AI output autopsy, agent reports, **M4: storyOntology · harnessReport · mediaProjections · continuityContract**
+
+## M4 신설 에이전트 12명 (Stage × Media Matrix)
+
+M4-essay-studio-agents 와 M4-stage-agents 에서 신설된 12 에이전트. `ValidationAgentId` 23개 중 신설 12개.
+
+### 스튜디오 단계 코어 6명
+
+| Agent | 역할 | 주요 활동 |
+|---|---|---|
+| `canon-librarian` | 캐논 사서 | 캐논 사실 분류·인덱싱·정합 검증 |
+| `timeline-keeper` | 시간선 키퍼 | 회차 순서·예고·복선 스케줄 관리 |
+| `bible-curator` | 바이블 큐레이터 | 13 카테고리 바이블 패킷 구성·핀 관리 |
+| `critic-reviewer` | 작품성 평론가 | 양가성·윤리적 비용·침묵·모티프 변주 (작품성 트랙) |
+| `essay-curator` | 에세이 큐레이터 | 진실 계약·사적→보편 도약·노출 윤리 (에세이) |
+| `memory-evolution-keeper` | 메모리 성장 키퍼 | evolutionMemory 누적·압축·drift 감지 |
+
+### 랜딩 단계 1명
+
+| Agent | 역할 |
+|---|---|
+| `studio-architect` | 매체 선택·스튜디오 구성 제안 |
+
+### 브릿지 단계 1명
+
+| Agent | 역할 |
+|---|---|
+| `interview-curator` | 자유글·매체·길이를 보고 매체별 페르소나 풀에서 라인업 선정 |
+
+### 출판 단계 4명
+
+| Agent | 역할 |
+|---|---|
+| `book-designer` | 표지·내부·CMYK PDF·EPUB 3 |
+| `pr-specialist` | 보도자료·소셜·플랫폼 메타데이터·D-7~D+14 시퀀스 |
+| `platform-curator` | Kindle/Ridi/Yes24, 네이버/카카오, 윌라/Audible |
+| `business-strategist` | 가격·로열티·독점·라이선스·ROI |
+
+### 16 craft 검토 기준 (criteriaKeys)
+
+각 에이전트의 `AgentValidationProcess.criteriaKeys` 에 등록됨 (M4 청크 F).
+
+| Agent | criteriaKeys |
+|---|---|
+| `serial-showrunner` | chapter_one_hook_check · chapter_end_hook_check · stakes_progression_audit |
+| `character-custodian` | pressure_triangle_validation · flat_character_warning |
+| `world-keeper` | motif_variation_audit · historical_consistency_extended |
+| `genre-stylist` | scene_sequel_ratio · voice_match_score · read_aloud_audit |
+| `continuity-editor` | open_threads_overload |
+| `critic-reviewer` | ambiguity_audit · ethical_pressure_test · silence_audit |
+| `essay-curator` | universal_leap_check · self_reversal_check · disclosure_scope_check |
+
+
 - `TesterDrivenWorkflow`: evaluator-informed workflow board with activation metric, role ownership, quality gates, platform proof, and approval rule
 - `VoiceBible`: author style preferences, sentence rhythm, metaphor density, forbidden phrases, Korean naturalness flags
 - `EssayMemory`: user-supplied lived material, surrounding people, privacy boundaries, reflective questions

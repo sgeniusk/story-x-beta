@@ -131,4 +131,42 @@ describe('creativeDevelopment', () => {
     expect(result.outputAutopsy.userApprovalRequired).toBe(true);
     expect(result.referenceDnaCards[0].guardrail).toContain('표면 모방 금지');
   });
+
+  // M4 청크 H 후속 — Layer 0·1·7 통합 검증.
+  it('developCreativeProject 가 storyOntology · harnessReport · mediaProjections · continuityContract 를 통합 산출', () => {
+    const blueprint = buildCreativeBlueprint({ medium: 'novel', format: 'long-novel' });
+    const input = createDefaultDevelopmentInput(blueprint);
+    input.material = '기억을 고치는 필사관이 사라진 오빠를 찾는다';
+    input.storySeed = '탑에 들어갈수록 자신의 이름이 사라진다';
+    input.characterSeed = '서윤: 죄책감 때문에 진실을 확인해야 하는 필사관';
+    input.audience = '연재 미스터리 독자';
+    input.constraints = '장편';
+
+    const result = developCreativeProject(blueprint, input);
+
+    // storyOntology — 작품 그래프 채워짐.
+    expect(result.storyOntology?.premise.dramaticQuestion).toContain('찾');
+    expect(result.storyOntology?.characters[0]?.desire).toBeTruthy();
+    expect(result.storyOntology?.worldRules[0]?.cost).toBeTruthy();
+
+    // harnessReport — 6단계 스테이지 + 점수.
+    expect(result.harnessReport?.stages.length).toBe(6);
+    expect(result.harnessReport?.qualityScore).toBeGreaterThanOrEqual(70);
+    expect(result.harnessReport?.readyForProduction).toBe(true);
+
+    // mediaProjections — 5 매체.
+    expect(result.mediaProjections?.length).toBe(5);
+    expect(result.mediaProjections?.map((p) => p.target)).toEqual([
+      'novel',
+      'essay',
+      'webtoon',
+      'insta-toon',
+      'four-cut'
+    ]);
+
+    // continuityContract — 빈 hardCanon 으로 시작.
+    expect(result.continuityContract?.hardCanon).toEqual([]);
+    expect(result.continuityContract?.livingState).toEqual([]);
+    expect(result.continuityContract?.softSignals).toEqual([]);
+  });
 });

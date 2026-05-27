@@ -6,6 +6,11 @@ import {
   type ReferenceDnaCard,
   type TesterDrivenWorkflow
 } from './evaluationSynthesis';
+// M4 청크 H 후속 — Layer 0·1·7 통합. 작가 입력 → ontology → harness report → 5 매체 투영 + continuity contract.
+import { buildStoryOntology, type StoryOntology } from './storyOntology';
+import { runStoryHarness, type StoryHarnessReport } from './storyHarness';
+import { projectAllMedia, type MediaProjection } from './mediaProjection';
+import { createContinuityContract, type ContinuityContract } from './continuityContract';
 
 export interface CreativeDevelopmentInput {
   material: string;
@@ -119,6 +124,15 @@ export interface CreativeDevelopmentPackage {
   imagePromptPlan?: ImagePromptPlan;
   agentReports: DevelopmentAgentReport[];
   nextActions: string[];
+  // M4 청크 H 후속 — 4 신규 optional 필드. 작가 입력만으로 Layer 0·1·7 결과를 함께 산출.
+  /** Layer 0 — 작품 그래프 (전제·인물·세계·갈등·플롯·캐논 시드). */
+  storyOntology?: StoryOntology;
+  /** Layer 0 — 6단계 스테이지 점수 + readyForProduction 판정. */
+  harnessReport?: StoryHarnessReport;
+  /** Layer 7 — 같은 ontology 의 5 매체 투영 (novel/essay/webtoon/insta-toon/four-cut). */
+  mediaProjections?: MediaProjection[];
+  /** Layer 1 — 캐논 3계층 계약 (1차 컷은 hardCanon 만 채워 시작). */
+  continuityContract?: ContinuityContract;
 }
 
 const defaultMaterial = '평범한 인물이 이상한 규칙을 발견하고 삶의 방향이 바뀐다';
@@ -225,7 +239,24 @@ export function developCreativeProject(
         ? ['추가 질문 리스트 작성', '문체 샘플 저장', '주변 인물 익명화 점검']
         : isAudio
           ? ['낭독 스크립트 작성', '음악/효과음 큐 정리', '자막/장면 보드 생성']
-      : ['시리즈 바이블 저장', '첫 회차 비트 생성', '연속성 레저 업데이트']
+      : ['시리즈 바이블 저장', '첫 회차 비트 생성', '연속성 레저 업데이트'],
+    // M4 청크 H 후속 — Layer 0·1·7 통합.
+    // 같은 작가 입력으로 ontology → harness 점수 → 5 매체 투영을 한 번에 산출.
+    // continuityContract 는 빈 hardCanon 으로 시작 (작가가 회차를 쓰며 채움).
+    storyOntology: buildStoryOntology({ material, storySeed, characterSeed, audience: input.audience, constraints: input.constraints }),
+    harnessReport: runStoryHarness({
+      medium: blueprint.medium,
+      formatLabel: blueprint.formatLabel,
+      material,
+      storySeed,
+      characterSeed,
+      audience: input.audience,
+      constraints: input.constraints
+    }),
+    mediaProjections: projectAllMedia(
+      buildStoryOntology({ material, storySeed, characterSeed, audience: input.audience, constraints: input.constraints })
+    ),
+    continuityContract: createContinuityContract({ hardCanon: [] })
   };
 }
 
