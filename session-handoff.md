@@ -4,6 +4,67 @@
 
 ---
 
+## 2026-05-22 15:42 — M4.G 매체 투영 (Layer 7) 완료
+
+> Last Updated: 2026-05-22 15:42 KST
+
+### Current Objective
+M4 청크 G 완료 — 같은 StoryOntology 가 5 매체(novel/essay/webtoon/insta-toon/four-cut) 로 투영, 핵심 4 보존. 다음 자연스러운 작업 — M4 청크 H (통합 단계, M4 의 마지막 청크).
+
+### Recommended Next Step
+1. M4 청크 H 시작 — 가장 큰 통합 작업
+   · `canonRefactor.ts` 엔티티 ID 링크 기반 영향 탐지 (Gap 8)
+   · `storyEngine.validateContinuity` 를 `continuityContract.classifyCanonChange` 로 리팩터 (청크 C 에서 미룬 부분)
+   · `aiCliHarness.buildHarnessPrompt` 에 16 기준·12 게이트 반영 (Gap 10 프롬프트측)
+   · `creativeDevelopment.ts` 에 storyOntology·harnessReport·mediaProjection 통합
+   · `docs/agent-system.md`·`docs/codex-agent-manifest.md` 신설 에이전트 반영
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 36 files / 219 tests · `npm run build` 통과
+- 신설 — `src/lib/mediaProjection.ts` + `.test.ts` (9 케이스)
+
+### What the Last Session Did
+1. **mediaProjection.ts 신설** — Layer 7 매체 투영
+   - `MediaTarget` — 5 매체(novel/essay/webtoon/insta-toon/four-cut)
+   - `projectMedia(ontology, target)` — 한 매체로 투영, fields + preservation 산출
+   - `projectAllMedia(ontology)` — 5 매체 한 번에 (UI 비교용)
+2. **매체별 필드 (Stage 7 정본)**
+   - novel: chapterPromise · viewpointDistance · proseTexture · cliffhangerShape
+   - essay: interviewQuestionPath · livedMaterialChecklist · privacyBoundary · voiceBible · reflectiveTurn
+   - webtoon: episodeHook · scrollRhythm · visualAnchor · cutDensity
+   - insta-toon: firstSlideHook · saveShareFinalBeat · captionAngle
+   - four-cut: setup · escalation · twistPreparation · punchline
+3. **핵심 보존 검증 (PreservationReport)**
+   - 4 키 모두 체크 — premise.dramaticQuestion · characters[0].desire · worldRules[0].cost · plotThreads[0]
+   - preserved=false 면 missing 에 누락 키 채워짐
+   - 모든 매체가 같은 ontology 에서 동일한 preservedCore 보고 — 표면만 매체별, 핵심 동일
+4. **TDD 9 케이스** — 5 매체 각 필드 + 보존 true/false + projectAllMedia + 매체 간 핵심 일관성
+
+### Files To Touch (next milestone — M4 청크 H)
+- 수정 `src/lib/canonRefactor.ts` — 엔티티 ID 링크 (Gap 8)
+- 수정 `src/lib/storyEngine.ts` `validateContinuity` — `continuityContract.classifyCanonChange` 호출 (청크 C 에서 미룬 리팩터)
+- 수정 `src/lib/aiCliHarness.ts` `buildHarnessPrompt` — 16 기준·12 게이트 반영
+- 수정 `src/lib/creativeDevelopment.ts` — storyOntology·harnessReport·mediaProjection 통합
+- 갱신 `docs/agent-system.md` · `docs/codex-agent-manifest.md`
+
+### Files NOT To Touch
+- M4.A · M4.B · M4.C · M4.D · M4.E · M4.F 완성본
+- `src/lib/verticalSlice.ts` (필요 시만 호출 연결)
+
+### Blockers
+없음.
+
+### Known Issues
+- mediaProjection 의 필드 값들이 1차 컷에서 generic placeholder ('담담하고 선명한 한국어' 등) — 청크 H 통합에서 LLM 또는 작가 입력 기반으로 정밀화.
+- projectMedia 가 ontology 의 첫 항목만 사용 (worldRules[0], plotThreads[0]) — 복수 항목 처리는 추후.
+
+### Reference Documents
+- `docs/storyx-harness-architecture.md` § 7 청크 G
+- `docs/superpowers/plans/2026-05-12-story-ontology-harness.md` Stage 7
+
+---
+
 ## 2026-05-22 15:27 — M4.F 에이전트 실행 엔진 (Layer 5) 완료
 
 > Last Updated: 2026-05-22 15:27 KST

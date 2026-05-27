@@ -1,7 +1,7 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M4.F-agent-run-engine",
+  "active": "M4.G-media-projection",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
   "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
   "features": [
@@ -148,6 +148,15 @@
       "dependencies": ["M4.E-quality-gates-bible"],
       "done_criteria": "agentRunEngine planAgentRuns + 8 케이스 + storyEngine.buildAgentRuns wrapper 화 + agentOrchestration 폐기 + criteriaKeys 7곳/16키 + 35 files / 210 tests 통과",
       "evidence": "src/lib/agentRunEngine.ts (planAgentRuns + buildAgentRun + describeAgentRun), src/lib/storyEngine.ts buildAgentRuns wrapper + AgentRun.agentId 타입, src/lib/agentReviewProcess.ts criteriaKeys 7곳"
+    },
+    {
+      "id": "M4.G-media-projection",
+      "name": "M4 청크 G — 매체 투영 (Layer 7)",
+      "description": "mediaProjection.ts 신설. 같은 StoryOntology 를 5 매체(novel/essay/webtoon/insta-toon/four-cut) 로 투영. 매체별 필드는 다르되, 핵심 4 (premise.dramaticQuestion · characters[0].desire · worldRules[0].cost · plotThreads[0]) 는 변하지 않는다 (preservation 검증).",
+      "status": "done",
+      "dependencies": ["M4.F-agent-run-engine"],
+      "done_criteria": "projectMedia + projectAllMedia + PreservationReport + 9 케이스 + 36 files / 219 tests 통과",
+      "evidence": "src/lib/mediaProjection.ts (5 매체 buildFields + checkPreservation), src/lib/mediaProjection.test.ts 9 케이스"
     },
     {
       "id": "M5-vercel-functions",

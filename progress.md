@@ -4,7 +4,15 @@
 
 ## Current Objective
 
-**M4.F — 에이전트 실행 엔진 (Layer 5)** (`done` · 이번 세션)
+**M4.G — 매체 투영 (Layer 7)** (`done` · 이번 세션)
+
+M4 청크 G 완료. `mediaProjection.ts` 신설 — 같은 `StoryOntology` 가 5 매체(novel/essay/webtoon/insta-toon/four-cut) 로 투영. 매체별 필드는 다르지만 핵심 4 (premise.dramaticQuestion · characters[0].desire · worldRules[0].cost · plotThreads[0]) 는 변하지 않음 (PreservationReport 검증). `projectMedia` · `projectAllMedia` 함수. TDD 9 케이스, **36 files / 219 tests** 통과.
+
+다음 단계 — M4 청크 H (통합, 마지막 청크).
+
+---
+
+## (직전) M4.F — 에이전트 실행 엔진 (Layer 5) (`done`)
 
 M4 청크 F 완료. 4가지 변경 — (1) `agentRunEngine.ts` 신설 (스케일별 AgentRun 산출), (2) `storyEngine.buildAgentRuns` 하드코딩 5명 → wrapper 로 교체 (Gap 4), (3) `agentOrchestration.ts` + `.test.ts` 삭제 (Gap 2·11), (4) `agentReviewProcess.ts` 에 `criteriaKeys` 필드 + 7 에이전트에 16 craft 기준 키 채움. `AgentRun.agentId` 를 `ValidationAgentId` 로 통합. TDD 8 케이스, **35 files / 210 tests** 통과.
 
