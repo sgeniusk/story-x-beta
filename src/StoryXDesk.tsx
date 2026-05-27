@@ -106,6 +106,8 @@ import { buildTesterDrivenWorkflow, type TesterDrivenWorkflow } from './lib/eval
 import { buildComicsVisualWorkflow } from './lib/visualProduction';
 import { getCreativeActionLabels } from './lib/projectBlueprint';
 import { buildPublishingPlan, type PublishingPlan } from './lib/publishing';
+// M4 UI 통합 1차 컷 — 작가가 스튜디오 안에서 하네스 점수·6 스테이지·readyForProduction 을 본다.
+import { runStoryHarness, type StoryHarnessReport, type HarnessStageResult } from './lib/storyHarness';
 import { buildAlphaReadinessReport, type AlphaReadinessReport } from './lib/alphaReadiness';
 import { buildOneProjectVerticalSlice, type OneProjectVerticalSlice } from './lib/verticalSlice';
 import { STORYX_VERSION, storyxVersionLog } from './lib/version';
@@ -967,6 +969,30 @@ export function StoryXDesk({
     [editorText, latestChapter]
   );
   const evaluatorWorkflow = useMemo(() => buildTesterDrivenWorkflow(blueprint), [blueprint]);
+  // M4 UI 통합 1차 컷 — project 의 logline/deepQuestion/character 를 storyHarness 입력으로 매핑.
+  // 작가가 자기 작품의 6단계 스테이지 점수·readyForProduction 을 한눈에 본다.
+  const harnessReport: StoryHarnessReport = useMemo(
+    () =>
+      runStoryHarness({
+        medium: blueprint.medium,
+        formatLabel: blueprint.formatLabel,
+        material: project.logline || '',
+        storySeed: project.deepQuestion || project.audiencePromise || '',
+        characterSeed: project.characters[0]
+          ? `${project.characters[0].name}: ${project.characters[0].desire}`
+          : '',
+        audience: project.audiencePromise || '',
+        constraints: blueprint.formatLabel || ''
+      }),
+    [
+      blueprint.medium,
+      blueprint.formatLabel,
+      project.logline,
+      project.deepQuestion,
+      project.audiencePromise,
+      project.characters
+    ]
+  );
   const publishingPlan = useMemo(
     () => buildPublishingPlan(project, blueprint, { approvalQueue }),
     [approvalQueue, blueprint, project]
@@ -2210,6 +2236,8 @@ export function StoryXDesk({
                   setIsMediaPanelOpen(false);
                 }}
               />
+              {/* M4 UI 통합 — 스토리 하네스 진단 카드. 6 스테이지 + qualityScore + readyForProduction */}
+              <HarnessReportCard report={harnessReport} />
               <PublishingIndexCard plan={publishingPlan} />
             </>
           ) : activeTrack === 'draft' ? (
@@ -3051,6 +3079,90 @@ function TensionShareChart({
           <i className="ex-chart-swatch ex-chart-swatch--share" /> 분량 비중 · 계획
         </span>
       </div>
+    </section>
+  );
+}
+
+// M4 UI 통합 1차 컷 — 스토리 하네스 진단 카드.
+// 작가가 자기 작품의 6단계 스테이지 점수·readyForProduction 을 한눈에 본다.
+// 1차 컷은 인라인 스타일 — 디자인 검토 후 본격 다듬기.
+function HarnessReportCard({ report }: { report: StoryHarnessReport }) {
+  const score = report.qualityScore;
+  const ready = report.readyForProduction;
+  const scoreColor = score >= 70 ? '#7be37b' : score >= 40 ? '#f3c95a' : '#e76464';
+  return (
+    <section className="sx-panel sx-harness-report-card" aria-label="스토리 하네스 진단">
+      <div className="sx-panel-heading">
+        <BrainCircuit size={16} />
+        <h2>스토리 하네스</h2>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 4 }}>
+        <span style={{ fontSize: 36, fontWeight: 300, color: scoreColor, lineHeight: 1 }}>{score}</span>
+        <span style={{ fontSize: 13, color: 'var(--sx-muted)' }}>/ 100</span>
+        <span
+          style={{
+            marginLeft: 'auto',
+            padding: '3px 9px',
+            fontSize: 11,
+            fontWeight: 600,
+            borderRadius: 999,
+            background: ready ? 'rgba(123, 227, 123, 0.14)' : 'rgba(243, 201, 90, 0.16)',
+            color: ready ? '#7be37b' : '#f3c95a'
+          }}
+        >
+          {ready ? 'Ready for production' : 'Not ready'}
+        </span>
+      </div>
+      <ul style={{ margin: '12px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {report.stages.map((stage: HarnessStageResult) => {
+          const color =
+            stage.status === 'pass'
+              ? 'rgba(123, 227, 123, 0.85)'
+              : stage.status === 'warning'
+                ? '#f3c95a'
+                : '#e76464';
+          return (
+            <li
+              key={stage.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 12.5,
+                color: 'var(--sx-ink)'
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+              <span style={{ flex: 1 }}>{stage.title}</span>
+              <span style={{ color: 'var(--sx-muted)', fontFamily: 'ui-monospace, "SF Mono", monospace', fontSize: 11 }}>
+                {stage.score} / {stage.maxScore}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {!ready && report.stages.flatMap((s) => s.requiredRepairs).length > 0 && (
+        <div
+          style={{
+            marginTop: 10,
+            padding: '8px 10px',
+            background: 'rgba(243, 201, 90, 0.06)',
+            border: '1px solid rgba(243, 201, 90, 0.22)',
+            borderRadius: 6,
+            fontSize: 12,
+            color: 'var(--sx-muted)',
+            lineHeight: 1.5
+          }}
+        >
+          <strong style={{ color: '#f3c95a', display: 'block', marginBottom: 4 }}>다음 행동</strong>
+          {report.stages
+            .flatMap((s) => s.requiredRepairs)
+            .slice(0, 3)
+            .map((repair, idx) => (
+              <div key={idx}>· {repair}</div>
+            ))}
+        </div>
+      )}
     </section>
   );
 }
