@@ -4,6 +4,74 @@
 
 ---
 
+## 2026-05-22 22:50 — M4 완료 + M8 UI 통합 + Linear 다크 폴리시 · 디자인 핸드오프 준비로 인계
+
+> Last Updated: 2026-05-22 22:50 KST
+
+### Current Objective
+**M9 디자인 핸드오프 자료 준비** (다음 세션 첫 작업). M4 8/8 청크 완료 + M8 UI 통합 4 카드 + Linear 다크 폴리시까지 마침. 다음 세션에서 외주 디자이너에게 보낼 brief + 스크린샷 + 토큰 표 작성.
+
+### Recommended Next Step
+1. `docs/handoff/design-brief.md` 신설 — 4파트 구조 의도 + 거친 부분 + 의뢰 항목 7개
+2. Playwright 스크린샷 5종 — 랜딩(낮/밤), 브릿지, 홈(매체 선택), 스튜디오, 퍼블리시
+3. 토큰 매핑 표 — nx-* · sx-* · lc-* 현황
+4. 의뢰 항목 정리 — 전체 일관성·좌레일 가독성·검토/대화 UI·인라인 diff·확장 피드백·편집기 호흡·M8 카드 다듬기
+5. 외주 의뢰 후 병행 — M6.3 storyx CLI · D (agentRunEngine LLM 연결) · Vercel env 등록
+
+### Branch · Commit · Verification
+- Branch — `design/linear-dark`
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 36 files / 220 tests · `npm run build` 1.04s
+- Local dev — http://127.0.0.1:5173 동작 중
+- Vercel preview — https://story-x-alpha-184suo6gf-gomgomee-s-projects.vercel.app
+- 8 commits 이번 세션 — M4.H 후속 · M8.1 · M8.2~4 · M8.5 · M8.6 (예정)
+
+### What the Last Session Did
+1. **M4 청크 H 후속** — creativeDevelopment 4 신규 optional 필드(storyOntology/harnessReport/mediaProjections/continuityContract) + agent-system.md 신설 12 에이전트 + 16 criteriaKeys 표. **M4 8/8 완전 완료.**
+2. **M8.1** HarnessReportCard — 점수·6 스테이지·readyForProduction 좌레일 노출
+3. **M8.2** QualityGatesCard — 12 게이트 + StoryMode 슬라이더 (commercial ↔ literary 100%) + localStorage 영속
+4. **M8.3** MediaProjectionsCard — 5 매체 투영 + 핵심 4 보존 신호
+5. **M8.4** OntologyCard — 인물·세계·갈등·플롯 4 카테고리
+6. **Vercel preview 배포** — `story-x-alpha-184suo6gf-...vercel.app` (mock 폴백 상태)
+7. **M8.5** .home-page Linear 다크 토큰 12개 오버라이드 — 매체 선택 단계 어색함 해결. 브릿지 로그인/프로젝트 라이트 유지.
+8. **M8.6** 편집기 여백 축소 (clamp 10~16px) + sx-manuscript-editor.is-edited 좌측 라임 글로우 + sx-diff-toggle 강조
+
+### Files To Touch (next milestone — M9)
+- 신설 `docs/handoff/design-brief.md`
+- 신설 `docs/handoff/screenshots/` (Playwright 자동 캡처 또는 수동)
+- 신설 `docs/handoff/token-map.md`
+- 갱신 `feature_list.json` M9 진행 표시
+
+### Files NOT To Touch
+- M4 완성본 (storyEngine, storyOntology, storyHarness, continuityContract, koreanVoiceGate, qualityGates, agentRunEngine, mediaProjection)
+- M8 카드 컴포넌트 (디자인 핸드오프 후 외주 결과로 재작성 예정)
+- 매체 선택 등 단계 폴리시 (외주 결과 받은 뒤 통합)
+
+### Blockers
+없음. 단, 디자인 핸드오프 후에는 다음 항목들이 의뢰 결과를 기다림.
+
+### 핸드오프 의뢰 항목 (7개)
+1. 전체 사이트 4파트 톤 일관성 (랜딩·브릿지·홈·스튜디오·퍼블리시)
+2. 좌레일 가독성 (AgentIntentCard, M8 4 카드, statusbar)
+3. 에이전트 검토·대화 UI 재설계 — 현재 거칠다
+4. 인라인 diff 하이라이트 (textarea 위 실시간 빨강/라임) — ContentEditable 또는 overlay
+5. 확장(집중 모드) 버튼 시각 피드백 강화
+6. 편집기 호흡 — 여백·타이포·hover
+7. M8 4 카드 본격 다듬기 (현재 인라인 스타일 1차 컷)
+
+### Known Issues
+- AgentIntentCard ("쇼러너가 잡은 다음 회...") 카드는 동작은 하지만 (textarea 입력 + 토글 펼치기) 시각 피드백 부족. 외주 의뢰 항목 #2 에 포함.
+- prose diff 가 별도 보기 토글 (sx-diff-toggle) — 인라인 실시간 하이라이트 X. 외주 의뢰 항목 #4 에 포함.
+- 확장 버튼 (ex-focus-btn) 동작은 정상이나 변화가 미묘. 외주 의뢰 항목 #5 에 포함.
+- M5 Vercel Functions 5 라우트 모두 mock 폴백 — env 등록 필요. 핸드오프와 병행해서 처리 가능.
+
+### Reference Documents
+- `docs/storyx-harness-architecture.md` — 스토리 하네스 정본
+- `docs/agent-system.md` — 23 에이전트 매트릭스 + 16 criteriaKeys
+- `docs/vercel-env-setup.md` — Vercel env 등록 안내
+- `~/.claude/plans/x-zippy-graham.md` — 0.2 → 1.0 마스터 로드맵
+
+---
+
 ## 2026-05-22 20:50 — M4.H 통합·리팩터 핵심 3 작업 완료 (1차 컷)
 
 > Last Updated: 2026-05-22 20:50 KST

@@ -1,7 +1,7 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M8.2-ui-integration-batch",
+  "active": "M9-design-handoff-prep",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
   "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
   "features": [
@@ -157,6 +157,24 @@
       "dependencies": ["M4.F-agent-run-engine"],
       "done_criteria": "projectMedia + projectAllMedia + PreservationReport + 9 케이스 + 36 files / 219 tests 통과",
       "evidence": "src/lib/mediaProjection.ts (5 매체 buildFields + checkPreservation), src/lib/mediaProjection.test.ts 9 케이스"
+    },
+    {
+      "id": "M8.5-home-linear-dark-polish",
+      "name": "M8.5 매체 선택 단계 Linear 다크 + 편집기 여백·수정 표시",
+      "description": ".home-page 의 nx-* 토큰을 Linear 다크 값으로 오버라이드 — 매체·자유서술·인터뷰·빌딩 4 step 모두 다크 통일. 편집기 여백 축소 (clamp 10~16px). 수정 표시 가시화 — sx-manuscript-editor.is-edited 좌측 라임 글로우 + sx-diff-toggle 라임 강조.",
+      "status": "done",
+      "dependencies": ["M8.2-ui-integration-batch"],
+      "done_criteria": ".home-page 토큰 12개 오버라이드 + 편집기 padding 축소 + is-edited 시각 피드백 + 36 files / 220 tests + build 성공",
+      "evidence": "src/styles.css .home-page 다크 토큰 + .sx-manuscript-editor.is-edited 라임 글로우, src/StoryXDesk.tsx sx-manuscript-editor-wrap is-edited 클래스"
+    },
+    {
+      "id": "M9-design-handoff-prep",
+      "name": "M9 디자인 핸드오프 자료 준비 (다음 세션 첫 작업)",
+      "description": "외주 디자이너에게 전달할 단일 brief 문서 + Playwright 스크린샷 묶음 + 토큰 매핑 시트. 의뢰 항목 7개 정리 (4파트 일관성·좌레일 가독성·검토/대화 UI·인라인 diff·확장 피드백·편집기 호흡·M8 카드 다듬기).",
+      "status": "todo",
+      "dependencies": ["M8.5-home-linear-dark-polish"],
+      "done_criteria": "docs/handoff/design-brief.md + 단계별 스크린샷 5종 + 컬러/토큰 표 + 외주에게 발송 가능 패키지",
+      "evidence": null
     },
     {
       "id": "M8.2-ui-integration-batch",

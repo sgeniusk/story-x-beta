@@ -4,7 +4,21 @@
 
 ## Current Objective
 
-**M4.H — 통합·리팩터 (1차 컷 · 핵심 3 작업)** (`in_progress` · 이번 세션)
+**M9 — 디자인 핸드오프 준비** (`todo` · 다음 세션 첫 작업)
+
+M4 8/8 완전 완료 + M8 UI 통합 4 카드 + Linear 다크 폴리시까지 마침. 다음 세션 첫 작업은 외주 디자이너에게 보낼 핸드오프 패키지 작성. `docs/handoff/design-brief.md` + Playwright 스크린샷 5종 + 토큰 매핑 표 + 의뢰 항목 7개 (4파트 일관성·좌레일 가독성·검토/대화 UI·인라인 diff·확장 피드백·편집기 호흡·M8 카드 다듬기).
+
+핸드오프 의뢰 후 병행 작업 — M6.3 storyx CLI / agentRunEngine LLM 연결 / Vercel env 등록.
+
+---
+
+## (직전) M8.5 — 매체 선택 Linear 다크 + 편집기 여백·수정 표시 (`done`)
+
+`.home-page` 의 nx-* 토큰 12개 다크 오버라이드. 매체·자유서술·인터뷰·빌딩 4 step 모두 다크 통일. 편집기 여백 축소(clamp 10~16px). 수정 표시 가시화 — `.sx-manuscript-editor.is-edited` 좌측 라임 글로우 + `.sx-diff-toggle` 강조. **36 files / 220 tests** 통과.
+
+---
+
+## (직전) M4.H — 통합·리팩터 (1차 컷 · 핵심 3 작업) (`done`)
 
 M4 청크 H 의 핵심 3 작업 완료. (1) `aiCliHarness.buildHarnessPrompt` 에 16 craft 검토 기준 + 12 품질 게이트 라인 추가 (Gap 10). (2) `canonRefactor.findAffectedChapters` 가 `change.targetCanonId` ↔ `chapter.newCanonFacts.id` 직접 매칭 우선, 없으면 부분문자열 fallback (Gap 8). (3) `storyEngine.validateContinuity` 가 `continuityContract.classifyCanonChange` 호출 — hard-canon 위반만 추가 issue, dedup 으로 기존 흐름 보존 (Gap 3). **36 files / 219 tests** 통과.
 

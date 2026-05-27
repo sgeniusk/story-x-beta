@@ -5640,7 +5640,7 @@ function CreativeStage({
               {isSerialFormat(blueprint.format) ? `Episode ${chapter.episode}` : '원고'}
             </p>
             <h2>{chapter.title}</h2>
-            <label className="sx-manuscript-editor-wrap">
+            <label className={`sx-manuscript-editor-wrap ${editedSinceReview ? 'is-edited' : ''}`}>
               <span className="sx-manuscript-editor-head">
                 원고
                 {proseDiff.changed && (
