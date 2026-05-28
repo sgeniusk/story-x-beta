@@ -1,7 +1,7 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M9-design-handoff-prep",
+  "active": "M6.3-storyx-cli",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
   "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
   "features": [
@@ -169,12 +169,12 @@
     },
     {
       "id": "M9-design-handoff-prep",
-      "name": "M9 디자인 핸드오프 자료 준비 (다음 세션 첫 작업)",
-      "description": "외주 디자이너에게 전달할 단일 brief 문서 + Playwright 스크린샷 묶음 + 토큰 매핑 시트. 의뢰 항목 7개 정리 (4파트 일관성·좌레일 가독성·검토/대화 UI·인라인 diff·확장 피드백·편집기 호흡·M8 카드 다듬기).",
-      "status": "todo",
+      "name": "M9 디자인 핸드오프 자료 준비",
+      "description": "외주 디자이너 또는 Claude Design 에게 전달할 단일 brief 문서 + Playwright 스크린샷 묶음 + 토큰 매핑 시트. 의뢰 항목 7개 정리 (4파트 일관성·좌레일 가독성·검토/대화 UI·인라인 diff·확장 피드백·편집기 호흡·M8 카드 다듬기). design/linear-dark 브랜치를 main 으로 ff merge 완료.",
+      "status": "done",
       "dependencies": ["M8.5-home-linear-dark-polish"],
       "done_criteria": "docs/handoff/design-brief.md + 단계별 스크린샷 5종 + 컬러/토큰 표 + 외주에게 발송 가능 패키지",
-      "evidence": null
+      "evidence": "docs/handoff/design-brief.md (의뢰 항목 7개 + 자유도/금지선 + 검증 절차), docs/handoff/token-map.md (4 토큰 레이어 매핑 + 라인 번호), docs/handoff/screenshots/{01-landing-dark,02-landing-light,03-bridge-home,04-studio-editor,05-publish}.png 5종, design/linear-dark → main ff merge (commit bc9f803)"
     },
     {
       "id": "M8.2-ui-integration-batch",

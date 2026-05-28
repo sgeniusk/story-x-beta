@@ -4,6 +4,64 @@
 
 ---
 
+## 2026-05-28 00:25 — M9 핸드오프 패키지 완성 · design/linear-dark → main ff merge
+
+> Last Updated: 2026-05-28 00:25 KST
+
+### Current Objective
+**M9 디자인 핸드오프 자료 준비** 완료. 외주 디자이너 또는 Claude Design 에 즉시 발송 가능한 패키지 산출. 다음 자연스러운 작업 — M6.3 storyx CLI · agentRunEngine LLM 실 연결 · Vercel env 등록 중 선택.
+
+### Recommended Next Step
+1. 패키지(`docs/handoff/`) 외부 발송 또는 Claude Design 에 위임 → 결과 통합 브랜치 신설
+2. 병행: M6.3 `tools/storyx.mjs` 에 `init` · `serve` · `memory sync` 명령 확장
+3. 또는: agentRunEngine 의 generic 출력을 LLM 호출로 교체 (Layer 5 Gap 끝)
+4. 또는: Vercel Project Settings 에 `AI_GATEWAY_API_KEY` / `ANTHROPIC_API_KEY` 등록 → 배포본 실제 LLM 응답 검증 (curl)
+
+### Branch · Commit · Verification
+- Branch — `main` (design/linear-dark ff merge, head `bc9f803` 이후 핸드오프 산출 추가)
+- 로컬은 origin/main 보다 94+ 커밋 앞섬 — push 는 별도 지시 시
+- 검증 마지막 통과 — `npx tsc --noEmit` exit 0 · `npm test` 36 files / 220 tests · `npm run build` 1.04s
+- 신설 — `docs/handoff/design-brief.md` · `docs/handoff/token-map.md` · `docs/handoff/screenshots/{01..05}.png`
+- 수정 — `feature_list.json` (M9 done + active M6.3) · `progress.md` · `session-handoff.md` · `docs/handoff/design-brief.md` 데모 URL 갱신
+- Vercel production (외주 라이브 데모) — https://story-x-alpha.vercel.app (READY · `vercel deploy --prod` 1m · public 200 · `<title>Story X</title>` 검증 · LLM env 미설정으로 mock 폴백)
+- Preview deployment (내부 검토용) — https://story-x-alpha-1jzhsnqr8-gomgomee-s-projects.vercel.app (SSO 401, Vercel Authentication 가드 유지)
+- GitHub Repo — https://github.com/sgeniusk/story-x-beta (public, M9 핸드오프 커밋 + 94+ 커밋 origin 동기화)
+
+### What the Last Session Did
+1. **design/linear-dark → main ff merge** — main 이 superset 인 design/linear-dark 까지 fast-forward. 87 파일 변경(M4 모듈 + M8 카드 + Linear 다크 폴리시) 모두 main 에 반영.
+2. **`docs/handoff/design-brief.md` 신설** — 4파트 구조 의도 + 자유도(Decisive)/금지선(Don't) + 의뢰 항목 7개 각 항목에 문제·코드 위치·기대 결과 + 기술 컨텍스트(파일/페르소나/토큰/폰트) + 검증·완료 기준 + Option A/B/C 의뢰 방식.
+3. **`docs/handoff/token-map.md` 신설** — 토큰 4 레이어(`--sx-*` 스튜디오 / `--nx-*` 브릿지 / `--lc-*` 랜딩 / 사용자 트윅) 각 라인 번호 + 한 줄 cascade 다이어그램 + 손대도 OK / 손대지 말 것 + 추가 시 권장 위치.
+4. **Playwright 스크린샷 5종** — 1440×900 / Linear 다크 톤. 랜딩 다크·라이트, 홈 매체 선택, 스튜디오 편집기(작가진 5명 + 좌레일 + 알파 03%), 퍼블리시 4 카드.
+5. **`feature_list.json`** — M9-design-handoff-prep status `todo` → `done`. active `M9-design-handoff-prep` → `M6.3-storyx-cli`.
+
+### Files To Touch (next milestone — M6.3 storyx CLI 또는 LLM 연결)
+- 수정 `tools/storyx.mjs` — `init` · `serve` · `memory sync` 서브커맨드 + flag 파싱
+- 또는 수정 `src/lib/agentRunEngine.ts` `describeAgentRun` — LLM 호출 도입 (현재 generic)
+- 또는 Vercel CLI — `vercel env add AI_GATEWAY_API_KEY production`
+
+### Files NOT To Touch
+- `docs/handoff/*` (핸드오프 발송 전 동결)
+- M4 완성본 (storyEngine, storyOntology, storyHarness, continuityContract, koreanVoiceGate, qualityGates, agentRunEngine, mediaProjection)
+- M8 카드 컴포넌트 (외주 결과로 재작성 예정 — `StoryXDesk.tsx` 인라인 스타일 1차 컷 보존)
+
+### Blockers
+없음. 단, 외주/Claude Design 의 결과 통합은 본 세션 범위 밖.
+
+### Known Issues
+- 04-studio-editor 스크린샷은 편집 모드 좌레일 — 바이블 모드의 M8 4 카드(`HarnessReportCard` 등)는 별도 캡처가 필요할 수 있음. 외주 요청 시 추가 캡처 가능 (`?stage=editor` 후 좌레일 모드 토글).
+- 05-publish 스크린샷은 medium=novel 기본 — book-designer/pr-specialist/platform-curator/business-strategist 4 카드 노출. 다른 매체 캡처는 외주가 추가 요청 시.
+- 스크린샷 캡처 중 Playwright MCP가 `.playwright-mcp/` 가 아닌 프로젝트 루트에 저장 — `docs/handoff/screenshots/` 로 수동 이동. 재캡처 시 절대경로 또는 사후 이동 권장.
+
+### Reference Documents
+- `docs/handoff/design-brief.md` — 핸드오프 brief (단일 진입)
+- `docs/handoff/token-map.md` — 토큰 4 레이어
+- `docs/claude-design-handoff-prompt.md` — 깊은 비전·자유도 (357줄, brief 가 참조)
+- `docs/storyx-harness-architecture.md` — 스토리 하네스 정본
+- `docs/agent-system.md` — 23 ValidationAgentId + 16 criteriaKeys
+- `~/.claude/plans/x-zippy-graham.md` — 0.2 → 1.0 마스터 로드맵
+
+---
+
 ## 2026-05-22 22:50 — M4 완료 + M8 UI 통합 + Linear 다크 폴리시 · 디자인 핸드오프 준비로 인계
 
 > Last Updated: 2026-05-22 22:50 KST

@@ -1,14 +1,18 @@
 # Story X — Progress
 
-> Last Updated: 2026-05-21 15:18 KST · Branch: `design/linear-dark`
+> Last Updated: 2026-05-28 00:25 KST · Branch: `main` (design/linear-dark ff merge)
 
 ## Current Objective
 
-**M9 — 디자인 핸드오프 준비** (`todo` · 다음 세션 첫 작업)
+**M6.3 — storyx CLI 확장** (`todo`) — M9 핸드오프 패키지 발송 후 병행 진행할 다음 활성 후보.
 
-M4 8/8 완전 완료 + M8 UI 통합 4 카드 + Linear 다크 폴리시까지 마침. 다음 세션 첫 작업은 외주 디자이너에게 보낼 핸드오프 패키지 작성. `docs/handoff/design-brief.md` + Playwright 스크린샷 5종 + 토큰 매핑 표 + 의뢰 항목 7개 (4파트 일관성·좌레일 가독성·검토/대화 UI·인라인 diff·확장 피드백·편집기 호흡·M8 카드 다듬기).
+M9 (디자인 핸드오프 자료 준비) 완료. `design/linear-dark` → `main` ff merge + `docs/handoff/{design-brief.md, token-map.md, screenshots/01-05.png}` 산출. 외주 또는 Claude Design 에 즉시 발송 가능. 다음 세션은 M6.3 storyx CLI · agentRunEngine LLM 실 연결 · Vercel env 등록 중 우선순위 결정.
 
-핸드오프 의뢰 후 병행 작업 — M6.3 storyx CLI / agentRunEngine LLM 연결 / Vercel env 등록.
+---
+
+## (직전) M9 — 디자인 핸드오프 자료 준비 (`done`)
+
+`design/linear-dark` → `main` ff merge(`bc9f803`) 후 `docs/handoff/` 신설. (1) `design-brief.md` — 4파트 구조 의도 + 자유도/금지선 + 의뢰 항목 7개 + 검증 절차. (2) `token-map.md` — 4 토큰 레이어(`--sx-*` 스튜디오 / `--nx-*` 브릿지 / `--lc-*` 랜딩 / 사용자 트윅) 라인 번호별 매핑. (3) Playwright 1440×900 스크린샷 5종 — 랜딩 다크/라이트·홈·스튜디오·퍼블리시. 외주 인계 패키지로 발송 가능 상태.
 
 ---
 
