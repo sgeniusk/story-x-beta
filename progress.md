@@ -1,12 +1,21 @@
 # Story X — Progress
 
-> Last Updated: 2026-05-28 00:25 KST · Branch: `main` (design/linear-dark ff merge)
+> Last Updated: 2026-05-29 14:03 KST · Branch: `design/margin-integration`
 
 ## Current Objective
 
-**M6.3 — storyx CLI 확장** (`todo`) — M9 핸드오프 패키지 발송 후 병행 진행할 다음 활성 후보.
+**M10 — Margin 디자인 통합 Phase 2 (좌레일 구조 스킴 + DataPanel 4카드)** (`implemented_uncommitted`) — 브랜치 `design/margin-integration`.
 
-M9 (디자인 핸드오프 자료 준비) 완료. `design/linear-dark` → `main` ff merge + `docs/handoff/{design-brief.md, token-map.md, screenshots/01-05.png}` 산출. 외주 또는 Claude Design 에 즉시 발송 가능. 다음 세션은 M6.3 storyx CLI · agentRunEngine LLM 실 연결 · Vercel env 등록 중 우선순위 결정.
+Phase 2 패킷(`docs/handoff/margin-phase2-task-packet.md`)에 따라 편집 좌레일을 구조 중심으로 재배치하고, 외주 `DataPanel`/`studioMetrics` 를 이식했다. 도메인 로직은 수정하지 않고 기존 `harnessReport`/`qualityGatesReport`/`mediaProjections`/`storyOntology` useMemo 산출물을 `toStudioMetrics` 어댑터로 변환한다.
+
+- 베이스라인(변경 전) — `bash init.sh` 통과 · 37 files / 226 tests.
+- 신설 3 — `src/lib/studioMetrics.ts`, `src/lib/studioMetrics.test.ts`, `src/components/DataPanel.tsx`.
+- 수정 3 — `src/StoryXDesk.tsx`(구조↔지표 세그먼트, publish 4카드 DataPanel 통합, `storyx.studio.railTab` 영속), `src/styles.css`(막 제목 위계·DataPanel axis 보강), `src/editorFocusLayout.test.ts`.
+- 삭제/제거 — `StoryXDesk.tsx` 인라인 `HarnessReportCard`/`QualityGatesCard`/`MediaProjectionsCard`/`OntologyCard` 함수 제거. grep 후 다른 런타임 참조 없음 확인.
+- 구조 트리 — ChapterBeat 스키마 변경 없이 기존 `beats` + `groupBeatsIntoActs()` 유지. 막 제목은 `beat.label` 우선, 없으면 `beat.summary` 첫 문장, 없으면 기승전결 fallback.
+- 최종 검증 — `npx tsc --noEmit` exit 0 · `npm test` **38 files / 231 tests 통과** · `npm run build` 성공(js 579.49kB / css 192.36kB, 2.44s) · 최종 `bash init.sh` 통과(38 files / 231 tests · 빌드 성공).
+- 로컬 dev 서버 — `http://127.0.0.1:5173/?stage=editor` HTTP 200 · `?stage=publish` HTTP 200.
+- 커밋 금지 지시 준수 — 커밋하지 않음.
 
 ---
 

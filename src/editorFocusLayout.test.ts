@@ -84,6 +84,15 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('function ChapterStructureTree');
     expect(desk).toContain('회차 구조');
     expect(desk).toContain('function groupBeatsIntoActs');
+    expect(desk).toContain('function resolveActTitle');
+    expect(desk).toContain("const [studioRailTab, setStudioRailTab]");
+    expect(desk).toContain("window.localStorage.getItem('storyx.studio.railTab')");
+    expect(desk).toContain('<DataPanel metrics={studioMetrics} onMediaAxisChange={updateStoryModeAxis} />');
+    expect(desk).toContain('toStudioMetrics({');
+    expect(desk).not.toContain('function HarnessReportCard');
+    expect(desk).not.toContain('function QualityGatesCard');
+    expect(desk).not.toContain('function MediaProjectionsCard');
+    expect(desk).not.toContain('function OntologyCard');
     expect(desk).not.toContain('function ChapterBeatsCard');
     expect(desk).not.toContain('function ChapterTreeCard');
     expect(desk).toContain('검토');
@@ -91,8 +100,11 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('position: sticky');
     expect(css).toContain('.sx-desk.is-focus-mode .sx-project-rail');
     expect(css).toContain('.sx-expand-editor-button');
-    expect(css).toContain('.sx-manuscript-editor.is-edited');
+    expect(css).toContain('.sx-manuscript-editor p.is-anchored');
     expect(css).toContain('.sx-desk .ex-scene');
+    expect(css).toContain('.sx-rail-seg');
+    expect(css).toContain('.sx-data-stack');
+    expect(css).toContain('.sx-axis-input');
   });
 
   it('P1 — keeps the manuscript as the protagonist with a thin toolstrip above it', () => {
@@ -355,17 +367,24 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-desk .ex-chart-svg');
   });
 
-  it('P2-C — slims the review rail into lean text-focused rows with expand toggle', () => {
-    expect(desk).toContain('function AgentReviewRow');
-    expect(desk).toContain('ex-review-row ex-review-row--');
-    expect(desk).toContain('ex-review-opinion');
-    expect(desk).toContain('is-clamped');
-    expect(desk).toContain('펼치기');
-    expect(desk).toContain('접기');
-    // 검토 행 클릭으로 에이전트 대화창이 열린다
-    expect(desk).toContain('onOpenDialog');
-    expect(css).toContain('.sx-desk .ex-review-row');
-    expect(css).toContain('.sx-desk .ex-review-opinion.is-clamped');
+  it('P2-C — replaces the right review rail with margin annotations and a core strip', () => {
+    expect(desk).toContain('const marginReview = useMarginReview');
+    expect(desk).toContain('<MarginColumn');
+    expect(desk).toContain('<CoreStrip');
+    expect(desk).toContain('<MentionBar');
+    expect(desk).toContain('<Spotlight');
+    expect(desk).toContain('toMarginReview');
+    expect(desk).toContain('data-pid={paragraph.id}');
+    expect(desk).toContain('className="sx-margin-toggle"');
+    expect(desk).toContain('className="sx-binder-toggle"');
+    expect(desk).not.toContain('function AgentReviewRow');
+    expect(desk).not.toContain('ex-review-row ex-review-row--');
+    expect(css).toContain('.sx-margin-col');
+    expect(css).toContain('.sx-core-strip');
+    expect(css).toContain('.sx-manuscript-editor p.is-anchored');
+    expect(css).toContain('.sx-desk.is-draft-mode .sx-desk-grid');
+    expect(css).toContain('.sx-desk.drawer-open .sx-margin-col');
+    expect(css).not.toContain('.sx-desk .ex-review-row');
   });
 
   it('surfaces the one-project vertical slice inside the editor approval flow', () => {

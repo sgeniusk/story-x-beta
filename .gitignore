@@ -11,3 +11,4 @@ vite.config.d.ts
 memory-bank/**/private/
 .vercel
 .env*.local
+story x design/
