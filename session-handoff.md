@@ -4,7 +4,31 @@
 
 ---
 
-## 2026-05-29 14:03 — M10 Phase 2 좌레일 구조 스킴 + DataPanel 통합 · 커밋 보류
+## 2026-05-29 14:25 — M10 Phase 1+2 커밋 완료 · Claude 총괄 재검증 통과
+
+> Last Updated: 2026-05-29 14:25 KST · Branch: `design/margin-integration`
+
+### Current Objective
+**M10 Margin 디자인 통합 Phase 1+2 완료·커밋.** Codex(gpt-5.5 @ xhigh)가 구현, Claude가 하네스(Task Packet 2종)·총괄 재검증 담당. 커밋 3개 — `e09a5e5`(P1 우레일 마진), `9260642`(P2 좌레일 구조+DataPanel), handoff 갱신 커밋. origin push 는 별도 지시 시.
+
+### 총괄 재검증 결과 (Claude 직접 재실행)
+- 게이트 — `npx tsc --noEmit` exit 0 · `npm test` **38 files / 231 tests** · `npm run build` 성공(js 579.49kB / css 192.36kB).
+- 라이브 렌더(Playwright, 1440×900) —
+  - `?stage=editor` 구조 탭: 기승전결 트리. 지표 탭 클릭 → DataPanel 4카드(하니스 8/8·품질 4/8·매체 소설·온톨로지 7) 렌더 확인. 마진 col·코어 strip 보존.
+  - `?stage=publish` DataPanel 렌더(구 인라인 4카드 0).
+  - console error 0.
+- 스코프 — 도메인 lib 8종 무변경(git 확인) · Phase 1 마진 파일 보존 · patch 잔여물 없음.
+- 스크린샷 — `docs/handoff/screenshots/{06-margin-editor,07-phase2-metrics-tab}.png`.
+
+### Recommended Next Step
+1. (선택) origin push + Vercel preview 배포로 외부 시각 확인.
+2. `story x design/` 원본 폴더는 미추적(커밋 제외) — 보관/삭제 결정 필요.
+3. 알려진 한계 — `audiobook` 매체가 도메인 `mediaProjection.ts` target 에 없어 DataPanel current 가 top-fit fallback. 매체 풀 확장 시 정리.
+4. 또는 M6.3 storyx CLI · agentRunEngine LLM 실연결 등 기존 백로그 복귀.
+
+---
+
+## 2026-05-29 14:03 — M10 Phase 2 좌레일 구조 스킴 + DataPanel 통합 (Codex 자가보고)
 
 > Last Updated: 2026-05-29 14:03 KST
 
