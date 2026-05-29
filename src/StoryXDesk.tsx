@@ -42,6 +42,7 @@ import { getAgentValidationProcess, type ValidationAgentId } from './lib/agentRe
 import storyXSymbol from './assets/brand/story-x-symbol-light.svg';
 import { AiStatusBadge } from './components/AiStatusBadge';
 import { CoreStrip } from './components/CoreStrip';
+import { DataPanel } from './components/DataPanel';
 import { MarginColumn } from './components/MarginColumn';
 import { MentionBar } from './components/MentionBar';
 import { PixelAvatar } from './components/PixelAvatar';
@@ -124,11 +125,12 @@ import { buildComicsVisualWorkflow } from './lib/visualProduction';
 import { getCreativeActionLabels } from './lib/projectBlueprint';
 import { buildPublishingPlan, type PublishingPlan } from './lib/publishing';
 // M4 UI 통합 1차 컷 — 작가가 스튜디오 안에서 하네스 점수·6 스테이지·readyForProduction 을 본다.
-import { runStoryHarness, type StoryHarnessReport, type HarnessStageResult } from './lib/storyHarness';
+import { runStoryHarness, type StoryHarnessReport } from './lib/storyHarness';
 // M8 UI 통합 — Layer 0·4·7 결과를 좌레일에 노출.
 import { buildStoryOntology, type StoryOntology } from './lib/storyOntology';
 import { projectAllMedia, type MediaProjection } from './lib/mediaProjection';
-import { evaluateQualityGates, type GateResult, type QualityGatesReport, type StoryMode } from './lib/qualityGates';
+import { evaluateQualityGates, type QualityGatesReport, type StoryMode } from './lib/qualityGates';
+import { toStudioMetrics } from './lib/studioMetrics';
 import { buildAlphaReadinessReport, type AlphaReadinessReport } from './lib/alphaReadiness';
 import { buildOneProjectVerticalSlice, type OneProjectVerticalSlice } from './lib/verticalSlice';
 import { STORYX_VERSION, storyxVersionLog } from './lib/version';
@@ -1100,9 +1102,9 @@ export function StoryXDesk({
   // M8 UI 통합 — StoryMode 슬라이더 state (commercial/literary 가중치). localStorage 영속.
   const [storyMode, setStoryMode] = useState<StoryMode>(() => {
     if (typeof window === 'undefined') return { commercialWeight: 0.5, literaryWeight: 0.5 };
-    const saved = window.localStorage.getItem('storyx.studio.storyMode');
-    if (saved) {
-      try {
+    try {
+      const saved = window.localStorage.getItem('storyx.studio.storyMode');
+      if (saved) {
         const parsed = JSON.parse(saved) as StoryMode;
         if (
           typeof parsed.commercialWeight === 'number' &&
@@ -1110,19 +1112,36 @@ export function StoryXDesk({
         ) {
           return parsed;
         }
-      } catch {
-        /* ignore */
       }
+    } catch {
+      /* ignore */
     }
     return { commercialWeight: 0.5, literaryWeight: 0.5 };
   });
+  const [studioRailTab, setStudioRailTab] = useState<'structure' | 'metrics'>(() => {
+    if (typeof window === 'undefined') return 'structure';
+    try {
+      return window.localStorage.getItem('storyx.studio.railTab') === 'metrics' ? 'metrics' : 'structure';
+    } catch {
+      return 'structure';
+    }
+  });
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
       window.localStorage.setItem('storyx.studio.storyMode', JSON.stringify(storyMode));
     } catch {
       /* silent */
     }
   }, [storyMode]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem('storyx.studio.railTab', studioRailTab);
+    } catch {
+      /* silent */
+    }
+  }, [studioRailTab]);
   const harnessReport: StoryHarnessReport = useMemo(
     () =>
       runStoryHarness({
@@ -1199,6 +1218,22 @@ export function StoryXDesk({
       storyMode
     ]
   );
+  const studioMetrics = useMemo(
+    () =>
+      toStudioMetrics({
+        harnessReport,
+        qualityGatesReport,
+        mediaProjections,
+        storyOntology,
+        storyMode,
+        currentMedium: blueprint.medium
+      }),
+    [blueprint.medium, harnessReport, mediaProjections, qualityGatesReport, storyMode, storyOntology]
+  );
+  const updateStoryModeAxis = useCallback((axis: number) => {
+    const literaryWeight = Math.max(0, Math.min(1, axis));
+    setStoryMode({ commercialWeight: 1 - literaryWeight, literaryWeight });
+  }, []);
   const publishingPlan = useMemo(
     () => buildPublishingPlan(project, blueprint, { approvalQueue }),
     [approvalQueue, blueprint, project]
@@ -2631,32 +2666,52 @@ export function StoryXDesk({
                   setIsMediaPanelOpen(false);
                 }}
               />
-              {/* M4 UI 통합 — 스토리 하네스 진단 카드. 6 스테이지 + qualityScore + readyForProduction */}
-              <HarnessReportCard report={harnessReport} />
-              {/* M8.2 — 12 품질 게이트 그리드 + StoryMode 슬라이더 */}
-              <QualityGatesCard report={qualityGatesReport} mode={storyMode} onModeChange={setStoryMode} />
-              {/* M8.3 — 5 매체 투영 카드 */}
-              <MediaProjectionsCard projections={mediaProjections} />
-              {/* M8.4 — 온톨로지 4 카테고리 카드 */}
-              <OntologyCard ontology={storyOntology} />
+              <DataPanel metrics={studioMetrics} onMediaAxisChange={updateStoryModeAxis} />
               <PublishingIndexCard plan={publishingPlan} />
             </>
           ) : activeTrack === 'draft' ? (
             <>
-              {/* P2-B — 편집 모드 좌레일: 작품 상태(4셀) / 회차 의도(에이전트) / 회차 구조 트리 / 긴장 곡선 */}
-              <section className="sx-panel ex-workstate-card" aria-label="작품 상태">
-                <div className="ex-rail-section-head">
-                  <span className="ex-rail-label">작품 상태</span>
-                </div>
-                <WorkStateGrid project={project} latestChapter={latestChapter} isSerial={isSerial} />
-                <div className="ex-canon-health" title="캐논 건강도 — 회차 대비 확정 사실·규칙·인물의 밀도">
-                  <span className="ex-canon-health-label">캐논</span>
-                  <span className="ex-canon-health-track">
-                    <i className="ex-canon-health-fill" style={{ width: `${canonHealth}%` }} />
+              <div className="sx-rail-seg" role="tablist" aria-label="편집 좌레일 보기">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={studioRailTab === 'structure'}
+                  className={studioRailTab === 'structure' ? 'is-active' : ''}
+                  onClick={() => setStudioRailTab('structure')}
+                >
+                  구조
+                  <span className="ct">{latestChapter?.beats.length ?? 0}</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={studioRailTab === 'metrics'}
+                  className={studioRailTab === 'metrics' ? 'is-active' : ''}
+                  onClick={() => setStudioRailTab('metrics')}
+                >
+                  지표
+                  <span className={`ct ${studioMetrics.quality.tone === 'warn' ? 'warn' : ''}`}>
+                    {studioMetrics.quality.lead}
                   </span>
-                  <span className="ex-canon-health-pct">{canonHealth}%</span>
-                </div>
-              </section>
+                </button>
+              </div>
+              {studioRailTab === 'metrics' ? (
+                <DataPanel metrics={studioMetrics} onMediaAxisChange={updateStoryModeAxis} />
+              ) : (
+                <>
+                  <ChapterStructureTree
+                    chapter={latestChapter}
+                    isSerial={isSerial}
+                    activeBeatId={activeBeatId}
+                    onSelectBeat={selectBeat}
+                  />
+                  <TensionShareChart
+                    chapter={latestChapter}
+                    activeBeatId={activeBeatId}
+                    onSelectBeat={selectBeat}
+                  />
+                </>
+              )}
               <AgentIntentCard
                 latestChapter={latestChapter}
                 isSerial={isSerial}
@@ -2677,17 +2732,19 @@ export function StoryXDesk({
                   ) : null
                 }
               />
-              <ChapterStructureTree
-                chapter={latestChapter}
-                isSerial={isSerial}
-                activeBeatId={activeBeatId}
-                onSelectBeat={selectBeat}
-              />
-              <TensionShareChart
-                chapter={latestChapter}
-                activeBeatId={activeBeatId}
-                onSelectBeat={selectBeat}
-              />
+              <section className="sx-panel ex-workstate-card" aria-label="작품 상태">
+                <div className="ex-rail-section-head">
+                  <span className="ex-rail-label">작품 상태</span>
+                </div>
+                <WorkStateGrid project={project} latestChapter={latestChapter} isSerial={isSerial} />
+                <div className="ex-canon-health" title="캐논 건강도 — 회차 대비 확정 사실·규칙·인물의 밀도">
+                  <span className="ex-canon-health-label">캐논</span>
+                  <span className="ex-canon-health-track">
+                    <i className="ex-canon-health-fill" style={{ width: `${canonHealth}%` }} />
+                  </span>
+                  <span className="ex-canon-health-pct">{canonHealth}%</span>
+                </div>
+              </section>
             </>
           ) : (
             /* P3 — 데이터 모드 좌레일: 작품 상태 4셀 + 캐논 nav 5종 + 바이블 규칙 아코디언 + 작품 데이터 진입점 */
@@ -3317,10 +3374,11 @@ const STRUCTURE_ACTS: Array<{ id: string; glyph: string; label: string }> = [
 // 평탄한 beat 목록을 4막에 균등 분배한다. beat 수가 4 미만이면 앞 막부터 채운다.
 function groupBeatsIntoActs(beats: ChapterBeat[]): Array<{
   act: (typeof STRUCTURE_ACTS)[number];
+  title: string;
   beats: ChapterBeat[];
 }> {
   const total = beats.length;
-  const result = STRUCTURE_ACTS.map((act) => ({ act, beats: [] as ChapterBeat[] }));
+  const result = STRUCTURE_ACTS.map((act) => ({ act, title: act.label, beats: [] as ChapterBeat[] }));
   if (total === 0) {
     return result;
   }
@@ -3328,7 +3386,19 @@ function groupBeatsIntoActs(beats: ChapterBeat[]): Array<{
     const actIndex = Math.min(STRUCTURE_ACTS.length - 1, Math.floor((index * STRUCTURE_ACTS.length) / total));
     result[actIndex].beats.push(beat);
   });
-  return result;
+  return result.map((group) => ({
+    ...group,
+    title: resolveActTitle(group.beats, group.act.label)
+  }));
+}
+
+function resolveActTitle(beats: ChapterBeat[], fallback: string): string {
+  const titledBeat = beats.find((beat) => beat.label.trim().length > 0);
+  if (titledBeat) return titledBeat.label.trim();
+  const summarizedBeat = beats.find((beat) => beat.summary.trim().length > 0);
+  if (!summarizedBeat) return fallback;
+  const firstSentence = summarizedBeat.summary.split(/(?<=[.!?。！？])\s+|\n/)[0]?.trim();
+  return firstSentence || fallback;
 }
 
 function ChapterStructureTree({
@@ -3384,7 +3454,10 @@ function ChapterStructureTree({
                   <span className="ex-act-glyph" aria-hidden="true">
                     {group.act.glyph}
                   </span>
-                  <span className="ex-act-title">{group.act.label}</span>
+                  <span className="ex-act-copy">
+                    <span className="ex-act-kicker">{group.act.label}</span>
+                    <span className="ex-act-title">{group.title}</span>
+                  </span>
                   <span className="ex-act-count">{group.beats.length}</span>
                 </button>
                 {!isCollapsed && group.beats.length > 0 && (
@@ -3547,275 +3620,6 @@ function TensionShareChart({
         <span>
           <i className="ex-chart-swatch ex-chart-swatch--share" /> 분량 비중 · 계획
         </span>
-      </div>
-    </section>
-  );
-}
-
-// M4 UI 통합 1차 컷 — 스토리 하네스 진단 카드.
-// 작가가 자기 작품의 6단계 스테이지 점수·readyForProduction 을 한눈에 본다.
-// 1차 컷은 인라인 스타일 — 디자인 검토 후 본격 다듬기.
-function HarnessReportCard({ report }: { report: StoryHarnessReport }) {
-  const score = report.qualityScore;
-  const ready = report.readyForProduction;
-  const scoreColor = score >= 70 ? '#7be37b' : score >= 40 ? '#f3c95a' : '#e76464';
-  return (
-    <section className="sx-panel sx-harness-report-card" aria-label="스토리 하네스 진단">
-      <div className="sx-panel-heading">
-        <BrainCircuit size={16} />
-        <h2>스토리 하네스</h2>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 4 }}>
-        <span style={{ fontSize: 36, fontWeight: 300, color: scoreColor, lineHeight: 1 }}>{score}</span>
-        <span style={{ fontSize: 13, color: 'var(--sx-muted)' }}>/ 100</span>
-        <span
-          style={{
-            marginLeft: 'auto',
-            padding: '3px 9px',
-            fontSize: 11,
-            fontWeight: 600,
-            borderRadius: 999,
-            background: ready ? 'rgba(123, 227, 123, 0.14)' : 'rgba(243, 201, 90, 0.16)',
-            color: ready ? '#7be37b' : '#f3c95a'
-          }}
-        >
-          {ready ? 'Ready for production' : 'Not ready'}
-        </span>
-      </div>
-      <ul style={{ margin: '12px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {report.stages.map((stage: HarnessStageResult) => {
-          const color =
-            stage.status === 'pass'
-              ? 'rgba(123, 227, 123, 0.85)'
-              : stage.status === 'warning'
-                ? '#f3c95a'
-                : '#e76464';
-          return (
-            <li
-              key={stage.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 12.5,
-                color: 'var(--sx-ink)'
-              }}
-            >
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
-              <span style={{ flex: 1 }}>{stage.title}</span>
-              <span style={{ color: 'var(--sx-muted)', fontFamily: 'ui-monospace, "SF Mono", monospace', fontSize: 11 }}>
-                {stage.score} / {stage.maxScore}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-      {!ready && report.stages.flatMap((s) => s.requiredRepairs).length > 0 && (
-        <div
-          style={{
-            marginTop: 10,
-            padding: '8px 10px',
-            background: 'rgba(243, 201, 90, 0.06)',
-            border: '1px solid rgba(243, 201, 90, 0.22)',
-            borderRadius: 6,
-            fontSize: 12,
-            color: 'var(--sx-muted)',
-            lineHeight: 1.5
-          }}
-        >
-          <strong style={{ color: '#f3c95a', display: 'block', marginBottom: 4 }}>다음 행동</strong>
-          {report.stages
-            .flatMap((s) => s.requiredRepairs)
-            .slice(0, 3)
-            .map((repair, idx) => (
-              <div key={idx}>· {repair}</div>
-            ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-// M8.2 — 12 품질 게이트 그리드 + StoryMode 슬라이더 (commercial/literary 가중치).
-// 작가가 슬라이더를 흔들면 게이트의 blocking/advisory 가 즉시 변한다.
-function QualityGatesCard({
-  report,
-  mode,
-  onModeChange
-}: {
-  report: QualityGatesReport;
-  mode: StoryMode;
-  onModeChange: (next: StoryMode) => void;
-}) {
-  const blocking = report.results.filter((r) => r.requirement === 'blocking');
-  const advisory = report.results.filter((r) => r.requirement === 'advisory');
-  const blockingFailed = blocking.filter((r) => !r.passed).length;
-  return (
-    <section className="sx-panel sx-quality-gates-card" aria-label="품질 게이트">
-      <div className="sx-panel-heading">
-        <ShieldAlert size={16} />
-        <h2>품질 게이트</h2>
-      </div>
-      <div style={{ display: 'flex', gap: 14, marginTop: 4, fontSize: 12, color: 'var(--sx-muted)' }}>
-        <span>
-          강제 <strong style={{ color: blockingFailed > 0 ? '#e76464' : '#7be37b' }}>{blocking.length - blockingFailed}/{blocking.length}</strong>
-        </span>
-        <span>
-          권고 <strong style={{ color: '#f3c95a' }}>{advisory.filter((r) => r.passed).length}/{advisory.length}</strong>
-        </span>
-      </div>
-      <div style={{ marginTop: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--sx-muted)', marginBottom: 4 }}>
-          <span>대중성 {Math.round(mode.commercialWeight * 100)}%</span>
-          <span>작품성 {Math.round(mode.literaryWeight * 100)}%</span>
-        </div>
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={Math.round(mode.commercialWeight * 100)}
-          onChange={(e) => {
-            const c = Number(e.target.value) / 100;
-            onModeChange({ commercialWeight: c, literaryWeight: 1 - c });
-          }}
-          style={{ width: '100%', accentColor: 'var(--sx-brand)' }}
-          aria-label="작품 무게중심 (좌: 대중성 / 우: 작품성)"
-        />
-      </div>
-      <ul style={{ margin: '12px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {report.results.map((gate: GateResult) => {
-          const color = gate.passed ? 'rgba(123, 227, 123, 0.85)' : gate.requirement === 'blocking' ? '#e76464' : '#f3c95a';
-          return (
-            <li
-              key={gate.gate}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}
-              title={gate.reason}
-            >
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
-              <span style={{ flex: 1, color: 'var(--sx-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {gate.gate.replace(/^gate_/, '')}
-              </span>
-              <span style={{ fontSize: 10, color: 'var(--sx-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                {gate.requirement === 'blocking' ? '강제' : '권고'}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
-// M8.3 — 5 매체 투영. 한 작품이 매체별로 어떻게 표현되는지 카드 5개.
-function MediaProjectionsCard({ projections }: { projections: MediaProjection[] }) {
-  const allPreserved = projections.every((p) => p.preservation.preserved);
-  return (
-    <section className="sx-panel sx-media-projections-card" aria-label="매체 투영">
-      <div className="sx-panel-heading">
-        <Database size={16} />
-        <h2>매체 투영</h2>
-      </div>
-      <p style={{ fontSize: 12, color: 'var(--sx-muted)', margin: '4px 0 10px' }}>
-        같은 온톨로지를 5 매체로 투영. 핵심 4 키(전제·욕망·세계 비용·플롯) 는 변하지 않습니다.
-        <span style={{ marginLeft: 6, color: allPreserved ? '#7be37b' : '#f3c95a', fontWeight: 600 }}>
-          {allPreserved ? '핵심 보존 OK' : '핵심 누락'}
-        </span>
-      </p>
-      <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {projections.map((projection) => {
-          const ok = projection.preservation.preserved;
-          const firstKey = Object.keys(projection.fields)[0];
-          const firstValue = projection.fields[firstKey] ?? '';
-          return (
-            <li
-              key={projection.target}
-              style={{
-                padding: '6px 10px',
-                background: ok ? 'rgba(123, 227, 123, 0.04)' : 'rgba(243, 201, 90, 0.05)',
-                border: `1px solid ${ok ? 'rgba(123, 227, 123, 0.18)' : 'rgba(243, 201, 90, 0.22)'}`,
-                borderRadius: 6
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--sx-ink)' }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: ok ? '#7be37b' : '#f3c95a' }} />
-                {projection.target}
-                <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--sx-muted)' }}>
-                  {Object.keys(projection.fields).length} 필드
-                </span>
-              </div>
-              <div
-                style={{
-                  fontSize: 11.5,
-                  color: 'var(--sx-muted)',
-                  marginTop: 2,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-                title={firstValue}
-              >
-                {firstKey ? `${firstKey}: ${firstValue}` : ''}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
-// M8.4 — 온톨로지 4 카테고리 (인물·세계·갈등·플롯) + 누락 경고.
-function OntologyCard({ ontology }: { ontology: StoryOntology }) {
-  const categories: Array<{ key: string; label: string; count: number; hint: string }> = [
-    { key: 'characters', label: '인물', count: ontology.characters.length, hint: ontology.characters[0]?.name ?? '' },
-    { key: 'worldRules', label: '세계 규칙', count: ontology.worldRules.length, hint: ontology.worldRules[0]?.rule ?? '' },
-    { key: 'conflict', label: '갈등', count: ontology.conflictEngines.length, hint: ontology.conflictEngines[0]?.detail ?? '' },
-    { key: 'plots', label: '플롯', count: ontology.plotThreads.length, hint: ontology.plotThreads[0]?.promise ?? '' }
-  ];
-  return (
-    <section className="sx-panel sx-ontology-card" aria-label="스토리 온톨로지">
-      <div className="sx-panel-heading">
-        <GitBranch size={16} />
-        <h2>온톨로지</h2>
-      </div>
-      <p style={{ fontSize: 12, color: 'var(--sx-muted)', margin: '4px 0 10px', lineHeight: 1.5 }}>
-        {ontology.premise.dramaticQuestion === '아직 정해지지 않은 중심 질문'
-          ? '중심 질문이 비어 있습니다. 소재 한 줄을 적어 주세요.'
-          : ontology.premise.dramaticQuestion}
-      </p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-        {categories.map((cat) => {
-          const ok = cat.count > 0;
-          return (
-            <div
-              key={cat.key}
-              style={{
-                padding: '8px 10px',
-                background: ok ? 'rgba(123, 227, 123, 0.04)' : 'rgba(231, 100, 100, 0.04)',
-                border: `1px solid ${ok ? 'rgba(123, 227, 123, 0.18)' : 'rgba(231, 100, 100, 0.22)'}`,
-                borderRadius: 6
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11, color: 'var(--sx-muted)' }}>
-                {cat.label}
-                <strong style={{ color: ok ? '#7be37b' : '#e76464', fontSize: 14, marginLeft: 'auto' }}>{cat.count}</strong>
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: 'var(--sx-ink)',
-                  marginTop: 4,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-                title={cat.hint}
-              >
-                {cat.hint || '비어 있음'}
-              </div>
-            </div>
-          );
-        })}
       </div>
     </section>
   );

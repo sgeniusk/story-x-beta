@@ -5940,10 +5940,28 @@ body {
   color: var(--sx-brand-ink);
 }
 
-.sx-desk .ex-act-title {
+.sx-desk .ex-act-copy {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sx-desk .ex-act-kicker {
+  color: var(--sx-muted);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  line-height: 1.1;
+}
+
+.sx-desk .ex-act-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.78rem;
   font-weight: var(--sx-weight-semibold);
+  line-height: 1.2;
 }
 
 .sx-desk .ex-act-count {
@@ -10460,6 +10478,11 @@ body {
   font-weight: var(--sx-weight-semibold);
   color: var(--sx-ink);
 }
+.sx-mcard__tail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .sx-mcard__lead.good { color: var(--sx-good); }
 .sx-mcard__lead.warn { color: var(--sx-warn); }
 .sx-mcard__chev {
@@ -10526,6 +10549,11 @@ body {
   height: 4px; border-radius: 2px;
   background: linear-gradient(90deg, var(--sx-stage-done), var(--sx-accent));
   position: relative;
+}
+.sx-axis-input {
+  width: 100%;
+  margin: 8px 0 0;
+  accent-color: var(--sx-brand);
 }
 .sx-axis-knob {
   position: absolute; top: 50%;

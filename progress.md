@@ -1,23 +1,21 @@
 # Story X — Progress
 
-> Last Updated: 2026-05-28 00:25 KST · Branch: `main` (design/linear-dark ff merge)
+> Last Updated: 2026-05-29 14:03 KST · Branch: `design/margin-integration`
 
 ## Current Objective
 
-**M10 — Margin 디자인 통합 Phase 1 (우레일 마진 검토 모델)** (`in_progress`) — 브랜치 `design/margin-integration`.
+**M10 — Margin 디자인 통합 Phase 2 (좌레일 구조 스킴 + DataPanel 4카드)** (`implemented_uncommitted`) — 브랜치 `design/margin-integration`.
 
-외주(Claude Design)가 `story x design/patch/` 에 실제 코드 패치(컴포넌트 8 + lib 3 + hook 1 + CSS + MIGRATION)를 만들어 옴. 채택 방향 `B·Margin`. Phase 1 = 에디터 우레일 `ex-review-*` → 마진 검토 모델 교체 (도메인 무변경, `toMarginReview` 어댑터). Codex 5.5(gpt-5.5-codex @ xhigh)에 위임, Claude 가 하네스(`docs/handoff/margin-phase1-task-packet.md`)·검증 담당. Phase 2 = 좌레일 기승전결 구조 + M8 4카드→DataPanel (별도).
+Phase 2 패킷(`docs/handoff/margin-phase2-task-packet.md`)에 따라 편집 좌레일을 구조 중심으로 재배치하고, 외주 `DataPanel`/`studioMetrics` 를 이식했다. 도메인 로직은 수정하지 않고 기존 `harnessReport`/`qualityGatesReport`/`mediaProjections`/`storyOntology` useMemo 산출물을 `toStudioMetrics` 어댑터로 변환한다.
 
-- 위임 패킷 — `docs/handoff/margin-phase1-task-packet.md`
-- 베이스라인(변경 전) — 36 files / 220 tests 통과 확인됨
-- **검증 결과(Claude 재실행)** — `npx tsc --noEmit` exit 0 · `npm test` **37 files / 226 tests 통과** · `npm run build` 성공(js 528.94kB / css 181.83kB, 873ms) · dev `?stage=editor` HTTP 200
-- 신설 11 — `src/lib/{marginReview.ts,marginReview.test.ts,extendedPersonas.ts}` · `src/hooks/useMarginReview.ts` · `src/components/{MarginColumn,AnnotationCard,MentionBar,CoreStrip,Spotlight,PixelAvatar,CanonSummaryCard}.tsx`
-- 수정 3 — `src/StoryXDesk.tsx`(우레일 `ex-review-*`→마진 모델, textarea→contentEditable+data-pid, `toMarginReview` 어댑터) · `src/styles.css`(styles-additions append) · `src/editorFocusLayout.test.ts`(마진 계약으로 단언 갱신)
-- 스코프 준수 — 도메인 로직 무변경(git 확인) · M8 4카드 함수 4개 보존 · patch 잔여물(.orig/.rej) 제거
-- 라이브 렌더 검증(Playwright MCP, 1440×900, `?stage=editor`) — `.sx-margin-col`×1 · `.sx-core-strip`×1(CORE 5) · 구 `.ex-review-row`×0(제거 확인) · "마지널리아" 헤더 + "5명에게 전체 검토 맡기기" · console error 0 · 스크린샷 `docs/handoff/screenshots/06-margin-editor.png`
-- 커밋 보류 중 (사용자 승인 대기)
-- Phase 2(미착수) — 좌레일 기승전결 구조 스킴 + M8 4카드→DataPanel/studioMetrics
-- Phase 2(미착수) — 좌레일 기승전결 구조 스킴 + M8 4카드→DataPanel/studioMetrics
+- 베이스라인(변경 전) — `bash init.sh` 통과 · 37 files / 226 tests.
+- 신설 3 — `src/lib/studioMetrics.ts`, `src/lib/studioMetrics.test.ts`, `src/components/DataPanel.tsx`.
+- 수정 3 — `src/StoryXDesk.tsx`(구조↔지표 세그먼트, publish 4카드 DataPanel 통합, `storyx.studio.railTab` 영속), `src/styles.css`(막 제목 위계·DataPanel axis 보강), `src/editorFocusLayout.test.ts`.
+- 삭제/제거 — `StoryXDesk.tsx` 인라인 `HarnessReportCard`/`QualityGatesCard`/`MediaProjectionsCard`/`OntologyCard` 함수 제거. grep 후 다른 런타임 참조 없음 확인.
+- 구조 트리 — ChapterBeat 스키마 변경 없이 기존 `beats` + `groupBeatsIntoActs()` 유지. 막 제목은 `beat.label` 우선, 없으면 `beat.summary` 첫 문장, 없으면 기승전결 fallback.
+- 최종 검증 — `npx tsc --noEmit` exit 0 · `npm test` **38 files / 231 tests 통과** · `npm run build` 성공(js 579.49kB / css 192.36kB, 2.44s) · 최종 `bash init.sh` 통과(38 files / 231 tests · 빌드 성공).
+- 로컬 dev 서버 — `http://127.0.0.1:5173/?stage=editor` HTTP 200 · `?stage=publish` HTTP 200.
+- 커밋 금지 지시 준수 — 커밋하지 않음.
 
 ---
 

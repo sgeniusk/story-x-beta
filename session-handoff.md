@@ -4,6 +4,59 @@
 
 ---
 
+## 2026-05-29 14:03 — M10 Phase 2 좌레일 구조 스킴 + DataPanel 통합 · 커밋 보류
+
+> Last Updated: 2026-05-29 14:03 KST
+
+### Current Objective
+**M10 Margin 디자인 통합 Phase 2** 구현 완료, 커밋 전 검증 대기. 편집 좌레일은 `구조 ↔ 지표` 세그먼트로 전환되고 기본은 구조 탭이다. 퍼블리시 좌레일의 기존 M8 4카드는 `DataPanel` 단일 컴포넌트로 통합됐다.
+
+### Recommended Next Step
+1. 총괄 검증 후 커밋 여부 결정. 사용자 지시로 이번 세션에서는 커밋하지 않음.
+2. 가능하면 실제 브라우저/Playwright 환경에서 `?stage=editor` 지표 탭 클릭과 `?stage=publish` 좌레일 DataPanel 렌더를 시각 재확인.
+
+### Branch · Commit · Verification
+- Branch — `design/margin-integration`
+- Commit — 없음(커밋 금지 지시 준수)
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 38 files / 231 tests · `npm run build` 성공 · 최종 `bash init.sh` 통과(38 files / 231 tests · 빌드 성공)
+- HTTP smoke — dev server `http://127.0.0.1:5173/?stage=editor` 200 · `?stage=publish` 200
+
+### What This Session Did
+1. `src/lib/studioMetrics.ts` + `src/lib/studioMetrics.test.ts` 신설. TDD 순서로 RED 확인 후 어댑터 구현.
+2. `src/components/DataPanel.tsx` 신설. 외주 DataPanel 계약을 이식하고 media axis range 입력으로 `storyMode` 슬라이더 연결 유지.
+3. `src/StoryXDesk.tsx` 편집 좌레일에 `구조 ↔ 지표` 세그먼트 추가. `storyx.studio.railTab` localStorage 영속.
+4. 구조 탭에서 `ChapterStructureTree` + `TensionShareChart` 를 좌레일 중심으로 올리고, 작품 상태/이번 회차 의도는 유지하되 하단으로 재배치.
+5. publish 좌레일의 `HarnessReportCard`/`QualityGatesCard`/`MediaProjectionsCard`/`OntologyCard` 호출을 `DataPanel` 로 교체하고, 인라인 4카드 함수 제거.
+6. `groupBeatsIntoActs()` 유지. 막 제목은 기존 `ChapterBeat.label` 우선, 없으면 `summary` 첫 문장, 없으면 기승전결 fallback.
+
+### Files Touched
+- 신설 `src/lib/studioMetrics.ts`
+- 신설 `src/lib/studioMetrics.test.ts`
+- 신설 `src/components/DataPanel.tsx`
+- 수정 `src/StoryXDesk.tsx`
+- 수정 `src/styles.css`
+- 수정 `src/editorFocusLayout.test.ts`
+- 수정 `progress.md`
+- 수정 `session-handoff.md`
+
+### Files NOT To Touch
+- 도메인 lib: `storyHarness`, `qualityGates`, `mediaProjection`, `storyOntology`, `storyEngine`, `agentRunEngine`, `continuityContract`, `koreanVoiceGate`
+- Phase 1 우레일 마진 모델: `marginReview`, `useMarginReview`, `MarginColumn` 등
+- `.claude/agents/*.md`
+- `--sx-stage-*` 6색 의미 매핑
+
+### Blockers
+- Browser/Playwright MCP는 이 환경에서 사용 불가. `playwright` 패키지 없음, Chrome headless 실행은 exit -1, Computer Use Chrome state는 timeout. 자동 게이트와 HTTP 200까지 확인.
+
+### Reference Documents
+- `docs/handoff/margin-phase2-task-packet.md`
+- `docs/handoff/margin-phase1-task-packet.md`
+- `story x design/patch/MIGRATION.md` §6
+- `story x design/patch/src/components/DataPanel.tsx`
+- `story x design/patch/src/lib/studioMetrics.ts`
+
+---
+
 ## 2026-05-28 00:25 — M9 핸드오프 패키지 완성 · design/linear-dark → main ff merge
 
 > Last Updated: 2026-05-28 00:25 KST

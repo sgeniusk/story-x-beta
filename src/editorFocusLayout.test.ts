@@ -84,6 +84,15 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('function ChapterStructureTree');
     expect(desk).toContain('회차 구조');
     expect(desk).toContain('function groupBeatsIntoActs');
+    expect(desk).toContain('function resolveActTitle');
+    expect(desk).toContain("const [studioRailTab, setStudioRailTab]");
+    expect(desk).toContain("window.localStorage.getItem('storyx.studio.railTab')");
+    expect(desk).toContain('<DataPanel metrics={studioMetrics} onMediaAxisChange={updateStoryModeAxis} />');
+    expect(desk).toContain('toStudioMetrics({');
+    expect(desk).not.toContain('function HarnessReportCard');
+    expect(desk).not.toContain('function QualityGatesCard');
+    expect(desk).not.toContain('function MediaProjectionsCard');
+    expect(desk).not.toContain('function OntologyCard');
     expect(desk).not.toContain('function ChapterBeatsCard');
     expect(desk).not.toContain('function ChapterTreeCard');
     expect(desk).toContain('검토');
@@ -93,6 +102,9 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-expand-editor-button');
     expect(css).toContain('.sx-manuscript-editor p.is-anchored');
     expect(css).toContain('.sx-desk .ex-scene');
+    expect(css).toContain('.sx-rail-seg');
+    expect(css).toContain('.sx-data-stack');
+    expect(css).toContain('.sx-axis-input');
   });
 
   it('P1 — keeps the manuscript as the protagonist with a thin toolstrip above it', () => {
