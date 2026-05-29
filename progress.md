@@ -4,9 +4,20 @@
 
 ## Current Objective
 
-**M6.3 — storyx CLI 확장** (`todo`) — M9 핸드오프 패키지 발송 후 병행 진행할 다음 활성 후보.
+**M10 — Margin 디자인 통합 Phase 1 (우레일 마진 검토 모델)** (`in_progress`) — 브랜치 `design/margin-integration`.
 
-M9 (디자인 핸드오프 자료 준비) 완료. `design/linear-dark` → `main` ff merge + `docs/handoff/{design-brief.md, token-map.md, screenshots/01-05.png}` 산출. 외주 또는 Claude Design 에 즉시 발송 가능. 다음 세션은 M6.3 storyx CLI · agentRunEngine LLM 실 연결 · Vercel env 등록 중 우선순위 결정.
+외주(Claude Design)가 `story x design/patch/` 에 실제 코드 패치(컴포넌트 8 + lib 3 + hook 1 + CSS + MIGRATION)를 만들어 옴. 채택 방향 `B·Margin`. Phase 1 = 에디터 우레일 `ex-review-*` → 마진 검토 모델 교체 (도메인 무변경, `toMarginReview` 어댑터). Codex 5.5(gpt-5.5-codex @ xhigh)에 위임, Claude 가 하네스(`docs/handoff/margin-phase1-task-packet.md`)·검증 담당. Phase 2 = 좌레일 기승전결 구조 + M8 4카드→DataPanel (별도).
+
+- 위임 패킷 — `docs/handoff/margin-phase1-task-packet.md`
+- 베이스라인(변경 전) — 36 files / 220 tests 통과 확인됨
+- **검증 결과(Claude 재실행)** — `npx tsc --noEmit` exit 0 · `npm test` **37 files / 226 tests 통과** · `npm run build` 성공(js 528.94kB / css 181.83kB, 873ms) · dev `?stage=editor` HTTP 200
+- 신설 11 — `src/lib/{marginReview.ts,marginReview.test.ts,extendedPersonas.ts}` · `src/hooks/useMarginReview.ts` · `src/components/{MarginColumn,AnnotationCard,MentionBar,CoreStrip,Spotlight,PixelAvatar,CanonSummaryCard}.tsx`
+- 수정 3 — `src/StoryXDesk.tsx`(우레일 `ex-review-*`→마진 모델, textarea→contentEditable+data-pid, `toMarginReview` 어댑터) · `src/styles.css`(styles-additions append) · `src/editorFocusLayout.test.ts`(마진 계약으로 단언 갱신)
+- 스코프 준수 — 도메인 로직 무변경(git 확인) · M8 4카드 함수 4개 보존 · patch 잔여물(.orig/.rej) 제거
+- 라이브 렌더 검증(Playwright MCP, 1440×900, `?stage=editor`) — `.sx-margin-col`×1 · `.sx-core-strip`×1(CORE 5) · 구 `.ex-review-row`×0(제거 확인) · "마지널리아" 헤더 + "5명에게 전체 검토 맡기기" · console error 0 · 스크린샷 `docs/handoff/screenshots/06-margin-editor.png`
+- 커밋 보류 중 (사용자 승인 대기)
+- Phase 2(미착수) — 좌레일 기승전결 구조 스킴 + M8 4카드→DataPanel/studioMetrics
+- Phase 2(미착수) — 좌레일 기승전결 구조 스킴 + M8 4카드→DataPanel/studioMetrics
 
 ---
 

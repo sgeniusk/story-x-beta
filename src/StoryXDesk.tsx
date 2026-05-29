@@ -29,16 +29,34 @@ import {
 } from 'lucide-react';
 import {
   useEffect,
+  useCallback,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
   type FormEvent,
+  type ReactElement,
   type RefObject
 } from 'react';
-import { getAgentValidationProcess } from './lib/agentReviewProcess';
+import { getAgentValidationProcess, type ValidationAgentId } from './lib/agentReviewProcess';
 import storyXSymbol from './assets/brand/story-x-symbol-light.svg';
 import { AiStatusBadge } from './components/AiStatusBadge';
+import { CoreStrip } from './components/CoreStrip';
+import { MarginColumn } from './components/MarginColumn';
+import { MentionBar } from './components/MentionBar';
+import { PixelAvatar } from './components/PixelAvatar';
+import { Spotlight } from './components/Spotlight';
+import { useMarginReview } from './hooks/useMarginReview';
+import { findPersona } from './lib/extendedPersonas';
+import {
+  applyDiff,
+  splitIntoParagraphs,
+  toMarginReview,
+  type CanonDelta,
+  type InlineDiff,
+  type MarginReview,
+  type Paragraph
+} from './lib/marginReview';
 import {
   buildCreativeBlueprint,
   getFormatOptions,
@@ -82,7 +100,6 @@ import { requestLlmDraft } from './lib/draftClient';
 import { requestAgentReview } from './lib/reviewClient';
 import { requestDataReview, type DataReviewNote } from './lib/dataReviewClient';
 import { describeKoreanStyleLevel, evaluateKoreanProse } from './lib/koreanStyle';
-import { diffProseBlocks } from './lib/proseDiff';
 import {
   agentReportsToRuns,
   buildAiCliRunPlan,
@@ -526,6 +543,108 @@ const defaultRuns: AgentRun[] = [
   }
 ];
 
+const MARGIN_CORE_AGENT_IDS: ValidationAgentId[] = [
+  'showrunner',
+  'character-custodian',
+  'world-keeper',
+  'genre-stylist',
+  'continuity-editor'
+];
+
+function agentReportToRun(report: AiCliAgentReport): AgentRun {
+  return {
+    agentId: report.agentId,
+    title: report.label,
+    status: report.status === 'blocked' ? 'block' : report.status,
+    output: report.note,
+    evidence: report.evidence,
+    strengths: report.strengths ?? [],
+    issues: report.issues ?? []
+  };
+}
+
+function fallbackRunForAgent(agentId: string, output: string): AgentRun {
+  const process = getAgentValidationProcess(agentId);
+  const persona = findPersona(agentId);
+  return {
+    agentId: agentId as ValidationAgentId,
+    title: persona.name || process.label,
+    status: 'pass',
+    output,
+    evidence: process.evidenceTargets.slice(0, 2)
+  };
+}
+
+function resolveReviewAnchor(run: AgentRun, paragraphs: Paragraph[], fallback = 'p1') {
+  const haystack = [run.output, ...(run.issues ?? []), ...run.evidence]
+    .join('\n')
+    .toLocaleLowerCase();
+  const matched = paragraphs.find((paragraph) => {
+    const text = paragraph.text.toLocaleLowerCase();
+    return text.length > 12 && haystack.includes(text.slice(0, 24));
+  });
+  return matched?.id ?? fallback;
+}
+
+function marginReviewToRun(review: MarginReview): AgentRun {
+  const persona = findPersona(String(review.persona));
+  return {
+    agentId: review.persona as ValidationAgentId,
+    title: persona.name,
+    status: review.severity === 'block' ? 'block' : review.severity === 'suggest' ? 'revise' : 'pass',
+    output: review.body || review.head,
+    evidence: [review.anchor]
+  };
+}
+
+function textFromEditable(root: HTMLDivElement): string {
+  const paragraphs = Array.from(root.querySelectorAll<HTMLElement>('[data-pid]'))
+    .map((node) => node.innerText.trim())
+    .filter(Boolean);
+  return paragraphs.length > 0 ? paragraphs.join('\n\n') : root.innerText.trim();
+}
+
+function renderParagraphText(text: string, diffs: InlineDiff[]): Array<string | ReactElement> {
+  let segments: Array<string | ReactElement> = [text || '\u00a0'];
+
+  diffs.forEach((diff, diffIndex) => {
+    segments = segments.flatMap((segment, segmentIndex) => {
+      if (typeof segment !== 'string') {
+        return [segment];
+      }
+
+      const fromIndex = segment.indexOf(diff.from);
+      if (fromIndex >= 0) {
+        return [
+          segment.slice(0, fromIndex),
+          <span className="sx-diff-del" key={`del-${diffIndex}-${segmentIndex}`}>
+            {diff.from}
+          </span>,
+          <span className="sx-diff-add" key={`add-${diffIndex}-${segmentIndex}`}>
+            {diff.to}
+          </span>,
+          segment.slice(fromIndex + diff.from.length)
+        ];
+      }
+
+      const toIndex = segment.indexOf(diff.to);
+      if (toIndex >= 0) {
+        return [
+          segment.slice(0, toIndex),
+          <span className="sx-diff-add" key={`accepted-${diffIndex}-${segmentIndex}`}>
+            {diff.to}
+          </span>,
+          segment.slice(toIndex + diff.to.length)
+        ];
+      }
+
+      return [segment];
+    });
+  });
+
+  return segments;
+}
+
 const visualStoryAgentRuns: AgentRun[] = [
   {
     agentId: 'storyboard-agent',
@@ -832,6 +951,9 @@ export function StoryXDesk({
   const [isPublishingMode, setIsPublishingMode] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
+  const [isMarginDrawerOpen, setIsMarginDrawerOpen] = useState(false);
+  const [isBinderDrawerOpen, setIsBinderDrawerOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
   const [isVersionLogOpen, setIsVersionLogOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AgentDialogSelection | null>(null);
@@ -936,7 +1058,7 @@ export function StoryXDesk({
     };
   }, [isStudioSettingsOpen]);
   const draftBootRef = useRef(false);
-  const manuscriptRef = useRef<HTMLTextAreaElement>(null);
+  const manuscriptRef = useRef<HTMLDivElement>(null);
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [medium, format]);
   const editorWorkspace = useMemo(
@@ -1179,6 +1301,179 @@ export function StoryXDesk({
     isReviewing: run.output.includes('읽고') || run.output.includes('읽는')
   }));
   const crewDoneCount = crewProgress.filter((member) => member.stage === 'done').length;
+  const currentReviewText = editorText.trim() || latestChapter?.prose.trim() || draftPrompt.trim() || project.logline;
+  const marginParagraphs = useMemo(
+    () => splitIntoParagraphs(editorText || latestChapter?.prose || ''),
+    [editorText, latestChapter?.prose]
+  );
+  const marginDefaultAnchor = marginParagraphs[0]?.id ?? 'p1';
+  const marginCanonDeltas: CanonDelta[] = useMemo(
+    () =>
+      (latestChapter?.newCanonFacts ?? []).slice(0, 4).map((fact) => ({
+        kind: 'added',
+        label: fact.statement,
+        source: `${fact.owner} · ${latestChapter ? chapterLabel(latestChapter) : '원고'}`
+      })),
+    [latestChapter, chapterLabel]
+  );
+  const runMarginReviewAll = useCallback(
+    async (onPartial: (review: MarginReview) => void) => {
+      if (isReviewing || isGenerating) {
+        return;
+      }
+
+      const context = buildProjectContextDigest(project);
+      setIsReviewing(true);
+      setGenerationNote(null);
+      setEditedSinceReview(false);
+      setAgentRuns(
+        MARGIN_CORE_AGENT_IDS.map((agentId) => ({
+          agentId,
+          title: getAgentLabel(agentId),
+          status: 'idle',
+          output: '검토 순서를 기다리는 중입니다.',
+          evidence: []
+        }))
+      );
+
+      const reports: AiCliAgentReport[] = [];
+      const candidates: AiCliMemoryCandidate[] = [];
+
+      try {
+        for (const agentId of MARGIN_CORE_AGENT_IDS) {
+          setAgentRuns((current) =>
+            current.map((run) =>
+              run.agentId === agentId ? { ...run, output: '지금 원고를 읽고 있습니다…' } : run
+            )
+          );
+
+          const res = await requestAgentReview({
+            agentId,
+            target: currentReviewText,
+            medium: blueprint.medium,
+            context
+          });
+
+          if (res.ok && res.report) {
+            reports.push(res.report);
+            if (res.memoryCandidates) {
+              candidates.push(...res.memoryCandidates);
+            }
+            const run = agentReportToRun(res.report);
+            setAgentRuns((current) => current.map((item) => (item.agentId === agentId ? run : item)));
+            onPartial(toMarginReview(run, resolveReviewAnchor(run, marginParagraphs, marginDefaultAnchor)));
+          } else {
+            await new Promise((resolve) => setTimeout(resolve, 180));
+            const run = fallbackRunForAgent(
+              agentId,
+              `${getAgentLabel(agentId)}가 mock 폴백으로 원고를 확인했습니다. ${res.reason ? `(${res.reason})` : '브리지 응답이 없어 기본 검토를 사용합니다.'}`
+            );
+            setAgentRuns((current) => current.map((item) => (item.agentId === agentId ? run : item)));
+            onPartial(toMarginReview(run, marginDefaultAnchor));
+          }
+        }
+      } finally {
+        setIsReviewing(false);
+      }
+
+      if (reports.length > 0) {
+        const pass = reports.filter((report) => report.status === 'pass').length;
+        const revise = reports.filter((report) => report.status === 'revise').length;
+        const blocked = reports.filter((report) => report.status === 'blocked').length;
+        setLatestReviewResult({
+          provider: 'claude',
+          mode: 'review',
+          scale: reviewScale,
+          generatedAt: new Date().toISOString(),
+          summary: `${reports.length}명의 코어 작가진이 마진 검토를 남겼습니다. 통과 ${pass} · 수정 ${revise} · 차단 ${blocked}.`,
+          agentReports: reports,
+          memoryCandidates: candidates,
+          nextActions: [
+            '마진의 수정·차단 의견을 원고 단락 기준으로 확인하세요.',
+            '승인할 기억 후보는 승인 대기함에서 캐논에 반영하세요.'
+          ],
+          pendingReviewTarget: 'reviews/pending',
+          approvalRequiredBeforeSync: true
+        });
+        setGenerationNote('Claude 구독으로 코어 작가진이 마진 검토를 남겼습니다.');
+      } else {
+        setGenerationNote('검토 브리지를 쓰지 못해 mock 폴백 마진 검토로 대체했습니다.');
+      }
+    },
+    [
+      blueprint.medium,
+      currentReviewText,
+      isGenerating,
+      isReviewing,
+      marginDefaultAnchor,
+      marginParagraphs,
+      project,
+      reviewScale
+    ]
+  );
+  const summonMarginReviewAgent = useCallback(
+    async (personaId: string, ctx: { selectedText?: string; anchor?: string }) => {
+      const anchor = ctx.anchor ?? marginDefaultAnchor;
+      const context = buildProjectContextDigest(project);
+      const target = ctx.selectedText
+        ? [`선택 문장:\n${ctx.selectedText}`, `전체 원고:\n${currentReviewText}`].join('\n\n')
+        : currentReviewText;
+
+      const res = await requestAgentReview({
+        agentId: personaId,
+        target,
+        medium: blueprint.medium,
+        context
+      });
+
+      if (res.ok && res.report) {
+        const run = agentReportToRun(res.report);
+        setAgentRuns((current) => {
+          const exists = current.some((item) => item.agentId === run.agentId);
+          return exists
+            ? current.map((item) => (item.agentId === run.agentId ? run : item))
+            : [...current, run];
+        });
+        return toMarginReview(run, anchor);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 220));
+      return toMarginReview(
+        fallbackRunForAgent(
+          personaId,
+          `${findPersona(personaId).name}가 선택한 대목을 확인했습니다. ${res.reason ? `(${res.reason})` : 'mock 폴백 의견입니다.'}`
+        ),
+        anchor
+      );
+    },
+    [blueprint.medium, currentReviewText, marginDefaultAnchor, project]
+  );
+  const marginReview = useMarginReview({
+    paragraphs: marginParagraphs,
+    runAll: runMarginReviewAll,
+    summonOne: summonMarginReviewAgent
+  });
+  const acceptMarginDiff = useCallback(
+    (diff: InlineDiff) => {
+      marginReview.onAcceptDiff(diff);
+      setEditorText((current) => {
+        const source = current || latestChapter?.prose || '';
+        return splitIntoParagraphs(source)
+          .map((paragraph) => (paragraph.id === diff.paragraph ? applyDiff(paragraph.text, diff) : paragraph.text))
+          .join('\n\n');
+      });
+      setEditedSinceReview(true);
+    },
+    [latestChapter?.prose, marginReview]
+  );
+  const openMarginReviewChat = useCallback(
+    (review: MarginReview) => {
+      const run =
+        displayedAgentRuns.find((item) => item.agentId === review.persona) ?? marginReviewToRun(review);
+      setSelectedAgent({ run, persona: getAgentPersona(run) });
+    },
+    [displayedAgentRuns]
+  );
   const isLatestLocked = latestChapter?.locked === true;
   const actionLabels = getCreativeActionLabels(blueprint.medium);
   const mainActionLabel = !latestChapter
@@ -1344,8 +1639,12 @@ export function StoryXDesk({
     function handleGlobalShortcut(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        setCommandQuery('');
-        setIsCommandPaletteOpen((current) => !current);
+        if (isDraftMode) {
+          setIsSpotlightOpen((current) => !current);
+        } else {
+          setCommandQuery('');
+          setIsCommandPaletteOpen((current) => !current);
+        }
         return;
       }
 
@@ -1356,6 +1655,9 @@ export function StoryXDesk({
       }
 
       if (event.key === 'Escape') {
+        setIsSpotlightOpen(false);
+        setIsMarginDrawerOpen(false);
+        setIsBinderDrawerOpen(false);
         setIsCommandPaletteOpen(false);
         setIsMediaPanelOpen(false);
       }
@@ -1364,7 +1666,7 @@ export function StoryXDesk({
     window.addEventListener('keydown', handleGlobalShortcut);
 
     return () => window.removeEventListener('keydown', handleGlobalShortcut);
-  }, []);
+  }, [isDraftMode]);
 
   useEffect(() => {
     if (!latestChapter) {
@@ -1773,7 +2075,7 @@ export function StoryXDesk({
   }
 
   function reviewDraft() {
-    runAiReview(editorText.trim() || draftPrompt.trim() || project.logline);
+    marginReview.onRunAll();
   }
 
   function requestBibleReview() {
@@ -1923,7 +2225,16 @@ export function StoryXDesk({
 
   return (
     <main
-      className={`sx-desk sx-genre-${request.genre} ${isFocusMode ? 'is-focus-mode' : ''}`}
+      className={[
+        'sx-desk',
+        `sx-genre-${request.genre}`,
+        isDraftMode ? 'is-draft-mode' : '',
+        isFocusMode ? 'is-focus-mode is-focus' : '',
+        isMarginDrawerOpen ? 'drawer-open' : '',
+        isBinderDrawerOpen ? 'binder-open' : ''
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={
         {
           '--sx-brand': STUDIO_ACCENT_VALUES[studioAccent].value,
@@ -2306,7 +2617,7 @@ export function StoryXDesk({
       )}
 
       <section className="sx-desk-grid">
-        <aside className="sx-project-rail" aria-label="프로젝트 대시보드">
+        <aside className="sx-project-rail sx-rail-l" aria-label="프로젝트 대시보드">
           {isPublishingMode ? (
             <>
               <ProjectStateCard
@@ -2471,6 +2782,12 @@ export function StoryXDesk({
                 editedSinceReview={editedSinceReview}
                 isFocusMode={isFocusMode}
                 manuscriptRef={manuscriptRef}
+                marginParagraphs={marginParagraphs}
+                marginReviews={marginReview.reviews}
+                marginOpenId={marginReview.openId}
+                filterPersona={marginReview.filterPersona}
+                appliedDiffs={marginReview.applied}
+                onSummonAgent={marginReview.onSummon}
                 onEditableTextChange={updateEditorText}
                 onReviewDraft={reviewDraft}
                 onOpenApprovalQueue={() => {
@@ -2513,36 +2830,98 @@ export function StoryXDesk({
           )}
         </section>
 
-        <aside className="sx-codex-rail sx-focused-assist-rail" aria-label={isBibleMode ? '조수진과 바이블 검토' : '작가진과 열린 질문'}>
-          {isBibleMode ? (
-            dataView.kind === 'canon' ? (
-              /* P4 — 데이터 모드: 분야별 데이터 검토 레일. 실제 엔티티 검토 결과를 정합/제안으로 보여준다 */
-              <DataReviewRail
-                category={dataView.category}
-                review={dataReviewResults[dataView.category] ?? null}
-                isReviewing={dataReviewingCategory === dataView.category}
-                onRequestReview={() => runDataReview(dataView.category)}
-                onOpenApprovalQueue={() => openBibleSection('approval')}
-              />
+        {isDraftMode ? (
+          <>
+            <MarginColumn
+              paragraphs={marginParagraphs}
+              reviews={marginReview.reviews}
+              openId={marginReview.openId}
+              setOpenId={marginReview.setOpenId}
+              filterPersona={marginReview.filterPersona}
+              setFilterPersona={marginReview.setFilterPersona}
+              canonDeltas={marginCanonDeltas}
+              onRunAll={marginReview.onRunAll}
+              onAcceptDiff={acceptMarginDiff}
+              onRejectReview={marginReview.onRejectReview}
+              onOpenChat={openMarginReviewChat}
+              onResolveCanon={() => marginReview.onSummon('canon-librarian', { anchor: marginDefaultAnchor })}
+            />
+            <CoreStrip
+              reviews={marginReview.reviews}
+              summonedExtended={marginReview.summonedExtended}
+              filterPersona={marginReview.filterPersona}
+              setFilterPersona={marginReview.setFilterPersona}
+              openSpotlight={() => setIsSpotlightOpen(true)}
+            />
+          </>
+        ) : (
+          <aside className="sx-codex-rail sx-focused-assist-rail" aria-label={isBibleMode ? '조수진과 바이블 검토' : '열린 질문'}>
+            {isBibleMode ? (
+              dataView.kind === 'canon' ? (
+                /* P4 — 데이터 모드: 분야별 데이터 검토 레일. 실제 엔티티 검토 결과를 정합/제안으로 보여준다 */
+                <DataReviewRail
+                  category={dataView.category}
+                  review={dataReviewResults[dataView.category] ?? null}
+                  isReviewing={dataReviewingCategory === dataView.category}
+                  onRequestReview={() => runDataReview(dataView.category)}
+                  onOpenApprovalQueue={() => openBibleSection('approval')}
+                />
+              ) : (
+                <BibleAssistantSidebar
+                  runs={bibleAssistantRuns}
+                  activeSection={dataView.section}
+                  onSelectAgent={(run, persona) => setSelectedAgent({ run, persona })}
+                />
+              )
             ) : (
-              <BibleAssistantSidebar
-                runs={bibleAssistantRuns}
-                activeSection={dataView.section}
-                onSelectAgent={(run, persona) => setSelectedAgent({ run, persona })}
-              />
-            )
-          ) : (
-            <>
-              <AgentSidebar
-                runs={displayedAgentRuns}
-                onSelectAgent={(run, persona) => setSelectedAgent({ run, persona })}
-              />
-
               <OpenThreadsCard threads={project.openThreads} />
-            </>
-          )}
-        </aside>
+            )}
+          </aside>
+        )}
       </section>
+      {isDraftMode && (
+        <>
+          <button
+            type="button"
+            className="sx-margin-toggle"
+            aria-label="마진 의견 열기"
+            onClick={() => setIsMarginDrawerOpen(true)}
+          >
+            <MessageCircle size={15} />
+            의견 보기
+            <span className="cnt">{marginReview.reviews.length}</span>
+          </button>
+          <button
+            type="button"
+            className="sx-binder-toggle"
+            aria-label="좌측 작업 바인더 열기"
+            onClick={() => setIsBinderDrawerOpen(true)}
+          >
+            <ListChecks size={15} />
+            바인더
+          </button>
+        </>
+      )}
+      {isDraftMode && isSpotlightOpen && (
+        <Spotlight
+          onClose={() => setIsSpotlightOpen(false)}
+          onSummon={(id) => {
+            setIsSpotlightOpen(false);
+            marginReview.onSummon(id, { anchor: marginDefaultAnchor });
+          }}
+        />
+      )}
+      {isDraftMode && marginReview.toast && (() => {
+        const persona = findPersona(marginReview.toast.personaId);
+        return (
+          <div className="sx-toast" role="status">
+            <PixelAvatar tint={persona.tint} className="sx-toast__avatar" />
+            <span>
+              <span className="sx-toast__name">{persona.name}</span> — 잠시만요, 읽고 있어요.
+            </span>
+          </div>
+        );
+      })()}
       <StoryXStatusBar
         alphaReport={alphaReport}
         project={project}
@@ -5062,143 +5441,6 @@ function OpenThreadsCard({ threads }: { threads: string[] }) {
   );
 }
 
-// 작가진 검토 레일 — 상태별 AI-stage 분포를 design3 timeline 스트립으로 요약한다
-const REVIEW_STAGE_STRIP: Array<{ id: AgentRun['status']; label: string; tone: string }> = [
-  { id: 'idle', label: '대기', tone: 'queued' },
-  { id: 'revise', label: '표시', tone: 'mark' },
-  { id: 'block', label: '작성', tone: 'write' },
-  { id: 'pass', label: '완료', tone: 'done' }
-];
-
-function AgentStageTimeline({ runs }: { runs: AgentRun[] }) {
-  const counts: Record<string, number> = { queued: 0, mark: 0, write: 0, done: 0 };
-  for (const run of runs) {
-    if (run.status === 'pass' || run.status === 'complete') counts.done += 1;
-    else if (run.status === 'revise') counts.mark += 1;
-    else if (run.status === 'block') counts.write += 1;
-    else counts.queued += 1;
-  }
-  return (
-    <div className="ex-crew-timeline" aria-label="작가진 검토 단계 분포">
-      {REVIEW_STAGE_STRIP.map((stage) => (
-        <span key={stage.tone} className="ex-crew-timeline-seg" style={{ flex: Math.max(counts[stage.tone], 0.4) }}>
-          <span className={`ex-crew-timeline-dot ex-stage-${stage.tone}`} aria-hidden="true" />
-          <span className="ex-crew-timeline-label">
-            {stage.label} {counts[stage.tone]}
-          </span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-// P2-C — 작가진 검토 행 하나. 카드 장식을 줄이고 글 중심으로: 얇은 구분선,
-// 인물·역할·단계가 한 줄, 검토 의견은 2줄 클램프 + 펼치기/접기, 클릭하면 대화창이 열린다.
-function AgentReviewRow({
-  run,
-  persona,
-  expanded,
-  onToggleExpand,
-  onOpenDialog
-}: {
-  run: AgentRun;
-  persona: AgentPersona;
-  expanded: boolean;
-  onToggleExpand: () => void;
-  onOpenDialog: () => void;
-}) {
-  return (
-    <article
-      className={`ex-review-row ex-review-row--${run.status}`}
-      role="button"
-      tabIndex={0}
-      aria-label={`${persona.title} ${agentStatusLabel(run.status)} — 자세한 검토 열기`}
-      onClick={onOpenDialog}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onOpenDialog();
-        }
-      }}
-    >
-      <header className="ex-review-head">
-        <AgentPixelPortrait persona={persona} />
-        <span className="ex-review-name">{persona.title}</span>
-        <span className="ex-review-role">{persona.subtitle}</span>
-        <span className={`ex-review-stage ex-review-stage--${run.status}`}>
-          {agentStatusLabel(run.status)}
-        </span>
-      </header>
-      <p className={`ex-review-opinion ${expanded ? '' : 'is-clamped'}`}>{run.output}</p>
-      <footer className="ex-review-foot">
-        <button
-          type="button"
-          className="ex-review-expand"
-          aria-expanded={expanded}
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggleExpand();
-          }}
-        >
-          {expanded ? '접기' : '펼치기'}
-        </button>
-        <span
-          className="ex-review-talk"
-          onClick={(event) => {
-            event.stopPropagation();
-            onOpenDialog();
-          }}
-        >
-          <MessageCircle size={12} />
-          대화하기
-        </span>
-      </footer>
-    </article>
-  );
-}
-
-function AgentSidebar({
-  runs,
-  onSelectAgent
-}: {
-  runs: AgentRun[];
-  onSelectAgent: (run: AgentRun, persona: AgentPersona) => void;
-}) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const doneCount = runs.filter((run) => run.status === 'pass' || run.status === 'complete').length;
-
-  return (
-    <section className="sx-panel sx-agent-sidebar ex-crew-rail" aria-label="AI 작가진">
-      <div className="sx-panel-heading ex-crew-head">
-        <span className="ex-crew-overline">작가진 검토</span>
-        <h2>{runs.length}명이 읽고 있어요</h2>
-        <span className="ex-crew-done">
-          {doneCount}
-          <em>/{runs.length}</em>
-        </span>
-      </div>
-      <AgentStageTimeline runs={runs} />
-      <div className="ex-review-list">
-        {runs.map((run) => {
-          const persona = getAgentPersona(run);
-          const rowKey = `${run.agentId}-${run.title}`;
-
-          return (
-            <AgentReviewRow
-              key={rowKey}
-              run={run}
-              persona={persona}
-              expanded={expandedId === rowKey}
-              onToggleExpand={() => setExpandedId((current) => (current === rowKey ? null : rowKey))}
-              onOpenDialog={() => onSelectAgent(run, persona)}
-            />
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 function BibleAssistantSidebar({
   runs,
   activeSection,
@@ -5510,6 +5752,12 @@ function CreativeStage({
   editedSinceReview,
   isFocusMode,
   manuscriptRef,
+  marginParagraphs,
+  marginReviews,
+  marginOpenId,
+  filterPersona,
+  appliedDiffs,
+  onSummonAgent,
   onEditableTextChange,
   onReviewDraft,
   onOpenApprovalQueue,
@@ -5522,22 +5770,18 @@ function CreativeStage({
   editableText: string;
   editedSinceReview: boolean;
   isFocusMode: boolean;
-  manuscriptRef: RefObject<HTMLTextAreaElement>;
+  manuscriptRef: RefObject<HTMLDivElement>;
+  marginParagraphs: Paragraph[];
+  marginReviews: MarginReview[];
+  marginOpenId: string | null;
+  filterPersona: string | null;
+  appliedDiffs: InlineDiff[];
+  onSummonAgent: (personaId: string, context?: { selectedText?: string; anchor?: string }) => void;
   onEditableTextChange: (value: string) => void;
   onReviewDraft: () => void;
   onOpenApprovalQueue: () => void;
   onToggleFocusMode: () => void;
 }) {
-  const [showDiff, setShowDiff] = useState(false);
-  const proseDiff = useMemo(
-    () => diffProseBlocks(chapter?.prose ?? '', editableText),
-    [chapter, editableText]
-  );
-
-  useEffect(() => {
-    setShowDiff(false);
-  }, [chapter?.id]);
-
   const expandButton = (
     <button type="button" className="sx-expand-editor-button" onClick={onToggleFocusMode}>
       {isFocusMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
@@ -5545,6 +5789,7 @@ function CreativeStage({
     </button>
   );
   // 편집기 중앙 무대에서 vertical-slice proof 패널을 제거 — 창작 공간을 가리지 않는다
+  void editableText;
   void verticalSlice;
   void onOpenApprovalQueue;
   const verticalSlicePanel = null;
@@ -5641,37 +5886,50 @@ function CreativeStage({
             </p>
             <h2>{chapter.title}</h2>
             <label className={`sx-manuscript-editor-wrap ${editedSinceReview ? 'is-edited' : ''}`}>
-              <span className="sx-manuscript-editor-head">
-                원고
-                {proseDiff.changed && (
-                  <button
-                    type="button"
-                    className="sx-diff-toggle"
-                    onClick={() => setShowDiff((current) => !current)}
-                  >
-                    {showDiff
-                      ? '편집으로 돌아가기'
-                      : `내 수정 보기 (+${proseDiff.addedBlocks} / −${proseDiff.removedBlocks})`}
-                  </button>
-                )}
-              </span>
-              {showDiff ? (
-                <div className="sx-prose-diff" aria-label="AI 초안 대비 내 수정">
-                  {proseDiff.blocks.map((block, index) => (
-                    <p key={`${block.kind}-${index}`} className={`sx-diff-block is-${block.kind}`}>
-                      {block.text}
+              <span className="sx-manuscript-editor-head">원고</span>
+              <div
+                ref={manuscriptRef}
+                className={`sx-manuscript-editor ${editedSinceReview ? 'is-edited' : ''}`}
+                aria-label="원고 편집기"
+                role="textbox"
+                tabIndex={0}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={(event) => onEditableTextChange(textFromEditable(event.currentTarget))}
+              >
+                {marginParagraphs.map((paragraph) => {
+                  const reviews = marginReviews.filter((review) => review.anchor === paragraph.id);
+                  const anchorColor =
+                    reviews.length > 0 ? findPersona(String(reviews[0].persona)).tint : 'transparent';
+                  const isOpen = reviews.some(
+                    (review) => marginOpenId === `${review.anchor}${review.persona}`
+                  );
+                  const isDim = Boolean(filterPersona) && reviews.every((review) => review.persona !== filterPersona);
+                  const diffs = appliedDiffs.filter((diff) => diff.paragraph === paragraph.id);
+
+                  return (
+                    <p
+                      key={paragraph.id}
+                      data-pid={paragraph.id}
+                      className={[
+                        reviews.length > 0 ? 'is-anchored' : '',
+                        isOpen ? 'is-open' : '',
+                        isDim && reviews.length > 0 ? 'is-dim' : ''
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      style={{ ['--anchor-color' as string]: anchorColor }}
+                    >
+                      {renderParagraphText(paragraph.text, diffs)}
                     </p>
-                  ))}
-                </div>
-              ) : (
-                <textarea
-                  ref={manuscriptRef}
-                  className={`sx-manuscript-editor ${editedSinceReview ? 'is-edited' : ''}`}
-                  aria-label="원고 편집기"
-                  value={editableText}
-                  onChange={(event) => onEditableTextChange(event.target.value)}
-                  rows={16}
-                />
+                  );
+                })}
+              </div>
+              <MentionBar manuscriptRef={manuscriptRef} onSummon={onSummonAgent} />
+              {isFocusMode && (
+                <span className="sx-focus-chip" contentEditable={false}>
+                  무대 위 · <kbd>Esc</kbd> 나가기
+                </span>
               )}
             </label>
             <div className={`sx-edit-state ${editedSinceReview ? 'is-dirty' : ''}`}>
