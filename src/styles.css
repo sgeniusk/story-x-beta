@@ -10466,7 +10466,7 @@ body {
 .sx-rail-seg .ct.warn { color: var(--sx-warn); background: rgba(192, 133, 50, 0.18); }
 .sx-rail-seg button.is-active .ct.warn { color: var(--sx-brand-ink); background: rgba(8, 9, 10, 0.18); }
 
-.sx-data-stack { display: flex; flex-direction: column; gap: 8px; padding: 2px; }
+.sx-data-stack { display: flex; flex-direction: column; gap: 8px; padding: 2px; width: 100%; min-width: 0; box-sizing: border-box; }
 
 .sx-mcard {
   border: 1px solid var(--sx-line-hair);

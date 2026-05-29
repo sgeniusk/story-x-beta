@@ -1361,38 +1361,37 @@ export function StoryXDesk({
         }))
       );
 
-      const reports: AiCliAgentReport[] = [];
-      const candidates: AiCliMemoryCandidate[] = [];
-
       try {
-        for (const [reviewIndex, agentId] of MARGIN_CORE_AGENT_IDS.entries()) {
+        const reviewTasks = MARGIN_CORE_AGENT_IDS.map(async (agentId, reviewIndex) => {
           setAgentRuns((current) =>
             current.map((run) =>
               run.agentId === agentId ? { ...run, output: '지금 원고를 읽고 있습니다…' } : run
             )
           );
 
-          const res = await requestAgentReview({
-            agentId,
-            target: currentReviewText,
-            medium: blueprint.medium,
-            context
-          });
+          try {
+            const res = await requestAgentReview({
+              agentId,
+              target: currentReviewText,
+              medium: blueprint.medium,
+              context
+            });
 
-          if (res.ok && res.report) {
-            reports.push(res.report);
-            if (res.memoryCandidates) {
-              candidates.push(...res.memoryCandidates);
+            if (res.ok && res.report) {
+              const run = agentReportToRun(res.report);
+              setAgentRuns((current) => current.map((item) => (item.agentId === agentId ? run : item)));
+              onPartial(
+                toMarginReview(
+                  run,
+                  resolveRunReviewAnchor(run, marginParagraphs, reviewIndex, marginDefaultAnchor)
+                )
+              );
+              return {
+                report: res.report,
+                memoryCandidates: res.memoryCandidates ?? []
+              };
             }
-            const run = agentReportToRun(res.report);
-            setAgentRuns((current) => current.map((item) => (item.agentId === agentId ? run : item)));
-            onPartial(
-              toMarginReview(
-                run,
-                resolveRunReviewAnchor(run, marginParagraphs, reviewIndex, marginDefaultAnchor)
-              )
-            );
-          } else {
+
             await new Promise((resolve) => setTimeout(resolve, 180));
             const run = fallbackRunForAgent(
               agentId,
@@ -1405,34 +1404,56 @@ export function StoryXDesk({
                 resolveRunReviewAnchor(run, marginParagraphs, reviewIndex, marginDefaultAnchor)
               )
             );
+            return { memoryCandidates: [] };
+          } catch (error) {
+            const reason = error instanceof Error ? error.message : '검토 중 예외가 발생했습니다.';
+            await new Promise((resolve) => setTimeout(resolve, 180));
+            const run = fallbackRunForAgent(
+              agentId,
+              `${getAgentLabel(agentId)}가 mock 폴백으로 원고를 확인했습니다. (${reason})`
+            );
+            setAgentRuns((current) => current.map((item) => (item.agentId === agentId ? run : item)));
+            onPartial(
+              toMarginReview(
+                run,
+                resolveRunReviewAnchor(run, marginParagraphs, reviewIndex, marginDefaultAnchor)
+              )
+            );
+            return { memoryCandidates: [] };
           }
+        });
+
+        const reviewResults = await Promise.all(reviewTasks);
+        const reports: AiCliAgentReport[] = reviewResults
+          .map((result) => result.report)
+          .filter((report): report is AiCliAgentReport => Boolean(report));
+        const candidates: AiCliMemoryCandidate[] = reviewResults.flatMap((result) => result.memoryCandidates);
+
+        if (reports.length > 0) {
+          const pass = reports.filter((report) => report.status === 'pass').length;
+          const revise = reports.filter((report) => report.status === 'revise').length;
+          const blocked = reports.filter((report) => report.status === 'blocked').length;
+          setLatestReviewResult({
+            provider: 'claude',
+            mode: 'review',
+            scale: reviewScale,
+            generatedAt: new Date().toISOString(),
+            summary: `${reports.length}명의 코어 작가진이 마진 검토를 남겼습니다. 통과 ${pass} · 수정 ${revise} · 차단 ${blocked}.`,
+            agentReports: reports,
+            memoryCandidates: candidates,
+            nextActions: [
+              '마진의 수정·차단 의견을 원고 단락 기준으로 확인하세요.',
+              '승인할 기억 후보는 승인 대기함에서 캐논에 반영하세요.'
+            ],
+            pendingReviewTarget: 'reviews/pending',
+            approvalRequiredBeforeSync: true
+          });
+          setGenerationNote('Claude 구독으로 코어 작가진이 마진 검토를 남겼습니다.');
+        } else {
+          setGenerationNote('검토 브리지를 쓰지 못해 mock 폴백 마진 검토로 대체했습니다.');
         }
       } finally {
         setIsReviewing(false);
-      }
-
-      if (reports.length > 0) {
-        const pass = reports.filter((report) => report.status === 'pass').length;
-        const revise = reports.filter((report) => report.status === 'revise').length;
-        const blocked = reports.filter((report) => report.status === 'blocked').length;
-        setLatestReviewResult({
-          provider: 'claude',
-          mode: 'review',
-          scale: reviewScale,
-          generatedAt: new Date().toISOString(),
-          summary: `${reports.length}명의 코어 작가진이 마진 검토를 남겼습니다. 통과 ${pass} · 수정 ${revise} · 차단 ${blocked}.`,
-          agentReports: reports,
-          memoryCandidates: candidates,
-          nextActions: [
-            '마진의 수정·차단 의견을 원고 단락 기준으로 확인하세요.',
-            '승인할 기억 후보는 승인 대기함에서 캐논에 반영하세요.'
-          ],
-          pendingReviewTarget: 'reviews/pending',
-          approvalRequiredBeforeSync: true
-        });
-        setGenerationNote('Claude 구독으로 코어 작가진이 마진 검토를 남겼습니다.');
-      } else {
-        setGenerationNote('검토 브리지를 쓰지 못해 mock 폴백 마진 검토로 대체했습니다.');
       }
     },
     [
