@@ -100,6 +100,7 @@
       <span class="chip ok">방향 <b>사회과학 글쓰기</b></span>
       <span class="chip">현재 <b>v0.10.0 · M10 완료</b></span>
       <span class="chip">재활용 <b>essay 트랙·36 에이전트</b></span>
+      <span class="chip ok">결정 <b>로컬 휴리스틱 · 영어(APA) · academic 매체</b></span>
       <span class="chip mono">2026-05-29</span>
     </div>
   </div>
@@ -233,11 +234,11 @@
 <!-- 5. 리스크와 결정 -->
 <section id="risk">
   <div class="wrap">
-    <div class="sec-head"><span class="sec-num">05</span><div><h2>리스크 · 열린 결정</h2><div class="sec-sub">착수 전에 정해야 할 것들</div></div></div>
+    <div class="sec-head"><span class="sec-num">05</span><div><h2>확정된 결정</h2><div class="sec-sub">2026-05-29 사용자 결정 — A1 착수 기준</div></div></div>
     <div class="grid c3">
-      <div class="card"><span class="ic">🔍</span><h3>인용 검증의 깊이</h3><p>로컬 휴리스틱만으로 갈지, CrossRef·Semantic Scholar 등 외부 문헌 API를 붙일지. 후자는 정확하나 비용·복잡도가 큼. A3에서 1차는 휴리스틱 권장.</p></div>
-      <div class="card"><span class="ic">🌐</span><h3>한국어 학술 vs 영어 학술</h3><p>한국 사회과학 논문 관행(KCI)과 영어 저널(APA) 중 우선순위. 사용자 배경상 한국어 우선, 영어 병행이 자연스러움.</p></div>
-      <div class="card"><span class="ic">🧩</span><h3>매체 확장 vs 신규 모드</h3><p><code>academic</code>을 5번째 매체로 둘지, "글쓰기 종류"라는 상위 축을 새로 만들지. 매체로 두는 게 기존 투영 구조와 정합.</p></div>
+      <div class="card"><span class="ic">🔍</span><h3>인용 검증의 깊이 <span class="tag p1">확정</span></h3><p><b>로컬 휴리스틱만.</b> 외부 문헌 API(CrossRef 등)는 붙이지 않는다. 인용 형식·출처 존재 표기·맥락 일치를 텍스트 휴리스틱으로 점검. 비용·복잡도를 낮게 유지하고, 외부 DB 연동은 필요 시 별도 마일스톤으로 분리.</p></div>
+      <div class="card"><span class="ic">🌐</span><h3>학술 관행 <span class="tag p1">확정</span></h3><p><b>영어(APA) 우선.</b> 참고문헌 포맷·인용 규칙·논증 구조를 영어 학술 저널 기준으로 설계. 한국어 KCI 관행은 후속 확장으로 미룬다.</p></div>
+      <div class="card"><span class="ic">🧩</span><h3>매체 구조 <span class="tag p1">확정</span></h3><p><b>5번째 매체로.</b> <code>CreativeMedium</code>에 <code>academic</code>을 추가해 기존 매체 투영 구조에 그대로 얹는다. 상위 축 신설 없음 — 기존 아키텍처와 정합.</p></div>
     </div>
   </div>
 </section>
