@@ -3,6 +3,9 @@ import type { AgentRun } from './storyEngine';
 import {
   applyDiff,
   groupAnnotationsByParagraph,
+  replacePendingMarginReview,
+  resolveRunReviewAnchor,
+  seedPendingMarginReviews,
   splitIntoParagraphs,
   toMarginReview,
   type InlineDiff,
@@ -77,6 +80,87 @@ describe('marginReview pure logic', () => {
       ['p1', 'showrunner', true, false],
       ['p2', 'continuity-editor', true, false],
       ['p2', 'world-keeper', false, true]
+    ]);
+  });
+
+  it('distributes unmatched review anchors across paragraphs by fallback index', () => {
+    const paragraphs = splitIntoParagraphs(
+      [
+        '첫 단락은 주인공의 약속을 세운다.',
+        '둘째 단락은 관계의 압력을 키운다.',
+        '셋째 단락은 세계 규칙의 비용을 드러낸다.'
+      ].join('\n\n')
+    );
+
+    const anchors = [
+      'showrunner',
+      'character-custodian',
+      'world-keeper',
+      'genre-stylist',
+      'continuity-editor'
+    ].map((agentId, index) =>
+      resolveRunReviewAnchor(
+        run({
+          agentId,
+          output: '요약형 검토라서 원문 첫머리를 직접 인용하지 않습니다.',
+          evidence: ['요약 근거']
+        }),
+        paragraphs,
+        index
+      )
+    );
+
+    expect(anchors).toEqual(['p1', 'p2', 'p3', 'p1', 'p2']);
+  });
+
+  it('keeps a matched evidence anchor before fallback distribution', () => {
+    const paragraphs = splitIntoParagraphs(
+      [
+        '첫 단락은 주인공의 약속을 세운다.',
+        '둘째 단락은 관계의 압력을 키운다. 오래 묵은 빚이 대화 중에 드러난다.',
+        '셋째 단락은 세계 규칙의 비용을 드러낸다.'
+      ].join('\n\n')
+    );
+
+    const anchor = resolveRunReviewAnchor(
+      run({
+        output: `이 대목을 보세요: ${paragraphs[1].text.slice(0, 24)}`
+      }),
+      paragraphs,
+      0
+    );
+
+    expect(anchor).toBe('p2');
+  });
+
+  it('seeds pending placeholders and replaces the resolved persona only', () => {
+    const pending = seedPendingMarginReviews(
+      ['showrunner', 'world-keeper'],
+      [
+        { id: 'p1', text: '첫 단락' },
+        { id: 'p2', text: '둘째 단락' }
+      ]
+    );
+
+    expect(pending.map((review) => [review.persona, review.anchor, review.pending])).toEqual([
+      ['showrunner', 'p1', true],
+      ['world-keeper', 'p2', true]
+    ]);
+
+    const merged = replacePendingMarginReview(
+      pending,
+      toMarginReview(
+        run({
+          agentId: 'showrunner',
+          output: '첫 단락보다 둘째 단락의 약속이 더 선명합니다.'
+        }),
+        'p2'
+      )
+    );
+
+    expect(merged.map((review) => [review.persona, review.anchor, review.pending ?? false])).toEqual([
+      ['world-keeper', 'p2', true],
+      ['showrunner', 'p2', false]
     ]);
   });
 

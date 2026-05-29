@@ -54,11 +54,37 @@ export function AnnotationCard({
     .filter(Boolean)
     .join(' ');
 
+  if (review.pending) {
+    return (
+      <div
+        className={classes}
+        style={{ ['--anchor-color' as string]: persona.tint }}
+        role="article"
+        aria-busy="true"
+        aria-label={`${persona.name} 검토 대기`}
+      >
+        <div className="sx-annot__head">
+          <PixelAvatar tint={persona.tint} className="sx-annot__avatar" />
+          <span className="sx-annot__name">{persona.name}</span>
+          <span className="sx-annot__role">{persona.role}</span>
+        </div>
+
+        <div className="sx-annot__anchor-line">검토 중</div>
+        <div className="sx-annot__head-text">{review.head || '읽고 있어요...'}</div>
+        <div className="sx-annot__skeleton" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={classes}
       style={{ ['--anchor-color' as string]: persona.tint }}
-      onClick={review.pending ? undefined : onToggle}
+      onClick={onToggle}
       role="article"
       aria-label={`${persona.name} 의견 · 단락 ${anchorIndex}`}
     >
@@ -66,19 +92,17 @@ export function AnnotationCard({
         <PixelAvatar tint={persona.tint} className="sx-annot__avatar" />
         <span className="sx-annot__name">{persona.name}</span>
         <span className="sx-annot__role">{persona.role}</span>
-        {!review.pending && (
-          <span className="sx-annot__sev-chip">
-            {sevLabel}
-            {diffsCount > 0 ? ` ${diffsCount}` : ''}
-          </span>
-        )}
+        <span className="sx-annot__sev-chip">
+          {sevLabel}
+          {diffsCount > 0 ? ` ${diffsCount}` : ''}
+        </span>
       </div>
 
       <div className="sx-annot__anchor-line">단락 {anchorIndex}</div>
       <div className="sx-annot__head-text">{review.head}</div>
       <div className="sx-annot__body">{review.body}</div>
 
-      {!review.pending && diffsCount > 0 && (
+      {diffsCount > 0 && (
         <div className="sx-annot__actions">
           <button
             type="button"
@@ -99,7 +123,7 @@ export function AnnotationCard({
         </div>
       )}
 
-      {!review.pending && diffsCount === 0 && (
+      {diffsCount === 0 && (
         <div className="sx-annot__actions">
           {sev === 'block' && (
             <button

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { findPersona, CORE_PERSONAS } from '../lib/extendedPersonas';
 import type {
   InlineDiff,
@@ -7,9 +7,14 @@ import type {
   PersonaCard,
   SummonHandler,
 } from '../lib/marginReview';
+import {
+  replacePendingMarginReview,
+  seedPendingMarginReviews,
+} from '../lib/marginReview';
 
 interface Options {
   paragraphs: Paragraph[];
+  corePersonaIds: string[];
   /**
    * 진짜 검토를 돌리는 함수. agentReviewProcess 응답을 MarginReview[] 로
    * 변환해 돌려준다. mock 폴백 시엔 정적 데이터를 resolve 하면 된다.
@@ -32,15 +37,15 @@ interface Options {
  * 도메인 로직(storyEngine 등)은 건드리지 않는다 — runAll / summonOne 두
  * 콜백을 통해서만 결과를 받는다.
  */
-export function useMarginReview({ paragraphs, runAll, summonOne }: Options) {
+export function useMarginReview({ paragraphs, corePersonaIds, runAll, summonOne }: Options) {
   const [reviews, setReviews] = useState<MarginReview[]>([]);
-  const [pending, setPending] = useState<MarginReview[]>([]);
   const [applied, setApplied] = useState<InlineDiff[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [filterPersona, setFilterPersona] = useState<string | null>(null);
   const [summonedExtended, setSummonedExtended] = useState<PersonaCard[]>([]);
   const [toast, setToast] = useState<{ personaId: string } | null>(null);
   const toastTimer = useRef<number | null>(null);
+  const runAllSeq = useRef(0);
 
   const showToast = useCallback((personaId: string) => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
@@ -66,11 +71,21 @@ export function useMarginReview({ paragraphs, runAll, summonOne }: Options) {
   }, []);
 
   const onRunAll = useCallback(() => {
-    setReviews([]);
-    runAll((review) => {
-      setReviews((arr) => [...arr, review]);
+    const seq = runAllSeq.current + 1;
+    runAllSeq.current = seq;
+    setOpenId(null);
+    setReviews(seedPendingMarginReviews(corePersonaIds, paragraphs));
+    void runAll((review) => {
+      if (runAllSeq.current !== seq) {
+        return;
+      }
+      setReviews((arr) => replacePendingMarginReview(arr, review));
+    }).catch(() => {
+      if (runAllSeq.current === seq) {
+        setReviews((arr) => arr.filter((review) => !review.pending));
+      }
     });
-  }, [runAll]);
+  }, [corePersonaIds, paragraphs, runAll]);
 
   const onSummon: SummonHandler = useCallback(
     (personaId, ctx = {}) => {
@@ -94,32 +109,18 @@ export function useMarginReview({ paragraphs, runAll, summonOne }: Options) {
         diffs: [],
         pending: true,
       };
-      setPending((arr) => [...arr, pendingCard]);
+      setReviews((arr) => [...arr, pendingCard]);
       showToast(personaId);
 
       summonOne(personaId, ctx).then((resolved) => {
-        setPending((arr) =>
-          arr.filter((p) => !(p.persona === personaId && p.anchor === anchor))
-        );
-        setReviews((arr) => [
-          ...arr.filter(
-            (r) => !(r.persona === personaId && r.anchor === resolved.anchor)
-          ),
-          resolved,
-        ]);
+        setReviews((arr) => replacePendingMarginReview(arr, resolved));
       });
     },
     [paragraphs, showToast, summonOne]
   );
 
-  // pending 을 reviews 와 합쳐 마진에 보여줄 최종 목록
-  const allReviews = useMemo(
-    () => [...reviews, ...pending],
-    [reviews, pending]
-  );
-
   return {
-    reviews: allReviews,
+    reviews,
     applied,
     openId,
     setOpenId,

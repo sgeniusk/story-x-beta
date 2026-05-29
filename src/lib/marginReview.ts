@@ -99,6 +99,59 @@ export function splitIntoParagraphs(text: string): Paragraph[] {
   }));
 }
 
+export function resolveRunReviewAnchor(
+  run: AgentRun,
+  paragraphs: Paragraph[],
+  fallbackIndex = 0,
+  fallback: ParagraphAnchor = 'p1'
+): ParagraphAnchor {
+  const haystack = [run.output, ...(run.issues ?? []), ...run.evidence]
+    .join('\n')
+    .toLocaleLowerCase();
+  const matched = paragraphs.find((paragraph) => {
+    const text = paragraph.text.toLocaleLowerCase();
+    return text.length > 12 && haystack.includes(text.slice(0, 24));
+  });
+
+  if (matched) {
+    return matched.id;
+  }
+
+  return resolveFallbackAnchor(paragraphs, fallbackIndex, fallback);
+}
+
+export function seedPendingMarginReviews(
+  personaIds: Array<ValidationAgentId | string>,
+  paragraphs: Paragraph[]
+): MarginReview[] {
+  const anchors = paragraphs.length > 0 ? paragraphs : [{ id: 'p1', text: '' }];
+
+  return personaIds.map((persona, index) => ({
+    persona,
+    anchor: anchors[index % anchors.length]?.id ?? 'p1',
+    severity: 'note',
+    head: '읽고 있어요...',
+    body: '',
+    diffs: [],
+    pending: true
+  }));
+}
+
+export function replacePendingMarginReview(
+  reviews: MarginReview[],
+  resolved: MarginReview
+): MarginReview[] {
+  return [
+    ...reviews.filter((review) => {
+      if (review.pending && review.persona === resolved.persona) {
+        return false;
+      }
+      return !(review.persona === resolved.persona && review.anchor === resolved.anchor);
+    }),
+    { ...resolved, pending: false }
+  ];
+}
+
 export function applyDiff(text: string, diff: InlineDiff | InlineDiff[]): string {
   const diffs = Array.isArray(diff) ? diff : [diff];
 
@@ -202,4 +255,17 @@ function dedupeDiffs(diffs: InlineDiff[]): InlineDiff[] {
     seen.add(key);
     return true;
   });
+}
+
+function resolveFallbackAnchor(
+  paragraphs: Paragraph[],
+  fallbackIndex: number,
+  fallback: ParagraphAnchor
+): ParagraphAnchor {
+  if (paragraphs.length === 0) {
+    return fallback;
+  }
+
+  const index = ((fallbackIndex % paragraphs.length) + paragraphs.length) % paragraphs.length;
+  return paragraphs[index]?.id ?? fallback;
 }

@@ -4,6 +4,80 @@
 
 ---
 
+## 2026-05-29 20:50 — M10 Phase 3 검토 UX 다듬기 · Claude 총괄 재검증 통과
+
+> Last Updated: 2026-05-29 20:50 KST · Branch: `design/margin-integration`
+
+### Current Objective
+**M10 Margin 통합 Phase 3 완료.** 실사용 테스트에서 발견한 두 결함 수정 — (A) 전체 검토 ~80초 동안 마진 빈 화면, (B) 의견이 첫 단락 클러스터링. Codex(gpt-5.5 @ xhigh) 구현, Claude 하네스(패킷)·총괄 검증.
+
+### 총괄 재검증 결과 (Claude 직접)
+- 게이트 — tsc exit 0 · `npm test` **38 files / 234 tests** · build 성공.
+- 라이브 렌더(Playwright, `?stage=editor`, 실 LLM 초안 23단락) —
+  - (A) "5명에게 전체 검토 맡기기" 클릭 **즉시 pending skeleton 5개**("읽고 있는 중…") 표시. 도착 시 확정 의견으로 교체, stillPending 0.
+  - (B) 의견 5개가 서로 다른 단락(p1·p7·p13·p19·p2)에 **분산 anchored** (이전엔 전부 p19).
+  - console error 0.
+- 스코프 — 도메인 lib 8종 무변경 · 검토 호출 경로 무변경 · 잔여물 없음.
+
+### 알려진 약점 (다음 후보)
+- 마진 헤더 카운트는 pending 중 "0건"으로 표시(확정만 셈). "N/5 검토 중" 형태가 더 친절. 소소.
+- 병렬 검토(순차 80초 → 병렬 ~16초)는 이번 스코프 밖. 별도 작업.
+
+### Recommended Next Step
+1. Phase 3 커밋 → main 머지(PR) 여부 사용자 결정.
+2. L1 — Vercel env 등록(배포본 실 LLM).
+
+---
+
+## 2026-05-29 20:40 — M10 Phase 3 마진 검토 UX 수정 완료 · 커밋 전
+
+> Last Updated: 2026-05-29 20:40 KST · Branch: `design/margin-integration`
+
+### Current Objective
+**M10 Margin 통합 Phase 3 구현 완료, 커밋 전 검증 대기.** 전체 검토 시작 직후 코어 5명 pending skeleton 이 즉시 뜨고, 실제 리뷰가 도착하면 같은 persona placeholder 를 교체한다. anchor 매칭 실패 리뷰는 첫 단락 몰림 대신 단락 순서 round-robin 으로 분산된다. 도메인 로직과 `/api/review-agent` 호출 경로는 건드리지 않았다.
+
+### Recommended Next Step
+1. Claude 총괄이 diff와 UI를 재확인한 뒤 커밋 여부 결정. 사용자 지시로 Codex는 커밋하지 않음.
+2. 가능하면 실제 브라우저에서 `?stage=editor` → "5명에게 전체 검토 맡기기"를 눌러 pending 5장, 도착 순 교체, console error 0을 확인.
+3. 이월 — 코어 5명 순차 호출 병렬화는 이번 스코프 밖. 별도 작업으로 분리.
+
+### Branch · Commit · Verification
+- Branch — `design/margin-integration`
+- Commit — 없음(커밋 금지 지시 준수)
+- Verification — `npx tsc --noEmit` exit 0 · `npm test` 38 files / 234 tests · `npm run build` 성공 · 최종 `bash init.sh` 통과(38 files / 234 tests · 빌드 성공)
+- HTTP smoke — dev server `http://127.0.0.1:5173/?stage=editor` 200
+
+### What This Session Did
+1. `src/lib/marginReview.test.ts` 에 TDD 케이스 3개 추가 — unmatched anchor 분산, evidence 매칭 우선, pending seed→persona replace.
+2. `src/lib/marginReview.ts` 에 `resolveRunReviewAnchor`, `seedPendingMarginReviews`, `replacePendingMarginReview` 추가.
+3. `src/hooks/useMarginReview.ts` 가 `corePersonaIds` 를 받아 전체 검토 시작 시 pending 5장을 즉시 seed 하도록 변경.
+4. `StoryXDesk.tsx` 의 전체 검토 루프가 review index 를 넘겨 fallback anchor 를 결정론적으로 분산하도록 변경.
+5. `MarginColumn` 헤더를 pending 중 `N/5 검토 중` 형태로 표시하고, 빈 상태/재실행 버튼이 pending 중 노출되지 않게 조정.
+6. `AnnotationCard` pending 렌더를 persona + avatar + skeleton shimmer 로 분리.
+7. `CoreStrip` 카운트가 pending 을 확정 의견으로 세지 않도록 변경.
+
+### Files Touched
+- 수정 `src/lib/marginReview.ts`
+- 수정 `src/lib/marginReview.test.ts`
+- 수정 `src/hooks/useMarginReview.ts`
+- 수정 `src/components/MarginColumn.tsx`
+- 수정 `src/components/AnnotationCard.tsx`
+- 수정 `src/components/CoreStrip.tsx`
+- 수정 `src/StoryXDesk.tsx`
+- 수정 `src/styles.css`
+- 수정 `progress.md`
+- 수정 `session-handoff.md`
+
+### Files NOT To Touch
+- 도메인 lib: `storyEngine`, `agentRunEngine`, `agentReviewProcess`, `continuityContract`, `qualityGates`, `mediaProjection`, `storyOntology`, `storyHarness`, `koreanVoiceGate`
+- `/api/*`, `requestAgentReview` 호출 경로와 응답 스키마
+- 좌레일, DataPanel, `.claude/agents/*.md`, `--sx-stage-*` 6색
+
+### Blockers
+- Browser MCP/Playwright 자동 시각 검증은 이 세션에서 사용 불가. 대신 Vite dev HTTP 200 smoke 와 코드/테스트 게이트로 보증.
+
+---
+
 ## 2026-05-29 14:25 — M10 Phase 1+2 커밋 완료 · Claude 총괄 재검증 통과
 
 > Last Updated: 2026-05-29 14:25 KST · Branch: `design/margin-integration`

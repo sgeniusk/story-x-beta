@@ -55,9 +55,14 @@ export function MarginColumn({
     [paragraphs, reviews]
   );
 
-  const visibleCount = filterPersona
+  const countItems = filterPersona
     ? items.filter((i) => i.persona === filterPersona).length
     : items.length;
+  const countedItems = filterPersona ? items.filter((i) => i.persona === filterPersona) : items;
+  const confirmedCount = countedItems.filter((i) => !i.pending).length;
+  const pendingCount = countedItems.length - confirmedCount;
+  const countLabel =
+    pendingCount > 0 ? `${confirmedCount}/${countItems} 검토 중` : `${countItems}건`;
 
   const allDone = items.length > 0 && items.every((i) => !i.pending);
   const showCanonCard = allDone && canonDeltas.length > 0;
@@ -66,7 +71,7 @@ export function MarginColumn({
     <aside className="sx-margin-col" aria-label="작가진 의견">
       <div className="sx-margin-col__head">
         <h3>마지널리아</h3>
-        <span className="sx-margin-col__count">{visibleCount}건</span>
+        <span className="sx-margin-col__count">{countLabel}</span>
       </div>
 
       {filterPersona && (() => {
@@ -121,7 +126,7 @@ export function MarginColumn({
           </div>
         )}
 
-        {onRunAll && !allDone && (
+        {onRunAll && items.length === 0 && (
           <div style={{ marginTop: 14 }}>
             <button
               type="button"
