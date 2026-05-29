@@ -26,14 +26,19 @@ export function CoreStrip({
   setFilterPersona,
   openSpotlight,
 }: Props) {
-  const reviewedIds = new Set(reviews.map((r) => r.persona));
+  const confirmedCounts = reviews.reduce<Record<string, number>>((counts, review) => {
+    if (!review.pending) {
+      counts[String(review.persona)] = (counts[String(review.persona)] ?? 0) + 1;
+    }
+    return counts;
+  }, {});
 
   return (
     <aside className="sx-core-strip" aria-label="작가실 코어">
       <span className="sx-core-strip__label">CORE 5</span>
 
       {CORE_PERSONAS.map((p) => {
-        const has = reviewedIds.has(p.id);
+        const count = confirmedCounts[p.id] ?? 0;
         const isActive = filterPersona === p.id;
         return (
           <Sliver
@@ -41,7 +46,7 @@ export function CoreStrip({
             persona={p}
             isActive={isActive}
             isExtended={false}
-            hasReview={has}
+            reviewCount={count}
             onToggle={() => setFilterPersona(isActive ? null : p.id)}
           />
         );
@@ -58,7 +63,7 @@ export function CoreStrip({
                 persona={p}
                 isActive={isActive}
                 isExtended
-                hasReview={reviewedIds.has(p.id)}
+                reviewCount={confirmedCounts[String(p.id)] ?? 0}
                 onToggle={() => setFilterPersona(isActive ? null : p.id)}
               />
             );
@@ -84,11 +89,13 @@ interface SliverProps {
   persona: PersonaCard;
   isActive: boolean;
   isExtended: boolean;
-  hasReview: boolean;
+  reviewCount: number;
   onToggle: () => void;
 }
 
-function Sliver({ persona, isActive, isExtended, hasReview, onToggle }: SliverProps) {
+function Sliver({ persona, isActive, isExtended, reviewCount, onToggle }: SliverProps) {
+  const hasReview = reviewCount > 0;
+
   return (
     <div
       className={[
@@ -113,7 +120,7 @@ function Sliver({ persona, isActive, isExtended, hasReview, onToggle }: SliverPr
       <PixelAvatar tint={persona.tint} className="sx-core-strip__avatar" />
       <span className="sx-core-strip__name">{persona.name.slice(0, 4)}</span>
       <span className={`sx-core-strip__badge ${hasReview ? 'has' : ''}`}>
-        {hasReview ? '1' : '0'}
+        {reviewCount}
       </span>
     </div>
   );

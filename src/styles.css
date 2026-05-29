@@ -9923,7 +9923,9 @@ body {
 /* pending — 호출 직후 응답 대기 상태 */
 .sx-annot.is-pending {
   animation: sx-annot-slide-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  cursor: default;
 }
+.sx-annot.is-pending:hover { background: transparent; }
 .sx-annot.is-pending .sx-annot__avatar {
   animation: sx-pulse-stage 1.4s ease-in-out infinite;
 }
@@ -9932,6 +9934,28 @@ body {
   font-style: italic;
   font-weight: var(--sx-weight-regular);
 }
+.sx-annot__skeleton {
+  display: grid;
+  gap: 6px;
+  padding-left: 30px;
+  margin-top: 10px;
+}
+.sx-annot__skeleton span {
+  display: block;
+  height: 7px;
+  border-radius: var(--sx-radius-pill);
+  background: linear-gradient(
+    90deg,
+    var(--sx-faintest2) 0%,
+    var(--sx-faintest) 45%,
+    var(--sx-faintest2) 90%
+  );
+  background-size: 220% 100%;
+  animation: sx-annot-shimmer 1.35s ease-in-out infinite;
+}
+.sx-annot__skeleton span:nth-child(1) { width: 82%; }
+.sx-annot__skeleton span:nth-child(2) { width: 64%; }
+.sx-annot__skeleton span:nth-child(3) { width: 38%; }
 @keyframes sx-annot-slide-in {
   from { transform: translateX(20px); opacity: 0; }
   to   { transform: translateX(0); opacity: 1; }
@@ -9939,6 +9963,10 @@ body {
 @keyframes sx-pulse-stage {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%      { opacity: 0.55; transform: scale(1.4); }
+}
+@keyframes sx-annot-shimmer {
+  0%   { background-position: 110% 0; }
+  100% { background-position: -110% 0; }
 }
 
 /* ---------------------------------------------------------------------------

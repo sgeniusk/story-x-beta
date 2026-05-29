@@ -51,6 +51,7 @@ import { useMarginReview } from './hooks/useMarginReview';
 import { findPersona } from './lib/extendedPersonas';
 import {
   applyDiff,
+  resolveRunReviewAnchor,
   splitIntoParagraphs,
   toMarginReview,
   type CanonDelta,
@@ -575,17 +576,6 @@ function fallbackRunForAgent(agentId: string, output: string): AgentRun {
     output,
     evidence: process.evidenceTargets.slice(0, 2)
   };
-}
-
-function resolveReviewAnchor(run: AgentRun, paragraphs: Paragraph[], fallback = 'p1') {
-  const haystack = [run.output, ...(run.issues ?? []), ...run.evidence]
-    .join('\n')
-    .toLocaleLowerCase();
-  const matched = paragraphs.find((paragraph) => {
-    const text = paragraph.text.toLocaleLowerCase();
-    return text.length > 12 && haystack.includes(text.slice(0, 24));
-  });
-  return matched?.id ?? fallback;
 }
 
 function marginReviewToRun(review: MarginReview): AgentRun {
@@ -1375,7 +1365,7 @@ export function StoryXDesk({
       const candidates: AiCliMemoryCandidate[] = [];
 
       try {
-        for (const agentId of MARGIN_CORE_AGENT_IDS) {
+        for (const [reviewIndex, agentId] of MARGIN_CORE_AGENT_IDS.entries()) {
           setAgentRuns((current) =>
             current.map((run) =>
               run.agentId === agentId ? { ...run, output: '지금 원고를 읽고 있습니다…' } : run
@@ -1396,7 +1386,12 @@ export function StoryXDesk({
             }
             const run = agentReportToRun(res.report);
             setAgentRuns((current) => current.map((item) => (item.agentId === agentId ? run : item)));
-            onPartial(toMarginReview(run, resolveReviewAnchor(run, marginParagraphs, marginDefaultAnchor)));
+            onPartial(
+              toMarginReview(
+                run,
+                resolveRunReviewAnchor(run, marginParagraphs, reviewIndex, marginDefaultAnchor)
+              )
+            );
           } else {
             await new Promise((resolve) => setTimeout(resolve, 180));
             const run = fallbackRunForAgent(
@@ -1404,7 +1399,12 @@ export function StoryXDesk({
               `${getAgentLabel(agentId)}가 mock 폴백으로 원고를 확인했습니다. ${res.reason ? `(${res.reason})` : '브리지 응답이 없어 기본 검토를 사용합니다.'}`
             );
             setAgentRuns((current) => current.map((item) => (item.agentId === agentId ? run : item)));
-            onPartial(toMarginReview(run, marginDefaultAnchor));
+            onPartial(
+              toMarginReview(
+                run,
+                resolveRunReviewAnchor(run, marginParagraphs, reviewIndex, marginDefaultAnchor)
+              )
+            );
           }
         }
       } finally {
@@ -1485,6 +1485,7 @@ export function StoryXDesk({
   );
   const marginReview = useMarginReview({
     paragraphs: marginParagraphs,
+    corePersonaIds: MARGIN_CORE_AGENT_IDS,
     runAll: runMarginReviewAll,
     summonOne: summonMarginReviewAgent
   });

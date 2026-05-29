@@ -1,20 +1,20 @@
 # Story X — Progress
 
-> Last Updated: 2026-05-29 14:03 KST · Branch: `design/margin-integration`
+> Last Updated: 2026-05-29 20:40 KST · Branch: `design/margin-integration`
 
 ## Current Objective
 
-**M10 — Margin 디자인 통합 Phase 2 (좌레일 구조 스킴 + DataPanel 4카드)** (`implemented_uncommitted`) — 브랜치 `design/margin-integration`.
+**M10 — Margin 통합 Phase 3 (검토 UX 다듬기)** (`implemented_uncommitted`) — 브랜치 `design/margin-integration`.
 
-Phase 2 패킷(`docs/handoff/margin-phase2-task-packet.md`)에 따라 편집 좌레일을 구조 중심으로 재배치하고, 외주 `DataPanel`/`studioMetrics` 를 이식했다. 도메인 로직은 수정하지 않고 기존 `harnessReport`/`qualityGatesReport`/`mediaProjections`/`storyOntology` useMemo 산출물을 `toStudioMetrics` 어댑터로 변환한다.
+Phase 3 패킷(`docs/handoff/margin-phase3-task-packet.md`)에 따라 전체 검토 시작 직후 코어 5명 pending skeleton 을 seed 하고, anchor 매칭 실패 리뷰를 단락별 round-robin fallback 으로 분산했다. 도메인 로직과 `/api/review-agent` 호출 경로는 변경하지 않았다.
 
-- 베이스라인(변경 전) — `bash init.sh` 통과 · 37 files / 226 tests.
-- 신설 3 — `src/lib/studioMetrics.ts`, `src/lib/studioMetrics.test.ts`, `src/components/DataPanel.tsx`.
-- 수정 3 — `src/StoryXDesk.tsx`(구조↔지표 세그먼트, publish 4카드 DataPanel 통합, `storyx.studio.railTab` 영속), `src/styles.css`(막 제목 위계·DataPanel axis 보강), `src/editorFocusLayout.test.ts`.
-- 삭제/제거 — `StoryXDesk.tsx` 인라인 `HarnessReportCard`/`QualityGatesCard`/`MediaProjectionsCard`/`OntologyCard` 함수 제거. grep 후 다른 런타임 참조 없음 확인.
-- 구조 트리 — ChapterBeat 스키마 변경 없이 기존 `beats` + `groupBeatsIntoActs()` 유지. 막 제목은 `beat.label` 우선, 없으면 `beat.summary` 첫 문장, 없으면 기승전결 fallback.
-- 최종 검증 — `npx tsc --noEmit` exit 0 · `npm test` **38 files / 231 tests 통과** · `npm run build` 성공(js 579.49kB / css 192.36kB, 2.44s) · 최종 `bash init.sh` 통과(38 files / 231 tests · 빌드 성공).
-- 로컬 dev 서버 — `http://127.0.0.1:5173/?stage=editor` HTTP 200 · `?stage=publish` HTTP 200.
+- 베이스라인(변경 전) — `bash init.sh` 통과 · 38 files / 231 tests.
+- TDD — `src/lib/marginReview.test.ts` 에 anchor fallback 분산, evidence 매칭 우선, pending seed→persona replace 케이스를 먼저 추가하고 RED 확인 후 구현.
+- 수정 8 — `src/lib/marginReview.ts`, `src/lib/marginReview.test.ts`, `src/hooks/useMarginReview.ts`, `src/components/MarginColumn.tsx`, `src/components/AnnotationCard.tsx`, `src/components/CoreStrip.tsx`, `src/StoryXDesk.tsx`, `src/styles.css`.
+- Pending 계약 — `useMarginReview` 가 `corePersonaIds` 를 받아 `MarginReview.pending=true` placeholder 5개를 즉시 seed. 실제 결과 도착 시 같은 persona pending 만 제거하고 확정 리뷰로 교체. CoreStrip 카운트는 pending 제외.
+- Anchor 분산 — `resolveRunReviewAnchor()` 가 evidence/output 매칭 성공은 존중하고, 실패 시 `reviewIndex % paragraphs.length` 로 결정론적 분산.
+- 최종 검증 — `npx tsc --noEmit` exit 0 · `npm test` **38 files / 234 tests 통과** · `npm run build` 성공(js 580.80kB / css 193.00kB, 876ms) · 최종 `bash init.sh` 통과(38 files / 234 tests · 빌드 성공).
+- 로컬 dev 서버 smoke — `http://127.0.0.1:5173/?stage=editor` HTTP 200.
 - 커밋 금지 지시 준수 — 커밋하지 않음.
 
 ---
