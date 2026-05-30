@@ -129,6 +129,56 @@ describe('qualityGates', () => {
     expect(academicGates.filter((r) => r.requirement === 'blocking' && !r.passed)).toEqual([]);
   });
 
+  it('academic claim_evidence_mapping fails advisory when marked claims lack evidence', () => {
+    const report = evaluateQualityGates(
+      {
+        ...fullyPassingInput,
+        medium: 'academic',
+        text: 'We argue that informal leaders determine welfare access.',
+        claimEvidenceMapped: false,
+        unsupportedClaimCount: 1
+      },
+      { commercialWeight: 0, literaryWeight: 0 }
+    );
+    const claimGate = report.results.find((r) => r.gate === 'claim_evidence_mapping');
+
+    expect(claimGate?.requirement).toBe('advisory');
+    expect(claimGate?.passed).toBe(false);
+    expect(claimGate?.reason).toContain('1');
+    expect(report.blockingPassed).toBe(true);
+    expect(report.advisoryFailures).toBeGreaterThan(0);
+  });
+
+  it('academic claim_evidence_mapping can derive unsupported claims from text', () => {
+    const report = evaluateQualityGates(
+      {
+        ...fullyPassingInput,
+        medium: 'academic',
+        text: 'We argue that informal leaders determine welfare access.'
+      },
+      { commercialWeight: 0, literaryWeight: 0 }
+    );
+    const claimGate = report.results.find((r) => r.gate === 'claim_evidence_mapping');
+
+    expect(claimGate?.passed).toBe(false);
+    expect(claimGate?.reason).toContain('1');
+  });
+
+  it('non-academic media ignore unsupported academic-style claims', () => {
+    const report = evaluateQualityGates(
+      {
+        ...fullyPassingInput,
+        medium: 'novel',
+        text: 'We argue that informal leaders determine welfare access.',
+        claimEvidenceMapped: false,
+        unsupportedClaimCount: 1
+      },
+      balancedMode
+    );
+
+    expect(report.results.find((r) => r.gate === 'claim_evidence_mapping')).toBeUndefined();
+  });
+
   it('non-academic media skip academic-track gates entirely', () => {
     const report = evaluateQualityGates({ ...fullyPassingInput, medium: 'essay' }, balancedMode);
 
