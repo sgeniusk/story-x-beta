@@ -565,7 +565,11 @@ function buildAgentReviewPrompt({ agentId, persona, target, medium, context }) {
 
 function buildInterviewPrompt({ medium, format, freewrite, personas = [] }) {
   const isEssay = medium === 'essay';
+  const isAcademic = medium === 'academic';
   const isSerial = isSerialFormat(format);
+  const agentIdChoices = isAcademic
+    ? 'showrunner|voice-curator|essay-interviewer|essay-thesis|essay-curator|critic-reviewer|interview-curator|continuity-editor'
+    : 'showrunner|character-custodian|world-keeper|voice-curator|essay-interviewer|essay-thesis|continuity-editor';
 
   // 매체별 페르소나 풀에서 선별된 라인업을 LLM 프롬프트에 톤 가이드로 주입.
   // 라인업이 비어 있어도 동작하며, 있으면 각 페르소나의 tone/questionStarters/blockingSignals 를 참고해 질문의 결을 맞추도록 지시.
@@ -610,6 +614,9 @@ function buildInterviewPrompt({ medium, format, freewrite, personas = [] }) {
     '- voice-curator: 문체와 목소리',
     '- essay-interviewer: 에세이의 실제 경험과 거리',
     '- essay-thesis: 에세이의 논증·사유 구조와 큰 그림 (에세이 전용)',
+    '- essay-curator: 진실 계약, 보편 도약, 연구 윤리 경계 (academic 재활용)',
+    '- critic-reviewer: 반론, 양가성, 대안 가설 (academic 재활용)',
+    '- interview-curator: 자유글 기반 질문 시퀀스 설계 (academic 재활용)',
     '- continuity-editor: 연속성과 캐논',
     '',
     '## 규칙',
@@ -617,7 +624,9 @@ function buildInterviewPrompt({ medium, format, freewrite, personas = [] }) {
     '- 각 질문은 객관식 선택지 3개와, 각 선택지가 작품에 미치는 영향(impact)을 함께 답니다.',
     isEssay
       ? '- 에세이이므로 essay-interviewer를 반드시 포함하고, 작가가 적지 않은 사실을 지어내는 선택지는 만들지 않습니다.'
-      : '- 매체와 자유 서술에 맞는 인터뷰어를 고릅니다.',
+      : isAcademic
+        ? '- academic 매체이므로 essay-curator, critic-reviewer, interview-curator, essay-thesis 중 최소 2명을 포함하고, 영어 APA 논증·근거·인용 맥락을 묻습니다.'
+        : '- 매체와 자유 서술에 맞는 인터뷰어를 고릅니다.',
     isSerial
       ? '- 연재형이므로 회차 후킹, 다음 화로 이어지는 약속을 묻는 질문을 포함할 수 있습니다.'
       : '- 단독 완결형이므로 회차·연재·다음 화를 전제한 질문은 만들지 않습니다. 하나의 효과·정서·반전으로 완결되는 한 편을 묻습니다.',
@@ -629,7 +638,7 @@ function buildInterviewPrompt({ medium, format, freewrite, personas = [] }) {
     '{',
     '  "questions": [',
     '    {',
-    '      "agentId": "showrunner|character-custodian|world-keeper|voice-curator|essay-interviewer|essay-thesis|continuity-editor",',
+    `      "agentId": "${agentIdChoices}",`,
     '      "question": "이 작품에 대한 구체적인 질문",',
     '      "options": [{ "label": "선택지", "impact": "이 선택이 작품에 미치는 영향" }],',
     '      "recommendedOptionLabel": "추천 선택지의 label"',

@@ -79,23 +79,57 @@ describe('mediaProjection', () => {
     expect(result.preservation.missing.length).toBe(4);
   });
 
-  // 5 매체 모두 한 번에 투영 — UI 에서 같은 작품을 비교할 때.
-  it('projectAllMedia 는 5 매체 모두 산출', () => {
+  // 기존 5 매체 순서를 유지하고 academic 을 끝에 추가 — UI 에서 같은 작품을 비교할 때.
+  it('projectAllMedia 는 기존 5 매체 순서를 유지한 뒤 academic 을 추가 산출', () => {
     const results = projectAllMedia(richOntology);
-    expect(results.map((r) => r.target)).toEqual([
+    expect(results.map((r) => r.target).slice(0, 5)).toEqual([
       'novel',
       'essay',
       'webtoon',
       'insta-toon',
       'four-cut'
     ]);
+    expect(results.map((r) => r.target)).toContain('academic');
+    expect(results.length).toBe(6);
     // 모든 매체에서 preservation 동일 (같은 ontology 라서)
     expect(results.every((r) => r.preservation.preserved === true)).toBe(true);
   });
 
-  // 모든 5 매체가 같은 ontology 의 핵심을 변형 없이 가져와야 한다 (표면만 매체별).
+  it('academic 투영은 논제/근거구조/기여 필드를 산출하고 핵심 4요소를 보존', () => {
+    const result = projectMedia(richOntology, 'academic');
+
+    expect(result.target).toBe('academic');
+    expect(result.fields.thesis).toBeTruthy();
+    expect(result.fields.evidenceStructure).toBeTruthy();
+    expect(result.fields.contribution).toBeTruthy();
+    expect(result.fields.apaCitationPlan).toContain('APA');
+    expect(result.preservation.preserved).toBe(true);
+    expect(result.preservation.preservedCore).toEqual(
+      expect.arrayContaining([
+        'premise.dramaticQuestion',
+        'characters[0].desire',
+        'worldRules[0].cost',
+        'plotThreads[0]'
+      ])
+    );
+  });
+
+  it('projectAllMedia 는 academic 을 더해 6 매체를 산출하되 기존 5매체 순서를 보존', () => {
+    const results = projectAllMedia(richOntology);
+
+    expect(results.map((r) => r.target)).toEqual([
+      'novel',
+      'essay',
+      'webtoon',
+      'insta-toon',
+      'four-cut',
+      'academic'
+    ]);
+  });
+
+  // 모든 6 매체가 같은 ontology 의 핵심을 변형 없이 가져와야 한다 (표면만 매체별).
   it('모든 매체 투영의 핵심 키는 동일한 preservedCore 를 보고한다', () => {
-    const targets: MediaTarget[] = ['novel', 'essay', 'webtoon', 'insta-toon', 'four-cut'];
+    const targets: MediaTarget[] = ['novel', 'essay', 'webtoon', 'insta-toon', 'four-cut', 'academic'];
     const reports = targets.map((t) => projectMedia(richOntology, t).preservation.preservedCore);
     const first = reports[0].slice().sort();
     for (const other of reports.slice(1)) {

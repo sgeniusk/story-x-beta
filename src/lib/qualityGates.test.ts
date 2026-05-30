@@ -113,4 +113,25 @@ describe('qualityGates', () => {
       expect(gate.requirement).toBe('blocking');
     }
   });
+
+  it('academic medium exposes advisory placeholder gates without blocking empty input', () => {
+    const report = evaluateQualityGates({ medium: 'academic' }, balancedMode);
+    const academicGates = report.results.filter((r) => r.track === 'academic');
+
+    expect(academicGates.map((r) => r.gate)).toEqual([
+      'claim_evidence_mapping',
+      'citation_integrity',
+      'counter_argument_present',
+      'research_ethics_disclosure'
+    ]);
+    expect(academicGates.every((r) => r.requirement === 'advisory')).toBe(true);
+    expect(academicGates.every((r) => r.passed === true)).toBe(true);
+    expect(academicGates.filter((r) => r.requirement === 'blocking' && !r.passed)).toEqual([]);
+  });
+
+  it('non-academic media skip academic-track gates entirely', () => {
+    const report = evaluateQualityGates({ ...fullyPassingInput, medium: 'essay' }, balancedMode);
+
+    expect(report.results.filter((r) => r.track === 'academic')).toEqual([]);
+  });
 });

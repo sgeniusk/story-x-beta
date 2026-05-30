@@ -1,12 +1,12 @@
 // M4 청크 G · Layer 7 — 매체 투영.
 // 정본 — docs/storyx-harness-architecture.md § 7 청크 G, ontology-harness plan Stage 7.
 //
-// 핵심 — 같은 StoryOntology 가 매체별로 다른 형식으로 보여진다 (소설/에세이/웹툰/인스타툰/네컷).
+// 핵심 — 같은 StoryOntology 가 매체별로 다른 형식으로 보여진다 (소설/에세이/웹툰/인스타툰/네컷/학술).
 // 표면 표현은 매체마다 달라지지만, 인물의 욕망·상처·세계의 비용·승인된 캐논은 변하지 않는다.
 // 변하면 continuity issue 로 신호한다.
 import type { StoryOntology } from './storyOntology';
 
-export type MediaTarget = 'novel' | 'essay' | 'webtoon' | 'insta-toon' | 'four-cut';
+export type MediaTarget = 'novel' | 'essay' | 'webtoon' | 'insta-toon' | 'four-cut' | 'academic';
 
 export interface MediaProjection {
   target: MediaTarget;
@@ -31,9 +31,9 @@ export function projectMedia(ontology: StoryOntology, target: MediaTarget): Medi
   return { target, fields, preservation };
 }
 
-// 한 온톨로지를 5 매체 모두로 투영. UI 가 한 화면에서 같은 작품의 5 매체 가능성을 비교할 때 쓴다.
+// 한 온톨로지를 6 매체 모두로 투영. UI 가 한 화면에서 같은 작품의 매체 가능성을 비교할 때 쓴다.
 export function projectAllMedia(ontology: StoryOntology): MediaProjection[] {
-  const targets: MediaTarget[] = ['novel', 'essay', 'webtoon', 'insta-toon', 'four-cut'];
+  const targets: MediaTarget[] = ['novel', 'essay', 'webtoon', 'insta-toon', 'four-cut', 'academic'];
   return targets.map((t) => projectMedia(ontology, t));
 }
 
@@ -75,6 +75,16 @@ function buildFields(ontology: StoryOntology, target: MediaTarget): Record<strin
         escalation: ontology.conflictEngines[0]?.detail ?? '두 번째 컷의 압력 상승',
         twistPreparation: ontology.worldRules[0]?.cost ?? '세 번째 컷의 비용 노출',
         punchline: ontology.plotThreads[0]?.promise ?? '네 번째 컷의 정서 전환 또는 한 줄'
+      };
+    case 'academic':
+      return {
+        thesis: ontology.premise.dramaticQuestion || ontology.premise.oneSentence || '검증할 사회과학 논제',
+        evidenceStructure: ontology.characters[0]?.desire
+          ? `핵심 행위자/사례의 욕망 또는 동기: ${ontology.characters[0].desire}`
+          : '각 주장에 데이터, 선행연구, 논리 근거를 매핑',
+        contribution: ontology.plotThreads[0]?.promise ?? ontology.theme.statement ?? '기존 논의의 빈칸과 기여를 명시',
+        methodFrame: ontology.worldRules[0]?.cost ?? '방법의 한계, 비용, 적용 범위를 공개',
+        apaCitationPlan: 'APA author-date 인용과 참고문헌 placeholder'
       };
   }
 }

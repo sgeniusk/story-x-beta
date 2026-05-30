@@ -1,4 +1,4 @@
-export type CreativeMedium = 'novel' | 'essay' | 'audiobook' | 'comics';
+export type CreativeMedium = 'novel' | 'essay' | 'audiobook' | 'comics' | 'academic';
 
 export interface CreativeActionLabels {
   draft: string;
@@ -34,6 +34,14 @@ export function getCreativeActionLabels(medium: CreativeMedium): CreativeActionL
         lockedChip: '발행 확정됨',
         nextDraft: '다음 컷 콘티'
       };
+    case 'academic':
+      return {
+        draft: '초안 집필',
+        review: '논증 점검',
+        lock: '원고 확정',
+        lockedChip: '원고 확정됨',
+        nextDraft: '다음 절 집필'
+      };
     case 'novel':
     default:
       return {
@@ -60,7 +68,10 @@ export type CreativeFormat =
   | 'insta-toon'
   | 'four-cut-insta-toon'
   | 'short-comic'
-  | 'graphic-novel';
+  | 'graphic-novel'
+  | 'research-paper'
+  | 'academic-column'
+  | 'literature-review';
 
 export interface MediumOption {
   id: CreativeMedium;
@@ -95,7 +106,12 @@ export interface CreativeBlueprint {
     title: string;
     outcome: string;
   }>;
-  nextWorkspace: 'serial-writing-studio' | 'essay-writing-studio' | 'audio-video-studio' | 'visual-storyboard-studio';
+  nextWorkspace:
+    | 'serial-writing-studio'
+    | 'essay-writing-studio'
+    | 'audio-video-studio'
+    | 'visual-storyboard-studio'
+    | 'academic-writing-studio';
 }
 
 const mediumOptions: MediumOption[] = [
@@ -122,6 +138,12 @@ const mediumOptions: MediumOption[] = [
     label: '만화',
     description: '웹툰, 단편 만화, 그래픽노블처럼 컷과 장면 연속성이 중요한 작업을 관리합니다.',
     signal: '캐릭터 시트, 컷 연출, 배경, 에피소드 보드'
+  },
+  {
+    id: 'academic',
+    label: '사회과학/학술',
+    description: '영어 APA 관행을 우선해 논제, 근거 구조, 반론, 인용 무결성을 한 원고 안에서 관리합니다.',
+    signal: '논증, 근거, APA 인용, 연구 윤리'
   }
 ];
 
@@ -204,6 +226,26 @@ const formatOptions: Record<CreativeMedium, FormatOption[]> = {
       label: '웹툰 연재',
       description: '회차별 스크롤 리듬, 컷 후킹, 캐릭터 비주얼 연속성을 관리합니다.',
       cadence: '주간 연재 / 컷 보드'
+    }
+  ],
+  academic: [
+    {
+      id: 'research-paper',
+      label: 'Research Paper',
+      description: 'Introduction, Literature, Method, Discussion, Conclusion 흐름으로 영어 APA 논문 초안을 설계합니다.',
+      cadence: 'APA / IMRaD 변형'
+    },
+    {
+      id: 'academic-column',
+      label: 'Academic Column',
+      description: '사회과학 논점을 독자가 따라갈 수 있는 칼럼형 논증으로 압축합니다.',
+      cadence: 'thesis / evidence / implications'
+    },
+    {
+      id: 'literature-review',
+      label: 'Literature Review',
+      description: '선행연구의 쟁점, 공백, 반론을 정리하고 다음 연구 질문으로 연결합니다.',
+      cadence: 'sources / debate / gap'
     }
   ]
 };
@@ -330,6 +372,63 @@ const blueprintByFormat: Record<CreativeFormat, Omit<CreativeBlueprint, 'medium'
       { title: '문체 바이블', outcome: '시리즈 전체의 문장 취향과 금지 표현을 저장' }
     ],
     nextWorkspace: 'essay-writing-studio'
+  },
+  'research-paper': {
+    projectRoomTitle: '사회과학 논문 설계 보드',
+    projectRoomSubtitle:
+      '영어 APA 원고를 기준으로 논제, 선행연구, 방법, 논의, 결론의 뼈대를 먼저 잠급니다.',
+    managementFocus: ['연구 질문', '주장-근거 매핑', 'APA 인용 무결성', '반론 처리', '연구 윤리 공개'],
+    agentStack: [
+      '에세이 큐레이터 에이전트',
+      '평론가 에이전트',
+      '인터뷰 큐레이터 에이전트',
+      '논증 구조 에이전트'
+    ],
+    skillStack: ['academic-argument-outline', 'gomi-writing', 'story-coach'],
+    productionPhases: [
+      { title: '논제 설정', outcome: '연구 질문과 중심 주장을 한 문장으로 고정' },
+      { title: '근거 구조', outcome: '각 주장에 필요한 데이터, 선행연구, 논리 근거를 배치' },
+      { title: 'APA 원고 초안', outcome: 'Introduction-Literature-Method-Discussion-Conclusion 골격으로 초안화' }
+    ],
+    nextWorkspace: 'academic-writing-studio'
+  },
+  'academic-column': {
+    projectRoomTitle: '학술 칼럼 설계 보드',
+    projectRoomSubtitle:
+      '사회과학 논점을 대중 독자가 따라갈 수 있게 압축하되, 근거와 인용의 출처 감각을 유지합니다.',
+    managementFocus: ['핵심 논제', '주장-근거 매핑', 'APA 인용 무결성', '반론 처리', '사회적 함의'],
+    agentStack: [
+      '에세이 큐레이터 에이전트',
+      '평론가 에이전트',
+      '인터뷰 큐레이터 에이전트',
+      '논증 구조 에이전트'
+    ],
+    skillStack: ['academic-argument-outline', 'story-coach'],
+    productionPhases: [
+      { title: '논점 압축', outcome: '칼럼이 답할 사회과학 질문을 하나로 압축' },
+      { title: '근거 선별', outcome: '독자에게 보여줄 핵심 근거와 반론을 분리' },
+      { title: '칼럼 초안', outcome: '학술 정확성과 읽히는 흐름을 함께 점검' }
+    ],
+    nextWorkspace: 'academic-writing-studio'
+  },
+  'literature-review': {
+    projectRoomTitle: '문헌 리뷰 설계 보드',
+    projectRoomSubtitle:
+      '선행연구의 흐름, 대립 주장, 빈칸을 정리하고 다음 연구 질문으로 이어지는 리뷰를 만듭니다.',
+    managementFocus: ['문헌 범위', '쟁점 지도', '주장-근거 매핑', 'APA 인용 무결성', '연구 공백'],
+    agentStack: [
+      '에세이 큐레이터 에이전트',
+      '평론가 에이전트',
+      '인터뷰 큐레이터 에이전트',
+      '논증 구조 에이전트'
+    ],
+    skillStack: ['academic-argument-outline', 'story-coach'],
+    productionPhases: [
+      { title: '문헌 범위', outcome: '포함할 분야, 기간, 핵심 키워드를 정함' },
+      { title: '논쟁 구조', outcome: '동의, 반론, 방법 차이를 축으로 선행연구를 배열' },
+      { title: '리뷰 초안', outcome: '연구 공백과 다음 질문이 보이는 문헌 리뷰 골격 작성' }
+    ],
+    nextWorkspace: 'academic-writing-studio'
   },
   'music-video': {
     projectRoomTitle: '뮤직비디오 설계 보드',

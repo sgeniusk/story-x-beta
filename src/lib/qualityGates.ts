@@ -2,12 +2,13 @@
 // 정본 — docs/storyx-harness-architecture.md § 5-3, 3-3 (두 트랙 설계).
 //
 // 각 게이트는 { key, track, requirement, evaluate, reason } 형태.
-// 트랙 — common / commercial / literary / essay.
+// 트랙 — common / commercial / literary / essay / academic.
 // StoryMode 가중치(commercialWeight, literaryWeight) 로 강제(blocking) / 권고(advisory) 가 결정된다.
 //   - common 게이트: 항상 blocking
 //   - commercial 게이트: commercialWeight ≥ 0.5 일 때 blocking, 아니면 advisory
 //   - literary 게이트: literaryWeight ≥ 0.5 일 때 blocking, 아니면 advisory
 //   - essay 게이트: 에세이 매체에서만 평가, gate_disclosure_scope 만 항상 blocking, 나머지 둘은 advisory
+//   - academic 게이트: 학술 매체에서만 노출, A1에서는 영어 APA placeholder 이므로 항상 advisory/pass
 
 export type GateKey =
   | 'gate_hook_first_300'
@@ -21,9 +22,13 @@ export type GateKey =
   | 'gate_historical_density'
   | 'gate_universal_leap'
   | 'gate_self_reversal'
-  | 'gate_disclosure_scope';
+  | 'gate_disclosure_scope'
+  | 'claim_evidence_mapping'
+  | 'citation_integrity'
+  | 'counter_argument_present'
+  | 'research_ethics_disclosure';
 
-export type GateTrack = 'common' | 'commercial' | 'literary' | 'essay';
+export type GateTrack = 'common' | 'commercial' | 'literary' | 'essay' | 'academic';
 export type GateRequirement = 'blocking' | 'advisory';
 
 export interface StoryMode {
@@ -36,7 +41,7 @@ export interface StoryMode {
 export interface GateInput {
   /** 생성된 본문 — gate_hook_first_300 / gate_hook_last_200 가 본다. */
   text?: string;
-  /** 매체 — 에세이 게이트 활성 여부. */
+  /** 매체 — 에세이/학술 게이트 활성 여부. */
   medium?: string;
   /** 연재형 여부 — gate_hook_last_200 는 serial 일 때만 평가. */
   isSerial?: boolean;
@@ -83,11 +88,14 @@ export interface QualityGatesReport {
 // 모든 게이트를 평가하고 모드 가중치에 맞춰 blocking/advisory 를 결정한다.
 export function evaluateQualityGates(input: GateInput, mode: StoryMode): QualityGatesReport {
   const isEssay = input.medium === 'essay';
+  const isAcademic = input.medium === 'academic';
   const results: GateResult[] = [];
 
   for (const def of GATE_DEFS) {
     // 에세이 게이트는 에세이 매체에서만 평가.
     if (def.track === 'essay' && !isEssay) continue;
+    // 학술 게이트는 academic 매체에서만 노출한다.
+    if (def.track === 'academic' && !isAcademic) continue;
     // gate_hook_last_200 은 serial 에서만 평가.
     if (def.key === 'gate_hook_last_200' && !input.isSerial) continue;
     // gate_ambiguity_at_finale 는 finale 에서만 평가.
@@ -209,11 +217,45 @@ const GATE_DEFS: GateDef[] = [
     evaluate: (i) => Boolean(i.disclosureScopeSafe),
     passReason: '실제 인물 노출 범위가 안전합니다.',
     failReason: '실제 인물 노출이 위험 범위입니다 — 출간 전 반드시 점검.'
+  },
+  // A1 academic placeholder — 실제 주장 레저/인용/반론/연구윤리 판정은 A2~A4에서 구현한다.
+  // 영어 APA 기준을 UI에 노출하되, 빈 입력이나 초안에서 차단하지 않도록 항상 통과/advisory 로 둔다.
+  {
+    key: 'claim_evidence_mapping',
+    track: 'academic',
+    evaluate: () => true,
+    passReason: 'A1 placeholder: 영어 APA 원고의 주장-근거 매핑은 A2에서 실제 평가합니다.',
+    failReason: 'A2에서 구현 예정입니다.'
+  },
+  {
+    key: 'citation_integrity',
+    track: 'academic',
+    evaluate: () => true,
+    passReason: 'A1 placeholder: 영어 APA 인용 무결성은 A3에서 로컬 휴리스틱으로 평가합니다.',
+    failReason: 'A3에서 구현 예정입니다.'
+  },
+  {
+    key: 'counter_argument_present',
+    track: 'academic',
+    evaluate: () => true,
+    passReason: 'A1 placeholder: 반론과 대안 가설 점검은 A4에서 평가합니다.',
+    failReason: 'A4에서 구현 예정입니다.'
+  },
+  {
+    key: 'research_ethics_disclosure',
+    track: 'academic',
+    evaluate: () => true,
+    passReason: 'A1 placeholder: 연구 윤리와 이해충돌 공개는 A4에서 평가합니다.',
+    failReason: 'A4에서 구현 예정입니다.'
   }
 ];
 
 function resolveRequirement(def: GateDef, mode: StoryMode): GateRequirement {
   if (def.track === 'common') return 'blocking';
+  if (def.track === 'academic') {
+    // A1에서는 academic 게이트를 노출만 한다. 실제 차단 여부는 A2~A4에서 구현.
+    return 'advisory';
+  }
   if (def.track === 'essay') {
     // 에세이 트랙은 disclosure_scope 만 항상 차단.
     return def.key === 'gate_disclosure_scope' ? 'blocking' : 'advisory';

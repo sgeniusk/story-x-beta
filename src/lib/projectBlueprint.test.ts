@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildCreativeBlueprint,
+  getCreativeActionLabels,
   getFormatOptions,
   getWorkUnitNoun,
   isSerialFormat
@@ -144,5 +145,37 @@ describe('projectBlueprint', () => {
       '컷별 프롬프트',
       '프레임 완성'
     ]);
+  });
+
+  it('maps an academic selection to English APA argument operations', () => {
+    const options = getFormatOptions('academic');
+    const blueprint = buildCreativeBlueprint({
+      medium: 'academic',
+      format: 'research-paper'
+    });
+    const labels = getCreativeActionLabels('academic');
+
+    expect(options.map((option) => option.id)).toEqual([
+      'research-paper',
+      'academic-column',
+      'literature-review'
+    ]);
+    expect(blueprint.mediumLabel).toBe('사회과학/학술');
+    expect(blueprint.formatLabel).toBe('Research Paper');
+    expect(blueprint.managementFocus).toContain('주장-근거 매핑');
+    expect(blueprint.managementFocus).toContain('APA 인용 무결성');
+    expect(blueprint.agentStack).toContain('에세이 큐레이터 에이전트');
+    expect(blueprint.agentStack).toContain('평론가 에이전트');
+    expect(blueprint.agentStack).toContain('인터뷰 큐레이터 에이전트');
+    expect(blueprint.agentStack).toContain('논증 구조 에이전트');
+    expect(blueprint.skillStack).toContain('academic-argument-outline');
+    expect(blueprint.nextWorkspace).toBe('academic-writing-studio');
+    expect(labels).toEqual({
+      draft: '초안 집필',
+      review: '논증 점검',
+      lock: '원고 확정',
+      lockedChip: '원고 확정됨',
+      nextDraft: '다음 절 집필'
+    });
   });
 });

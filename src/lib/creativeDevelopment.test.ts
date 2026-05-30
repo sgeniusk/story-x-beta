@@ -154,14 +154,15 @@ describe('creativeDevelopment', () => {
     expect(result.harnessReport?.qualityScore).toBeGreaterThanOrEqual(70);
     expect(result.harnessReport?.readyForProduction).toBe(true);
 
-    // mediaProjections — 5 매체.
-    expect(result.mediaProjections?.length).toBe(5);
+    // mediaProjections — 기존 5 매체 순서를 보존하고 academic 을 끝에 추가.
+    expect(result.mediaProjections?.length).toBe(6);
     expect(result.mediaProjections?.map((p) => p.target)).toEqual([
       'novel',
       'essay',
       'webtoon',
       'insta-toon',
-      'four-cut'
+      'four-cut',
+      'academic'
     ]);
 
     // continuityContract — 빈 hardCanon 으로 시작.
