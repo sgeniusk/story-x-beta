@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-05-30 17:55 — A2 주장-근거 하네스 완료·머지 (사회과학 확장)
+
+> Last Updated: 2026-05-30 · Branch: `main` (47b15f9)
+
+### Current Objective
+사회과학 글쓰기 확장 A2 완료·main 머지. Codex(gpt-5.5 @ xhigh) 구현, Claude 하네스·검증·머지.
+
+### 완료 (A2)
+- `claimLedger.ts` 신설 — 학술 본문 주장 추출(영어 APA 마커)·근거 유형(data/prior-work/logic/anecdote) 매핑·미근거 주장 탐지. 로컬 휴리스틱·결정론적.
+- `claim_evidence_mapping` 게이트 실제 판정(academic 전용, advisory).
+- academic 매체일 때 근거 없는 주장을 마진에 `block`(critic-reviewer)으로 표시.
+- 검증(Claude 직접) — tsc 0 · **39 files / 246 tests** · build 성공. 스코프 깨끗(마진 핵심·도메인 무변경).
+- 커밋 `31b114b` → 머지 `47b15f9` → push 완료, local=origin 동기화.
+
+### 사회과학 로드맵 진행
+- A1 ✅(a89e34c) · A2 ✅(47b15f9) · **A3 대기** — 인용 무결성 게이트 + 검증자 페르소나(citationGate, 환각 인용 탐지) · A4 반론·문헌 검토 · A5 학술 퍼블리시.
+
+### Recommended Next Step
+A3 — `citationGate.ts` + citation_integrity 게이트 실제 판정. 출처 존재·페이지·맥락 일치 로컬 휴리스틱. 패킷: `docs/handoff/academic-a3-task-packet.md`(미작성).
+
+---
+
+---
+
 ## 2026-05-29 20:50 — M10 Phase 3 검토 UX 다듬기 · Claude 총괄 재검증 통과
 
 > Last Updated: 2026-05-29 20:50 KST · Branch: `design/margin-integration`
