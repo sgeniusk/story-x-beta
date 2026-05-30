@@ -2723,6 +2723,7 @@ export function StoryXDesk({
                 <>
                   <ChapterStructureTree
                     chapter={latestChapter}
+                    medium={blueprint.medium}
                     isSerial={isSerial}
                     activeBeatId={activeBeatId}
                     onSelectBeat={selectBeat}
@@ -3386,26 +3387,42 @@ function AgentIntentCard({
 
 // 회차 구조 — 평탄한 beat 목록을 위치 기준 기·승·전·결 4막으로 묶어 트리로 보여준다.
 // beats는 순서가 있는 평탄한 리스트이므로 act 묶음은 순번으로 유도한다(에이전트가 고른 스킴).
-const STRUCTURE_ACTS: Array<{ id: string; glyph: string; label: string }> = [
+type StructureAct = { id: string; glyph: string; label: string };
+
+const STRUCTURE_ACTS: StructureAct[] = [
   { id: 'gi', glyph: '기', label: '기 — 도입' },
   { id: 'seung', glyph: '승', label: '승 — 전개' },
   { id: 'jeon', glyph: '전', label: '전 — 전환' },
   { id: 'gyeol', glyph: '결', label: '결 — 결말' }
 ];
 
-// 평탄한 beat 목록을 4막에 균등 분배한다. beat 수가 4 미만이면 앞 막부터 채운다.
-function groupBeatsIntoActs(beats: ChapterBeat[]): Array<{
-  act: (typeof STRUCTURE_ACTS)[number];
+const ACADEMIC_STRUCTURE_ACTS: StructureAct[] = [
+  { id: 'introduction', glyph: 'I', label: 'Introduction' },
+  { id: 'literature', glyph: 'L', label: 'Literature' },
+  { id: 'method', glyph: 'M', label: 'Method' },
+  { id: 'discussion', glyph: 'D', label: 'Discussion' },
+  { id: 'conclusion', glyph: 'C', label: 'Conclusion' }
+];
+
+const ACADEMIC_STRUCTURE_SCHEME = 'Introduction-Literature-Method-Discussion-Conclusion';
+
+function getStructureActs(medium: CreativeMedium): StructureAct[] {
+  return medium === 'academic' ? ACADEMIC_STRUCTURE_ACTS : STRUCTURE_ACTS;
+}
+
+// 평탄한 beat 목록을 구조 스킴에 균등 분배한다. beat 수가 막 수보다 적으면 앞 막부터 채운다.
+function groupBeatsIntoActs(beats: ChapterBeat[], acts: StructureAct[] = STRUCTURE_ACTS): Array<{
+  act: StructureAct;
   title: string;
   beats: ChapterBeat[];
 }> {
   const total = beats.length;
-  const result = STRUCTURE_ACTS.map((act) => ({ act, title: act.label, beats: [] as ChapterBeat[] }));
+  const result = acts.map((act) => ({ act, title: act.label, beats: [] as ChapterBeat[] }));
   if (total === 0) {
     return result;
   }
   beats.forEach((beat, index) => {
-    const actIndex = Math.min(STRUCTURE_ACTS.length - 1, Math.floor((index * STRUCTURE_ACTS.length) / total));
+    const actIndex = Math.min(acts.length - 1, Math.floor((index * acts.length) / total));
     result[actIndex].beats.push(beat);
   });
   return result.map((group) => ({
@@ -3425,31 +3442,36 @@ function resolveActTitle(beats: ChapterBeat[], fallback: string): string {
 
 function ChapterStructureTree({
   chapter,
+  medium,
   isSerial,
   activeBeatId,
   onSelectBeat
 }: {
   chapter: Chapter | null;
+  medium: CreativeMedium;
   isSerial: boolean;
   activeBeatId: string | null;
   onSelectBeat: (beat: ChapterBeat) => void;
 }) {
   const beats = chapter?.beats ?? [];
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const grouped = useMemo(() => groupBeatsIntoActs(beats), [beats]);
+  const structureActs = useMemo(() => getStructureActs(medium), [medium]);
+  const grouped = useMemo(() => groupBeatsIntoActs(beats, structureActs), [beats, structureActs]);
   const activeActId = useMemo(() => {
     const found = grouped.find((group) => group.beats.some((beat) => beat.id === activeBeatId));
     return found?.act.id ?? null;
   }, [grouped, activeBeatId]);
-  const structureLabel = isSerial ? '회차 구조' : '원고 구조';
+  const isAcademic = medium === 'academic';
+  const structureLabel = isAcademic ? '학술 원고 구조' : isSerial ? '회차 구조' : '원고 구조';
   const unitWord = isSerial ? '회차' : '원고';
+  const schemeLabel = isAcademic ? ACADEMIC_STRUCTURE_SCHEME : '기승전결';
 
   return (
     <section className="sx-panel ex-structure-card" aria-label={structureLabel}>
       <div className="ex-rail-section-head">
         <span className="ex-rail-label">{structureLabel}</span>
         <span className="ex-structure-scheme">
-          기승전결<span className="ex-structure-scheme-by"> · 에이전트 선택</span>
+          {schemeLabel}<span className="ex-structure-scheme-by"> · 에이전트 선택</span>
         </span>
       </div>
       {!chapter ? (

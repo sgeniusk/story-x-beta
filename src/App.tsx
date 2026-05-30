@@ -41,6 +41,8 @@ function mediumDisplayLabel(medium: CreativeMedium): string {
       return '만화';
     case 'audiobook':
       return '오디오북';
+    case 'academic':
+      return '사회과학/학술';
     default:
       return medium;
   }
@@ -62,6 +64,9 @@ const intakePixelClass: Record<string, string> = {
   'voice-curator': 'is-voice',
   'essay-interviewer': 'is-essay',
   'essay-thesis': 'is-thesis',
+  'essay-curator': 'is-essay-curator',
+  'critic-reviewer': 'is-critic',
+  'interview-curator': 'is-interview',
   'continuity-editor': 'is-continuity',
   'creative-coach': 'is-coach',
   'storyboard-agent': 'is-storyboard',
@@ -623,7 +628,7 @@ function ProjectHub({
         <button type="button" className="pjx-new-card" onClick={onOpenNewProject}>
           <Plus size={28} />
           <strong>새 프로젝트</strong>
-          <span>소설, 웹툰, 에세이, 오디오북 중에서 선택</span>
+          <span>소설, 웹툰, 에세이, 오디오북, 학술 중에서 선택</span>
         </button>
 
         <button type="button" className="pjx-card" onClick={onOpenProject}>
@@ -1254,6 +1259,10 @@ function getMediumIcon(medium: CreativeMedium) {
 
   if (medium === 'essay') {
     return <Feather size={24} />;
+  }
+
+  if (medium === 'academic') {
+    return <FileText size={24} />;
   }
 
   if (medium === 'audiobook') {

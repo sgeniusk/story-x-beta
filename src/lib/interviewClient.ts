@@ -16,10 +16,64 @@ const KNOWN_AGENT_IDS: IntakeAgentId[] = [
   'voice-curator',
   'essay-interviewer',
   'essay-thesis',
+  'essay-curator',
+  'critic-reviewer',
+  'interview-curator',
   'continuity-editor',
   'creative-coach',
   'storyboard-agent',
   'speech-bubble-agent'
+];
+
+const ACADEMIC_PERSONA_LINEUP: MediaPersona[] = [
+  {
+    id: 'essay-curator',
+    label: '에세이 큐레이터',
+    category: 'essay',
+    tone: '사적 경험을 보편 질문과 연구 윤리의 경계로 번역한다.',
+    strengths: ['진실 계약', '노출 윤리', '사적 경험에서 보편 질문으로의 도약'],
+    questionStarters: ['이 논제의 출발 경험은 무엇인가요?', '연구 윤리상 공개하면 안 되는 경계는 어디인가요?', '독자가 가져갈 보편 질문은 무엇인가요?'],
+    blockingSignals: ['사적 경험이 근거 없이 일반화됨', '노출 윤리 경계가 흐림'],
+    matchKeywords: ['경험', '윤리', '공개', '질문', '사회'],
+    isFictionalized: false,
+    references: []
+  },
+  {
+    id: 'critic-reviewer',
+    label: '평론가',
+    category: 'essay',
+    tone: '가장 강한 반론과 대안 가설을 먼저 묻는다.',
+    strengths: ['반론 점검', '양가성', '대안 가설'],
+    questionStarters: ['이 주장에 가장 강한 반론은 무엇인가요?', '다른 해석이 가능한 자료는 무엇인가요?', '논의에서 남겨야 할 여백은 무엇인가요?'],
+    blockingSignals: ['반론 부재', '단일 주장으로 닫힘'],
+    matchKeywords: ['반론', '비판', '논쟁', '대안', '한계'],
+    isFictionalized: false,
+    references: []
+  },
+  {
+    id: 'interview-curator',
+    label: '인터뷰 큐레이터',
+    category: 'essay',
+    tone: '자유글에서 학술 원고로 넘어갈 질문 순서를 설계한다.',
+    strengths: ['질문 시퀀스', '매체 적합성', '인터뷰 구조'],
+    questionStarters: ['먼저 확인해야 할 연구 질문은 무엇인가요?', '자료와 경험 중 어디부터 물어야 하나요?', '이번 원고의 독자는 어느 학술 공동체인가요?'],
+    blockingSignals: ['질문 순서가 산만함', '매체와 독자 불일치'],
+    matchKeywords: ['인터뷰', '질문', '자료', '독자', '구조'],
+    isFictionalized: false,
+    references: []
+  },
+  {
+    id: 'essay-thesis',
+    label: '논증 구조 큐레이터',
+    category: 'essay',
+    tone: '큰 그림, 중심 논제, 근거 사다리를 한 문장 단위로 점검한다.',
+    strengths: ['논제 압축', '근거 사다리', '구조 설계'],
+    questionStarters: ['한 문장 논제는 무엇인가요?', '각 절이 어떤 근거를 담당하나요?', '결론이 새로 기여하는 지점은 무엇인가요?'],
+    blockingSignals: ['논제 불명확', '근거 사다리 누락'],
+    matchKeywords: ['논제', '근거', '인용', 'APA', '문헌'],
+    isFictionalized: false,
+    references: []
+  }
 ];
 
 export interface InterviewRequestInput {
@@ -44,6 +98,9 @@ function buildPersonaLineup(medium: string, freewrite: string): MediaPersona[] {
     case 'essay':
       // pickEssayInterviewers 는 EssayPersona[] 반환 — 구조가 MediaPersona 와 호환된다.
       return pickEssayInterviewers(freewrite, charLength, 3) as unknown as MediaPersona[];
+    case 'academic':
+      // A1에서는 신규 학술 페르소나를 만들지 않고 기존 essay-curator/critic-reviewer/interview-curator/essay-thesis 를 재활용한다.
+      return ACADEMIC_PERSONA_LINEUP;
     case 'novel':
       return pickNovelInterviewers(freewrite, charLength, 3);
     case 'comic':
