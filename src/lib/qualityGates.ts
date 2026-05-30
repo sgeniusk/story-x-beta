@@ -1,3 +1,5 @@
+import { extractClaims, findUnsupportedClaims, mapClaimsToEvidence } from './claimLedger';
+
 // M4 청크 E · Layer 4 — 품질 게이트 12개.
 // 정본 — docs/storyx-harness-architecture.md § 5-3, 3-3 (두 트랙 설계).
 //
@@ -8,7 +10,7 @@
 //   - commercial 게이트: commercialWeight ≥ 0.5 일 때 blocking, 아니면 advisory
 //   - literary 게이트: literaryWeight ≥ 0.5 일 때 blocking, 아니면 advisory
 //   - essay 게이트: 에세이 매체에서만 평가, gate_disclosure_scope 만 항상 blocking, 나머지 둘은 advisory
-//   - academic 게이트: 학술 매체에서만 노출, A1에서는 영어 APA placeholder 이므로 항상 advisory/pass
+//   - academic 게이트: 학술 매체에서만 노출, claim_evidence_mapping 은 A2부터 실제 판정/advisory
 
 export type GateKey =
   | 'gate_hook_first_300'
@@ -67,6 +69,10 @@ export interface GateInput {
   selfReversalCount?: number;
   /** 에세이 — 실제 인물 노출이 안전 범위 안인가. */
   disclosureScopeSafe?: boolean;
+  /** 학술 — 주장 레저가 모든 주장에 근거를 매핑했는가. */
+  claimEvidenceMapped?: boolean;
+  /** 학술 — claimLedger 가 찾은 미근거 주장 수. */
+  unsupportedClaimCount?: number;
 }
 
 export interface GateResult {
@@ -108,7 +114,7 @@ export function evaluateQualityGates(input: GateInput, mode: StoryMode): Quality
       track: def.track,
       requirement,
       passed,
-      reason: passed ? def.passReason : def.failReason
+      reason: resolveGateReason(passed ? def.passReason : def.failReason, input)
     });
   }
 
@@ -128,8 +134,8 @@ interface GateDef {
   key: GateKey;
   track: GateTrack;
   evaluate: (input: GateInput) => boolean;
-  passReason: string;
-  failReason: string;
+  passReason: string | ((input: GateInput) => string);
+  failReason: string | ((input: GateInput) => string);
 }
 
 // 게이트 12개 정의. 휴리스틱은 보수적 — 1차 컷.
@@ -218,14 +224,14 @@ const GATE_DEFS: GateDef[] = [
     passReason: '실제 인물 노출 범위가 안전합니다.',
     failReason: '실제 인물 노출이 위험 범위입니다 — 출간 전 반드시 점검.'
   },
-  // A1 academic placeholder — 실제 주장 레저/인용/반론/연구윤리 판정은 A2~A4에서 구현한다.
-  // 영어 APA 기준을 UI에 노출하되, 빈 입력이나 초안에서 차단하지 않도록 항상 통과/advisory 로 둔다.
+  // Academic gates — 영어 APA 기준. claim_evidence_mapping 은 A2에서 실제 판정으로 전환,
+  // 나머지 인용/반론/연구윤리는 A3~A4 placeholder 로 유지한다.
   {
     key: 'claim_evidence_mapping',
     track: 'academic',
-    evaluate: () => true,
-    passReason: 'A1 placeholder: 영어 APA 원고의 주장-근거 매핑은 A2에서 실제 평가합니다.',
-    failReason: 'A2에서 구현 예정입니다.'
+    evaluate: (i) => resolveUnsupportedClaimCount(i) === 0,
+    passReason: '영어 APA 원고의 명시적 주장에 같은/인접 단락 근거가 매핑되어 있습니다.',
+    failReason: (i) => `근거 없는 학술 주장 ${resolveUnsupportedClaimCount(i)}개가 있습니다.`
   },
   {
     key: 'citation_integrity',
@@ -253,7 +259,7 @@ const GATE_DEFS: GateDef[] = [
 function resolveRequirement(def: GateDef, mode: StoryMode): GateRequirement {
   if (def.track === 'common') return 'blocking';
   if (def.track === 'academic') {
-    // A1에서는 academic 게이트를 노출만 한다. 실제 차단 여부는 A2~A4에서 구현.
+    // A2 범위에서는 claim/evidence 실패도 advisory 로 유지한다. Blocking 승격은 사용자 정책 단계.
     return 'advisory';
   }
   if (def.track === 'essay') {
@@ -265,6 +271,27 @@ function resolveRequirement(def: GateDef, mode: StoryMode): GateRequirement {
   }
   // literary
   return mode.literaryWeight >= 0.5 ? 'blocking' : 'advisory';
+}
+
+function resolveGateReason(reason: GateDef['passReason'], input: GateInput): string {
+  return typeof reason === 'function' ? reason(input) : reason;
+}
+
+function resolveUnsupportedClaimCount(input: GateInput): number {
+  if (typeof input.unsupportedClaimCount === 'number') {
+    return Math.max(0, input.unsupportedClaimCount);
+  }
+  if (typeof input.claimEvidenceMapped === 'boolean') {
+    return input.claimEvidenceMapped ? 0 : 1;
+  }
+
+  const text = input.text ?? '';
+  if (!text.trim()) {
+    return 0;
+  }
+
+  const ledger = mapClaimsToEvidence(extractClaims(text), text);
+  return findUnsupportedClaims(ledger).length;
 }
 
 // 첫 300자 안에 행동/긴장 신호가 있는가 — 보수적 휴리스틱.

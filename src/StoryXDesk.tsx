@@ -131,6 +131,7 @@ import { runStoryHarness, type StoryHarnessReport } from './lib/storyHarness';
 import { buildStoryOntology, type StoryOntology } from './lib/storyOntology';
 import { projectAllMedia, type MediaProjection } from './lib/mediaProjection';
 import { evaluateQualityGates, type QualityGatesReport, type StoryMode } from './lib/qualityGates';
+import { extractClaims, findUnsupportedClaims, mapClaimsToEvidence, type Claim } from './lib/claimLedger';
 import { toStudioMetrics } from './lib/studioMetrics';
 import { buildAlphaReadinessReport, type AlphaReadinessReport } from './lib/alphaReadiness';
 import { buildOneProjectVerticalSlice, type OneProjectVerticalSlice } from './lib/verticalSlice';
@@ -586,6 +587,31 @@ function marginReviewToRun(review: MarginReview): AgentRun {
     status: review.severity === 'block' ? 'block' : review.severity === 'suggest' ? 'revise' : 'pass',
     output: review.body || review.head,
     evidence: [review.anchor]
+  };
+}
+
+function buildAcademicClaimMarginReviews(text: string): MarginReview[] {
+  if (!text.trim()) {
+    return [];
+  }
+
+  const claims = extractClaims(text);
+  const ledger = mapClaimsToEvidence(claims, text);
+  return findUnsupportedClaims(ledger).map(claimToMarginReview);
+}
+
+function claimToMarginReview(claim: Claim): MarginReview {
+  return {
+    persona: 'critic-reviewer',
+    anchor: claim.paragraph,
+    severity: 'block',
+    head: '근거 없는 주장',
+    body: [
+      `주장: ${claim.text}`,
+      '필요 근거: 데이터(수치·표), 선행연구(APA 인용), 논리(because/mechanism), 사례(for example) 중 하나를 같은 단락이나 인접 단락에 붙이세요.'
+    ].join('\n'),
+    diffs: [],
+    pending: false
   };
 }
 
@@ -1510,6 +1536,14 @@ export function StoryXDesk({
     runAll: runMarginReviewAll,
     summonOne: summonMarginReviewAgent
   });
+  const academicClaimMarginReviews = useMemo(
+    () => (blueprint.medium === 'academic' ? buildAcademicClaimMarginReviews(currentReviewText) : []),
+    [blueprint.medium, currentReviewText]
+  );
+  const displayedMarginReviews = useMemo(
+    () => [...academicClaimMarginReviews, ...marginReview.reviews],
+    [academicClaimMarginReviews, marginReview.reviews]
+  );
   const acceptMarginDiff = useCallback(
     (diff: InlineDiff) => {
       marginReview.onAcceptDiff(diff);
@@ -2863,7 +2897,7 @@ export function StoryXDesk({
                 isFocusMode={isFocusMode}
                 manuscriptRef={manuscriptRef}
                 marginParagraphs={marginParagraphs}
-                marginReviews={marginReview.reviews}
+                marginReviews={displayedMarginReviews}
                 marginOpenId={marginReview.openId}
                 filterPersona={marginReview.filterPersona}
                 appliedDiffs={marginReview.applied}
@@ -2914,7 +2948,7 @@ export function StoryXDesk({
           <>
             <MarginColumn
               paragraphs={marginParagraphs}
-              reviews={marginReview.reviews}
+              reviews={displayedMarginReviews}
               openId={marginReview.openId}
               setOpenId={marginReview.setOpenId}
               filterPersona={marginReview.filterPersona}
@@ -2927,7 +2961,7 @@ export function StoryXDesk({
               onResolveCanon={() => marginReview.onSummon('canon-librarian', { anchor: marginDefaultAnchor })}
             />
             <CoreStrip
-              reviews={marginReview.reviews}
+              reviews={displayedMarginReviews}
               summonedExtended={marginReview.summonedExtended}
               filterPersona={marginReview.filterPersona}
               setFilterPersona={marginReview.setFilterPersona}
@@ -2969,7 +3003,7 @@ export function StoryXDesk({
           >
             <MessageCircle size={15} />
             의견 보기
-            <span className="cnt">{marginReview.reviews.length}</span>
+            <span className="cnt">{displayedMarginReviews.length}</span>
           </button>
           <button
             type="button"
