@@ -21,6 +21,7 @@ import { buildMemoryApprovalQueue } from '../lib/memoryBank';
 import { buildPublishingPlan, type PublishingChecklistItem, type PublishingPlan } from '../lib/publishing';
 import { requestAgentReview } from '../lib/reviewClient';
 import type { AiCliAgentReport } from '../lib/aiCliHarness';
+import type { AcademicPublishSummary } from '../lib/academicPublish';
 import type { SeriesProject } from '../lib/storyEngine';
 
 type PublishAgentId = 'book-designer' | 'pr-specialist' | 'platform-curator' | 'business-strategist';
@@ -34,6 +35,7 @@ type AgentReviewState =
 interface PublishScreenProps {
   medium: CreativeMedium;
   format: CreativeFormat;
+  academicSummary?: AcademicPublishSummary;
   workTitle?: string;
   mediumLabel?: string;
   onBack: () => void;
@@ -455,6 +457,124 @@ const packagingListStyle: CSSProperties = {
   lineHeight: 1.5
 };
 
+const academicGridStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+  gap: 16
+};
+
+const academicPanelStyle: CSSProperties = {
+  background: 'rgba(255, 255, 255, 0.025)',
+  border: '1px solid rgba(255, 255, 255, 0.06)',
+  borderRadius: 12,
+  padding: '18px 20px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
+  minWidth: 0
+};
+
+const academicPanelTitleStyle: CSSProperties = {
+  fontSize: 12,
+  letterSpacing: 1.5,
+  textTransform: 'uppercase',
+  color: 'rgba(243, 201, 90, 0.78)',
+  fontWeight: 600
+};
+
+const academicEmptyStyle: CSSProperties = {
+  margin: 0,
+  fontSize: 13,
+  lineHeight: 1.6,
+  color: 'rgba(237, 237, 243, 0.52)'
+};
+
+const academicClaimListStyle: CSSProperties = {
+  margin: 0,
+  padding: 0,
+  listStyle: 'none',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 10
+};
+
+const academicClaimItemStyle = (hasEvidence: boolean): CSSProperties => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 7,
+  padding: '10px 11px',
+  borderRadius: 9,
+  background: hasEvidence ? 'rgba(123, 227, 123, 0.05)' : 'rgba(231, 100, 100, 0.08)',
+  border: `1px solid ${hasEvidence ? 'rgba(123, 227, 123, 0.18)' : 'rgba(231, 100, 100, 0.24)'}`
+});
+
+const academicClaimTextStyle: CSSProperties = {
+  fontSize: 12.5,
+  lineHeight: 1.55,
+  color: 'rgba(237, 237, 243, 0.82)'
+};
+
+const academicChipStyle = (tone: 'pass' | 'warn'): CSSProperties => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  alignSelf: 'flex-start',
+  padding: '3px 8px',
+  borderRadius: 999,
+  background: tone === 'pass' ? 'rgba(123, 227, 123, 0.12)' : 'rgba(231, 100, 100, 0.14)',
+  color: tone === 'pass' ? '#7be37b' : '#e76464',
+  border: `1px solid ${tone === 'pass' ? 'rgba(123, 227, 123, 0.24)' : 'rgba(231, 100, 100, 0.28)'}`,
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: 0.4,
+  textTransform: 'uppercase'
+});
+
+const academicMetricGridStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: 8
+};
+
+const academicMetricStyle: CSSProperties = {
+  padding: '10px 11px',
+  borderRadius: 9,
+  background: 'rgba(0, 0, 0, 0.22)',
+  border: '1px solid rgba(255, 255, 255, 0.05)',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 3
+};
+
+const academicMetricLabelStyle: CSSProperties = {
+  fontSize: 11,
+  color: 'rgba(237, 237, 243, 0.5)'
+};
+
+const academicMetricValueStyle: CSSProperties = {
+  fontSize: 18,
+  color: '#ededf3',
+  fontWeight: 600
+};
+
+const academicGateListStyle: CSSProperties = {
+  margin: 0,
+  padding: 0,
+  listStyle: 'none',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 9
+};
+
+const academicGateItemStyle = (passed: boolean): CSSProperties => ({
+  display: 'grid',
+  gridTemplateColumns: 'auto 1fr',
+  gap: 8,
+  alignItems: 'flex-start',
+  fontSize: 12.5,
+  lineHeight: 1.5,
+  color: 'rgba(237, 237, 243, 0.76)'
+});
+
 const releaseStatusStyle = (canLock: boolean): CSSProperties => ({
   display: 'flex',
   alignItems: 'flex-start',
@@ -504,7 +624,7 @@ const lockButtonStyle = (canLock: boolean, isLocked: boolean): CSSProperties => 
   transition: 'transform 120ms ease'
 });
 
-export function PublishScreen({ medium, format, workTitle, mediumLabel, onBack }: PublishScreenProps) {
+export function PublishScreen({ medium, format, academicSummary, workTitle, mediumLabel, onBack }: PublishScreenProps) {
   // 출간 화면도 스튜디오와 같은 storage 에서 project 를 읽고 동일한 publishingPlan 빌더를 쓴다.
   // reviewCandidates·decisions 같은 in-memory state 는 출간 단계에서 별도 관리하지 않으므로 빈 옵션으로 호출.
   const project = useMemo(() => loadProject(), []);
@@ -686,6 +806,77 @@ export function PublishScreen({ medium, format, workTitle, mediumLabel, onBack }
             </section>
           )}
 
+          {medium === 'academic' && academicSummary && (
+            <section>
+              <h2 style={sectionTitleStyle}>학술 퍼블리시 무결성</h2>
+              <div style={academicGridStyle}>
+                <article style={academicPanelStyle}>
+                  <span style={academicPanelTitleStyle}>References</span>
+                  {academicSummary.references.length === 0 ? (
+                    <p style={academicEmptyStyle}>참고문헌 없음</p>
+                  ) : (
+                    <ol style={{ ...packagingListStyle, listStyle: 'decimal', paddingLeft: 18 }}>
+                      {academicSummary.references.map((reference) => (
+                        <li key={reference}>{reference}</li>
+                      ))}
+                    </ol>
+                  )}
+                </article>
+
+                <article style={academicPanelStyle}>
+                  <span style={academicPanelTitleStyle}>Claim · Evidence Map</span>
+                  {academicSummary.claimLedger.claims.length === 0 ? (
+                    <p style={academicEmptyStyle}>명시적 학술 주장 없음</p>
+                  ) : (
+                    <ul style={academicClaimListStyle}>
+                      {academicSummary.claimLedger.claims.map((claim) => (
+                        <li key={claim.id} style={academicClaimItemStyle(claim.hasEvidence)}>
+                          <span style={academicClaimTextStyle}>{claim.text}</span>
+                          <span style={academicChipStyle(claim.hasEvidence ? 'pass' : 'warn')}>
+                            {claim.hasEvidence ? formatEvidenceType(claim.evidenceType) : '근거 없음'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </article>
+
+                <article style={academicPanelStyle}>
+                  <span style={academicPanelTitleStyle}>Citation Integrity</span>
+                  <div style={academicMetricGridStyle}>
+                    <Metric label="본문 인용" value={academicSummary.citationSummary.totalCitations} />
+                    <Metric label="Orphan" value={academicSummary.citationSummary.orphanCitations} />
+                    <Metric label="Page missing" value={academicSummary.citationSummary.pageMissingQuotes} />
+                    <Metric label="Uncited ref" value={academicSummary.citationSummary.uncitedReferences} />
+                  </div>
+                  {academicSummary.citationSummary.missingReferenceSection && (
+                    <p style={academicEmptyStyle}>References 섹션이 없어 orphan 판정을 보류했습니다.</p>
+                  )}
+                </article>
+
+                <article style={academicPanelStyle}>
+                  <span style={academicPanelTitleStyle}>Academic Gates</span>
+                  <ul style={academicGateListStyle}>
+                    {academicSummary.gateStatus.map((gate) => (
+                      <li key={gate.gate} style={academicGateItemStyle(gate.passed)}>
+                        {gate.passed ? (
+                          <CheckCircle2 size={14} color="#7be37b" style={{ marginTop: 2 }} />
+                        ) : (
+                          <AlertTriangle size={14} color="#f3c95a" style={{ marginTop: 2 }} />
+                        )}
+                        <span>
+                          <strong style={{ color: '#ededf3' }}>{formatGateLabel(gate.gate)}</strong>
+                          <br />
+                          {gate.passed ? '통과' : '주의'} · {gate.reason}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              </div>
+            </section>
+          )}
+
           <footer style={footerStyle}>
             <p style={footerNoteStyle}>
               네 영역이 모두 끝나고 출간 게이트가 ready 가 되면 잠금이 활성화됩니다.
@@ -712,6 +903,45 @@ export function PublishScreen({ medium, format, workTitle, mediumLabel, onBack }
       </main>
     </div>
   );
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return (
+    <span style={academicMetricStyle}>
+      <span style={academicMetricLabelStyle}>{label}</span>
+      <span style={academicMetricValueStyle}>{value}</span>
+    </span>
+  );
+}
+
+function formatEvidenceType(type: AcademicPublishSummary['claimLedger']['claims'][number]['evidenceType']) {
+  switch (type) {
+    case 'data':
+      return 'data';
+    case 'prior-work':
+      return 'prior work';
+    case 'logic':
+      return 'logic';
+    case 'anecdote':
+      return 'anecdote';
+    default:
+      return '근거 확인';
+  }
+}
+
+function formatGateLabel(gate: AcademicPublishSummary['gateStatus'][number]['gate']) {
+  switch (gate) {
+    case 'claim_evidence_mapping':
+      return '주장-근거 매핑';
+    case 'citation_integrity':
+      return '인용 무결성';
+    case 'counter_argument_present':
+      return '반론·대안 가설';
+    case 'research_ethics_disclosure':
+      return '연구 윤리 공개';
+    default:
+      return gate;
+  }
 }
 
 // 카드의 CTA + 결과 패널 렌더링. idle / loading / success / failed 4가지 상태를 인라인 처리.
