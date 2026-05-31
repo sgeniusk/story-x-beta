@@ -1,4 +1,5 @@
 import { extractClaims, findUnsupportedClaims, mapClaimsToEvidence } from './claimLedger';
+import { auditCitations } from './citationGate';
 
 // M4 청크 E · Layer 4 — 품질 게이트 12개.
 // 정본 — docs/storyx-harness-architecture.md § 5-3, 3-3 (두 트랙 설계).
@@ -10,7 +11,7 @@ import { extractClaims, findUnsupportedClaims, mapClaimsToEvidence } from './cla
 //   - commercial 게이트: commercialWeight ≥ 0.5 일 때 blocking, 아니면 advisory
 //   - literary 게이트: literaryWeight ≥ 0.5 일 때 blocking, 아니면 advisory
 //   - essay 게이트: 에세이 매체에서만 평가, gate_disclosure_scope 만 항상 blocking, 나머지 둘은 advisory
-//   - academic 게이트: 학술 매체에서만 노출, claim_evidence_mapping 은 A2부터 실제 판정/advisory
+//   - academic 게이트: 학술 매체에서만 노출, claim_evidence_mapping/citation_integrity 는 advisory
 
 export type GateKey =
   | 'gate_hook_first_300'
@@ -73,6 +74,10 @@ export interface GateInput {
   claimEvidenceMapped?: boolean;
   /** 학술 — claimLedger 가 찾은 미근거 주장 수. */
   unsupportedClaimCount?: number;
+  /** 학술 — citationGate 가 찾은 orphan citation + page-missing quote 수. */
+  citationIssueCount?: number;
+  /** 학술 — 외부에서 계산한 citation integrity 통과 여부. */
+  citationIntegrityPassed?: boolean;
 }
 
 export interface GateResult {
@@ -224,8 +229,8 @@ const GATE_DEFS: GateDef[] = [
     passReason: '실제 인물 노출 범위가 안전합니다.',
     failReason: '실제 인물 노출이 위험 범위입니다 — 출간 전 반드시 점검.'
   },
-  // Academic gates — 영어 APA 기준. claim_evidence_mapping 은 A2에서 실제 판정으로 전환,
-  // 나머지 인용/반론/연구윤리는 A3~A4 placeholder 로 유지한다.
+  // Academic gates — 영어 APA 기준. claim_evidence_mapping 은 A2, citation_integrity 는 A3에서 실제 판정.
+  // 반론/연구윤리는 A4 placeholder 로 유지한다.
   {
     key: 'claim_evidence_mapping',
     track: 'academic',
@@ -236,9 +241,9 @@ const GATE_DEFS: GateDef[] = [
   {
     key: 'citation_integrity',
     track: 'academic',
-    evaluate: () => true,
-    passReason: 'A1 placeholder: 영어 APA 인용 무결성은 A3에서 로컬 휴리스틱으로 평가합니다.',
-    failReason: 'A3에서 구현 예정입니다.'
+    evaluate: (i) => resolveCitationIssueCount(i) === 0,
+    passReason: '영어 APA 본문 인용이 참고문헌과 대조되고, 직접 인용의 페이지 표기가 확인됩니다.',
+    failReason: (i) => `깨진 인용 또는 페이지 없는 직접 인용 ${resolveCitationIssueCount(i)}개가 있습니다.`
   },
   {
     key: 'counter_argument_present',
@@ -292,6 +297,23 @@ function resolveUnsupportedClaimCount(input: GateInput): number {
 
   const ledger = mapClaimsToEvidence(extractClaims(text), text);
   return findUnsupportedClaims(ledger).length;
+}
+
+function resolveCitationIssueCount(input: GateInput): number {
+  if (typeof input.citationIssueCount === 'number') {
+    return Math.max(0, input.citationIssueCount);
+  }
+  if (typeof input.citationIntegrityPassed === 'boolean') {
+    return input.citationIntegrityPassed ? 0 : 1;
+  }
+
+  const text = input.text ?? '';
+  if (!text.trim()) {
+    return 0;
+  }
+
+  const audit = auditCitations(text);
+  return audit.orphanCitations.length + audit.pageMissingQuotes.length;
 }
 
 // 첫 300자 안에 행동/긴장 신호가 있는가 — 보수적 휴리스틱.

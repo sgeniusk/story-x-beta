@@ -164,6 +164,43 @@ describe('qualityGates', () => {
     expect(claimGate?.reason).toContain('1');
   });
 
+  it('academic citation_integrity fails advisory when orphan or page-missing citation issues exist', () => {
+    const report = evaluateQualityGates(
+      {
+        ...fullyPassingInput,
+        medium: 'academic',
+        text: [
+          'Prior work frames the same problem (Ghost, 2022).',
+          '"Access changed sharply" (Lee & Chen, 2021).',
+          'References',
+          'Lee, A., & Chen, B. (2021). Access and welfare. Social Policy Review.'
+        ].join('\n')
+      },
+      { commercialWeight: 0, literaryWeight: 0 }
+    );
+    const citationGate = report.results.find((r) => r.gate === 'citation_integrity');
+
+    expect(citationGate?.requirement).toBe('advisory');
+    expect(citationGate?.passed).toBe(false);
+    expect(citationGate?.reason).toContain('2');
+    expect(report.blockingPassed).toBe(true);
+  });
+
+  it('academic citation_integrity can use an explicit citation issue count', () => {
+    const report = evaluateQualityGates(
+      {
+        ...fullyPassingInput,
+        medium: 'academic',
+        citationIssueCount: 1
+      },
+      { commercialWeight: 0, literaryWeight: 0 }
+    );
+    const citationGate = report.results.find((r) => r.gate === 'citation_integrity');
+
+    expect(citationGate?.passed).toBe(false);
+    expect(citationGate?.reason).toContain('1');
+  });
+
   it('non-academic media ignore unsupported academic-style claims', () => {
     const report = evaluateQualityGates(
       {

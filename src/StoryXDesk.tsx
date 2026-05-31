@@ -132,6 +132,7 @@ import { buildStoryOntology, type StoryOntology } from './lib/storyOntology';
 import { projectAllMedia, type MediaProjection } from './lib/mediaProjection';
 import { evaluateQualityGates, type QualityGatesReport, type StoryMode } from './lib/qualityGates';
 import { extractClaims, findUnsupportedClaims, mapClaimsToEvidence, type Claim } from './lib/claimLedger';
+import { auditCitations, type Citation, type Reference } from './lib/citationGate';
 import { toStudioMetrics } from './lib/studioMetrics';
 import { buildAlphaReadinessReport, type AlphaReadinessReport } from './lib/alphaReadiness';
 import { buildOneProjectVerticalSlice, type OneProjectVerticalSlice } from './lib/verticalSlice';
@@ -609,6 +610,88 @@ function claimToMarginReview(claim: Claim): MarginReview {
     body: [
       `주장: ${claim.text}`,
       '필요 근거: 데이터(수치·표), 선행연구(APA 인용), 논리(because/mechanism), 사례(for example) 중 하나를 같은 단락이나 인접 단락에 붙이세요.'
+    ].join('\n'),
+    diffs: [],
+    pending: false
+  };
+}
+
+function buildAcademicCitationMarginReviews(text: string): MarginReview[] {
+  if (!text.trim()) {
+    return [];
+  }
+
+  const audit = auditCitations(text);
+  const reviews: MarginReview[] = [
+    ...audit.orphanCitations.map(citationToOrphanMarginReview),
+    ...audit.pageMissingQuotes.map(citationToPageMissingMarginReview),
+    ...audit.uncitedReferences.map(referenceToUncitedMarginReview)
+  ];
+
+  if (audit.missingReferenceSection && audit.citations.length > 0) {
+    reviews.unshift(missingReferenceSectionToMarginReview(audit.citations[0]));
+  }
+
+  return reviews;
+}
+
+function citationToOrphanMarginReview(citation: Citation): MarginReview {
+  return {
+    persona: 'critic-reviewer',
+    anchor: citation.paragraph,
+    severity: 'block',
+    head: '참고문헌에 없는 인용',
+    body: [
+      `인용: ${citation.raw}`,
+      '문제: 본문 APA 인용과 일치하는 References/Bibliography 항목을 찾지 못했습니다.',
+      '조치: 참고문헌을 추가하거나, 본문 인용의 저자·연도를 실제 참고문헌과 맞추세요.'
+    ].join('\n'),
+    diffs: [],
+    pending: false
+  };
+}
+
+function citationToPageMissingMarginReview(citation: Citation): MarginReview {
+  return {
+    persona: 'critic-reviewer',
+    anchor: citation.paragraph,
+    severity: 'suggest',
+    head: '직접 인용에 페이지 누락',
+    body: [
+      `인용: ${citation.raw}`,
+      '문제: 큰따옴표 직접 인용에는 APA 페이지 표기(p. 12 또는 pp. 12-13)가 필요합니다.',
+      '조치: 인용 안에 페이지를 넣거나, 직접 인용을 패러프레이즈로 바꾸세요.'
+    ].join('\n'),
+    diffs: [],
+    pending: false
+  };
+}
+
+function referenceToUncitedMarginReview(reference: Reference): MarginReview {
+  return {
+    persona: 'critic-reviewer',
+    anchor: reference.paragraph,
+    severity: 'note',
+    head: '본문에서 쓰이지 않은 참고문헌',
+    body: [
+      `참고문헌: ${reference.raw}`,
+      '문제: References/Bibliography에는 있지만 본문 APA 인용과 연결되지 않았습니다.',
+      '조치: 실제로 쓴 문헌이면 본문에 인용하고, 아니면 참고문헌에서 제거하세요.'
+    ].join('\n'),
+    diffs: [],
+    pending: false
+  };
+}
+
+function missingReferenceSectionToMarginReview(citation: Citation): MarginReview {
+  return {
+    persona: 'critic-reviewer',
+    anchor: citation.paragraph,
+    severity: 'note',
+    head: '참고문헌 섹션 없음',
+    body: [
+      '본문 APA 인용은 감지했지만 References/Bibliography/참고문헌 섹션이 없어 orphan 판정을 보류했습니다.',
+      '짧은 초안이면 참고만 하고, 제출 원고라면 참고문헌 섹션을 추가하세요.'
     ].join('\n'),
     diffs: [],
     pending: false
@@ -1540,9 +1623,13 @@ export function StoryXDesk({
     () => (blueprint.medium === 'academic' ? buildAcademicClaimMarginReviews(currentReviewText) : []),
     [blueprint.medium, currentReviewText]
   );
+  const academicCitationMarginReviews = useMemo(
+    () => (blueprint.medium === 'academic' ? buildAcademicCitationMarginReviews(currentReviewText) : []),
+    [blueprint.medium, currentReviewText]
+  );
   const displayedMarginReviews = useMemo(
-    () => [...academicClaimMarginReviews, ...marginReview.reviews],
-    [academicClaimMarginReviews, marginReview.reviews]
+    () => [...academicClaimMarginReviews, ...academicCitationMarginReviews, ...marginReview.reviews],
+    [academicClaimMarginReviews, academicCitationMarginReviews, marginReview.reviews]
   );
   const acceptMarginDiff = useCallback(
     (diff: InlineDiff) => {
