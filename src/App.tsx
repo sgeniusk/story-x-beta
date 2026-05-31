@@ -29,6 +29,7 @@ import {
 import { requestLlmInterview } from './lib/interviewClient';
 import { AiStatusBadge } from './components/AiStatusBadge';
 import { PublishScreen } from './components/PublishScreen';
+import { buildAcademicPublishSummary } from './lib/academicPublish';
 
 // 매체 코드를 사용자 표시용 한국어 라벨로 매핑. 헤더·퍼블리시 화면 등에 노출.
 function mediumDisplayLabel(medium: CreativeMedium): string {
@@ -47,7 +48,7 @@ function mediumDisplayLabel(medium: CreativeMedium): string {
       return medium;
   }
 }
-import { type DraftChapterPayload } from './lib/storyEngine';
+import { type DraftChapterPayload, type SeriesProject } from './lib/storyEngine';
 import { loadProject } from './lib/storage';
 import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
@@ -167,10 +168,17 @@ function App() {
   }
 
   if (stage === 'publish') {
+    const publishProject = loadProject();
+    const academicSummary = medium === 'academic'
+      ? buildAcademicPublishSummary(buildAcademicPublishText(publishProject))
+      : undefined;
+
     return (
       <PublishScreen
         medium={medium}
         format={format}
+        academicSummary={academicSummary}
+        workTitle={publishProject.title}
         mediumLabel={mediumDisplayLabel(medium)}
         onBack={() => setStage('editor')}
       />
@@ -209,6 +217,15 @@ function App() {
   }
 
   return <MarketingLanding onOpenHome={() => setStage('home')} onOpenProjects={() => setStage('projects')} />;
+}
+
+function buildAcademicPublishText(project: SeriesProject): string {
+  const chapterText = project.chapters
+    .map((chapter) => [`# ${chapter.title}`, chapter.prose].filter(Boolean).join('\n\n'))
+    .filter((chapter) => chapter.trim().length > 0)
+    .join('\n\n');
+
+  return chapterText.trim() || project.logline || '';
 }
 
 function LandingBrand({
