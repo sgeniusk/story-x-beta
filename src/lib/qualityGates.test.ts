@@ -1,5 +1,5 @@
-// M4 청크 E · qualityGates TDD 케이스.
-// 12 게이트 + StoryMode 가중치(commercial/literary) 강제/권고 분기 + 에세이 트랙 + finale/serial 조건부.
+// M4 청크 E + academic extension · qualityGates TDD 케이스.
+// StoryMode 가중치(commercial/literary) 강제/권고 분기 + 에세이/학술 트랙 + finale/serial 조건부.
 import { describe, expect, it } from 'vitest';
 import { evaluateQualityGates, type GateInput, type StoryMode } from './qualityGates';
 
@@ -114,7 +114,7 @@ describe('qualityGates', () => {
     }
   });
 
-  it('academic medium exposes advisory placeholder gates without blocking empty input', () => {
+  it('academic medium exposes advisory gates without blocking empty input', () => {
     const report = evaluateQualityGates({ medium: 'academic' }, balancedMode);
     const academicGates = report.results.filter((r) => r.track === 'academic');
 
@@ -199,6 +199,74 @@ describe('qualityGates', () => {
 
     expect(citationGate?.passed).toBe(false);
     expect(citationGate?.reason).toContain('1');
+  });
+
+  it('academic counter_argument_present fails advisory for one-sided claims', () => {
+    const report = evaluateQualityGates(
+      {
+        ...fullyPassingInput,
+        medium: 'academic',
+        text: 'This paper argues that neighborhood brokers determine welfare access.'
+      },
+      { commercialWeight: 0, literaryWeight: 0 }
+    );
+    const counterGate = report.results.find((r) => r.gate === 'counter_argument_present');
+
+    expect(counterGate?.requirement).toBe('advisory');
+    expect(counterGate?.passed).toBe(false);
+    expect(counterGate?.reason).toContain('반론');
+    expect(report.blockingPassed).toBe(true);
+  });
+
+  it('academic counter_argument_present passes when an alternative hypothesis is acknowledged', () => {
+    const report = evaluateQualityGates(
+      {
+        ...fullyPassingInput,
+        medium: 'academic',
+        text: [
+          'This study finds that neighborhood brokers determine welfare access.',
+          'An alternative explanation is that municipal capacity explains the same pattern.'
+        ].join(' ')
+      },
+      { commercialWeight: 0, literaryWeight: 0 }
+    );
+    const counterGate = report.results.find((r) => r.gate === 'counter_argument_present');
+
+    expect(counterGate?.passed).toBe(true);
+  });
+
+  it('academic research_ethics_disclosure fails advisory when participant protections are missing', () => {
+    const report = evaluateQualityGates(
+      {
+        ...fullyPassingInput,
+        medium: 'academic',
+        text: 'We interviewed 20 participants about welfare access and coded the survey responses.'
+      },
+      { commercialWeight: 0, literaryWeight: 0 }
+    );
+    const ethicsGate = report.results.find((r) => r.gate === 'research_ethics_disclosure');
+
+    expect(ethicsGate?.requirement).toBe('advisory');
+    expect(ethicsGate?.passed).toBe(false);
+    expect(ethicsGate?.reason).toContain('연구 윤리');
+    expect(report.blockingPassed).toBe(true);
+  });
+
+  it('academic research_ethics_disclosure passes when consent and anonymity are declared', () => {
+    const report = evaluateQualityGates(
+      {
+        ...fullyPassingInput,
+        medium: 'academic',
+        text: [
+          'We interviewed 20 participants about welfare access.',
+          'Participants gave informed consent, and all responses were anonymized under IRB approved protocol.'
+        ].join(' ')
+      },
+      { commercialWeight: 0, literaryWeight: 0 }
+    );
+    const ethicsGate = report.results.find((r) => r.gate === 'research_ethics_disclosure');
+
+    expect(ethicsGate?.passed).toBe(true);
   });
 
   it('non-academic media ignore unsupported academic-style claims', () => {

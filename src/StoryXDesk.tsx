@@ -133,6 +133,12 @@ import { projectAllMedia, type MediaProjection } from './lib/mediaProjection';
 import { evaluateQualityGates, type QualityGatesReport, type StoryMode } from './lib/qualityGates';
 import { extractClaims, findUnsupportedClaims, mapClaimsToEvidence, type Claim } from './lib/claimLedger';
 import { auditCitations, type Citation, type Reference } from './lib/citationGate';
+import {
+  auditCounterArgument,
+  auditResearchEthics,
+  type CounterArgumentAudit,
+  type ResearchEthicsAudit
+} from './lib/academicIntegrity';
 import { toStudioMetrics } from './lib/studioMetrics';
 import { buildAlphaReadinessReport, type AlphaReadinessReport } from './lib/alphaReadiness';
 import { buildOneProjectVerticalSlice, type OneProjectVerticalSlice } from './lib/verticalSlice';
@@ -692,6 +698,56 @@ function missingReferenceSectionToMarginReview(citation: Citation): MarginReview
     body: [
       '본문 APA 인용은 감지했지만 References/Bibliography/참고문헌 섹션이 없어 orphan 판정을 보류했습니다.',
       '짧은 초안이면 참고만 하고, 제출 원고라면 참고문헌 섹션을 추가하세요.'
+    ].join('\n'),
+    diffs: [],
+    pending: false
+  };
+}
+
+function buildAcademicIntegrityMarginReviews(text: string): MarginReview[] {
+  if (!text.trim()) {
+    return [];
+  }
+
+  const counterAudit = auditCounterArgument(text);
+  const ethicsAudit = auditResearchEthics(text);
+  const reviews: MarginReview[] = [];
+
+  if (counterAudit.missingCounterArgument) {
+    reviews.push(counterArgumentToMarginReview(counterAudit));
+  }
+  if (ethicsAudit.issues.length > 0) {
+    reviews.push(researchEthicsToMarginReview(ethicsAudit));
+  }
+
+  return reviews;
+}
+
+function counterArgumentToMarginReview(audit: CounterArgumentAudit): MarginReview {
+  return {
+    persona: 'critic-reviewer',
+    anchor: audit.claimParagraphs[0] ?? 'p1',
+    severity: 'suggest',
+    head: '반론·대안 가설 미처리',
+    body: [
+      `명시적 학술 주장 ${audit.claimCount}개가 있지만 반론, 대안 가설, limitation 마커가 없습니다.`,
+      '조치: however/critics argue/an alternative explanation/limitation 같은 문장으로 가장 강한 반론이나 한계를 직접 다루세요.'
+    ].join('\n'),
+    diffs: [],
+    pending: false
+  };
+}
+
+function researchEthicsToMarginReview(audit: ResearchEthicsAudit): MarginReview {
+  return {
+    persona: 'canon-librarian',
+    anchor: audit.subjectParagraphs[0] ?? 'p1',
+    severity: 'block',
+    head: '연구 윤리 미공개',
+    body: [
+      '피험자·인터뷰·설문·데이터셋 언급이 있지만 필요한 연구 윤리 공개가 부족합니다.',
+      `문제: ${audit.issues.join(' ')}`,
+      '조치: 익명화/비식별화, informed consent, IRB/ethics approval, funding/conflict disclosure를 원고 안에 명시하세요.'
     ].join('\n'),
     diffs: [],
     pending: false
@@ -1627,9 +1683,18 @@ export function StoryXDesk({
     () => (blueprint.medium === 'academic' ? buildAcademicCitationMarginReviews(currentReviewText) : []),
     [blueprint.medium, currentReviewText]
   );
+  const academicIntegrityMarginReviews = useMemo(
+    () => (blueprint.medium === 'academic' ? buildAcademicIntegrityMarginReviews(currentReviewText) : []),
+    [blueprint.medium, currentReviewText]
+  );
   const displayedMarginReviews = useMemo(
-    () => [...academicClaimMarginReviews, ...academicCitationMarginReviews, ...marginReview.reviews],
-    [academicClaimMarginReviews, academicCitationMarginReviews, marginReview.reviews]
+    () => [
+      ...academicClaimMarginReviews,
+      ...academicCitationMarginReviews,
+      ...academicIntegrityMarginReviews,
+      ...marginReview.reviews
+    ],
+    [academicClaimMarginReviews, academicCitationMarginReviews, academicIntegrityMarginReviews, marginReview.reviews]
   );
   const acceptMarginDiff = useCallback(
     (diff: InlineDiff) => {
