@@ -1,7 +1,8 @@
 import { extractClaims, findUnsupportedClaims, mapClaimsToEvidence } from './claimLedger';
 import { auditCitations } from './citationGate';
+import { auditCounterArgument, auditResearchEthics } from './academicIntegrity';
 
-// M4 청크 E · Layer 4 — 품질 게이트 12개.
+// M4 청크 E · Layer 4 — 기본 품질 게이트 + academic extension.
 // 정본 — docs/storyx-harness-architecture.md § 5-3, 3-3 (두 트랙 설계).
 //
 // 각 게이트는 { key, track, requirement, evaluate, reason } 형태.
@@ -11,7 +12,7 @@ import { auditCitations } from './citationGate';
 //   - commercial 게이트: commercialWeight ≥ 0.5 일 때 blocking, 아니면 advisory
 //   - literary 게이트: literaryWeight ≥ 0.5 일 때 blocking, 아니면 advisory
 //   - essay 게이트: 에세이 매체에서만 평가, gate_disclosure_scope 만 항상 blocking, 나머지 둘은 advisory
-//   - academic 게이트: 학술 매체에서만 노출, claim_evidence_mapping/citation_integrity 는 advisory
+//   - academic 게이트: 학술 매체에서만 노출, 4개 모두 advisory
 
 export type GateKey =
   | 'gate_hook_first_300'
@@ -78,6 +79,12 @@ export interface GateInput {
   citationIssueCount?: number;
   /** 학술 — 외부에서 계산한 citation integrity 통과 여부. */
   citationIntegrityPassed?: boolean;
+  /** 학술 — 반론/대안가설/limitation 마커가 명시적으로 있는가. */
+  counterArgumentPresent?: boolean;
+  /** 학술 — 연구 윤리 점검에서 발견한 이슈 수. */
+  researchEthicsIssueCount?: number;
+  /** 학술 — 외부에서 계산한 연구 윤리 공개 통과 여부. */
+  researchEthicsSafe?: boolean;
 }
 
 export interface GateResult {
@@ -229,8 +236,7 @@ const GATE_DEFS: GateDef[] = [
     passReason: '실제 인물 노출 범위가 안전합니다.',
     failReason: '실제 인물 노출이 위험 범위입니다 — 출간 전 반드시 점검.'
   },
-  // Academic gates — 영어 APA 기준. claim_evidence_mapping 은 A2, citation_integrity 는 A3에서 실제 판정.
-  // 반론/연구윤리는 A4 placeholder 로 유지한다.
+  // Academic gates — 영어 APA 기준. A2/A3/A4 모두 로컬 휴리스틱 판정이며 advisory 로 유지한다.
   {
     key: 'claim_evidence_mapping',
     track: 'academic',
@@ -248,16 +254,17 @@ const GATE_DEFS: GateDef[] = [
   {
     key: 'counter_argument_present',
     track: 'academic',
-    evaluate: () => true,
-    passReason: 'A1 placeholder: 반론과 대안 가설 점검은 A4에서 평가합니다.',
-    failReason: 'A4에서 구현 예정입니다.'
+    evaluate: (i) => !resolveCounterArgumentMissing(i),
+    passReason: '영어 APA 원고의 명시적 주장에 반론·대안 가설·limitation 중 하나가 확인됩니다.',
+    failReason: '반론·대안 가설·limitation 없이 일방적 학술 주장만 제시되어 있습니다.'
   },
   {
     key: 'research_ethics_disclosure',
     track: 'academic',
-    evaluate: () => true,
-    passReason: 'A1 placeholder: 연구 윤리와 이해충돌 공개는 A4에서 평가합니다.',
-    failReason: 'A4에서 구현 예정입니다.'
+    evaluate: (i) => resolveResearchEthicsIssueCount(i) === 0,
+    passReason: '피험자/데이터 언급에 필요한 익명성·동의·IRB 윤리 공개가 확인됩니다.',
+    // A4에서는 advisory 로 유지한다. Blocking 승격은 출간 정책(A5 이후)에서 결정한다.
+    failReason: (i) => `연구 윤리 공개 이슈 ${resolveResearchEthicsIssueCount(i)}개가 있습니다.`
   }
 ];
 
@@ -314,6 +321,35 @@ function resolveCitationIssueCount(input: GateInput): number {
 
   const audit = auditCitations(text);
   return audit.orphanCitations.length + audit.pageMissingQuotes.length;
+}
+
+function resolveCounterArgumentMissing(input: GateInput): boolean {
+  if (typeof input.counterArgumentPresent === 'boolean') {
+    return !input.counterArgumentPresent;
+  }
+
+  const text = input.text ?? '';
+  if (!text.trim()) {
+    return false;
+  }
+
+  return auditCounterArgument(text).missingCounterArgument;
+}
+
+function resolveResearchEthicsIssueCount(input: GateInput): number {
+  if (typeof input.researchEthicsIssueCount === 'number') {
+    return Math.max(0, input.researchEthicsIssueCount);
+  }
+  if (typeof input.researchEthicsSafe === 'boolean') {
+    return input.researchEthicsSafe ? 0 : 1;
+  }
+
+  const text = input.text ?? '';
+  if (!text.trim()) {
+    return 0;
+  }
+
+  return auditResearchEthics(text).issues.length;
 }
 
 // 첫 300자 안에 행동/긴장 신호가 있는가 — 보수적 휴리스틱.
