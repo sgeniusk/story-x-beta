@@ -185,7 +185,7 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('sx-track-tabs ex-workbar-modes');
     expect(desk).toContain('className="sx-bible-alert-badge"');
     expect(desk).toContain('className="sx-media-change-panel"');
-    expect(desk).toContain('function MemoryBankStudio');
+    expect(componentSrc('MemoryBankStudio')).toContain('function MemoryBankStudio');
     expect(desk).toContain('function updateCharacterMemory');
     expect(desk).toContain('function updateWorldMemory');
     expect(desk).toContain('function updateCanonMemory');
@@ -194,9 +194,9 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('activeSection={dataView.section}');
     expect(desk).toContain('onSelectBibleSection={openBibleSection}');
     expect(css).toContain('flex-wrap: wrap');
-    expect(desk).toContain('승인됨');
-    expect(desk).toContain('수정 요청됨');
-    expect(desk).toContain('보류됨');
+    expect(componentSrc('MemoryBankStudio')).toContain('승인됨');
+    expect(componentSrc('MemoryBankStudio')).toContain('수정 요청됨');
+    expect(componentSrc('MemoryBankStudio')).toContain('보류됨');
     expect(css).toContain('.sx-track-tabs');
     // P5 — 편집/바이블/출간 트랙 전환 시 작업대에 약 130ms opacity 페이드
     expect(desk).toContain('const [isWorkbenchFading, setIsWorkbenchFading]');
@@ -230,8 +230,8 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain("const isBibleMode = activeTrack === 'bible' && !isPublishingMode");
     expect(componentSrc('OpenThreadsCard')).toContain('function OpenThreadsCard');
     expect(desk).toContain('<OpenThreadsCard threads={project.openThreads} />');
-    expect(desk).toContain('function BibleAssistantSidebar');
-    expect(desk).toContain('조수진');
+    expect(componentSrc('BibleAssistantSidebar')).toContain('function BibleAssistantSidebar');
+    expect(componentSrc('BibleAssistantSidebar')).toContain('조수진');
     expect(desk).toContain('<BibleAssistantSidebar');
     expect(desk).toContain('sx-focused-assist-rail');
     expect(css).toContain('.sx-focused-assist-rail');
@@ -263,25 +263,25 @@ describe('Story X focused editor layout', () => {
   });
 
   it('turns the memory bank into a left-indexed central editing workspace', () => {
-    expect(desk).toContain('className={`sx-bible-workbench is-${activeSection}`}');
-    expect(desk).toContain('BibleWorkbenchHeader');
-    expect(desk).toContain('buildBibleSectionState');
-    expect(desk).toContain('sectionState.reviewAgents.map');
-    expect(desk).toContain('변경 영향');
-    expect(desk).toContain('검토 순서');
+    expect(componentSrc('MemoryBankStudio')).toContain('className={`sx-bible-workbench is-${activeSection}`}');
+    expect(componentSrc('MemoryBankStudio')).toContain('BibleWorkbenchHeader');
+    expect(componentSrc('MemoryBankStudio')).toContain('buildBibleSectionState');
+    expect(componentSrc('BibleWorkbenchHeader')).toContain('sectionState.reviewAgents.map');
+    expect(componentSrc('BibleWorkbenchHeader')).toContain('변경 영향');
+    expect(componentSrc('BibleWorkbenchHeader')).toContain('검토 순서');
     expect(desk).toContain('function requestBibleReview');
     expect(desk).toContain('onRequestReview={requestBibleReview}');
-    expect(desk).toContain('변경 검토 요청');
-    expect(desk).toContain('className="sx-bible-review-request"');
-    expect(desk).toContain("activeSection === 'characters'");
-    expect(desk).toContain("activeSection === 'world'");
-    expect(desk).toContain("activeSection === 'canon'");
-    expect(desk).toContain("activeSection === 'voice'");
-    expect(desk).toContain("activeSection === 'approval'");
-    expect(desk).toContain('onUpdateCharacter(character.id');
-    expect(desk).toContain('onUpdateWorldRule(rule.id');
-    expect(desk).toContain('onUpdateCanon(fact.id');
-    expect(desk).toContain('CanonRefactorPanel');
+    expect(componentSrc('BibleWorkbenchHeader')).toContain('변경 검토 요청');
+    expect(componentSrc('BibleWorkbenchHeader')).toContain('className="sx-bible-review-request"');
+    expect(componentSrc('MemoryBankStudio')).toContain("activeSection === 'characters'");
+    expect(componentSrc('MemoryBankStudio')).toContain("activeSection === 'world'");
+    expect(componentSrc('MemoryBankStudio')).toContain("activeSection === 'canon'");
+    expect(componentSrc('MemoryBankStudio')).toContain("activeSection === 'voice'");
+    expect(componentSrc('MemoryBankStudio')).toContain("activeSection === 'approval'");
+    expect(componentSrc('MemoryBankStudio')).toContain('onUpdateCharacter(character.id');
+    expect(componentSrc('MemoryBankStudio')).toContain('onUpdateWorldRule(rule.id');
+    expect(componentSrc('MemoryBankStudio')).toContain('onUpdateCanon(fact.id');
+    expect(componentSrc('MemoryBankStudio')).toContain('CanonRefactorPanel');
     expect(desk).not.toContain('className="sx-bible-section-tabs"');
     expect(desk).not.toContain('<MemoryWorkbenchPanel');
     expect(css).toContain('.sx-bible-workbench');
@@ -296,11 +296,11 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('createCanonChangeEntry');
     expect(desk).toContain('const [canonChanges, setCanonChanges]');
     expect(desk).toContain('function logCanonChange');
-    expect(desk).toContain('CanonRefactorPanel');
-    expect(desk).toContain('변경 로그');
-    expect(desk).toContain('영향 회차');
-    expect(desk).toContain('에이전트 검토 순서');
-    expect(desk).toContain('캐논 리팩터');
+    expect(componentSrc('CanonRefactorPanel')).toContain('CanonRefactorPanel');
+    expect(componentSrc('CanonRefactorPanel')).toContain('변경 로그');
+    expect(componentSrc('CanonRefactorPanel')).toContain('영향 회차');
+    expect(componentSrc('CanonRefactorPanel')).toContain('에이전트 검토 순서');
+    expect(componentSrc('CanonRefactorPanel')).toContain('캐논 리팩터');
     expect(css).toContain('.sx-canon-refactor-panel');
     expect(css).toContain('.sx-change-log-list');
     expect(css).toContain('.sx-refactor-review-order');
@@ -329,10 +329,10 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('function updateApprovalStatement');
     expect(desk).toContain('approvalQueue={approvalQueue}');
     expect(desk).toContain('onUpdateApprovalStatement={updateApprovalStatement}');
-    expect(desk).toContain('approvalQueue.items.map');
-    expect(desk).toContain('value={item.editableStatement}');
+    expect(componentSrc('MemoryBankStudio')).toContain('approvalQueue.items.map');
+    expect(componentSrc('MemoryBankStudio')).toContain('value={item.editableStatement}');
     expect(desk).toContain('승인 대기함 열기');
-    expect(desk).toContain('동기화 가능');
+    expect(componentSrc('MemoryBankStudio')).toContain('동기화 가능');
     expect(css).toContain('.sx-approval-summary');
     expect(css).toContain('.sx-approval-source-pill');
     expect(css).toContain('.sx-approval-impact-tags');
@@ -431,8 +431,8 @@ describe('Story X focused editor layout', () => {
     expect(componentSrc('DataReviewRail')).toContain('function DataReviewRail');
     expect(componentSrc('DataReviewRail')).toContain('아직 검토 없음');
     expect(componentSrc('DataReviewRail')).toContain('데이터 검토 실행');
-    // 옛 바이블 트랙의 기능 보존 — MemoryBankStudio·승인 대기·캐논 원장은 데이터 모드에서 그대로 도달한다
-    expect(desk).toContain('function MemoryBankStudio');
+    // 옛 바이블 트랙의 기능 보존 — 승인 대기·캐논 원장은 데이터 모드에서 그대로 도달한다
+    expect(componentSrc('MemoryBankStudio')).toContain('function MemoryBankStudio');
     expect(desk).toContain('작품 데이터');
     expect(desk).toContain('승인 대기');
     expect(componentSrc('DataLeftRail')).toContain('캐논 원장');

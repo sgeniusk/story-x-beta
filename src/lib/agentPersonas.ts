@@ -1,4 +1,5 @@
 // 매체별 작가 에이전트 페르소나 정적 데이터.
+import type { AgentRun } from './storyEngine';
 
 export interface AgentPersona {
   id: string;
@@ -8,6 +9,26 @@ export interface AgentPersona {
   checks: string[];
   pixelClass: string;
   openingLine: string;
+}
+
+// 에이전트 실행 객체에서 페르소나를 해석한다(미등록 시 fallback).
+export function getAgentPersona(run: AgentRun) {
+  return agentPersonas[run.agentId] ?? fallbackAgentPersona;
+}
+
+// 에이전트 실행 상태를 한국어 라벨로 변환한다.
+export function agentStatusLabel(status: AgentRun['status']): string {
+  switch (status) {
+    case 'idle':
+      return '대기';
+    case 'pass':
+    case 'complete':
+      return '양호';
+    case 'revise':
+      return '주의';
+    case 'block':
+      return '경고';
+  }
 }
 
 export const agentPersonas: Record<string, AgentPersona> = {
