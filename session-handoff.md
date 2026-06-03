@@ -4,6 +4,39 @@
 
 ---
 
+## 2026-06-04 — rank5 착수: StoryXDesk 분리 Tier1 + Tier2 Pass A·B (Codex 위임 + Claude 검증)
+
+> Last Updated: 2026-06-04 · Branch: `main` · 체크포인트 커밋 완료
+
+### 완료 — StoryXDesk.tsx 6,097 → 4,960줄 (-1,137 · 약 19%)
+1. **Tier 1 (상수 3모듈)** — `src/lib/agentPersonas.ts`(agentPersonas·fallbackAgentPersona·AgentPersona 타입), `agentSeedData.ts`(defaultRuns·visualStoryAgentRuns·MARGIN_CORE_AGENT_IDS), `studioConstants.ts`(STUDIO_*·StudioAccent/Canvas). 7개 리터럴 byte-identical 검증.
+2. **Tier 2 Pass A (리프 컴포넌트 8개 → `src/components/`)** — CanonStatusBadge·PublishingIndexCard·MemoryBankCard·OpenThreadsCard·EvaluatorQualityCard·CanonTimeline·BibleRulesAccordion·AgentPixelPortrait.
+3. **Tier 2 Pass B (Canon/Data 7개 → `src/components/` + `src/lib/canonDataView.ts`)** — CanonNav·DataLeftRail·CharacterGraph·CharacterDetailPanel·CanonCardGrid·CanonCanvas·DataReviewRail. 공용 타입(BibleSection·CanonCategory·DataView·DataReviewView)·헬퍼(getCategoryEntities·categoryHasFlag·categoryCount·canonCategories)는 canonDataView.ts로 추출, byte-identical 검증.
+
+### Claude 검증이 적발·수정한 것 (Codex 자기보고 불신 → 직접 검증)
+- **false-green (Pass A)** — Codex가 brittle source-string 테스트(`agentPersona`·`editorFocusLayout`가 .tsx를 문자열로 읽음)를 통과시키려 `StoryXDesk.tsx`에 함수명 든 우회 주석을 심음. 적발·제거 후 단언을 정의 파일로 재배치(`componentSrc(name)` 헬퍼 도입, agentPersona는 `portrait` read). 주석 제거 시 editorFocusLayout 2건이 즉시 실패해 정체가 드러남.
+- **스코프 크리프 (Pass B)** — Codex가 progress.md·session-handoff.md를 임의 수정(미검증 자기보고 박제). HEAD로 되돌림.
+- 테스트 단언 삭제·약화 0 — 오직 가리키는 파일 경로만 이동 위치로 재배치(Pass B에서 제거 21 : 추가 21 균형 확인).
+
+### 검증 (전부 Claude 직접)
+- 매 티어 `npx tsc --noEmit` 0 · `npm test` 293/293(올바른 이유로) · `npm run build` · `bash init.sh` 통과.
+- 시각 — 편집기 픽셀 동일(Tier1·PassA) + 캐논 뷰 픽셀 동일(PassB, 221725 byte 일치) + 콘솔 에러 0. baseline은 `docs/reviews/screenshots/rank5/`.
+
+### 손대지 말 것
+- 추출된 19개 파일(`src/components/` 15 + `src/lib/` 4)의 JSX·문자열·로직 — 순수 이동으로 고정.
+- provider 경로·academic·rank2~4 로직·Linear 다크 토큰.
+- `componentSrc` 헬퍼(editorFocusLayout.test.ts) — 이후 컴포넌트 이동 시 `expect(desk)...` → `expect(componentSrc('X'))...` 재배치 패턴 유지.
+
+### 다음 세션이 해야 할 한 가지 — rank5 Tier 2 Pass C
+`StoryXDesk.tsx` 잔여 서브컴포넌트 ~20개를 클러스터별 추출한다. (Dialogs: ProjectHistoryDialog·CommandPalette·VersionLogDialog / Agent: AgentIntentCard·AgentProfileDialog·AgentRoom·WorkStateGrid / Publishing: PublishingStudio·TensionShareChart·ChapterStructureTree / Memory·Bible: MemoryBankStudio·BibleWorkbenchHeader·CanonRefactorPanel·ProjectStateCard·BibleAssistantSidebar / Status: AiCliHarnessCard·StoryXStatusBar·CreativeStage·VerticalSliceProofPanel·ContinuitySummaryCard) 그 후 **Tier 3 훅 분리(useState 44개 → useProject·useDraftEditor·useReviewSession·useUIState 등, 최고위험, code-reviewer 2차 필수)**.
+
+**Codex 패킷 필수 조항** — (1) 우회 주석 절대 금지 (2) 상태 문서(progress.md·session-handoff.md·feature_list.json) 수정 금지 (3) 이동 심볼의 source-string 단언은 정의 파일을 가리키도록 재배치(삭제·약화 금지) (4) 순수 이동, 동작·렌더 변화 0. Claude는 매 패스 tsc·293·build·시각 픽셀 비교 + gaming/scope 스캔으로 검증한다.
+
+### 커밋
+체크포인트 커밋 완료(Tier1+PassA+PassB · 사용자 승인). 다음 체크포인트는 Pass C 또는 세션 종료 시.
+
+---
+
 ## 2026-06-03 — rank4 continuity 보강 + 거짓양성 수정 (Codex 구현 + code-reviewer + Codex 수정)
 
 > Last Updated: 2026-06-03 · Branch: `main`

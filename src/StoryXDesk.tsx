@@ -9,7 +9,6 @@ import {
   Database,
   Download,
   FileText,
-  GitBranch,
   Info,
   ListChecks,
   Lock,
@@ -39,13 +38,28 @@ import {
   type RefObject
 } from 'react';
 import { getAgentValidationProcess, type ValidationAgentId } from './lib/agentReviewProcess';
+import { agentPersonas, fallbackAgentPersona, type AgentPersona } from './lib/agentPersonas';
+import { MARGIN_CORE_AGENT_IDS, defaultRuns, visualStoryAgentRuns } from './lib/agentSeedData';
+import { STUDIO_ACCENT_VALUES, STUDIO_CANVAS_VALUES, type StudioAccent, type StudioCanvas } from './lib/studioConstants';
 import storyXSymbol from './assets/brand/story-x-symbol-light.svg';
 import { AiStatusBadge } from './components/AiStatusBadge';
+import { AgentPixelPortrait } from './components/AgentPixelPortrait';
+import { CanonCanvas } from './components/CanonCanvas';
+import { CanonCardGrid } from './components/CanonCardGrid';
+import { CanonNav } from './components/CanonNav';
+import { CharacterDetailPanel } from './components/CharacterDetailPanel';
+import { CharacterGraph } from './components/CharacterGraph';
 import { CoreStrip } from './components/CoreStrip';
+import { DataLeftRail } from './components/DataLeftRail';
+import { DataReviewRail } from './components/DataReviewRail';
 import { DataPanel } from './components/DataPanel';
+import { EvaluatorQualityCard } from './components/EvaluatorQualityCard';
 import { MarginColumn } from './components/MarginColumn';
 import { MentionBar } from './components/MentionBar';
+import { MemoryBankCard } from './components/MemoryBankCard';
+import { OpenThreadsCard } from './components/OpenThreadsCard';
 import { PixelAvatar } from './components/PixelAvatar';
+import { PublishingIndexCard } from './components/PublishingIndexCard';
 import { Spotlight } from './components/Spotlight';
 import { useMarginReview } from './hooks/useMarginReview';
 import { findPersona } from './lib/extendedPersonas';
@@ -87,20 +101,18 @@ import {
   type Chapter,
   type ChapterBeat,
   type AgentId,
-  type CanonEntity,
   type CanonReviewCategory,
-  type CharacterProfile,
   type CreativeWeight,
   type DraftChapterPayload,
   type GenreId,
   type ProductionRequest,
   type ProductionResult,
-  type SeriesProject,
-  type TimelineEntry
+  type SeriesProject
 } from './lib/storyEngine';
 import { requestLlmDraft } from './lib/draftClient';
 import { requestAgentReview } from './lib/reviewClient';
-import { requestDataReview, type DataReviewNote } from './lib/dataReviewClient';
+import { requestDataReview } from './lib/dataReviewClient';
+import type { BibleSection, CanonCategory, DataReviewView, DataView } from './lib/canonDataView';
 import { describeKoreanStyleLevel, evaluateKoreanProse } from './lib/koreanStyle';
 import {
   agentReportsToRuns,
@@ -121,7 +133,7 @@ import {
   type MemoryApprovalQueue,
   type StoryMemoryBank
 } from './lib/memoryBank';
-import { buildTesterDrivenWorkflow, type TesterDrivenWorkflow } from './lib/evaluationSynthesis';
+import { buildTesterDrivenWorkflow } from './lib/evaluationSynthesis';
 import { buildComicsVisualWorkflow } from './lib/visualProduction';
 import { getCreativeActionLabels } from './lib/projectBlueprint';
 import { buildPublishingPlan, type PublishingPlan } from './lib/publishing';
@@ -164,30 +176,7 @@ import {
 } from './lib/storage';
 
 type DeskTrack = 'draft' | 'bible';
-type BibleSection = 'overview' | 'characters' | 'world' | 'canon' | 'voice' | 'approval';
 type ApprovalDecision = MemoryApprovalDecision;
-
-// 데이터 모드 캐논 분야 — 좌레일 캐논 nav가 고르는 5종. 가운데 캔버스가 이 단위로 바뀐다.
-type CanonCategory = 'characters' | 'places' | 'objects' | 'events' | 'timeline';
-// 데이터 모드 가운데 캔버스에 무엇을 띄울지 — 캐논 분야 5종 또는 바이블 작업장(MemoryBankStudio) 진입점.
-type DataView =
-  | { kind: 'canon'; category: CanonCategory }
-  | { kind: 'bible'; section: BibleSection };
-
-const canonCategories: Array<{ id: CanonCategory; label: string }> = [
-  { id: 'characters', label: '인물' },
-  { id: 'places', label: '장소' },
-  { id: 'objects', label: '사물' },
-  { id: 'events', label: '사건' },
-  { id: 'timeline', label: '시간선' }
-];
-
-// 데이터 모드 우레일에 채워지는 분야별 검토 결과 — summary와 정합/제안 노트, 그리고 출처(브리지/기본).
-interface DataReviewView {
-  summary: string;
-  notes: DataReviewNote[];
-  source: 'claude' | 'fallback';
-}
 
 const genreProfiles = getGenreProfiles();
 const mediumOptions = getMediumOptions();
@@ -204,16 +193,6 @@ const approvalDecisionLabels: Record<ApprovalDecision, string> = {
   revision: '수정 요청됨',
   hold: '보류됨'
 };
-
-interface AgentPersona {
-  id: string;
-  title: string;
-  subtitle: string;
-  instruction: string;
-  checks: string[];
-  pixelClass: string;
-  openingLine: string;
-}
 
 interface AgentDialogSelection {
   run: AgentRun;
@@ -249,230 +228,6 @@ interface DeskCommand {
   disabled?: boolean;
   run: () => void;
 }
-
-const agentPersonas: Record<string, AgentPersona> = {
-  showrunner: {
-    id: 'showrunner',
-    title: '쇼러너',
-    subtitle: '회차 약속과 클리프행어를 잠그는 진행자',
-    instruction:
-      '작품의 장기 약속, 이번 회차의 독자 보상, 마지막 질문이 한 방향으로 이어지는지 판단합니다. 재미를 위해 설정을 억지로 맞추지 않고, 약속이 약하면 사건 자체를 다시 제안합니다.',
-    checks: ['이번 회차의 독자 약속이 한 문장으로 선명한가', '클리프행어가 다음 회차를 부르는가', '장기 떡밥과 단기 사건이 충돌하지 않는가'],
-    pixelClass: 'is-showrunner',
-    openingLine: '오늘 회차의 약속부터 잠가볼게요. 독자가 마지막에 무엇을 궁금해해야 하나요?'
-  },
-  'character-custodian': {
-    id: 'character-custodian',
-    title: '캐릭터 큐레이터',
-    subtitle: '욕망, 상처, 말투, 관계 상태를 지키는 감수자',
-    instruction:
-      '인물의 욕망, 결핍, 상처, 말버릇, 호칭 거리, 관계 온도가 장면마다 같은 사람처럼 이어지는지 봅니다. 캐릭터성이 흔들릴 때는 더 그럴듯한 행동 대안을 제시합니다.',
-    checks: ['인물이 자기 욕망과 반대로 움직이지 않는가', '상처와 방어 방식이 장면 행동에 남아 있는가', '관계 변화가 이전 회차의 감정값과 이어지는가'],
-    pixelClass: 'is-character',
-    openingLine: '캐릭터가 무너지는 지점부터 같이 볼게요. 지금 제일 걱정되는 인물은 누구인가요?'
-  },
-  'world-keeper': {
-    id: 'world-keeper',
-    title: '배경 설계자',
-    subtitle: '세계 규칙, 비용, 시간표를 관리하는 설정 담당',
-    instruction:
-      '마법, 기술, 장소, 역사, 조직, 비용 규칙이 같은 방식으로 작동하는지 확인합니다. 새로운 설정이 생기면 기존 세계관에 붙일지, 예외로 격리할지 판단합니다.',
-    checks: ['세계 규칙의 대가가 사라지지 않았는가', '시간순서와 장소 이동이 말이 되는가', '새 설정이 기존 규칙을 싸게 만들지 않는가'],
-    pixelClass: 'is-world',
-    openingLine: '세계관은 재미를 만드는 압력이어야 해요. 새로 넣고 싶은 규칙이 있나요?'
-  },
-  'genre-stylist': {
-    id: 'genre-stylist',
-    title: '장르 스타일리스트',
-    subtitle: '장르 리듬과 문체 질감을 조정하는 작가',
-    instruction:
-      '로맨스, 판타지, 스릴러, 에세이, 인스타툰 등 매체와 장르가 요구하는 기대감을 맞춥니다. 장르 공식은 그대로 복붙하지 않고, 사건의 비용과 감정 리듬으로 새롭게 비틉니다.',
-    checks: ['장르 독자가 기대하는 쾌감이 남아 있는가', '문장 질감이 장면 목적을 방해하지 않는가', '반전이나 감정 보상이 너무 늦지 않은가'],
-    pixelClass: 'is-genre',
-    openingLine: '장르의 맛은 살리고 뻔함은 빼볼게요. 지금 원하는 독자 감정은 무엇인가요?'
-  },
-  'continuity-editor': {
-    id: 'continuity-editor',
-    title: '연속성 감수자',
-    subtitle: '캐논 충돌을 막고 승인된 사실만 장부에 넣는 편집자',
-    instruction:
-      '캐릭터, 배경, 사건, 시점, 목소리의 모순을 숨기지 않고 표시합니다. 초안이 멋져 보여도 캐논을 깨면 차단하고, 승인된 사실만 다음 작업의 기준으로 저장합니다.',
-    checks: ['초안의 새 사실이 기존 캐논과 충돌하지 않는가', '충돌을 재미로 쓸 수 있는지 수정해야 하는지 구분했는가', '다음 회차에 저장할 사실이 명확한가'],
-    pixelClass: 'is-continuity',
-    openingLine: '캐논은 족쇄가 아니라 재료예요. 지금 의심되는 설정 충돌을 알려주세요.'
-  },
-  'essay-interviewer': {
-    id: 'essay-interviewer',
-    title: '에세이 인터뷰어',
-    subtitle: '내 이야기를 대신 꾸미지 않고 계속 물어보는 질문자',
-    instruction:
-      '사용자의 기억, 주변 인물, 감정의 결을 먼저 묻고 확인합니다. 실제 경험을 임의로 발명하지 않으며, 쓸 수 있는 장면과 아직 물어봐야 하는 빈칸을 분리합니다.',
-    checks: ['개인 경험을 AI가 마음대로 만들지 않았는가', '내 주변 인물의 거리와 익명성이 지켜졌는가', '질문이 다음 문단의 재료로 이어지는가'],
-    pixelClass: 'is-essay',
-    openingLine: '좋은 에세이는 질문의 순서에서 시작해요. 이 이야기를 쓰고 싶어진 첫 장면이 뭐였나요?'
-  },
-  'voice-curator': {
-    id: 'voice-curator',
-    title: '문체 큐레이터',
-    subtitle: '한국어 자연스러움과 작가 문체를 지키는 편집자',
-    instruction:
-      '문장 길이, 비유 밀도, 존댓말/반말, 농담의 온도, 금지 표현을 문체 바이블로 관리합니다. 전체 원고가 한 사람의 글처럼 읽히도록 과한 AI식 표현을 줄입니다.',
-    checks: ['문체가 중간에 바뀌지 않았는가', '한국어 문장이 번역투로 굳지 않았는가', '반복되는 AI식 표현이 남아 있지 않은가'],
-    pixelClass: 'is-voice',
-    openingLine: '문체는 작품의 호흡이에요. 좋아하는 문장 리듬이나 피하고 싶은 말투가 있나요?'
-  },
-  'audio-narration-director': {
-    id: 'audio-narration-director',
-    title: '오디오 연출가',
-    subtitle: '목소리, 속도, 쉼, 청취 리듬을 설계하는 감독',
-    instruction:
-      '원고가 귀로 들릴 때의 속도, 쉼표, 강조, 감정 온도, 반복 훅을 설계합니다. 교육영상이나 동요읽기에서는 청자가 이해할 수 있는 호흡을 먼저 확보합니다.',
-    checks: ['소리로 들었을 때 한 번에 이해되는가', '쉼과 강조가 감정선을 살리는가', '음악과 효과음이 이야기를 덮지 않는가'],
-    pixelClass: 'is-audio',
-    openingLine: '이 장면을 귀로 들으면 어디서 숨을 쉬어야 할까요? 낭독 톤부터 잡아볼게요.'
-  },
-  'storyboard-agent': {
-    id: 'storyboard-agent',
-    title: '웹툰 연출가',
-    subtitle: '장면을 컷, 스크롤, 스와이프 리듬으로 바꾸는 콘티 감독',
-    instruction:
-      '원고의 사건을 컷 기능으로 나누고, 각 컷이 선택, 감정 변화, 정보 전달, 후크 중 무엇을 맡는지 정합니다. 웹툰에서는 스크롤 템포를, 인스타툰에서는 넘김과 저장 컷을 우선합니다.',
-    checks: ['각 컷의 기능이 선명한가', '스크롤/스와이프 리듬이 다음 컷 행동을 부르는가', '컷만 봐도 사건 흐름이 이해되는가'],
-    pixelClass: 'is-storyboard',
-    openingLine: '장면을 컷으로 찢어보겠습니다. 이 컷에서 독자가 꼭 봐야 하는 행동은 무엇인가요?'
-  },
-  'speech-bubble-agent': {
-    id: 'speech-bubble-agent',
-    title: '말풍선 연출가',
-    subtitle: '대사 밀도, 말풍선 위치, 시선 흐름을 지키는 만화 편집자',
-    instruction:
-      '말풍선이 표정, 손동작, 핵심 소품을 가리지 않는지 검토합니다. 모바일에서 읽히는 글자 수와 컷 순서를 기준으로 대사를 줄이거나 위치를 다시 제안합니다.',
-    checks: ['말풍선이 표정과 핵심 동작을 가리지 않는가', '대사량이 모바일 컷 안에서 읽히는가', '읽는 순서가 컷 흐름과 충돌하지 않는가'],
-    pixelClass: 'is-bubble',
-    openingLine: '대사는 그림을 도와야지 덮으면 안 됩니다. 이 컷에서 꼭 말로 해야 하는 건 무엇인가요?'
-  },
-  'keyframe-art-director': {
-    id: 'keyframe-art-director',
-    title: '원화/키프레임 감독',
-    subtitle: 'Midjourney 원화 후보를 고르고 visual DNA를 잠그는 아트 디렉터',
-    instruction:
-      '초기 원화와 키프레임 후보를 만들고, 사용자가 선택한 컷만 캐릭터 외형, 팔레트, 조명, 렌즈의 기준으로 승격합니다. 탈락한 이미지는 canon처럼 섞이지 않게 분리합니다.',
-    checks: ['선택된 원화가 반복 가능한가', '캐릭터 얼굴과 의상 기준이 하나로 잠겼는가', '탈락 후보가 visual bible에 섞이지 않았는가'],
-    pixelClass: 'is-keyframe',
-    openingLine: '처음 몇 장의 기준 컷이 전체 그림체를 결정합니다. 어떤 이미지가 작품의 얼굴이어야 하나요?'
-  },
-  'da-vinci': {
-    id: 'da-vinci',
-    title: '다빈치',
-    subtitle: '이미지 프롬프트와 컷별 시각 일관성을 설계하는 작화 에이전트',
-    instruction:
-      '인물 외형, 의상, 렌즈, 조명, 구도, 매체 질감, 부정 프롬프트를 구조화합니다. 장면마다 예쁜 그림이 아니라 같은 작품의 시각 언어로 이어지게 만듭니다.',
-    checks: ['캐릭터 외형과 의상이 컷마다 유지되는가', '카메라와 조명이 이야기 감정을 돕는가', '이미지 프롬프트가 구체적이고 검수 가능하게 쓰였는가'],
-    pixelClass: 'is-image',
-    openingLine: '컷의 그림체와 카메라부터 잡겠습니다. 이 장면은 가까운 표정인가요, 넓은 공간인가요?'
-  },
-  'frame-assembly-agent': {
-    id: 'frame-assembly-agent',
-    title: '프레임 조립가',
-    subtitle: '컷 순서, 여백, 비율, 파일 패키지를 정리하는 제작 담당',
-    instruction:
-      '이미지와 말풍선이 나온 뒤 게시 비율, 컷 순서, 여백, 파일명, 산출물 묶음을 점검합니다. 인스타툰은 정사각형과 캐러셀 순서를, 웹툰은 세로 스크롤 흐름을 우선합니다.',
-    checks: ['비율과 여백이 플랫폼에 맞는가', '컷 순서가 이야기 순서를 깨지 않는가', '파일명이 후속 수정과 배포에 재사용 가능한가'],
-    pixelClass: 'is-frame',
-    openingLine: '마지막 조립에서 작품의 읽기 경험이 결정됩니다. 이 산출물은 어디에 먼저 올릴 예정인가요?'
-  },
-  // ── M4 신설 8명 — 스튜디오 데이터·작품성·메타 + 랜딩·브릿지 ──
-  'canon-librarian': {
-    id: 'canon-librarian',
-    title: '캐논 라이브러리언',
-    subtitle: '캐논 사실을 3계층으로 분류하고 승인 게이트를 운영하는 사서',
-    instruction:
-      '캐논을 Hard / Living / Soft 세 계층으로 분류합니다. 변경 요청이 들어오면 영향 범위와 충돌 사실을 먼저 보고하고, 사용자의 승인 없이 사실을 덮어쓰지 않습니다.',
-    checks: ['새 사실이 Hard / Living / Soft 중 어디인가', '기존 캐논과 모순되는가', '변경의 앞·뒤 회차 영향이 잡혀 있는가'],
-    pixelClass: 'is-canon',
-    openingLine: '캐논은 박제가 아니라 분류입니다. 지금 의심되는 사실의 계층을 같이 정해볼까요?'
-  },
-  'timeline-keeper': {
-    id: 'timeline-keeper',
-    title: '타임라인 키퍼',
-    subtitle: '사건 × 스레드 × 회차 grid를 유지하는 시간 관리자',
-    instruction:
-      '설정-페이오프 짝, 회상 안전성, 미해결 떡밥 부하를 점검합니다. 새 사건이 들어오면 의존성과 페이오프 위치를 먼저 정합니다.',
-    checks: ['사건 순서가 의존성을 위반하지 않는가', '미해결 떡밥이 5개를 넘지 않는가', '페이오프 회차가 설정의 ±3 안에 있는가'],
-    pixelClass: 'is-timeline',
-    openingLine: '시간 위에 사건을 올려놓을게요. 가장 먼저 페이오프해야 할 떡밥이 무엇인가요?'
-  },
-  'bible-curator': {
-    id: 'bible-curator',
-    title: '바이블 큐레이터',
-    subtitle: '6 카테고리 바이블을 큐레이션하고 핀·stale을 관리하는 사서',
-    instruction:
-      '캐릭터·세계관·타임라인·문체 규칙·보이스 프로파일·관계도 6개 카테고리에서 요청자에게 필요한 카드만 짧게 묶어 전달합니다. PINNED 항목과 stale 카드를 표면화합니다.',
-    checks: ['요청자에게 정말 필요한 카드만 골랐는가', '패킷이 600단어 이하인가', 'PINNED·stale이 표시되었는가'],
-    pixelClass: 'is-bible',
-    openingLine: '전체를 보여드리는 대신 이번 작업에 꼭 필요한 카드만 골라드릴게요.'
-  },
-  'critic-reviewer': {
-    id: 'critic-reviewer',
-    title: '작품성 평론가',
-    subtitle: '양가성·윤리 비용·침묵·모티프를 점검하는 비평적 동료',
-    instruction:
-      '결말의 양가성, 핵심 결정의 윤리 비용, 중심 사건의 묘사 직접성, 모티프 변주, 상징 층, 내면 모순을 점검합니다. 대중성을 막지 않고 작품성을 보조합니다.',
-    checks: ['결말에 대안 해석이 1개 이상 가능한가', '핵심 결정의 대안 비용이 명시되는가', '3회 이상 등장 모티프가 의미 변주되는가'],
-    pixelClass: 'is-critic',
-    openingLine: '재미를 깎지 않고 깊이를 더해볼게요. 결말의 다른 해석 한 가지를 같이 적어볼까요?'
-  },
-  'essay-curator': {
-    id: 'essay-curator',
-    title: '에세이 큐레이터',
-    subtitle: '진실 계약·도약·자기반박·노출 윤리를 지키는 에세이 감수자',
-    instruction:
-      '에세이의 진실 계약을 지킵니다. 사적→보편 도약, 자기반박, 노출 윤리, 호흡 설계, GOMI 자연스러움을 점검하고 일기로 떨어지지 않도록 잡습니다.',
-    checks: ['사적→보편 도약 문장이 있는가', '1,500자+ 꼭지에 자기반박 단락이 있는가', '등장 타인의 노출 범위가 합의 안인가'],
-    pixelClass: 'is-essay-curator',
-    openingLine: '에세이는 일기가 아니에요. 이 글의 도약 문장을 같이 찾아볼까요?'
-  },
-  'memory-evolution-keeper': {
-    id: 'memory-evolution-keeper',
-    title: '메모리 성장 키퍼',
-    subtitle: '에이전트들의 학습 ledger를 영속·압축·표면화하는 메타 관리자',
-    instruction:
-      '각 에이전트의 evolutionMemory를 작품 수명 동안 누적·압축·다음 호출에 가이드로 제공합니다. drift가 감지되면 부드럽게 경고합니다.',
-    checks: ['이번 결정에서 어떤 에이전트의 ledger를 갱신해야 하는가', '30개 넘은 ledger가 압축되었는가', '학습 원칙과 어긋나는 drift가 있는가'],
-    pixelClass: 'is-memory',
-    openingLine: '작가진은 점점 작가의 취향을 배웁니다. 최근에 거절한 제안이 있나요?'
-  },
-  'studio-architect': {
-    id: 'studio-architect',
-    title: '스튜디오 아키텍트',
-    subtitle: '첫 만남에서 작품의 스튜디오 구성을 제안하는 구성가',
-    instruction:
-      '자유글·매체·길이를 받아 적합한 스튜디오 구성(매체·형식·작가진·바이블 카테고리·캐논 정책·첫 주 산출물)을 제안합니다. 항상 1~2개 대안을 같이 제시합니다.',
-    checks: ['자유글의 톤이 선언한 매체와 일치하는가', '작가진이 매체·길이에 합리적인가', '캐논 정책이 사용자 의도와 어긋나지 않는가'],
-    pixelClass: 'is-studio',
-    openingLine: '시작 전에 도구를 정하겠습니다. 이번 작품이 가장 닿고 싶은 매체는 무엇인가요?'
-  },
-  'interview-curator': {
-    id: 'interview-curator',
-    title: '인터뷰 큐레이터',
-    subtitle: '자유글·매체·길이를 보고 인터뷰어 라인업과 질문 시퀀스를 짜는 큐레이터',
-    instruction:
-      '매체별 페르소나 풀에서 3~5명을 골라 라인업을 만들고, trust → 감각 → 도약 → 자기반박 → 노출 윤리 → 다음 hook 순서로 8~14개 질문 시퀀스를 구성합니다.',
-    checks: ['라인업이 매체·자유글 키워드와 일치하는가', '실명 + 가공이 혼합되었는가', '질문 시퀀스가 trust부터 흐르는가'],
-    pixelClass: 'is-interview',
-    openingLine: '이번 글에 어울리는 인터뷰어 라인업을 골라드릴게요. 자유글에서 가장 중요한 한 문장은?'
-  }
-};
-
-const fallbackAgentPersona: AgentPersona = {
-  id: 'general-agent',
-  title: 'Story X 에이전트',
-  subtitle: '작품의 다음 결정을 돕는 협업자',
-  instruction: '현재 작업의 목적, 독자 약속, 캐논 충돌 가능성을 함께 확인하고 다음 행동을 제안합니다.',
-  checks: ['지금 결정이 작품 약속에 도움이 되는가', '다음 단계가 구체적인가', '검수할 기준이 남아 있는가'],
-  pixelClass: 'is-default',
-  openingLine: '지금 막힌 지점을 알려주세요. 작품 기준으로 같이 정리해볼게요.'
-};
 
 function getAgentPersona(run: AgentRun) {
   return agentPersonas[run.agentId] ?? fallbackAgentPersona;
@@ -515,52 +270,6 @@ function mergeAgentRuns(primaryRuns: AgentRun[], extraRuns: AgentRun[]) {
 
   return [...primaryRuns, ...extraRuns.filter((run) => !seen.has(run.agentId))];
 }
-
-const defaultRuns: AgentRun[] = [
-  {
-    agentId: 'showrunner',
-    title: '쇼러너',
-    status: 'idle',
-    output: '이번 회차의 약속, 압력, 마지막 질문을 한 줄로 잠글 준비가 되어 있습니다.',
-    evidence: ['독자 약속', '클리프행어']
-  },
-  {
-    agentId: 'character-custodian',
-    title: '캐릭터',
-    status: 'idle',
-    output: '욕망, 상처, 관계 상태가 초안에서 흔들리지 않는지 확인합니다.',
-    evidence: ['desire', 'wound']
-  },
-  {
-    agentId: 'world-keeper',
-    title: '월드',
-    status: 'idle',
-    output: '세계 규칙과 비용이 장면마다 같은 방식으로 작동하는지 봅니다.',
-    evidence: ['rules', 'cost']
-  },
-  {
-    agentId: 'genre-stylist',
-    title: '장르',
-    status: 'idle',
-    output: '장르 리듬과 문체 질감을 회차 목적에 맞게 조정합니다.',
-    evidence: ['beat', 'texture']
-  },
-  {
-    agentId: 'continuity-editor',
-    title: '연속성',
-    status: 'idle',
-    output: '모순은 숨기지 않고 충돌로 표시하고, 승인된 사실만 canon에 넣습니다.',
-    evidence: ['canon', 'conflict']
-  }
-];
-
-const MARGIN_CORE_AGENT_IDS: ValidationAgentId[] = [
-  'showrunner',
-  'character-custodian',
-  'world-keeper',
-  'genre-stylist',
-  'continuity-editor'
-];
 
 function agentReportToRun(report: AiCliAgentReport): AgentRun {
   return {
@@ -802,44 +511,6 @@ function renderParagraphText(text: string, diffs: InlineDiff[]): Array<string | 
   return segments;
 }
 
-const visualStoryAgentRuns: AgentRun[] = [
-  {
-    agentId: 'storyboard-agent',
-    title: '웹툰 연출',
-    status: 'idle',
-    output: '장면을 컷 기능, 스크롤 템포, 넘김 후크로 분해합니다.',
-    evidence: ['panel-plan', 'scroll-rhythm']
-  },
-  {
-    agentId: 'speech-bubble-agent',
-    title: '말풍선',
-    status: 'idle',
-    output: '말풍선 위치와 대사 밀도가 표정, 손동작, 핵심 소품을 가리지 않는지 봅니다.',
-    evidence: ['bubble-map', 'dialogue-density']
-  },
-  {
-    agentId: 'keyframe-art-director',
-    title: '원화',
-    status: 'idle',
-    output: 'Midjourney 원화 후보 중 사용자가 선택한 컷만 visual DNA로 잠급니다.',
-    evidence: ['midjourney-keyframe', 'visual-dna']
-  },
-  {
-    agentId: 'da-vinci',
-    title: '다빈치',
-    status: 'idle',
-    output: '승인된 원화와 캐릭터 시트를 컷별 이미지 프롬프트로 변환합니다.',
-    evidence: ['image-prompt', 'negative-prompt']
-  },
-  {
-    agentId: 'frame-assembly-agent',
-    title: '프레임',
-    status: 'idle',
-    output: '정사각형, 세로 스크롤, 페이지 시퀀스에 맞춰 컷 순서와 export 묶음을 확인합니다.',
-    evidence: ['frame-order', 'export-package']
-  }
-];
-
 function buildBibleAssistantRuns(
   project: SeriesProject,
   approvalQueue: MemoryApprovalQueue,
@@ -1020,45 +691,6 @@ function buildBibleSectionState({
 }
 
 // 편집기 설정 옵션 — 트윅(강조색) · 캔버스(원고 배경 톤). 사용자가 설정에서 고른다.
-const STUDIO_ACCENT_VALUES = {
-  lime: { value: '#e4f222', label: '라임' },
-  aether: { value: '#5e6ad2', label: '바이올렛' },
-  emerald: { value: '#27a644', label: '에메랄드' },
-  coral: { value: '#eb5757', label: '코랄' },
-  amber: { value: '#d4a94d', label: '앰버' }
-} as const;
-type StudioAccent = keyof typeof STUDIO_ACCENT_VALUES;
-
-// 캔버스 = 스튜디오 창의 배경 톤 패밀리.
-// shell: 바깥 페이지 / card: 좌·우 레일 카드 / page: 원고 영역 / paper2: 카드 안 셀·인풋
-const STUDIO_CANVAS_VALUES = {
-  pitch: {
-    shell: '#08090a',
-    card: '#0f1011',
-    page: '#161718',
-    paper2: '#161718',
-    surface: '#23252a',
-    label: '피치 블랙'
-  },
-  graphite: {
-    shell: '#0f1011',
-    card: '#161718',
-    page: '#1c1d1e',
-    paper2: '#1c1d1e',
-    surface: '#2a2c2e',
-    label: '그래파이트'
-  },
-  indigo: {
-    shell: '#14142a',
-    card: '#18182f',
-    page: '#1d1d2a',
-    paper2: '#222230',
-    surface: '#2a2a3d',
-    label: '인디고 슬레이트'
-  }
-} as const;
-type StudioCanvas = keyof typeof STUDIO_CANVAS_VALUES;
-
 interface StoryXDeskProps {
   initialMedium?: CreativeMedium;
   initialFormat?: CreativeFormat;
@@ -3442,7 +3074,7 @@ function VersionLogDialog({
 
 // 작품 상태 4셀 그리드 — 총 분량 / 회차(연재형) / 현재 분량 / 진행 %. 실제 프로젝트 데이터로 채운다.
 // 단독 완결형은 회차가 없으므로 둘째 셀을 "단계"(초안/검토/완성)로 바꿔 보여준다.
-function WorkStateGrid({
+export function WorkStateGrid({
   project,
   latestChapter,
   isSerial
@@ -3885,25 +3517,6 @@ function TensionShareChart({
   );
 }
 
-function PublishingIndexCard({ plan }: { plan: PublishingPlan }) {
-  return (
-    <section className="sx-panel sx-publishing-index-card" aria-label="출간 준비 목차">
-      <div className="sx-panel-heading">
-        <FileText size={16} />
-        <h2>출간 준비</h2>
-      </div>
-      <strong>{plan.title}</strong>
-      <p>{plan.releaseNotice}</p>
-      <div>
-        {plan.snapshotItems.map((item) => (
-          <span key={item}>{item}</span>
-        ))}
-      </div>
-      <small>출간 후 수정은 변경 로그 검토를 거쳐 다음 전개와 캐논에 반영합니다.</small>
-    </section>
-  );
-}
-
 function PublishingStudio({
   project,
   blueprint,
@@ -4041,651 +3654,6 @@ function PublishingStudio({
             {plan.releaseLock.label}
           </button>
         </article>
-      </div>
-    </section>
-  );
-}
-
-/* ── P3 데이터 모드 — 좌레일 / 캔버스 / 우레일 ─────────────────────────── */
-
-const canonStatusLabels: Record<CanonEntity['status'], string> = {
-  ok: '정합',
-  conflict: '충돌',
-  unverified: '미확인'
-};
-
-// 캐논 엔티티·시간선 항목의 정합 상태 배지. ok는 배지를 그리지 않는다.
-function CanonStatusBadge({ status }: { status: CanonEntity['status'] }) {
-  if (status === 'ok') {
-    return null;
-  }
-
-  return (
-    <span className={`ex-canon-badge ex-canon-badge--${status}`}>
-      <i aria-hidden="true" />
-      {canonStatusLabels[status]}
-    </span>
-  );
-}
-
-// 한 캐논 분야의 엔티티 목록을 분야 id로 돌려준다. 시간선은 별도 형태라 여기서 제외한다.
-function getCategoryEntities(project: SeriesProject, category: CanonCategory): CanonEntity[] {
-  switch (category) {
-    case 'places':
-      return project.places;
-    case 'objects':
-      return project.objects;
-    case 'events':
-      return project.events;
-    default:
-      return [];
-  }
-}
-
-// 분야에 충돌·미확인 엔티티가 하나라도 있으면 좌레일 nav에 플래그를 띄운다.
-function categoryHasFlag(project: SeriesProject, category: CanonCategory): boolean {
-  if (category === 'characters') {
-    return false;
-  }
-  if (category === 'timeline') {
-    return project.timeline.some((entry) => entry.status !== 'ok');
-  }
-
-  return getCategoryEntities(project, category).some((entity) => entity.status !== 'ok');
-}
-
-function categoryCount(project: SeriesProject, category: CanonCategory): number {
-  if (category === 'characters') {
-    return project.characters.length;
-  }
-  if (category === 'timeline') {
-    return project.timeline.length;
-  }
-
-  return getCategoryEntities(project, category).length;
-}
-
-// 데이터 모드 좌레일 캐논 nav — 분야 5종, 분야별 개수와 충돌 플래그를 보여준다.
-function CanonNav({
-  project,
-  activeCategory,
-  onSelectCategory
-}: {
-  project: SeriesProject;
-  activeCategory: CanonCategory | null;
-  onSelectCategory: (category: CanonCategory) => void;
-}) {
-  return (
-    <nav className="ex-canon-nav" aria-label="캐논 분야">
-      {canonCategories.map((category) => {
-        const isActive = activeCategory === category.id;
-        const hasFlag = categoryHasFlag(project, category.id);
-
-        return (
-          <button
-            key={category.id}
-            type="button"
-            className={`ex-canon-nav-item ${isActive ? 'is-active' : ''}`}
-            aria-current={isActive ? 'true' : undefined}
-            onClick={() => onSelectCategory(category.id)}
-          >
-            <span className="ex-canon-nav-name">{category.label}</span>
-            <span className="ex-canon-nav-count">{categoryCount(project, category.id)}</span>
-            {hasFlag && (
-              <span className="ex-canon-nav-flag" title="충돌·미확인 항목 있음" aria-label="충돌·미확인 항목 있음" />
-            )}
-          </button>
-        );
-      })}
-    </nav>
-  );
-}
-
-// 바이블 규칙 5섹션 아코디언 — project.bibleOutline의 실제 본문을 펼쳐 읽는다.
-function BibleRulesAccordion({ sections }: { sections: SeriesProject['bibleOutline'] }) {
-  const [openId, setOpenId] = useState<string | null>(null);
-
-  if (sections.length === 0) {
-    return <p className="ex-beats-empty">바이블 규칙이 아직 비어 있습니다.</p>;
-  }
-
-  return (
-    <div className="ex-bible-rules">
-      {sections.map((section) => {
-        const isOpen = openId === section.id;
-
-        return (
-          <div key={section.id} className={`ex-bible-rule ${isOpen ? 'is-open' : ''}`}>
-            <button
-              type="button"
-              className="ex-bible-rule-head"
-              aria-expanded={isOpen}
-              onClick={() => setOpenId((current) => (current === section.id ? null : section.id))}
-            >
-              <span className="ex-bible-rule-title">{section.title}</span>
-              <ChevronDown size={13} className="ex-bible-rule-caret" aria-hidden="true" />
-            </button>
-            {isOpen && <p className="ex-bible-rule-body">{section.body}</p>}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// 데이터 모드 좌레일 — 작품 상태 + 캐논 nav + 바이블 규칙 + 작품 데이터(개요·캐논·문체·승인) 진입점.
-function DataLeftRail({
-  project,
-  latestChapter,
-  isSerial,
-  canonHealth,
-  approvalQueue,
-  dataView,
-  onSelectCategory,
-  onSelectBibleSection
-}: {
-  project: SeriesProject;
-  latestChapter: Chapter | null;
-  isSerial: boolean;
-  canonHealth: number;
-  approvalQueue: MemoryApprovalQueue;
-  dataView: DataView;
-  onSelectCategory: (category: CanonCategory) => void;
-  onSelectBibleSection: (section: BibleSection) => void;
-}) {
-  const activeCategory = dataView.kind === 'canon' ? dataView.category : null;
-  const activeBibleSection = dataView.kind === 'bible' ? dataView.section : null;
-  const pendingCount = approvalQueue.items.filter((item) => item.status !== 'approved').length;
-  // 캐논 분야 5종 밖의 바이블 작업장 진입점 — 옛 바이블 트랙의 기능을 데이터 모드에서 그대로 이어 쓴다.
-  const bibleEntries: Array<{ id: BibleSection; label: string; meta: string }> = [
-    { id: 'overview', label: '작품 계약', meta: '약속·질문·형식' },
-    { id: 'canon', label: '캐논 원장', meta: `${project.canonFacts.length}개 사실` },
-    { id: 'voice', label: '문체 바이블', meta: '톤·시각·오디오' },
-    { id: 'approval', label: '승인 대기', meta: `${pendingCount}개 대기` }
-  ];
-
-  return (
-    <>
-      <section className="sx-panel ex-workstate-card" aria-label="작품 상태">
-        <div className="ex-rail-section-head">
-          <span className="ex-rail-label">작품 상태</span>
-        </div>
-        <WorkStateGrid project={project} latestChapter={latestChapter} isSerial={isSerial} />
-        <div className="ex-canon-health" title="캐논 건강도 — 회차 대비 확정 사실·규칙·인물의 밀도">
-          <span className="ex-canon-health-label">캐논</span>
-          <span className="ex-canon-health-track">
-            <i className="ex-canon-health-fill" style={{ width: `${canonHealth}%` }} />
-          </span>
-          <span className="ex-canon-health-pct">{canonHealth}%</span>
-        </div>
-      </section>
-
-      <section className="sx-panel ex-canon-nav-card" aria-label="캐논 분야">
-        <div className="ex-rail-section-head">
-          <span className="ex-rail-label">캐논</span>
-        </div>
-        <CanonNav project={project} activeCategory={activeCategory} onSelectCategory={onSelectCategory} />
-      </section>
-
-      <section className="sx-panel ex-data-bible-card" aria-label="작품 데이터">
-        <div className="ex-rail-section-head">
-          <span className="ex-rail-label">작품 데이터</span>
-        </div>
-        <div className="ex-data-bible-list">
-          {bibleEntries.map((entry) => {
-            const isActive = activeBibleSection === entry.id;
-            const isApproval = entry.id === 'approval';
-
-            return (
-              <button
-                key={entry.id}
-                type="button"
-                className={`ex-data-bible-item ${isActive ? 'is-active' : ''}${
-                  isApproval && pendingCount > 0 ? ' is-pending' : ''
-                }`}
-                aria-current={isActive ? 'true' : undefined}
-                onClick={() => onSelectBibleSection(entry.id)}
-              >
-                <span className="ex-data-bible-name">{entry.label}</span>
-                <span className="ex-data-bible-meta">{entry.meta}</span>
-                {isApproval && pendingCount > 0 && (
-                  <span className="ex-data-bible-badge">{pendingCount}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="sx-panel ex-bible-rules-card" aria-label="바이블 규칙">
-        <div className="ex-rail-section-head">
-          <span className="ex-rail-label">바이블 규칙</span>
-        </div>
-        <BibleRulesAccordion sections={project.bibleOutline} />
-      </section>
-    </>
-  );
-}
-
-// 인물 관계도 — 캐논 인물 노드와 character.relations 엣지를 SVG로 배치한다.
-function CharacterGraph({
-  characters,
-  pickedId,
-  onPick
-}: {
-  characters: CharacterProfile[];
-  pickedId: string;
-  onPick: (id: string) => void;
-}) {
-  const W = 640;
-  const H = 380;
-  // 노드를 원형으로 균등 배치한다 — 인물 수와 무관하게 안정적으로 펼쳐진다.
-  const layout = useMemo(() => {
-    const cx = W / 2;
-    const cy = H / 2;
-    const radius = characters.length <= 1 ? 0 : Math.min(W, H) * 0.32;
-    const map = new Map<string, { x: number; y: number }>();
-    characters.forEach((character, index) => {
-      if (characters.length === 1) {
-        map.set(character.id, { x: cx, y: cy });
-        return;
-      }
-      const angle = (index / characters.length) * Math.PI * 2 - Math.PI / 2;
-      map.set(character.id, {
-        x: cx + radius * Math.cos(angle),
-        y: cy + radius * Math.sin(angle)
-      });
-    });
-    return map;
-  }, [characters]);
-
-  // relations는 방향이 있지만 시각적으로는 한 쌍을 한 선으로 그린다 — 중복 엣지를 제거한다.
-  const edges = useMemo(() => {
-    const seen = new Set<string>();
-    const list: Array<{ a: string; b: string; label: string; strong: boolean; dashed: boolean }> = [];
-    characters.forEach((character) => {
-      character.relations.forEach((relation) => {
-        if (!layout.has(relation.targetId)) {
-          return;
-        }
-        const key = [character.id, relation.targetId].sort().join('::');
-        if (seen.has(key)) {
-          return;
-        }
-        seen.add(key);
-        list.push({
-          a: character.id,
-          b: relation.targetId,
-          label: relation.label,
-          strong: relation.strong === true,
-          dashed: relation.dashed === true
-        });
-      });
-    });
-    return list;
-  }, [characters, layout]);
-
-  if (characters.length === 0) {
-    return <p className="ex-beats-empty">아직 등록된 인물이 없습니다.</p>;
-  }
-
-  return (
-    <div className="ex-char-graph">
-      <svg viewBox={`0 0 ${W} ${H}`} className="ex-char-graph-svg" role="img" aria-label="인물 관계도">
-        {edges.map((edge, index) => {
-          const a = layout.get(edge.a)!;
-          const b = layout.get(edge.b)!;
-          const mx = (a.x + b.x) / 2;
-          const my = (a.y + b.y) / 2;
-
-          return (
-            <g key={index} className={`ex-char-edge ${edge.strong ? 'is-strong' : ''}`}>
-              <line
-                x1={a.x}
-                y1={a.y}
-                x2={b.x}
-                y2={b.y}
-                className={`ex-char-edge-line ${edge.strong ? 'is-strong' : ''} ${edge.dashed ? 'is-dashed' : ''}`}
-              />
-              {edge.label && (
-                <text x={mx} y={my - 6} className="ex-char-edge-label" textAnchor="middle">
-                  {edge.label}
-                </text>
-              )}
-            </g>
-          );
-        })}
-        {characters.map((character) => {
-          const pos = layout.get(character.id)!;
-          const isPicked = character.id === pickedId;
-
-          return (
-            <g
-              key={character.id}
-              className={`ex-char-node ${isPicked ? 'is-picked' : ''}`}
-              transform={`translate(${pos.x}, ${pos.y})`}
-              role="button"
-              tabIndex={0}
-              aria-label={`${character.name} — ${character.role}`}
-              aria-pressed={isPicked}
-              onClick={() => onPick(character.id)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  onPick(character.id);
-                }
-              }}
-            >
-              <circle r={34} className="ex-char-node-circle" />
-              <text y={5} textAnchor="middle" className="ex-char-node-name">
-                {character.name}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-      <div className="ex-char-graph-legend">
-        <span>
-          <i className="ex-char-legend-line is-strong" /> 핵심 관계
-        </span>
-        <span>
-          <i className="ex-char-legend-line is-dashed" /> 잠정·미확정
-        </span>
-        <span className="ex-char-graph-hint">노드를 누르면 옆에서 인물 상세를 봅니다.</span>
-      </div>
-    </div>
-  );
-}
-
-// 인물 관계도에서 고른 인물의 상세 — 욕망·상처·현재 상태를 직접 편집한다.
-function CharacterDetailPanel({
-  character,
-  onUpdateCharacter
-}: {
-  character: CharacterProfile;
-  onUpdateCharacter: (characterId: string, field: 'desire' | 'wound' | 'currentState', value: string) => void;
-}) {
-  return (
-    <div className="ex-canon-detail">
-      <header className="ex-canon-detail-head">
-        <span className="ex-canon-detail-type">인물</span>
-        <h3>{character.name}</h3>
-        <span className="ex-canon-detail-sub">{character.role}</span>
-      </header>
-      <label className="ex-canon-detail-field">
-        <small>욕망</small>
-        <textarea
-          value={character.desire}
-          onChange={(event) => onUpdateCharacter(character.id, 'desire', event.target.value)}
-          rows={2}
-        />
-      </label>
-      <label className="ex-canon-detail-field">
-        <small>상처</small>
-        <textarea
-          value={character.wound}
-          onChange={(event) => onUpdateCharacter(character.id, 'wound', event.target.value)}
-          rows={2}
-        />
-      </label>
-      <label className="ex-canon-detail-field">
-        <small>현재 상태</small>
-        <textarea
-          value={character.currentState}
-          onChange={(event) => onUpdateCharacter(character.id, 'currentState', event.target.value)}
-          rows={3}
-        />
-      </label>
-      {character.canonAnchors.length > 0 && (
-        <div className="ex-canon-detail-anchors" aria-label="캐논 앵커">
-          {character.canonAnchors.map((anchor) => (
-            <em key={anchor}>{anchor}</em>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// 장소·사물·사건 카드 그리드 — 캐논 엔티티를 읽고, 충돌이면 충돌 텍스트와 해결 진입점을 보여준다.
-function CanonCardGrid({
-  entries,
-  typeLabel,
-  onResolveConflict
-}: {
-  entries: CanonEntity[];
-  typeLabel: string;
-  onResolveConflict: () => void;
-}) {
-  if (entries.length === 0) {
-    return <p className="ex-beats-empty">아직 등록된 {typeLabel}이(가) 없습니다.</p>;
-  }
-
-  return (
-    <div className="ex-canon-card-grid">
-      {entries.map((entry) => (
-        <article key={entry.id} className={`ex-canon-card ex-canon-card--${entry.status}`}>
-          <header className="ex-canon-card-head">
-            <span className="ex-canon-card-type">{typeLabel}</span>
-            <h3>{entry.name}</h3>
-            {entry.sub && <span className="ex-canon-card-sub">{entry.sub}</span>}
-            <CanonStatusBadge status={entry.status} />
-          </header>
-          {entry.facts.length > 0 && (
-            <ul className="ex-canon-card-facts">
-              {entry.facts.map((fact, index) => (
-                <li key={index}>{fact}</li>
-              ))}
-            </ul>
-          )}
-          {entry.status === 'conflict' && entry.conflict && (
-            <div className="ex-canon-card-conflict">
-              <span className="ex-canon-card-conflict-label">충돌</span>
-              <p>{entry.conflict}</p>
-              <button type="button" className="ex-canon-card-resolve" onClick={onResolveConflict}>
-                캐논 원장에서 해결
-              </button>
-            </div>
-          )}
-          {entry.appearedIn.length > 0 && (
-            <div className="ex-canon-card-where">
-              <span>등장</span>
-              {entry.appearedIn.map((where) => (
-                <code key={where}>{where}</code>
-              ))}
-            </div>
-          )}
-        </article>
-      ))}
-    </div>
-  );
-}
-
-// 시간선 — project.timeline 항목을 세로 타임라인으로 보여준다.
-function CanonTimeline({ entries }: { entries: TimelineEntry[] }) {
-  if (entries.length === 0) {
-    return <p className="ex-beats-empty">아직 시간선 항목이 없습니다.</p>;
-  }
-
-  return (
-    <div className="ex-timeline">
-      {entries.map((entry) => (
-        <div key={entry.id} className={`ex-timeline-tick ex-timeline-tick--${entry.status}`}>
-          <span className="ex-timeline-mark" aria-hidden="true" />
-          <div className="ex-timeline-when">
-            <strong>{entry.season}</strong>
-          </div>
-          <div className="ex-timeline-body">
-            <h4>{entry.label}</h4>
-            <p>{entry.note}</p>
-            <CanonStatusBadge status={entry.status} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// 데이터 모드 가운데 캔버스 — 고른 캐논 분야에 따라 관계도/카드/타임라인을 띄운다.
-function CanonCanvas({
-  category,
-  project,
-  onUpdateCharacter,
-  onOpenBibleSection
-}: {
-  category: CanonCategory;
-  project: SeriesProject;
-  onUpdateCharacter: (characterId: string, field: 'desire' | 'wound' | 'currentState', value: string) => void;
-  onOpenBibleSection: (section: BibleSection) => void;
-}) {
-  const categoryLabel = canonCategories.find((item) => item.id === category)?.label ?? '캐논';
-  const [pickedCharacterId, setPickedCharacterId] = useState<string>(project.characters[0]?.id ?? '');
-  const pickedCharacter =
-    project.characters.find((character) => character.id === pickedCharacterId) ?? project.characters[0] ?? null;
-  // canon 분야 안내 — 분야별 한 줄 설명.
-  const categoryHint: Record<CanonCategory, string> = {
-    characters: '인물 관계도. 노드를 눌러 욕망·상처·현재 상태를 바로 고칩니다.',
-    places: '작품 속 장소 카드. 충돌 항목은 캐논 원장에서 해결합니다.',
-    objects: '작품 속 사물 카드. 충돌 항목은 캐논 원장에서 해결합니다.',
-    events: '작품 속 사건 카드. 충돌 항목은 캐논 원장에서 해결합니다.',
-    timeline: '작품 연표. 미확인 시점은 캐논 원장에서 확정합니다.'
-  };
-
-  let body: JSX.Element;
-  if (category === 'characters') {
-    body = (
-      <div className="ex-canon-pane ex-canon-pane--graph">
-        <CharacterGraph
-          characters={project.characters}
-          pickedId={pickedCharacterId || (project.characters[0]?.id ?? '')}
-          onPick={setPickedCharacterId}
-        />
-        <div className="ex-canon-pane-aside">
-          {pickedCharacter ? (
-            <CharacterDetailPanel character={pickedCharacter} onUpdateCharacter={onUpdateCharacter} />
-          ) : (
-            <p className="ex-beats-empty">인물을 먼저 등록하면 상세가 여기에 표시됩니다.</p>
-          )}
-        </div>
-      </div>
-    );
-  } else if (category === 'timeline') {
-    body = <CanonTimeline entries={project.timeline} />;
-  } else {
-    body = (
-      <CanonCardGrid
-        entries={getCategoryEntities(project, category)}
-        typeLabel={categoryLabel}
-        onResolveConflict={() => onOpenBibleSection('canon')}
-      />
-    );
-  }
-
-  return (
-    <section className="sx-canon-canvas" aria-label={`${categoryLabel} 데이터`}>
-      <header className="ex-canon-canvas-head">
-        <div className="ex-canon-canvas-crumbs">
-          <span>데이터</span>
-          <ChevronRight size={12} aria-hidden="true" />
-          <em>{categoryLabel}</em>
-        </div>
-        <h2 className="ex-canon-canvas-title">{categoryLabel}</h2>
-        <p className="ex-canon-canvas-hint">{categoryHint[category]}</p>
-        <div className="ex-canon-canvas-actions">
-          <button type="button" className="sx-secondary-button" onClick={() => onOpenBibleSection('canon')}>
-            <GitBranch size={14} />
-            캐논 원장 열기
-          </button>
-        </div>
-      </header>
-      <div className="ex-canon-canvas-body">{body}</div>
-    </section>
-  );
-}
-
-// 데이터 모드 우레일 — 분야별 데이터 검토. 검토를 실행하면 연속성 감수자가 정합/제안 노트를 채운다.
-function DataReviewRail({
-  category,
-  review,
-  isReviewing,
-  onRequestReview,
-  onOpenApprovalQueue
-}: {
-  category: CanonCategory;
-  review: DataReviewView | null;
-  isReviewing: boolean;
-  onRequestReview: () => void;
-  onOpenApprovalQueue: () => void;
-}) {
-  const categoryLabel = canonCategories.find((item) => item.id === category)?.label ?? '캐논';
-  const consistencyNotes = review ? review.notes.filter((note) => note.kind === '정합') : [];
-  const suggestionNotes = review ? review.notes.filter((note) => note.kind === '제안') : [];
-
-  return (
-    <section className="sx-panel sx-data-review-rail" aria-label={`${categoryLabel} 데이터 검토`}>
-      <div className="sx-panel-heading">
-        <ClipboardCheck size={16} />
-        <h2>{categoryLabel} 검토</h2>
-      </div>
-      <p className="ex-data-review-intro">
-        {categoryLabel} 데이터의 정합과 제안을 분야별로 모읍니다. 검토를 실행하면 결과가 여기에 쌓입니다.
-      </p>
-
-      {isReviewing ? (
-        <div className="ex-data-review-empty" aria-live="polite">
-          <span className="ex-data-review-empty-dot" aria-hidden="true" />
-          <strong>검토하는 중…</strong>
-          <p>연속성 감수자가 {categoryLabel} 데이터의 회차 간 정합을 읽고 있습니다.</p>
-        </div>
-      ) : review ? (
-        <div className="ex-data-review-result">
-          {review.summary ? <p className="ex-data-review-summary">{review.summary}</p> : null}
-          {review.source === 'fallback' ? (
-            <p className="ex-data-review-source">브리지를 쓰지 못해 기본 검토로 만든 결과입니다.</p>
-          ) : null}
-
-          {consistencyNotes.length > 0 ? (
-            <div className="ex-data-review-group">
-              <h3>정합 점검 ({consistencyNotes.length})</h3>
-              {consistencyNotes.map((note, index) => (
-                <article key={`정합-${index}`} className="ex-data-review-note ex-data-review-note--consistency">
-                  <span className="ex-data-review-note-kind">정합</span>
-                  {note.title ? <strong>{note.title}</strong> : null}
-                  <p>{note.body}</p>
-                </article>
-              ))}
-            </div>
-          ) : null}
-
-          {suggestionNotes.length > 0 ? (
-            <div className="ex-data-review-group">
-              <h3>보강 제안 ({suggestionNotes.length})</h3>
-              {suggestionNotes.map((note, index) => (
-                <article key={`제안-${index}`} className="ex-data-review-note ex-data-review-note--suggestion">
-                  <span className="ex-data-review-note-kind">제안</span>
-                  {note.title ? <strong>{note.title}</strong> : null}
-                  <p>{note.body}</p>
-                </article>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      ) : (
-        <div className="ex-data-review-empty">
-          <span className="ex-data-review-empty-dot" aria-hidden="true" />
-          <strong>아직 검토 없음</strong>
-          <p>이 분야에 대한 에이전트 의견이 아직 없습니다. 데이터 검토를 실행해 정합·제안을 받아보세요.</p>
-        </div>
-      )}
-
-      <div className="ex-data-review-actions">
-        <button type="button" className="sx-primary-button" onClick={onRequestReview} disabled={isReviewing}>
-          <ClipboardCheck size={15} />
-          {isReviewing ? '검토하는 중…' : review ? '데이터 검토 다시 실행' : '데이터 검토 실행'}
-        </button>
-        <button type="button" className="sx-secondary-button" onClick={onOpenApprovalQueue}>
-          승인 대기 열기
-        </button>
       </div>
     </section>
   );
@@ -5274,47 +4242,6 @@ function ProjectStateCard({
   );
 }
 
-function MemoryBankCard({ bank }: { bank: StoryMemoryBank }) {
-  const privateFiles = bank.files.filter((file) => file.syncPolicy === 'private-never-sync');
-  const folders = Array.from(
-    new Set(
-      bank.syncableFiles
-        .map((file) => file.path.replace(`${bank.root}/`, '').split('/')[0])
-        .filter((folder) => folder !== 'manifest.json' && folder !== 'story-core.md')
-    )
-  ).slice(0, 5);
-
-  return (
-    <section className="sx-panel sx-memory-bank-card" aria-label="Story X 메모리 뱅크">
-      <div className="sx-panel-heading">
-        <Database size={16} />
-        <h2>메모리 뱅크</h2>
-      </div>
-      <p className="sx-memory-bank-root">{bank.root}</p>
-      <dl className="sx-memory-bank-stats">
-        <div>
-          <dt>sync</dt>
-          <dd>{bank.syncableFiles.length}</dd>
-        </div>
-        <div>
-          <dt>private</dt>
-          <dd>{privateFiles.length}</dd>
-        </div>
-        <div>
-          <dt>files</dt>
-          <dd>{bank.files.length}</dd>
-        </div>
-      </dl>
-      <div className="sx-memory-bank-folders">
-        {folders.map((folder) => (
-          <span key={folder}>{folder}</span>
-        ))}
-      </div>
-      <small>원문 자료는 private/raw-sources에 두고, 에이전트는 필요한 구조 기억만 읽습니다.</small>
-    </section>
-  );
-}
-
 function AiCliHarnessCard({
   plan,
   result,
@@ -5419,32 +4346,6 @@ function AiCliHarnessCard({
   );
 }
 
-function EvaluatorQualityCard({ workflow }: { workflow: TesterDrivenWorkflow }) {
-  return (
-    <section className="sx-panel sx-evaluator-card" aria-label="평가 반영 품질 게이트">
-      <div className="sx-panel-heading">
-        <ClipboardCheck size={16} />
-        <h2>품질 게이트</h2>
-      </div>
-      <p>{workflow.activationMetric}</p>
-      <div className="sx-evaluator-gates">
-        {workflow.qualityGateIds.map((gate) => (
-          <span key={gate}>{gate}</span>
-        ))}
-      </div>
-      <ol>
-        {workflow.steps.slice(0, 4).map((step) => (
-          <li key={step.title}>
-            <strong>{step.title}</strong>
-            <small>{step.owner}</small>
-          </li>
-        ))}
-      </ol>
-      <small>{workflow.approvalRule}</small>
-    </section>
-  );
-}
-
 function StoryXStatusBar({
   alphaReport: report,
   project,
@@ -5478,30 +4379,6 @@ function StoryXStatusBar({
       <span>{editedSinceReview ? '수정 미검토' : 'synced'}</span>
       <span>⌘K 명령 · ⌘. 집중</span>
     </footer>
-  );
-}
-
-// 열린 질문 — 작품이 아직 답하지 않은, 연속성을 위해 추적 중인 질문들.
-// 새 프로젝트는 비어 있는 게 정상이라, 차분한 빈 상태를 보여준다(샘플 떡밥을 끼워 넣지 않는다).
-function OpenThreadsCard({ threads }: { threads: string[] }) {
-  return (
-    <section className="sx-panel sx-open-threads-card" aria-label="열린 질문">
-      <div className="sx-panel-heading">
-        <ListChecks size={16} />
-        <h2>열린 질문</h2>
-      </div>
-      {threads.length > 0 ? (
-        <ul className="sx-thread-list">
-          {threads.map((thread) => (
-            <li key={thread}>{thread}</li>
-          ))}
-        </ul>
-      ) : (
-        <p className="sx-thread-empty">
-          아직 열린 질문이 없습니다. 작품이 아직 답하지 않은 질문이 생기면, 연속성을 위해 이곳에 모입니다.
-        </p>
-      )}
-    </section>
   );
 }
 
@@ -5562,20 +4439,6 @@ function BibleAssistantSidebar({
         })}
       </div>
     </section>
-  );
-}
-
-function AgentPixelPortrait({ persona }: { persona: AgentPersona }) {
-  return (
-    <div className={`pixel-agent ${persona.pixelClass}`} aria-hidden="true">
-      <span className="pixel-agent-hair" />
-      <span className="pixel-agent-head">
-        <i />
-        <b />
-      </span>
-      <span className="pixel-agent-neck" />
-      <span className="pixel-agent-body" />
-    </div>
   );
 }
 

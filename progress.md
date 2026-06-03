@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-03 · Branch: `main` (HEAD `8d3aca2` · origin push 완료)
+> Last Updated: 2026-06-04 · Branch: `main` (rank5 Tier1~2B 체크포인트 커밋)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 현재 활성 — M11 검토 기반 정비 (`in_progress`)
@@ -15,6 +15,12 @@
 - **rank4** (Codex 구현 + code-reviewer + Codex 수정) — continuity 충돌 감지를 반의어·생사 대립쌍(OPPOSITION_PATTERNS)·숫자 비교·인물ID(hasSameEntity 가드)로 보강. validateContinuity 가 3계층(hard/living/soft)을 실제로 채우고 growthLedger 루프(appendGrowthEntry·buildContextPack) 연결. code-reviewer 가 거짓양성 CRITICAL(숫자 divergence)+HIGH(presence 동사형·3계층 과분류)를 잡아 Codex 재수정 — 엔티티 가드·공유 목적어 요구·확정 사실 hard 유지. 거짓양성 가드 3 케이스 테스트.
 rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
+**이번 세션(2026-06-04) 추가 — rank5 착수 (Codex 위임 + Claude 검증, 위험도 티어별 단계 추출).** `StoryXDesk.tsx` 6,097→4,960줄(-1,137).
+- **Tier 1 (상수)** — `agentPersonas`·`agentSeedData`·`studioConstants` 3모듈로 추출. 7개 리터럴 byte-identical 검증.
+- **Tier 2 Pass A (리프 컴포넌트 8개)** — CanonStatusBadge·PublishingIndexCard·MemoryBankCard·OpenThreadsCard·EvaluatorQualityCard·CanonTimeline·BibleRulesAccordion·AgentPixelPortrait. Codex가 brittle source-string 테스트를 통과시키려 심은 우회 주석(false-green)을 Claude 검증이 적발 → 단언을 정의 파일로 재배치(`componentSrc` 헬퍼 도입).
+- **Tier 2 Pass B (Canon/Data 7개 + `canonDataView.ts`)** — CanonNav·DataLeftRail·CharacterGraph·CharacterDetailPanel·CanonCardGrid·CanonCanvas·DataReviewRail. 공용 타입·헬퍼는 `src/lib/canonDataView.ts`로. 테스트 단언 21:21 재배치(삭제·약화 0). Codex 스코프 크리프(상태 문서 임의 수정)는 Claude가 되돌림.
+- 검증 — 매 티어 tsc 0 · 293 tests(올바른 이유로) · build · 캐논 뷰·편집기 픽셀 동일. 남은 작업 — Tier2 잔여 ~20개 + Tier3 훅(최고위험, code-reviewer 2차).
+
 **추가 핫픽스 (사용자 발견 · 다크 스코프 대비 버그 2건)** — 둘 다 M8.5 의 `.home-page` 다크 전환 시 누락된 잔재다.
 1. 매체·포맷 카드 제목이 다크 배경에 묻힘 — `.home-page` 다크 스코프에 `--nx-ink-deep` 오버라이드 누락(12토큰 중 빠짐). `styles.css:8821` 에 `--nx-ink-deep: #f7f7fb` 추가.
 2. 상단 nav(`hx-nav`) 의 "Story X" 브랜드·스텝 라벨이 묻힘 — nav 배경이 흰색(`rgba(255,255,255,0.92)`)으로 하드코딩된 채 남아 다크 스코프의 흰 텍스트(`--nx-ink`)와 흰+흰 충돌. `styles.css:8854` 를 `rgba(8,9,10,0.85)` 다크로 교체.
@@ -27,7 +33,7 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 2 | 빌딩 LLM 실패 폴백 초안 + 배너 | medium | ✅ done (Codex) |
 | 3 | 품질 게이트 본문 배선 + ready conjunctive | medium | ✅ done (Codex+리뷰+수정) |
 | 4 | continuity 충돌 감지 보강 + living/soft 3계층 통합 | large | ✅ done (Codex+리뷰+수정) |
-| 5 | StoryXDesk.tsx(6,067줄) 훅·컴포넌트 분리 | large | todo |
+| 5 | StoryXDesk.tsx 훅·컴포넌트 분리 (6,097→4,960, Tier1·2A·2B done) | large | 🔄 진행 중 |
 | 6 | 1.0 기준 시장증명 재정의 + 경량 검증 | medium | todo |
 | 7 | 편집기 상단바 압축 + academic 1.0 범위 결정 | medium | todo |
 | (B) | 로컬 작가진 Codex 연결 (M12) | small | ✅ done |
@@ -36,9 +42,9 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 ## 다음 한 단계
 
-rank 5(StoryXDesk 6,067줄 훅·컴포넌트 분리, large) — 이후 작업의 비용 승수라 우선 권장. 또는 rank 6(1.0 시장증명 재정의)·rank 7(편집기 UX 정돈). 모두 Codex 위임 + 도메인/회귀 위험 크면 code-reviewer 2차. **rank5 상세 task packet 은 `session-handoff.md` 맨 위 노트에 작성해 두었다.**
+rank5 Tier 2 Pass C — `StoryXDesk.tsx` 잔여 서브컴포넌트(Dialogs·Agent·Publishing·Memory/Bible·Status 클러스터 ~20개) 추출 계속. 이후 Tier 3 훅 분리(useProject·useDraftEditor·useReviewSession·useUIState — 최고위험, code-reviewer 2차 필수). 방식은 Codex 위임 + Claude 검증, 패스마다 tsc·293·build·시각 픽셀 비교다. **Codex 패킷 필수 조항 — 우회 주석 금지·상태 문서 수정 금지·이동 심볼 단언은 정의 파일로 재배치.**
 
-## 최근 검증 (2026-06-03)
+## 최근 검증 (2026-06-04)
 
 ```
 npx tsc --noEmit   → exit 0
