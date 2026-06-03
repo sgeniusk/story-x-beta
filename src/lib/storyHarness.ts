@@ -8,6 +8,7 @@ import {
   type BuildOntologyInput,
   type StoryOntology
 } from './storyOntology';
+import type { QualityGatesReport } from './qualityGates';
 
 export type HarnessStageId =
   | 'story-sense'
@@ -33,6 +34,7 @@ export interface HarnessStageResult {
 export interface RunStoryHarnessInput extends BuildOntologyInput {
   medium: string;
   formatLabel: string;
+  qualityGatesReport?: Pick<QualityGatesReport, 'blockingPassed'>;
 }
 
 export interface StoryHarnessReport {
@@ -61,11 +63,12 @@ export function runStoryHarness(input: RunStoryHarnessInput): StoryHarnessReport
 
   const qualityScore = stages.reduce((sum, stage) => sum + stage.score, 0);
   const anyBlocked = stages.some((stage) => stage.status === 'block');
+  const blockingQualityGatesPassed = input.qualityGatesReport?.blockingPassed ?? true;
 
   return {
     stages,
     qualityScore,
-    readyForProduction: qualityScore >= READY_THRESHOLD && !anyBlocked,
+    readyForProduction: qualityScore >= READY_THRESHOLD && !anyBlocked && blockingQualityGatesPassed,
     ontology
   };
 }

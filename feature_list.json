@@ -1,9 +1,9 @@
 {
   "schema": "harness/feature-list/v1",
   "project": "Story X — 한국어 장편 연재 스튜디오",
-  "active": "M6.3-storyx-cli",
+  "active": "M11-review-driven-hardening",
   "dependencies_note": "각 feature는 dependencies 배열로 선행 작업을 명시한다. status는 done · in_progress · blocked · todo 중 하나.",
-  "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것.",
+  "notes": "Story X에는 두 종류의 '하네스'가 있다. (a) 코딩 에이전트 작업 하네스 = 이 파일 + progress.md + init.sh + session-handoff.md. (b) 스토리 하네스 = storyOntology·storyHarness·continuityContract, docs/storyx-harness-architecture.md가 정본. 둘을 혼동하지 말 것. 마일스톤 트랙은 두 갈래다 — M 시리즈(코어 제품)와 A 시리즈(사회과학/학술 확장, A1~A5 완결).",
   "features": [
     {
       "id": "M1-harness-design-doc",
@@ -260,11 +260,74 @@
     {
       "id": "M7-alpha-1.0",
       "name": "v1.0.0-alpha 완성 루프",
-      "description": "소설·에세이 완성 루프가 끝까지 이어진다. 30화 회귀 통과. 모드 가중치(commercialWeight / literaryWeight) 게이트 실 동작.",
+      "description": "소설·에세이 완성 루프가 끝까지 이어진다. 30화 회귀 통과. 모드 가중치(commercialWeight / literaryWeight) 게이트 실 동작. 2026-06-01 멀티에이전트 검토 결과 done_criteria는 기술 회귀만이 아니라 시장 증명(외부 작가 N명 완성)을 포함하도록 재정의 필요 — M11 rank 6 참조.",
       "status": "todo",
       "dependencies": ["M4-story-harness-implementation", "M5-vercel-functions", "M6-persistence-memory-sync"],
       "done_criteria": "30화 시리즈 회귀 통과, 완성 루프 데모 가능",
       "evidence": null
+    },
+    {
+      "id": "A1-academic-medium-scaffold",
+      "name": "A1 — 사회과학/학술 매체 골격 (5번째 매체)",
+      "description": "기존 4매체(소설·에세이·만화·오디오북)에 academic(사회과학/학습) 매체를 5번째로 추가. 매체 선택 UI·projectBlueprint·storyEngine 매체 타입 확장. commercialWeight:0·literaryWeight:0 의 분리 모드. 영어 APA 관행·로컬 휴리스틱 결정.",
+      "status": "done",
+      "dependencies": ["M4-essay-studio-agents"],
+      "done_criteria": "academic 매체가 매체 선택에 노출 + projectBlueprint deliverables + tsc 0 · 테스트 전체 통과 · build 성공",
+      "evidence": "commit 98d6221 (merge a89e34c) · src/lib/projectBlueprint.ts academic 매체 · src/App.tsx:32,173 · docs 결정 e172350/d380f68"
+    },
+    {
+      "id": "A2-claim-evidence-harness",
+      "name": "A2 — 주장 레저 + 주장-근거 하네스",
+      "description": "claimLedger.ts 신설 — 학술 본문 주장 추출(영어 APA 마커)·근거 유형(data/prior-work/logic/anecdote) 매핑·미근거 주장 탐지. 로컬 휴리스틱·결정론적. claim_evidence_mapping 게이트(academic 전용, advisory). academic 매체일 때 근거 없는 주장을 마진에 block(critic-reviewer) 표시.",
+      "status": "done",
+      "dependencies": ["A1-academic-medium-scaffold"],
+      "done_criteria": "claimLedger extractClaims/mapClaimsToEvidence + claim_evidence_mapping 게이트 실판정 + tsc 0 · 테스트 전체 통과 · build 성공",
+      "evidence": "commit 31b114b (merge 47b15f9) · src/lib/claimLedger.ts + claimLedger.test.ts"
+    },
+    {
+      "id": "A3-citation-integrity-gate",
+      "name": "A3 — 인용 무결성 게이트 + 환각 인용 탐지",
+      "description": "citationGate.ts 신설 — 인용 추출·출처 존재·페이지·맥락 일치 로컬 휴리스틱. 환각 인용(존재하지 않거나 본문과 어긋나는 출처) 탐지. citation_integrity 게이트 실제 판정.",
+      "status": "done",
+      "dependencies": ["A2-claim-evidence-harness"],
+      "done_criteria": "citationGate + citation_integrity 게이트 실판정 + tsc 0 · 테스트 전체 통과 · build 성공",
+      "evidence": "commit 5c7b846 (merge d90cff2) · src/lib/citationGate.ts + citationGate.test.ts"
+    },
+    {
+      "id": "A4-counterargument-ethics-gate",
+      "name": "A4 — 반론 무결성 + 연구 윤리 게이트",
+      "description": "academicIntegrity.ts 신설 — 반론(counter-argument) 누락 감사(CounterArgumentAudit) + 연구 윤리 게이트. claimLedger 기반.",
+      "status": "done",
+      "dependencies": ["A3-citation-integrity-gate"],
+      "done_criteria": "academicIntegrity CounterArgumentAudit + 연구 윤리 게이트 + tsc 0 · 테스트 전체 통과 · build 성공",
+      "evidence": "commit 3c8861b (merge 3c8ba7a) · src/lib/academicIntegrity.ts + academicIntegrity.test.ts"
+    },
+    {
+      "id": "A5-academic-publish",
+      "name": "A5 — 학술 퍼블리시 (사회과학 로드맵 완결)",
+      "description": "academicPublish.ts 신설 — A2~A4 모듈(claimLedger·citationGate·academicIntegrity·qualityGates) 조합으로 buildAcademicPublishSummary. 새 판정 없이 재사용. PublishScreen academic 전용 4섹션(참고문헌 APA·주장-근거 지도·인용 무결성·게이트 현황) + App.tsx publish stage 배선. 다른 매체 퍼블리시 불변.",
+      "status": "done",
+      "dependencies": ["A4-counterargument-ethics-gate"],
+      "done_criteria": "academicPublish buildAcademicPublishSummary + PublishScreen academic 4섹션 + tsc 0 · 42 files / 269 tests · build 성공",
+      "evidence": "commit 513b50e (merge 1c652fa) · src/lib/academicPublish.ts + academicPublish.test.ts · src/components/PublishScreen.tsx academic 섹션 · src/App.tsx publish 배선"
+    },
+    {
+      "id": "M11-review-driven-hardening",
+      "name": "검토 기반 정비 (2026-06-01 멀티에이전트 검토 로드맵)",
+      "description": "로컬 구동 점검 + 7에이전트 멀티에이전트 검토(docs/reviews/2026-06-01-multiagent-review.md)에서 도출한 7단계 우선순위 로드맵. rank1 상태문서 동기화(이번 세션 완료) · rank2 빌딩 폴백초안+실패배너 · rank3 품질게이트 실본문 배선+ready conjunctive화 · rank4 continuity 충돌감지 보강+living/soft 통합 · rank5 StoryXDesk.tsx(6067줄) 훅/컴포넌트 분리 · rank6 1.0 기준 시장증명 재정의+경량검증 · rank7 편집기 UX 정돈+academic 1.0 범위 결정. 핵심 위험은 품질게이트 12개가 본문 대신 StoryXDesk.tsx:1352-1362 하드코딩 리터럴을 평가해 차별점이 데모에서만 작동하는 점(rank3).",
+      "status": "in_progress",
+      "dependencies": ["M4-story-harness-implementation", "A5-academic-publish"],
+      "done_criteria": "rank1~rank4 완료(+ B Codex 연결 M12). rank5~7 은 사용자 우선순위 결정 후 개별 착수.",
+      "evidence": "docs/reviews/2026-06-01-multiagent-review.md · rank1·2·3·4 + M12 완료(Codex 구현/Claude 검증/code-reviewer 2차) · tsc 0 · 293 tests · build 성공"
+    },
+    {
+      "id": "M12-codex-local-provider",
+      "name": "로컬 작가진 LLM provider 를 Codex 로 전환",
+      "description": "로컬 dev 작가진(인터뷰·초안·검토·데이터검토)의 LLM 호출을 claude CLI 에서 Codex CLI(codex exec)로 전환. vite.config.ts 5개 storyxBridge 라우트(/api/draft·review·interview·review-agent·review-data)의 --provider 를 codex 로, storyx.mjs normalize-provider-output 기본값도 codex 로. storyx.mjs 의 codex exec 분기는 이미 구현돼 있어 파서 보강 불필요(showrunner dev 실호출 정상 JSON 확인). claude 경로는 각 라우트 --provider 를 claude 로 되돌리면 복구.",
+      "status": "done",
+      "dependencies": ["M5-vercel-functions"],
+      "done_criteria": "vite 5라우트 codex + storyx 기본값 codex + tsc 0 + 271 tests + dev /api/review-agent codex 실호출 JSON 응답 확인",
+      "evidence": "vite.config.ts storyxBridge 5곳 + 주석(codex), tools/storyx.mjs normalize-provider-output 기본값 codex, dev POST /api/review-agent → provider=codex showrunner JSON(verdict revise) 응답 확인"
     }
   ]
 }

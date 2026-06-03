@@ -2,7 +2,8 @@ import { spawn } from 'node:child_process';
 import { defineConfig, type Connect, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// 로컬 dev 서버에서만 storyx CLI(claude provider)를 실행하는 브리지.
+// 로컬 dev 서버에서만 storyx CLI(codex provider)를 실행하는 브리지.
+// 작가진 LLM 호출을 로컬 Codex CLI(codex exec)로 라우팅한다. claude 로 되돌리려면 각 라우트의 '--provider' 값을 'claude' 로 바꾼다.
 // 배포본(Vercel 정적 호스팅)에는 이 미들웨어가 없으므로 프런트엔드가 deterministic 생성/검토로 폴백한다.
 function storyxBridge(
   route: string,
@@ -105,7 +106,7 @@ export default defineConfig({
       'tools/storyx.mjs',
       'draft',
       '--provider',
-      'claude',
+      'codex',
       '--medium',
       String(input.medium ?? 'novel'),
       '--format',
@@ -121,7 +122,7 @@ export default defineConfig({
       'tools/storyx.mjs',
       'review',
       '--provider',
-      'claude',
+      'codex',
       '--scale',
       String(input.scale ?? 'small'),
       '--target',
@@ -135,7 +136,7 @@ export default defineConfig({
       'tools/storyx.mjs',
       'interview',
       '--provider',
-      'claude',
+      'codex',
       '--medium',
       String(input.medium ?? 'novel'),
       '--format',
@@ -149,7 +150,7 @@ export default defineConfig({
       'tools/storyx.mjs',
       'review-agent',
       '--provider',
-      'claude',
+      'codex',
       '--agent',
       String(input.agent ?? 'showrunner'),
       '--target',
@@ -163,7 +164,7 @@ export default defineConfig({
       'tools/storyx.mjs',
       'review-data',
       '--provider',
-      'claude',
+      'codex',
       '--category',
       String(input.category ?? '인물'),
       '--target',

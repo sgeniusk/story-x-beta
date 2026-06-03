@@ -388,7 +388,7 @@ if (command === 'interview') {
 }
 
 if (command === 'normalize-provider-output') {
-  const provider = readFlag(args, '--provider', 'claude');
+  const provider = readFlag(args, '--provider', 'codex');
   const scale = readFlag(args, '--scale', 'small');
   const mode = readFlag(args, '--mode', 'review');
   const rawFile = readFlag(args, '--raw-file', '');

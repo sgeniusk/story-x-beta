@@ -130,7 +130,7 @@ import { runStoryHarness, type StoryHarnessReport } from './lib/storyHarness';
 // M8 UI 통합 — Layer 0·4·7 결과를 좌레일에 노출.
 import { buildStoryOntology, type StoryOntology } from './lib/storyOntology';
 import { projectAllMedia, type MediaProjection } from './lib/mediaProjection';
-import { evaluateQualityGates, type QualityGatesReport, type StoryMode } from './lib/qualityGates';
+import { buildProseQualityMetrics, evaluateQualityGates, type QualityGatesReport, type StoryMode } from './lib/qualityGates';
 import { extractClaims, findUnsupportedClaims, mapClaimsToEvidence, type Claim } from './lib/claimLedger';
 import { auditCitations, type Citation, type Reference } from './lib/citationGate';
 import {
@@ -1088,6 +1088,7 @@ export function StoryXDesk({
   });
   const [draftPrompt, setDraftPrompt] = useState(defaultEpisodeIntent);
   const [editorText, setEditorText] = useState('');
+  const [draftFallbackNotice, setDraftFallbackNotice] = useState(false);
   const [editedSinceReview, setEditedSinceReview] = useState(false);
   const [agentRuns, setAgentRuns] = useState<AgentRun[]>(defaultRuns);
   const [latestChapter, setLatestChapter] = useState<Chapter | null>(
@@ -1297,28 +1298,11 @@ export function StoryXDesk({
       /* silent */
     }
   }, [studioRailTab]);
-  const harnessReport: StoryHarnessReport = useMemo(
-    () =>
-      runStoryHarness({
-        medium: blueprint.medium,
-        formatLabel: blueprint.formatLabel,
-        material: project.logline || '',
-        storySeed: project.deepQuestion || project.audiencePromise || '',
-        characterSeed: project.characters[0]
-          ? `${project.characters[0].name}: ${project.characters[0].desire}`
-          : '',
-        audience: project.audiencePromise || '',
-        constraints: blueprint.formatLabel || ''
-      }),
-    [
-      blueprint.medium,
-      blueprint.formatLabel,
-      project.logline,
-      project.deepQuestion,
-      project.audiencePromise,
-      project.characters
-    ]
+  const latestProse = useMemo(
+    () => project.chapters[project.chapters.length - 1]?.prose || project.logline || '',
+    [project.chapters, project.logline]
   );
+  const proseQualityMetrics = useMemo(() => buildProseQualityMetrics(latestProse), [latestProse]);
   // M8.4 — storyOntology useMemo. harnessReport 와 같은 입력 매핑.
   const storyOntology: StoryOntology = useMemo(
     () =>
@@ -1346,17 +1330,12 @@ export function StoryXDesk({
     () =>
       evaluateQualityGates(
         {
-          text: project.chapters[project.chapters.length - 1]?.prose || project.logline || '',
+          text: latestProse,
           medium: blueprint.medium,
           isSerial: isSerialFormat(blueprint.format),
-          voiceMatchScore: 75, // 1차 컷 — koreanVoiceGate 연결은 다음 단계
           pressureTriangleActive: Boolean(project.characters[0]?.pressureTriangle),
-          sceneSequelRatio: 0.5,
           isFinale: false,
-          ambiguityScore: 60,
-          ethicalCostPresent: false,
-          motifVariations: project.canonFacts.length >= 2 ? 2 : 0,
-          historicalDensity: 50,
+          ...proseQualityMetrics,
           universalLeapPresent: blueprint.medium === 'essay' ? false : undefined,
           selfReversalCount: 0,
           disclosureScopeSafe: true
@@ -1364,13 +1343,36 @@ export function StoryXDesk({
         storyMode
       ),
     [
-      project.chapters,
-      project.logline,
+      latestProse,
       project.characters,
-      project.canonFacts.length,
       blueprint.medium,
       blueprint.format,
+      proseQualityMetrics,
       storyMode
+    ]
+  );
+  const harnessReport: StoryHarnessReport = useMemo(
+    () =>
+      runStoryHarness({
+        medium: blueprint.medium,
+        formatLabel: blueprint.formatLabel,
+        material: project.logline || '',
+        storySeed: project.deepQuestion || project.audiencePromise || '',
+        characterSeed: project.characters[0]
+          ? `${project.characters[0].name}: ${project.characters[0].desire}`
+          : '',
+        audience: project.audiencePromise || '',
+        constraints: blueprint.formatLabel || '',
+        qualityGatesReport
+      }),
+    [
+      blueprint.medium,
+      blueprint.formatLabel,
+      project.logline,
+      project.deepQuestion,
+      project.audiencePromise,
+      project.characters,
+      qualityGatesReport
     ]
   );
   const studioMetrics = useMemo(
@@ -1939,6 +1941,7 @@ export function StoryXDesk({
     setProject(result.updatedProject);
     saveProject(result.updatedProject);
     setLatestChapter(result.chapter);
+    setDraftFallbackNotice(initialDraftPayload.isFallback === true);
     setActiveTrack('draft');
     setIsPublishingMode(false);
     void runAiReview(result.chapter.prose, buildProjectContextDigest(result.updatedProject));
@@ -3039,31 +3042,58 @@ export function StoryXDesk({
                 </button>
               </div>
 
-              <CreativeStage
-                blueprint={blueprint}
-                chapter={latestChapter}
-                project={project}
-                verticalSlice={verticalSlice}
-                editableText={editorText}
-                editedSinceReview={editedSinceReview}
-                isFocusMode={isFocusMode}
-                manuscriptRef={manuscriptRef}
-                marginParagraphs={marginParagraphs}
-                marginReviews={displayedMarginReviews}
-                marginOpenId={marginReview.openId}
-                filterPersona={marginReview.filterPersona}
-                appliedDiffs={marginReview.applied}
-                onSummonAgent={marginReview.onSummon}
-                onEditableTextChange={updateEditorText}
-                onReviewDraft={reviewDraft}
-                onOpenApprovalQueue={() => {
-                  setActiveTrack('bible');
-                  setIsPublishingMode(false);
-                  setIsMediaPanelOpen(false);
-                  openBibleSection('approval');
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateRows: draftFallbackNotice ? 'auto minmax(0, 1fr)' : 'minmax(0, 1fr)',
+                  gap: 'var(--sx-space-3)',
+                  minHeight: 0
                 }}
-                onToggleFocusMode={() => setIsFocusMode((current) => !current)}
-              />
+              >
+                {draftFallbackNotice ? (
+                  <div
+                    role="status"
+                    style={{
+                      border: '1px solid var(--sx-line)',
+                      borderRadius: 'var(--sx-radius-sm)',
+                      background: 'var(--sx-surface)',
+                      color: 'var(--sx-ink)',
+                      padding: '9px 12px',
+                      fontSize: '0.84rem',
+                      fontWeight: 'var(--sx-weight-semibold)',
+                      lineHeight: 1.4
+                    }}
+                  >
+                    AI 생성이 실패해 입력 기반 임시 초안을 넣었습니다
+                  </div>
+                ) : null}
+
+                <CreativeStage
+                  blueprint={blueprint}
+                  chapter={latestChapter}
+                  project={project}
+                  verticalSlice={verticalSlice}
+                  editableText={editorText}
+                  editedSinceReview={editedSinceReview}
+                  isFocusMode={isFocusMode}
+                  manuscriptRef={manuscriptRef}
+                  marginParagraphs={marginParagraphs}
+                  marginReviews={displayedMarginReviews}
+                  marginOpenId={marginReview.openId}
+                  filterPersona={marginReview.filterPersona}
+                  appliedDiffs={marginReview.applied}
+                  onSummonAgent={marginReview.onSummon}
+                  onEditableTextChange={updateEditorText}
+                  onReviewDraft={reviewDraft}
+                  onOpenApprovalQueue={() => {
+                    setActiveTrack('bible');
+                    setIsPublishingMode(false);
+                    setIsMediaPanelOpen(false);
+                    openBibleSection('approval');
+                  }}
+                  onToggleFocusMode={() => setIsFocusMode((current) => !current)}
+                />
+              </div>
             </>
           ) : dataView.kind === 'canon' ? (
             /* P3 — 데이터 모드 가운데 캔버스: 분야별로 관계도/카드/타임라인이 바뀐다 */

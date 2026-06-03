@@ -77,6 +77,97 @@ describe('continuityContract', () => {
     expect(result.layer).toBe('unrelated');
   });
 
+  it('detects life/death antonym conflicts without a negation marker', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['도현은 마지막 편지를 남긴 뒤 살아있다'],
+      livingState: [],
+      softSignals: []
+    });
+
+    const result = classifyCanonChange(contract, '도현은 마지막 편지 이후 죽었다');
+
+    expect(result.allowed).toBe(false);
+    expect(result.layer).toBe('hard-canon');
+    expect(result.matchedSource).toBe('도현은 마지막 편지를 남긴 뒤 살아있다');
+  });
+
+  it('detects numeric divergence in the same noun context', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['달의 탑 출입 증표는 3장이다'],
+      livingState: [],
+      softSignals: []
+    });
+
+    const result = classifyCanonChange(contract, '달의 탑 출입 증표는 4장이다');
+
+    expect(result.allowed).toBe(false);
+    expect(result.layer).toBe('hard-canon');
+  });
+
+  it('allows normal story progression without false positives', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['서윤은 사라진 오빠를 찾고 있다', '달의 탑 하층 기록실 문은 닫혀 있다'],
+      livingState: ['서윤은 이안을 아직 믿지 않는다'],
+      softSignals: ['안내인은 오빠를 봤다는 소문을 들었다']
+    });
+
+    expect(classifyCanonChange(contract, '서윤은 오빠의 새 단서를 발견하고 하층으로 향한다').allowed).toBe(true);
+    expect(classifyCanonChange(contract, '이안은 닫힌 문 앞에서 서윤에게 초대장을 건넨다').allowed).toBe(true);
+    expect(classifyCanonChange(contract, '안내인은 소문을 더 자세히 전한다').allowed).toBe(true);
+  });
+
+  it('does not flag plain-verb presence wording as conflict for unrelated progression', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['서윤은 사라졌다'],
+      livingState: [],
+      softSignals: []
+    });
+
+    const result = classifyCanonChange(contract, '서윤은 단서를 발견했다');
+
+    expect(result.allowed).toBe(true);
+    expect(result.layer).toBe('unrelated');
+  });
+
+  it('does not flag opposite states for different entities', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['도현은 마지막 편지를 남긴 뒤 살아있다'],
+      livingState: [],
+      softSignals: []
+    });
+
+    const result = classifyCanonChange(contract, '민재는 폐역 사건 이후 죽었다');
+
+    expect(result.allowed).toBe(true);
+    expect(result.layer).toBe('unrelated');
+  });
+
+  it('does not flag numeric divergence for different named entities', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['도현의 출입 증표는 3장이다'],
+      livingState: [],
+      softSignals: []
+    });
+
+    const result = classifyCanonChange(contract, '민재의 출입 증표는 4장이다');
+
+    expect(result.allowed).toBe(true);
+    expect(result.layer).toBe('unrelated');
+  });
+
+  it('recognizes single-syllable proper noun tokens after josa stripping', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['린은 폐역에서 살아있다'],
+      livingState: [],
+      softSignals: []
+    });
+
+    const result = classifyCanonChange(contract, '린이 폐역에서 죽었다');
+
+    expect(result.allowed).toBe(false);
+    expect(result.layer).toBe('hard-canon');
+  });
+
   // 4B — 성장 레저.
   it('validateGrowthEntry — 필수 필드 모두 채워지면 ok=true', () => {
     const result = validateGrowthEntry({

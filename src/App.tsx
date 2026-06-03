@@ -48,7 +48,7 @@ function mediumDisplayLabel(medium: CreativeMedium): string {
       return medium;
   }
 }
-import { type DraftChapterPayload, type SeriesProject } from './lib/storyEngine';
+import { buildFallbackDraft, type DraftChapterPayload, type SeriesProject } from './lib/storyEngine';
 import { loadProject } from './lib/storage';
 import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
@@ -779,7 +779,18 @@ function StoryXHome({
     });
 
     setIsBuilding(false);
-    onOpenEditor(llm.ok && llm.payload ? llm.payload : undefined);
+    if (llm.ok && llm.payload) {
+      onOpenEditor(llm.payload);
+      return;
+    }
+
+    onOpenEditor(
+      buildFallbackDraft({
+        freewrite: freewriteText,
+        interviewAnswers: [...answerLines, interviewNote.trim()].filter(Boolean),
+        chapterNumber: 1
+      })
+    );
   }
 
   const homeFlowSteps: Array<{ id: HomeFlowStep; label: string; caption: string }> = [

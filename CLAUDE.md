@@ -18,7 +18,7 @@
 
 다음 모두를 만족해야 작업을 완료라고 부른다.
 
-- `npm test` — 28 files / 149+ tests 통과.
+- `npm test` — 전체 통과(녹색). 절대 테스트 수치는 박제하지 말고 `progress.md` '최근 검증' 한 곳에서만 관리한다.
 - `npm run build` — `tsc --noEmit && vite build` 성공.
 - 활성 feature 의 `progress.md` 항목이 증거(커밋 SHA·파일 경로·캡처 경로)와 함께 `done`으로 갱신됨.
 - 새 생성 동작은 `src/lib/storyEngine.test.ts` 테스트를 먼저 수정해 TDD 순서를 따른다.

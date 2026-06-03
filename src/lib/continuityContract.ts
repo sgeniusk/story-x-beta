@@ -254,15 +254,77 @@ function hasNegation(text: string): boolean {
   return NEGATION_PATTERN.test(text);
 }
 
-const JOSA_RE = /(은|는|이|가|을|를|에게|에서|의|으로|로|와|과|도|만|에|께서|께)$/;
+const JOSA_RE = /(께서|에게|에서|으로|은|는|이|가|을|를|의|로|와|과|도|만|에)$/;
+const NUMERIC_RE = /\d+(?:\.\d+)?\s*(?:년|개월|일|장|명|개|화|층|번|권|쪽|페이지)?/g;
+const SUBJECT_RE = /^\s*([가-힣]{1,8})(?:은|는|이|가|께서|의)/u;
 
-// 한국어 명사 토큰 추출 — 2글자 이상 한글 음절 그룹에서 흔한 조사를 떼고 set 으로.
+const STATE_STOPWORDS = new Set([
+  '살다',
+  '죽다',
+  '사망',
+  '생존',
+  '살아있다',
+  '죽었다',
+  '있다',
+  '없다',
+  '나타나다',
+  '사라지다',
+  '발견',
+  '실종',
+  '열리다',
+  '닫히다',
+  '열렸다',
+  '닫혔다',
+  '닫힌',
+  '열린',
+  '믿다',
+  '믿지',
+  '신뢰',
+  '의심',
+  '숨기다',
+  '드러나다'
+]);
+
+type OppositionSide = 'a' | 'b';
+
+interface OppositionPattern {
+  axis: string;
+  side: OppositionSide;
+  pattern: RegExp;
+}
+
+interface StateEvidence {
+  axis: string;
+  side: OppositionSide;
+  subject?: string;
+  identityTokens: Set<string>;
+}
+
+const OPPOSITION_PATTERNS: OppositionPattern[] = [
+  // Life / death.
+  { axis: 'life', side: 'a', pattern: /살아\s*있|살아있|생존|살다/ },
+  { axis: 'life', side: 'b', pattern: /죽었|죽다|사망|죽은/ },
+  // Presence / absence.
+  { axis: 'presence', side: 'a', pattern: /나타났|나타나|발견|존재|있다/ },
+  { axis: 'presence', side: 'b', pattern: /사라졌|사라지|실종|없다|없는/ },
+  // Open / closed.
+  { axis: 'open', side: 'a', pattern: /열렸|열리|열린/ },
+  { axis: 'open', side: 'b', pattern: /닫혔|닫히|닫힌|닫혀/ },
+  // Trust / distrust is a common living-state reversal in this story engine.
+  { axis: 'trust', side: 'a', pattern: /신뢰|믿기로|믿기 시작|믿는다|믿다/ },
+  { axis: 'trust', side: 'b', pattern: /믿지|의심|불신/ },
+  // Concealed / revealed.
+  { axis: 'reveal', side: 'a', pattern: /드러났|드러나|밝혀졌|밝히/ },
+  { axis: 'reveal', side: 'b', pattern: /숨겼|숨기|감췄|감추/ }
+];
+
+// 한국어 명사 토큰 추출 — 한글 음절 그룹에서 흔한 조사를 뗀다. 단음절 고유명도 보존한다.
 function extractKoreanNouns(text: string): Set<string> {
-  const matches = text.match(/[가-힣]{2,}/g) ?? [];
+  const matches = text.match(/[가-힣]+/g) ?? [];
   const out = new Set<string>();
   for (const raw of matches) {
     const stripped = raw.replace(JOSA_RE, '');
-    if (stripped.length >= 2) out.add(stripped);
+    if (stripped.length >= 1) out.add(stripped);
   }
   return out;
 }
@@ -274,13 +336,17 @@ function findReversalMatch(
   claimNegated: boolean,
   claim: string
 ): string | null {
+  const claimStates = extractStateEvidence(claim);
+  const claimNumbers = extractNumericValues(claim);
   for (const source of pool) {
     const sourceTokens = extractKoreanNouns(source);
     const shared = countShared(claimTokens, sourceTokens);
+    if (hasOpposingState(source, claim, sourceTokens, claimTokens, claimStates)) return source;
+    if (hasNumericDivergence(source, claim, sourceTokens, claimTokens, claimNumbers)) return source;
     if (shared < 2) continue;
     const sourceNegated = hasNegation(source);
     // 부정 신호 차이 있으면 반전. 같으면 같은 주장 — 일치라 통과.
-    if (claimNegated !== sourceNegated) {
+    if (claimNegated !== sourceNegated && hasSameEntity(source, claim, sourceTokens, claimTokens)) {
       return source;
     }
     // 부정 신호 같은데 명사 ≥ 3 공유 — claim 이 source 와 거의 동일한 주장. 일치로 본다.
@@ -289,6 +355,124 @@ function findReversalMatch(
     }
   }
   return null;
+}
+
+function extractStateEvidence(text: string): StateEvidence[] {
+  const tokens = extractKoreanNouns(text);
+  const subject = extractSubject(text);
+  const identityTokens = new Set([...tokens].filter((token) => !isStateToken(token)));
+  const evidence: StateEvidence[] = [];
+  for (const item of OPPOSITION_PATTERNS) {
+    if (item.pattern.test(text)) {
+      evidence.push({
+        axis: item.axis,
+        side: item.side,
+        subject,
+        identityTokens
+      });
+    }
+  }
+  return evidence;
+}
+
+function hasOpposingState(
+  source: string,
+  claim: string,
+  sourceTokens: Set<string>,
+  claimTokens: Set<string>,
+  claimStates: StateEvidence[]
+): boolean {
+  if (claimStates.length === 0) return false;
+  const sourceStates = extractStateEvidence(source);
+  for (const sourceState of sourceStates) {
+    for (const claimState of claimStates) {
+      if (sourceState.axis !== claimState.axis || sourceState.side === claimState.side) continue;
+      if (requiresSharedTarget(sourceState.axis) && !hasSharedTargetToken(sourceState, claimState)) continue;
+      if (hasSameEntity(source, claim, sourceTokens, claimTokens, sourceState, claimState)) return true;
+    }
+  }
+  return false;
+}
+
+function hasNumericDivergence(
+  source: string,
+  claim: string,
+  sourceTokens: Set<string>,
+  claimTokens: Set<string>,
+  claimNumbers: Set<string>
+): boolean {
+  if (claimNumbers.size === 0) return false;
+  const sourceNumbers = extractNumericValues(source);
+  if (sourceNumbers.size === 0) return false;
+  if (setsEqual(sourceNumbers, claimNumbers)) return false;
+  if (!hasSameEntity(source, claim, sourceTokens, claimTokens)) return false;
+  return countSharedWithoutNumbers(sourceTokens, claimTokens) >= 2;
+}
+
+function hasSameEntity(
+  source: string,
+  claim: string,
+  sourceTokens: Set<string>,
+  claimTokens: Set<string>,
+  sourceState?: StateEvidence,
+  claimState?: StateEvidence
+): boolean {
+  const sourceSubject = sourceState?.subject ?? extractSubject(source);
+  const claimSubject = claimState?.subject ?? extractSubject(claim);
+  if (sourceSubject && claimSubject) return sourceSubject === claimSubject;
+  const sourceIdentity = sourceState?.identityTokens ?? sourceTokens;
+  const claimIdentity = claimState?.identityTokens ?? claimTokens;
+  return countSharedWithoutNumbers(sourceIdentity, claimIdentity) >= 2;
+}
+
+function extractSubject(text: string): string | undefined {
+  const match = text.match(SUBJECT_RE);
+  return match?.[1]?.replace(JOSA_RE, '');
+}
+
+function extractNumericValues(text: string): Set<string> {
+  const values = new Set<string>();
+  const matches = text.match(NUMERIC_RE) ?? [];
+  for (const match of matches) {
+    values.add(match.replace(/\s+/g, ''));
+  }
+  return values;
+}
+
+function isStateToken(token: string): boolean {
+  if (STATE_STOPWORDS.has(token)) return true;
+  if (/(살아있|살았|죽었|사망|생존|나타났|사라졌|실종|발견|존재|열렸|닫혔|신뢰|의심|불신|숨겼|드러났|밝혀졌)/.test(token)) return true;
+  return [...STATE_STOPWORDS].some((word) => token.includes(word) || word.includes(token));
+}
+
+function requiresSharedTarget(axis: string): boolean {
+  return axis === 'presence' || axis === 'reveal';
+}
+
+function hasSharedTargetToken(sourceState: StateEvidence, claimState: StateEvidence): boolean {
+  const sourceSubject = sourceState.subject;
+  const claimSubject = claimState.subject;
+  for (const token of sourceState.identityTokens) {
+    if (token === sourceSubject || token === claimSubject) continue;
+    if (claimState.identityTokens.has(token)) return true;
+  }
+  return false;
+}
+
+function countSharedWithoutNumbers(a: Set<string>, b: Set<string>): number {
+  let n = 0;
+  for (const token of a) {
+    if (/\d/.test(token)) continue;
+    if (isStateToken(token)) continue;
+    if (b.has(token)) n += 1;
+  }
+  return n;
+}
+
+function setsEqual(a: Set<string>, b: Set<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const value of a) if (!b.has(value)) return false;
+  return true;
 }
 
 function countShared(a: Set<string>, b: Set<string>): number {

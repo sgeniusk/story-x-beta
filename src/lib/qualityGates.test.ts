@@ -1,7 +1,7 @@
 // M4 청크 E + academic extension · qualityGates TDD 케이스.
 // StoryMode 가중치(commercial/literary) 강제/권고 분기 + 에세이/학술 트랙 + finale/serial 조건부.
 import { describe, expect, it } from 'vitest';
-import { evaluateQualityGates, type GateInput, type StoryMode } from './qualityGates';
+import { buildProseQualityMetrics, evaluateQualityGates, type GateInput, type StoryMode } from './qualityGates';
 
 const fullyPassingInput: GateInput = {
   text: '문이 갑자기 열렸다. 그는 무엇이 들어왔는지 보지 못했다. 그가 다음 한 걸음을 어떻게 놓을지 멈췄다?',
@@ -288,5 +288,140 @@ describe('qualityGates', () => {
     const report = evaluateQualityGates({ ...fullyPassingInput, medium: 'essay' }, balancedMode);
 
     expect(report.results.filter((r) => r.track === 'academic')).toEqual([]);
+  });
+
+  it('strong prose produces different gate results than weak prose', () => {
+    const strongProse = [
+      '1932년 겨울, 종로의 전차가 갑자기 멈췄다. 유하는 약봉지를 품에 넣고 골목으로 뛰었다.',
+      '"네가 가져갔니?" 순사가 물었다. 유하는 대답하지 않고 성문 아래로 몸을 숨겼다.',
+      '그녀는 죄책감 때문에 약봉지를 폈다. 누군가를 살리려면 다른 가족의 약봉지를 희생해야 했다.',
+      '그녀는 그 선택의 무게를 후회했다. 조선의 낡은 성문과 시장의 먼지가 같은 이름을 반복했다.'
+    ].join('\n\n');
+    const weakProse = [
+      '이 이야기는 핵심적으로 중요한 인물의 효과적인 성장과 지속가능한 서사 구조를 제공합니다.',
+      '인물은 여러 요소와 과정 속에서 다양한 측면을 경험하며, 결론적으로, 이것은, 중요한 의미가 있습니다.',
+      '이 사건은 그에 의해 해결되어진다.',
+      '작품은 좋은 의미를 가지며 앞으로도 흥미로운 방식으로 전개됩니다.'
+    ].join('\n\n');
+
+    const strong = buildProseQualityMetrics(strongProse);
+    const weak = buildProseQualityMetrics(weakProse);
+
+    expect(strong.voiceMatchScore).toBeGreaterThan(weak.voiceMatchScore);
+    expect(strong.sceneSequelRatio).not.toBe(weak.sceneSequelRatio);
+    expect(strong.historicalDensity).toBeGreaterThan(weak.historicalDensity);
+
+    const strongReport = evaluateQualityGates(
+      {
+        text: strongProse,
+        medium: 'novel',
+        isSerial: false,
+        pressureTriangleActive: true,
+        ...strong
+      },
+      balancedMode
+    );
+    const weakReport = evaluateQualityGates(
+      {
+        text: weakProse,
+        medium: 'novel',
+        isSerial: false,
+        pressureTriangleActive: true,
+        ...weak
+      },
+      balancedMode
+    );
+
+    expect(strongReport.blockingPassed).toBe(true);
+    expect(weakReport.blockingPassed).toBe(false);
+    expect(weakReport.results.find((result) => result.gate === 'gate_voice_match_70')?.passed).toBe(false);
+  });
+
+  it('skips text-unmeasurable literary gates instead of passing fake defaults', () => {
+    const metrics = buildProseQualityMetrics('문이 열렸다.');
+    const report = evaluateQualityGates(
+      {
+        text: '문이 열렸다.',
+        medium: 'novel',
+        isSerial: false,
+        isFinale: true,
+        pressureTriangleActive: true,
+        ...metrics
+      },
+      balancedMode
+    );
+
+    expect(report.results.find((result) => result.gate === 'gate_ambiguity_at_finale')).toBeUndefined();
+    expect(report.results.find((result) => result.gate === 'gate_motif_variation')).toBeUndefined();
+    expect(report.skipped.map((result) => result.gate)).toEqual(
+      expect.arrayContaining(['gate_ambiguity_at_finale', 'gate_motif_variation'])
+    );
+    expect(report.skipped.every((result) => result.measured === false)).toBe(true);
+  });
+
+  it('splits CRLF double-newline bodies into exact paragraphs for scene balance', () => {
+    const crlfBody = [
+      '문이 갑자기 열렸다. 유하는 약봉지를 품고 골목으로 뛰었다.',
+      '그녀는 마음속으로 어제의 이름을 떠올렸다.',
+      '"멈춰." 순사가 물었다. 유하는 성문 아래로 몸을 숨겼다.',
+      '그녀는 후회했다. 선택의 무게가 손끝에 남았다.'
+    ].join('\r\n\r\n');
+
+    const metrics = buildProseQualityMetrics(crlfBody);
+
+    expect(metrics.sceneSequelRatio).toBe(0.5);
+  });
+
+  it('skips scene/sequel balance for an empty body instead of passing a fake default', () => {
+    const metrics = buildProseQualityMetrics('   \n\n   ');
+    const report = evaluateQualityGates(
+      {
+        text: '',
+        medium: 'novel',
+        isSerial: false,
+        pressureTriangleActive: true,
+        ...metrics
+      },
+      balancedMode
+    );
+
+    expect(metrics.metricMeasurements?.sceneSequelRatio).toBe(false);
+    expect(report.skipped.map((result) => result.gate)).toContain('gate_scene_sequel_balance');
+    expect(report.results.find((result) => result.gate === 'gate_scene_sequel_balance')).toBeUndefined();
+  });
+
+  it('scores a multi-paragraph historical body above the literary density threshold', () => {
+    const historicalBody = [
+      '1932년 겨울, 조선의 성문 옆 전차가 멈췄다.',
+      '일제 순사는 시장 입구에서 독립 전단과 유물을 뒤졌다.',
+      '대한제국의 낡은 문헌을 품은 아이는 궁궐 담장을 지나 달렸다.',
+      '해방 전쟁의 소문은 서원 마당과 왕조 족보 사이에서 번졌다.',
+      '근대 신문은 식민 통치의 제사 명단을 왕의 이름 아래 숨겼다.',
+      '1945년 봄, 시장 사람들은 고려 왕조의 오래된 종을 다시 울렸다.'
+    ].join('\n\n');
+
+    const metrics = buildProseQualityMetrics(historicalBody);
+
+    expect(metrics.historicalDensity).toBeGreaterThanOrEqual(50);
+  });
+
+  it('keeps a modern non-historical body below the historical density threshold', () => {
+    const modernBody = [
+      '오늘 회의실의 노트북 화면이 꺼졌다.',
+      '팀장은 새 프로젝트 일정을 확인하고 메시지를 보냈다.',
+      '주인공은 카페에서 친구와 만나 다음 선택을 이야기했다.',
+      '도시는 밝았고 사람들은 버스를 기다렸다.'
+    ].join('\n\n');
+
+    const metrics = buildProseQualityMetrics(modernBody);
+
+    expect(metrics.historicalDensity).toBeLessThan(50);
+  });
+
+  it('classifies ethical cost words with action as scene, not sequel', () => {
+    const metrics = buildProseQualityMetrics('그녀는 죄책감 때문에 멈췄다.');
+
+    expect(metrics.ethicalCostPresent).toBe(true);
+    expect(metrics.sceneSequelRatio).toBe(1);
   });
 });

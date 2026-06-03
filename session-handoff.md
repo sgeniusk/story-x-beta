@@ -4,6 +4,97 @@
 
 ---
 
+## 2026-06-03 — rank4 continuity 보강 + 거짓양성 수정 (Codex 구현 + code-reviewer + Codex 수정)
+
+> Last Updated: 2026-06-03 · Branch: `main`
+
+### 완료
+0. **rank4 구현 (Codex)** — continuity 충돌 감지를 반의어·생사 대립쌍(OPPOSITION_PATTERNS)·숫자 비교·인물ID(hasSameEntity)로 보강. validateContinuity 가 3계층(hard/living/soft)을 실제로 채우고 growthLedger 루프(appendGrowthEntry·buildContextPack) 연결. 이어 code-reviewer 2차가 거짓양성 CRITICAL+HIGH 를 발견해 아래로 수정.
+1. `hasNumericDivergence` 에 claim 인자와 same-entity guard 를 추가했다. `도현의 출입 증표는 3장이다` 와 `민재의 출입 증표는 4장이다` 는 unrelated 로 통과한다.
+2. presence/reveal 반전 감지는 같은 주어만으로 차단하지 않고 공유 object/target token 을 요구한다. `서윤은 사라졌다` 뒤 `서윤은 단서를 발견했다` 같은 정상 진행은 통과한다.
+3. `storyEngine` 의 soft/living canon 분류를 좁혔다. 단순 `들었다` 는 soft-signal 로 내리지 않고, confirmed past-tense world/plot fact 는 hard-canon 에 남는다.
+
+### 검증
+- TDD RED 확인 — `continuityContract.test.ts` 2 failed, `storyEngine.test.ts` 1 failed.
+- Focused GREEN — `continuityContract.test.ts` 18/18, `storyEngine.test.ts` 33/33.
+- `npx tsc --noEmit` exit 0.
+- `npm test` 42 files / 293 tests / 0 failures.
+- `bash init.sh` 통과 — tsc · vitest · build 전체 통과.
+
+### 손대지 말 것
+- academic track, provider paths, `vite.config.ts`, `tools/storyx.mjs`, server code.
+- Linear dark CSS tokens.
+
+### 커밋
+미실행. 사용자 지시가 `Do NOT commit` 이었다.
+
+---
+
+## 2026-06-01 (이어서) — Codex 로컬 연결(M12) + rank2·rank3 (Codex 위임 + 검증 루프)
+
+> Last Updated: 2026-06-01 · Branch: `main` (HEAD `1c652fa`, 미커밋)
+
+### 작업 모델
+사용자 요청 — 개선을 Codex CLI 로 코딩 + 로컬 작가진을 claude 가 아닌 Codex 에 연결. 이후 구현 코딩은 `codex:codex-rescue` 에 위임하고 Claude 가 검증·머지. (codex 는 chatgpt.com DNS 차단으로 한때 막혔다가 네트워크 복구 후 정상 작동.)
+
+### 완료
+1. **(B) Codex 로컬 연결 (M12, done)** — vite.config.ts 5 storyxBridge 라우트 + storyx.mjs normalize 기본값을 codex 로. storyx.mjs codex exec 분기는 기존 구현 그대로 작동(파서 보강 불요). dev POST /api/review-agent → provider=codex showrunner JSON 응답 확인.
+2. **rank2 (Codex 구현 · 검증 통과)** — 빌딩 LLM 실패 시 빈 에디터 대신 `buildFallbackDraft`(storyEngine.ts) 결정론적 폴백 초안 + isFallback 배너(StoryXDesk). storyEngine.test.ts 3 케이스(유효 초안·빈 입력 안전·시드 모티프 invent 방지).
+3. **rank3 (Codex 구현 + code-reviewer 2차 + Codex 수정 + 재검증)** — 품질 게이트가 하드코딩 리터럴 대신 본문 실측. buildProseQualityMetrics(voiceMatch↔koreanVoiceGate, sceneSequel·historical·motif·ethical 결정론 휴리스틱), measured:false skip, storyHarness ready conjunctive. code-reviewer 가 버그 5개(CRLF 단락 분리 HIGH 등) 발견 → Codex 수정 → 회귀 테스트 6개.
+
+### 검증 (Claude 직접)
+- tsc 0 · npm test 42 files / 283 tests · npm run build 성공 · dev 200 · 콘솔 에러 0.
+- 스코프 — codex 가 provider 경로(vite/storyx)·academic(claimLedger/citationGate/academicIntegrity) 무변경 확인. 하드코딩 리터럴 grep 매치 0.
+- 편집기 화면 회귀 없음(docs/reviews/screenshots/10-editor-rank3.png).
+
+### 다음 세션이 해야 할 한 가지
+rank4 (continuity 충돌 감지 보강 — 반의어·생사 대립쌍·숫자·인물 ID + living/soft 3계층 통합, large) 또는 rank5 (StoryXDesk 6,067줄 분리, large). 둘 다 Codex 위임 + code-reviewer 2차 권장. rank6(사업)·rank7(UI)은 후순위.
+
+### 손대지 말 것
+- A1~A5 · M4 도메인 완성본. rank3 가 배선한 qualityGates/storyHarness/koreanVoiceGate 측정 로직(회귀 테스트로 고정).
+- provider 경로(vite.config.ts·storyx.mjs)는 현재 codex 연결 상태 — claude 로 되돌리려면 vite 각 라우트 --provider 만 'claude' 로.
+
+### 커밋
+미실행(사용자 지시 대기).
+
+---
+
+## 2026-06-01 — 로컬 구동 점검 + 멀티에이전트 검토 + rank1 상태 동기화
+
+> Last Updated: 2026-06-01 · Branch: `main` (HEAD `1c652fa`)
+
+### 이번 세션이 한 일
+1. **로컬 구동 점검** — dev `http://127.0.0.1:5173` HTTP 200 · 콘솔 에러 0 · tsc 0 · 42 files / 269 tests. 4개 화면(랜딩·브릿지·편집기·퍼블리시) Playwright 캡처(`sx-01~04.png` — 루트에 생성, 미추적, 보관/삭제 결정 필요).
+2. **7에이전트 멀티에이전트 검토** — 6관점(온보딩·편집기UX·코드품질·스토리하네스·비즈니스·하네스위생) 병렬 + 총괄 종합. 전체 리포트 `docs/reviews/2026-06-01-multiagent-review.md`.
+3. **rank1 상태 문서 동기화 (완료)** — 아래 4묶음.
+4. **핫픽스 — 다크 스코프 대비 버그 2건 (사용자 발견)** — 둘 다 M8.5 `.home-page` 다크 전환 누락. (a) 카드 제목 — `--nx-ink-deep` 오버라이드 누락 → `styles.css:8821` 에 `--nx-ink-deep: #f7f7fb` 추가. (b) 상단 nav `hx-nav` 배경이 흰색(`rgba(255,255,255,0.92)`) 하드코딩으로 남아 흰 텍스트(`--nx-ink`)와 충돌 → `styles.css:8854` 를 `rgba(8,9,10,0.85)` 로 교체. `appExperience.test.ts` 회귀 테스트 2개(271 tests). 캡처 `docs/reviews/screenshots/07~08`. 같은 유형 전수 점검은 rank 7.
+
+### rank1 변경 파일
+- `feature_list.json` — A1~A5 5개 done 등재(SHA·모듈 evidence) + M11 마일스톤 신설 + active=M11. (이전 active=M6.3-storyx-cli 는 실제 HEAD(A5 완결)보다 5세대 뒤처져 있었음.)
+- `progress.md` — 헤더 main/2026-06-01 · Current Objective=M11 · 완료표에 M6.x·M8·M9·M10·A1~A5 추가 · 검증 42/269.
+- `init.sh:22` · `CLAUDE.md` DoD — 박제 수치 "28 files / 149 tests" 제거 → 불변 표현.
+- `session-handoff.md` — 이 노트.
+
+### 다음 세션이 해야 할 한 가지
+검토 7단계 로드맵 중 **사용자 우선순위 결정 후 rank 2 또는 rank 3 착수**.
+- **rank 3 (권장 · 최우선 위험)** — 품질 게이트 12개가 본문 대신 하드코딩 리터럴(`StoryXDesk.tsx:1352-1362`, voiceMatchScore=75 등)을 평가 → 차별점 "연속성을 제품 요건으로" 가 데모에서만 작동. voiceMatchScore↔koreanVoiceGate, sceneSequelRatio↔단락분류 배선 + storyHarness ready conjunctive 화. academic 트랙의 text 실판정 패턴(`qualityGates.ts:300-353`)을 commercial/literary 로 이식.
+- rank 2 — 빌딩 단계 LLM 실패 시 빈 에디터 대신 결정론적 폴백 초안 + 실패 배너(`src/App.tsx:782` goToBuilding, `src/lib/draftClient.ts:37-46`).
+
+### 손대지 말 것
+- A1~A5 완성본 (claimLedger·citationGate·academicIntegrity·academicPublish + .test.ts).
+- M4 스토리 하네스 완성본 — rank 3·4 에서 배선만 추가하되 기존 통과 테스트 보존(TDD).
+- 중앙 편집기 타이포·앵커(`styles.css:3146-3163`) — 시각 회귀 기준선.
+
+### 검증 · 커밋
+- tsc exit 0 · npm test 42 files / 269 tests · dev HTTP 200. rank1 은 문서·셸 echo·JSON 변경뿐이라 코드 게이트 불변.
+- 커밋 미실행(사용자 지시 대기). git status — progress.md · feature_list.json · session-handoff.md · init.sh · CLAUDE.md · docs/reviews/ 신설.
+
+### 검토에서 확정된 stale 사실
+- handoff 가 A2(5/30)에 멈춰 A3~A5 인계 누락이었음 → 이 노트로 해소. 머지 직후 handoff append 를 체크리스트화 권장.
+- 마진 병렬화(80s→16s `88282f1`)·DataPanel 폭 수정(`9247c5d`)은 이미 완료 — 과거 handoff "별도 작업" 표기는 stale 였음.
+
+---
+
 ## 2026-05-30 17:55 — A2 주장-근거 하네스 완료·머지 (사회과학 확장)
 
 > Last Updated: 2026-05-30 · Branch: `main` (47b15f9)

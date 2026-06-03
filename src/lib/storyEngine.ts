@@ -4,7 +4,15 @@ import { planAgentRuns } from './agentRunEngine';
 import type { ValidationAgentId } from './agentReviewProcess';
 // M4 청크 H — validateContinuity 가 continuityContract.classifyCanonChange 로 의미적 충돌 감지를 보강.
 // 기존 forbiddenContradictions 흐름은 그대로 보존하고, hard-canon 위반만 추가 issue 로 노출.
-import { classifyCanonChange, createContinuityContract } from './continuityContract';
+import {
+  appendGrowthEntry,
+  buildContextPack,
+  classifyCanonChange,
+  createContinuityContract,
+  proposeContinuityRepair,
+  type ContinuityContract,
+  type GrowthLedger
+} from './continuityContract';
 
 export type AgentId =
   | 'showrunner'
@@ -302,6 +310,8 @@ export interface SeriesProject {
   personaCard?: PersonaCard;
   /** disclosure_ledger — 에세이 모드 실제 인물 노출 추적. */
   disclosureLedger?: DisclosureEntry[];
+  /** growth_ledger — 인물 상태 변화의 원인·대가·후속 압력을 누적한다. */
+  growthLedger?: GrowthLedger;
 }
 
 export interface ProductionRequest {
@@ -369,6 +379,67 @@ export interface DraftChapterPayload {
   beats: DraftChapterPayloadBeat[];
   prose: string;
   newCanonFacts: DraftChapterPayloadCanonFact[];
+  /** LLM 실패 시 작가 입력만 재구성한 임시 초안인지 표시한다. */
+  isFallback?: boolean;
+}
+
+export interface FallbackDraftInput {
+  freewrite: string;
+  interviewAnswers?: string[];
+  chapterNumber?: number;
+}
+
+const FALLBACK_EMPTY_LINE = '작가 입력을 기다리는 임시 초안입니다.';
+
+function normalizeAuthorLine(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function splitAuthorMaterial(input: FallbackDraftInput): string[] {
+  const rawSections = [
+    input.freewrite,
+    ...(input.interviewAnswers ?? [])
+  ]
+    .filter((value): value is string => typeof value === 'string')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  const units = rawSections.flatMap((section) =>
+    section
+      .split(/(?<=[.!?。！？]|[다요죠음임함됨람문것곳간순쪽중]다[.!?]?)\s+|\n+/u)
+      .map(normalizeAuthorLine)
+      .filter(Boolean)
+  );
+
+  return units.length > 0 ? units : [FALLBACK_EMPTY_LINE];
+}
+
+function truncateKoreanLine(value: string, maxLength: number): string {
+  const normalized = normalizeAuthorLine(value);
+  return normalized.length > maxLength ? `${normalized.slice(0, maxLength).trim()}...` : normalized;
+}
+
+export function buildFallbackDraft(input: FallbackDraftInput): DraftChapterPayload {
+  const chapterNumber = Math.max(1, Math.floor(input.chapterNumber ?? 1));
+  const units = splitAuthorMaterial(input);
+  const hasAuthorMaterial = units.some((unit) => unit !== FALLBACK_EMPTY_LINE);
+  const firstUnit = units[0] ?? FALLBACK_EMPTY_LINE;
+  const outline = units.slice(0, 5);
+  const beats = units.slice(0, 5).map((unit, index) => ({
+    label: hasAuthorMaterial ? `입력 ${index + 1}` : '임시 초안',
+    summary: unit,
+    tension: DEFAULT_BEAT_TENSION
+  }));
+
+  return {
+    title: hasAuthorMaterial ? `${chapterNumber}화 — ${truncateKoreanLine(firstUnit, 18)}` : `${chapterNumber}화 — 임시 초안`,
+    hook: firstUnit,
+    outline,
+    beats,
+    prose: hasAuthorMaterial ? units.join('\n\n') : FALLBACK_EMPTY_LINE,
+    newCanonFacts: [],
+    isFallback: true
+  };
 }
 
 // 라벨·요약 쌍 목록을 번호 매겨진 ChapterBeat[]로 정규화한다. 빈 항목은 버리고, tension 누락은 기본값으로 보정한다.
@@ -872,12 +943,10 @@ export function validateContinuity(project: SeriesProject, claims: string[]): Co
       : [];
 
   // M4 청크 H — Gap 3: 부분문자열 매칭을 넘어 의미적 충돌 감지.
-  // project.canonFacts 를 hard-canon 으로 매핑한 contract 에 대해 각 claim 을 classify.
-  // hard-canon 위반(반전 신호) 만 새 issue 로 추가. 기존 흐름은 보존.
+  // project 상태를 3계층 contract 로 매핑한 뒤 각 claim 을 classify 한다.
+  // hard-canon 은 error, living-state cause/cost 누락은 warning. 기존 흐름은 보존.
   // dedup — 같은 claim 이 이미 character/world issue 를 만들었으면 중복 추가하지 않는다.
-  const contract = createContinuityContract({
-    hardCanon: project.canonFacts.map((fact) => fact.statement)
-  });
+  const contract = buildContinuityContractFromProject(project);
   const alreadyFlagged = new Set<string>();
   for (const claim of claims) {
     if (characterIssues.some((issue) => claim.includes(issue.claim)) ||
@@ -891,16 +960,87 @@ export function validateContinuity(project: SeriesProject, claims: string[]): Co
     if (alreadyFlagged.has(claim)) continue;
     const result = classifyCanonChange(contract, claim);
     if (!result.allowed && result.layer === 'hard-canon') {
+      const proposals = proposeContinuityRepair(result);
       contractIssues.push({
         severity: 'error',
         source: 'continuity-editor',
         claim,
-        message: result.reason
+        message: proposals.length > 0 ? `${result.reason} ${proposals[0].description}` : result.reason
+      });
+    } else if (!result.allowed && result.layer === 'living-state') {
+      const proposals = proposeContinuityRepair(result);
+      contractIssues.push({
+        severity: 'warning',
+        source: 'continuity-editor',
+        claim,
+        message: proposals.length > 0 ? `${result.reason} ${proposals[1]?.description ?? proposals[0].description}` : result.reason
       });
     }
   }
 
   return [...characterIssues, ...worldIssues, ...missingAnchorWarning, ...contractIssues];
+}
+
+export function buildContinuityContractFromProject(project: SeriesProject): ContinuityContract {
+  const hardCanon: string[] = [];
+  const livingState: string[] = [];
+  const softSignals: string[] = [];
+
+  for (const fact of project.canonFacts) {
+    pushLayeredStatement(fact.statement, fact.owner, hardCanon, livingState, softSignals);
+  }
+  for (const rule of project.worldRules) {
+    pushUnique(hardCanon, rule.rule);
+  }
+  for (const character of project.characters) {
+    for (const anchor of character.canonAnchors) pushUnique(hardCanon, anchor);
+    if (character.currentState.trim().length > 0) {
+      pushUnique(livingState, `${character.name}은 ${character.currentState}`);
+    }
+  }
+  for (const thread of project.openThreads) {
+    pushUnique(softSignals, thread);
+  }
+
+  return createContinuityContract({ hardCanon, livingState, softSignals });
+}
+
+function pushLayeredStatement(
+  statement: string,
+  owner: CanonFact['owner'],
+  hardCanon: string[],
+  livingState: string[],
+  softSignals: string[]
+): void {
+  const clean = statement.trim();
+  if (clean.length === 0) return;
+  if (isSoftCanonStatement(clean)) {
+    pushUnique(softSignals, clean);
+    return;
+  }
+  if (owner === 'character' && isLivingCanonStatement(clean)) {
+    pushUnique(livingState, clean);
+    return;
+  }
+  pushUnique(hardCanon, clean);
+}
+
+function isSoftCanonStatement(statement: string): boolean {
+  return /소문|추측|주장|전해진|듯하다|미확정|아직\s*드러나지|가능성/.test(statement);
+}
+
+function isLivingCanonStatement(statement: string): boolean {
+  if (isDefinitivePastEvent(statement)) return false;
+  return /현재|아직|믿지|믿기|믿는다|신뢰|의심|불신|숨기|두려|망설|관계|감정|상태/.test(statement);
+}
+
+function isDefinitivePastEvent(statement: string): boolean {
+  return /(했다|됐다|되었다|이었다|였다|었다|았다|났다|겼다|졌다|봤다|들었다)(?:[.!?。！？])?$/.test(statement.trim());
+}
+
+function pushUnique(target: string[], value: string): void {
+  const clean = value.trim();
+  if (clean.length > 0 && !target.includes(clean)) target.push(clean);
 }
 
 export function produceNextChapter(project: SeriesProject, request: ProductionRequest): ProductionResult {
@@ -985,13 +1125,46 @@ export function produceNextChapter(project: SeriesProject, request: ProductionRe
   };
 
   const agentRuns = buildAgentRuns(project, request, chapter, continuityIssues);
-  const updatedProject = commitChapter(project, chapter);
+  const updatedProject = recordChapterGrowth(commitChapter(project, chapter), project, chapter, request);
 
   return {
     chapter,
     agentRuns,
     continuityIssues: continuityIssues.filter((issue) => issue.severity !== 'warning'),
     updatedProject
+  };
+}
+
+function recordChapterGrowth(
+  updatedProject: SeriesProject,
+  originalProject: SeriesProject,
+  chapter: Chapter,
+  request: ProductionRequest
+): SeriesProject {
+  const primary = originalProject.characters[0];
+  const intent = request.intent.trim();
+  if (!primary || intent.length === 0) return updatedProject;
+
+  const before = primary.currentState.trim();
+  const after = `${chapter.episode}화 이후: ${intent}`;
+  if (before === after) return updatedProject;
+
+  const ledger = appendGrowthEntry(originalProject.growthLedger ?? { entries: [] }, {
+    characterId: primary.id,
+    before,
+    after,
+    triggerScene: chapter.id,
+    choice: intent,
+    cost: request.pressure.trim() || '이번 선택의 대가는 다음 회차에서 구체화된다.',
+    futureConsequence: `다음 회차에서 "${intent}"의 결과를 회수해야 한다.`
+  });
+
+  return {
+    ...updatedProject,
+    characters: updatedProject.characters.map((character) =>
+      character.id === primary.id ? { ...character, currentState: after } : character
+    ),
+    growthLedger: ledger
   };
 }
 
@@ -1026,7 +1199,7 @@ export function chapterFromDraftPayload(
     newCanonFacts
   };
   const agentRuns = buildAgentRuns(project, request, chapter, continuityIssues);
-  const updatedProject = commitChapter(project, chapter);
+  const updatedProject = recordChapterGrowth(commitChapter(project, chapter), project, chapter, request);
 
   return {
     chapter,
@@ -1059,6 +1232,22 @@ const CONTEXT_THREAD_LIMIT = 8;
 // 장편에서 캐논이 쌓여도 프롬프트가 무한정 커지지 않도록 초반 정착 캐논 + 최근 캐논으로 예산을 제한한다.
 export function buildProjectContextDigest(project: SeriesProject): string {
   const lines: string[] = [];
+  const continuityContract = buildContinuityContractFromProject(project);
+  const contextPack = buildContextPack({
+    storyPromise: project.audiencePromise,
+    contract: continuityContract,
+    characterContracts: project.characters.flatMap((character) => character.canonAnchors),
+    worldCosts: project.worldRules.map((rule) => rule.rule),
+    unresolvedThreads: project.openThreads,
+    recentDeltas: project.chapters.flatMap((chapter) => chapter.newCanonFacts.map((fact) => fact.statement)),
+    forbiddenContradictions: [
+      ...project.characters.flatMap((character) => character.forbiddenContradictions.map((rule) => rule.claim)),
+      ...project.worldRules.flatMap((rule) => rule.forbiddenContradictions.map((item) => item.claim))
+    ],
+    koreanVoiceRules: project.bibleOutline
+      .filter((section) => section.id === 'tone' || section.id === 'rhythm' || section.id === 'vocab')
+      .map((section) => section.body)
+  });
 
   // 작품 계약 — 1화부터 모든 생성이 따라야 하는 약속. 회차가 없어도 항상 넘긴다.
   lines.push('작품 계약:');
@@ -1090,6 +1279,17 @@ export function buildProjectContextDigest(project: SeriesProject): string {
       lines.push(`- … 초반 캐논 ${facts.length - CONTEXT_CANON_LIMIT}개 생략, 최근 캐논 우선 …`);
       facts.slice(facts.length - tailCount).forEach(printFact);
     }
+  }
+  if (contextPack.livingState.length > 0) {
+    lines.push('', '변화 가능 상태 (원인·대가 필요):');
+    contextPack.livingState.slice(-CONTEXT_THREAD_LIMIT).forEach((state) => lines.push(`- ${state}`));
+  }
+  if (contextPack.unresolvedThreads.length > 0 || contextPack.forbiddenContradictions.length > 0) {
+    lines.push('', '연속성 판단 팩:');
+    contextPack.unresolvedThreads.slice(-CONTEXT_THREAD_LIMIT).forEach((thread) => lines.push(`- 열린 떡밥: ${thread}`));
+    contextPack.forbiddenContradictions
+      .slice(0, CONTEXT_THREAD_LIMIT)
+      .forEach((claim) => lines.push(`- 금지 반전: ${claim}`));
   }
   if (project.characters.length > 0) {
     lines.push('', '인물:');

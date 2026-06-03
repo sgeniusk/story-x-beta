@@ -63,6 +63,22 @@ describe('Story X page experience', () => {
     expect(css).toContain('.home-page .hx-medium-card');
   });
 
+  it('overrides --nx-ink-deep inside the .home-page dark scope so card titles stay readable', () => {
+    // 회귀 방지 — .home-page 다크 블록이 --nx-ink-deep 를 오버라이드하지 않으면
+    // 매체/포맷 카드 제목(strong, color: var(--nx-ink-deep))이 다크 배경(#08090a)에 묻힌다.
+    const start = css.indexOf('.home-page {');
+    const block = css.slice(start, css.indexOf('}', start));
+    expect(block).toContain('--nx-ink-deep:');
+  });
+
+  it('keeps the .home-page top nav dark so its white brand/step text stays readable', () => {
+    // 회귀 방지 — .home-page 는 다크 테마라 텍스트가 흰색(--nx-ink #ededf3)이다.
+    // 상단 nav 가 흰 배경이면 흰 글씨(Story X 브랜드·스텝 라벨)가 묻힌다.
+    const start = css.indexOf('.home-page .hx-nav {');
+    const block = css.slice(start, css.indexOf('}', start));
+    expect(block).not.toContain('rgba(255, 255, 255');
+  });
+
   it('removes the agent-architecture noise from the new-project flow (P3)', () => {
     expect(app).not.toContain('<FlowAgentLayerCard');
     expect(app).not.toContain('scope-focus-strip');

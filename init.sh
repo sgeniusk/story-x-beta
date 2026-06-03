@@ -19,5 +19,5 @@ echo "==> 단위 테스트 (vitest)"
 npm test
 
 echo ""
-echo "✓ 하네스 검증 통과 — 28 files / 149 tests 통과 · 빌드 성공"
-echo "  결과를 progress.md '검증 증거'에 기록하라."
+echo "✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과"
+echo "  누적 테스트 수치는 박제하지 말 것. progress.md '최근 검증' 한 곳에서만 관리한다."

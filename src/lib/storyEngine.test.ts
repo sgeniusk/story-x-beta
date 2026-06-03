@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   applyApprovedMemory,
   buildDeterministicDataReview,
+  buildContinuityContractFromProject,
+  buildFallbackDraft,
   buildStoryEditorWorkspace,
   chapterFromDraftPayload,
   createEmptyProject,
@@ -152,6 +154,52 @@ describe('storyEngine', () => {
     expect(result.chapter.prose).not.toContain('이안');
     expect(result.chapter.hook).not.toContain('이안');
     expect(result.chapter.hook).not.toContain('오빠');
+  });
+
+  it('buildFallbackDraft 가 자유서술과 인터뷰 답변만으로 유효한 초안 payload 를 만든다', () => {
+    const draft = buildFallbackDraft({
+      freewrite: '혜진은 폐역에서 돌아오지 않는 동생의 녹음기를 발견한다. 플랫폼의 전광판은 매일 같은 시간을 가리킨다.',
+      interviewAnswers: ['주인공은 죄책감을 숨긴다.', '마지막 장면은 녹음기가 스스로 켜지는 순간이다.'],
+      chapterNumber: 2
+    });
+
+    expect(draft.title).toContain('2화');
+    expect(draft.hook).toContain('혜진');
+    expect(draft.outline.length).toBeGreaterThanOrEqual(3);
+    expect(draft.beats.length).toBeGreaterThanOrEqual(4);
+    expect(draft.beats.every((beat) => beat.label.trim().length > 0)).toBe(true);
+    expect(draft.beats.every((beat) => beat.summary.trim().length > 0)).toBe(true);
+    expect(draft.prose).toContain('혜진');
+    expect(draft.prose).toContain('녹음기');
+    expect(draft.newCanonFacts).toEqual([]);
+  });
+
+  it('buildFallbackDraft 는 빈 입력에서도 throw 없이 최소 한국어 placeholder payload 를 만든다', () => {
+    expect(() => buildFallbackDraft({ freewrite: '   ', interviewAnswers: [''], chapterNumber: 1 })).not.toThrow();
+
+    const draft = buildFallbackDraft({ freewrite: '', interviewAnswers: [] });
+
+    expect(draft.title).toBe('1화 — 임시 초안');
+    expect(draft.hook.length).toBeGreaterThan(0);
+    expect(draft.outline.length).toBeGreaterThanOrEqual(1);
+    expect(draft.beats.length).toBeGreaterThanOrEqual(1);
+    expect(draft.prose).toContain('작가 입력');
+  });
+
+  it('buildFallbackDraft 는 작가 입력에 없는 모티프를 invent 하지 않는다', () => {
+    const draft = buildFallbackDraft({
+      freewrite: '바닷가 우체국에서 민서는 오래된 엽서를 분류한다. 파도 소리와 소금 냄새가 계속 남는다.',
+      interviewAnswers: ['관계의 핵심은 기다림이다.']
+    });
+    const joined = [draft.title, draft.hook, ...draft.outline, ...draft.beats.map((beat) => `${beat.label} ${beat.summary}`), draft.prose].join('\n');
+
+    expect(joined).toContain('민서');
+    expect(joined).toContain('엽서');
+    expect(joined).not.toContain('달의 탑');
+    expect(joined).not.toContain('오빠의 표식');
+    expect(joined).not.toContain('이안');
+    expect(joined).not.toContain('마법 검');
+    expect(joined).not.toContain('비밀 왕국');
   });
 
   it('commitChapter no longer injects sample open threads into an empty project', () => {
@@ -441,6 +489,77 @@ describe('storyEngine', () => {
         })
       ])
     );
+  });
+
+  it('populates hard, living, and soft continuity layers from project state', () => {
+    const project = {
+      ...createSeedProject(),
+      canonFacts: [
+        { id: 'canon-hard', episode: 0, owner: 'world' as const, statement: '달의 탑 출입 증표는 3장이다' },
+        { id: 'canon-living', episode: 0, owner: 'character' as const, statement: '서윤은 이안을 아직 믿지 않는다' },
+        { id: 'canon-soft', episode: 0, owner: 'plot' as const, statement: '안내인은 오빠가 살아있다는 소문을 들었다' }
+      ]
+    };
+
+    const contract = buildContinuityContractFromProject(project);
+
+    expect(contract.hardCanon).toEqual(expect.arrayContaining(['달의 탑 출입 증표는 3장이다']));
+    expect(contract.livingState).toEqual(expect.arrayContaining(['서윤은 이안을 아직 믿지 않는다']));
+    expect(contract.softSignals).toEqual(expect.arrayContaining(['안내인은 오빠가 살아있다는 소문을 들었다']));
+
+    const livingIssues = validateContinuity(project, ['서윤은 이안을 신뢰하기 시작한다']);
+    expect(livingIssues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          severity: 'warning',
+          source: 'continuity-editor',
+          claim: '서윤은 이안을 신뢰하기 시작한다'
+        })
+      ])
+    );
+  });
+
+  it('keeps confirmed past-tense world and plot facts in hard canon', () => {
+    const project = {
+      ...createSeedProject(),
+      canonFacts: [
+        { id: 'canon-world-event', episode: 1, owner: 'world' as const, statement: '도현은 탑 3층에서 소리를 들었다' },
+        { id: 'canon-plot-relation', episode: 1, owner: 'plot' as const, statement: '서윤과 이안의 관계는 탑에서만 유지된다' }
+      ]
+    };
+
+    const contract = buildContinuityContractFromProject(project);
+
+    expect(contract.hardCanon).toEqual(
+      expect.arrayContaining(['도현은 탑 3층에서 소리를 들었다', '서윤과 이안의 관계는 탑에서만 유지된다'])
+    );
+    expect(contract.livingState).not.toEqual(expect.arrayContaining(['서윤과 이안의 관계는 탑에서만 유지된다']));
+    expect(contract.softSignals).not.toEqual(expect.arrayContaining(['도현은 탑 3층에서 소리를 들었다']));
+  });
+
+  it('records a growth ledger entry after a chapter changes character state', () => {
+    const project = createSeedProject();
+    const beforeState = project.characters[0].currentState;
+
+    const result = produceNextChapter(project, {
+      genre: 'romance-fantasy',
+      intent: '서윤이 이안을 믿기로 선택한다',
+      pressure: '탑 출입권을 잃는 대가'
+    });
+
+    const entry = result.updatedProject.growthLedger?.entries.at(-1);
+    expect(entry).toEqual(
+      expect.objectContaining({
+        characterId: project.characters[0].id,
+        before: beforeState,
+        after: expect.stringContaining('서윤이 이안을 믿기로 선택한다'),
+        triggerScene: result.chapter.id,
+        choice: '서윤이 이안을 믿기로 선택한다',
+        cost: '탑 출입권을 잃는 대가',
+        futureConsequence: expect.stringContaining('다음 회차')
+      })
+    );
+    expect(result.updatedProject.characters[0].currentState).toContain('서윤이 이안을 믿기로 선택한다');
   });
 
   it('builds a Scrivener-style editor workspace from the current series project', () => {

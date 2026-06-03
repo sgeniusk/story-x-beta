@@ -1,6 +1,7 @@
 import { extractClaims, findUnsupportedClaims, mapClaimsToEvidence } from './claimLedger';
 import { auditCitations } from './citationGate';
 import { auditCounterArgument, auditResearchEthics } from './academicIntegrity';
+import { inspectKoreanVoice } from './koreanVoiceGate';
 
 // M4 청크 E · Layer 4 — 기본 품질 게이트 + academic extension.
 // 정본 — docs/storyx-harness-architecture.md § 5-3, 3-3 (두 트랙 설계).
@@ -65,6 +66,8 @@ export interface GateInput {
   motifVariations?: number;
   /** 역사적/문화적 디테일 밀도 0~100. */
   historicalDensity?: number;
+  /** 텍스트만으로 측정 가능한 지표인지. false 면 해당 게이트를 평가하지 않고 skipped 로 보낸다. */
+  metricMeasurements?: Partial<Record<MeasuredMetricKey, boolean>>;
   /** 에세이 — 개인 경험에서 보편으로의 도약 여부. */
   universalLeapPresent?: boolean;
   /** 에세이 — 자기 반전(self-reversal) 횟수. */
@@ -93,21 +96,44 @@ export interface GateResult {
   requirement: GateRequirement;
   passed: boolean;
   reason: string;
+  measured?: boolean;
 }
 
 export interface QualityGatesReport {
   results: GateResult[];
+  /** 텍스트만으로 측정 불가능해 평가에서 제외한 게이트. fake default pass 를 막기 위한 명시적 흔적. */
+  skipped: GateResult[];
   /** 강제 게이트가 모두 통과했는가 — readyForProduction 의 후속 조건. */
   blockingPassed: boolean;
   /** 권고 게이트 중 실패한 항목 수 — 작가에게 알리되 차단은 안 함. */
   advisoryFailures: number;
 }
 
+export type MeasuredMetricKey =
+  | 'voiceMatchScore'
+  | 'sceneSequelRatio'
+  | 'ambiguityScore'
+  | 'ethicalCostPresent'
+  | 'motifVariations'
+  | 'historicalDensity';
+
+export type ProseQualityMetrics = Pick<
+  GateInput,
+  | 'voiceMatchScore'
+  | 'sceneSequelRatio'
+  | 'ambiguityScore'
+  | 'ethicalCostPresent'
+  | 'motifVariations'
+  | 'historicalDensity'
+  | 'metricMeasurements'
+>;
+
 // 모든 게이트를 평가하고 모드 가중치에 맞춰 blocking/advisory 를 결정한다.
 export function evaluateQualityGates(input: GateInput, mode: StoryMode): QualityGatesReport {
   const isEssay = input.medium === 'essay';
   const isAcademic = input.medium === 'academic';
   const results: GateResult[] = [];
+  const skipped: GateResult[] = [];
 
   for (const def of GATE_DEFS) {
     // 에세이 게이트는 에세이 매체에서만 평가.
@@ -119,8 +145,20 @@ export function evaluateQualityGates(input: GateInput, mode: StoryMode): Quality
     // gate_ambiguity_at_finale 는 finale 에서만 평가.
     if (def.key === 'gate_ambiguity_at_finale' && !input.isFinale) continue;
 
-    const passed = def.evaluate(input);
     const requirement = resolveRequirement(def, mode);
+    if (def.metricKey && input.metricMeasurements?.[def.metricKey] === false) {
+      skipped.push({
+        gate: def.key,
+        track: def.track,
+        requirement,
+        passed: false,
+        measured: false,
+        reason: '텍스트만으로 안정 측정할 수 없어 fake default 없이 평가에서 제외했습니다.'
+      });
+      continue;
+    }
+
+    const passed = def.evaluate(input);
     results.push({
       gate: def.key,
       track: def.track,
@@ -135,8 +173,32 @@ export function evaluateQualityGates(input: GateInput, mode: StoryMode): Quality
 
   return {
     results,
+    skipped,
     blockingPassed: blockingFailures.length === 0,
     advisoryFailures
+  };
+}
+
+export function buildProseQualityMetrics(text: string): ProseQualityMetrics {
+  const paragraphs = splitParagraphs(text);
+  const sceneSequel = measureSceneSequelRatio(paragraphs);
+  const motif = measureMotifVariations(paragraphs);
+
+  return {
+    voiceMatchScore: inspectKoreanVoice(text).score,
+    sceneSequelRatio: sceneSequel.measured ? sceneSequel.value : undefined,
+    ambiguityScore: undefined,
+    ethicalCostPresent: hasEthicalCost(text),
+    motifVariations: motif.measured ? motif.count : undefined,
+    historicalDensity: measureHistoricalDensity(text),
+    metricMeasurements: {
+      voiceMatchScore: true,
+      sceneSequelRatio: sceneSequel.measured,
+      ambiguityScore: false,
+      ethicalCostPresent: true,
+      motifVariations: motif.measured,
+      historicalDensity: true
+    }
   };
 }
 
@@ -145,6 +207,7 @@ export function evaluateQualityGates(input: GateInput, mode: StoryMode): Quality
 interface GateDef {
   key: GateKey;
   track: GateTrack;
+  metricKey?: MeasuredMetricKey;
   evaluate: (input: GateInput) => boolean;
   passReason: string | ((input: GateInput) => string);
   failReason: string | ((input: GateInput) => string);
@@ -169,13 +232,16 @@ const GATE_DEFS: GateDef[] = [
   {
     key: 'gate_scene_sequel_balance',
     track: 'common',
-    evaluate: (i) => (i.sceneSequelRatio ?? 0.5) >= 0.3 && (i.sceneSequelRatio ?? 0.5) <= 0.7,
+    metricKey: 'sceneSequelRatio',
+    evaluate: (i) =>
+      typeof i.sceneSequelRatio === 'number' && i.sceneSequelRatio >= 0.3 && i.sceneSequelRatio <= 0.7,
     passReason: 'scene/sequel 비율이 권장 범위(0.3~0.7) 안입니다.',
     failReason: 'scene/sequel 비율이 권장 범위를 벗어났습니다 — 호흡 조정 필요.'
   },
   {
     key: 'gate_voice_match_70',
     track: 'common',
+    metricKey: 'voiceMatchScore',
     evaluate: (i) => (i.voiceMatchScore ?? 0) >= 70,
     passReason: 'koreanVoiceGate 점수가 70 이상입니다.',
     failReason: 'koreanVoiceGate 점수가 70 미만입니다 — 문체 점검 필요.'
@@ -190,6 +256,7 @@ const GATE_DEFS: GateDef[] = [
   {
     key: 'gate_ambiguity_at_finale',
     track: 'literary',
+    metricKey: 'ambiguityScore',
     evaluate: (i) => (i.ambiguityScore ?? 0) >= 60,
     passReason: '마무리에 의미 있는 모호함이 남아 있습니다.',
     failReason: '마무리가 너무 닫혀 있습니다 — 작품성 트랙에서는 여백이 필요합니다.'
@@ -197,6 +264,7 @@ const GATE_DEFS: GateDef[] = [
   {
     key: 'gate_ethical_cost_present',
     track: 'literary',
+    metricKey: 'ethicalCostPresent',
     evaluate: (i) => Boolean(i.ethicalCostPresent),
     passReason: '윤리적 대가가 작품 안에 보입니다.',
     failReason: '윤리적 대가가 없어 인물의 선택이 가볍습니다.'
@@ -204,6 +272,7 @@ const GATE_DEFS: GateDef[] = [
   {
     key: 'gate_motif_variation',
     track: 'literary',
+    metricKey: 'motifVariations',
     evaluate: (i) => (i.motifVariations ?? 0) >= 2,
     passReason: '같은 모티프가 변주되며 깊이가 누적됩니다.',
     failReason: '모티프 변주가 부족합니다 — 같은 이미지가 새 의미를 얻어야 합니다.'
@@ -211,6 +280,7 @@ const GATE_DEFS: GateDef[] = [
   {
     key: 'gate_historical_density',
     track: 'literary',
+    metricKey: 'historicalDensity',
     evaluate: (i) => (i.historicalDensity ?? 0) >= 50,
     passReason: '역사적/문화적 디테일이 충분히 밀도 있습니다.',
     failReason: '역사적 디테일이 얕습니다 — 작품 세계의 무게가 약합니다.'
@@ -368,4 +438,149 @@ function hasClosingCliff(text: string): boolean {
   if (!text) return false;
   const tail = text.slice(-200);
   return CLOSING_CLIFF_TOKENS.some((t) => tail.includes(t));
+}
+
+function splitParagraphs(text: string): string[] {
+  return text
+    .split(/(?:\r\n|\n){2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+}
+
+const DIALOGUE_MARKERS = ['"', "'", '“', '”', '‘', '’', '「', '」', '『', '』'];
+const SAID_PATTERN = /(말했다|물었다|대답했다|속삭였다|외쳤다|중얼거렸다|소리쳤다|답했다)/;
+const ACTION_PATTERN =
+  /(뛰었다|달렸다|밀었다|잡았다|던졌다|숨었다|돌아섰다|멈췄다|들었다|열었다|닫았다|깨졌다|울렸다|발견했다|갔다|왔다|올랐다|내려갔다|꺼냈다|밀어냈다|품었다)/;
+const INTERNAL_PATTERN =
+  /(생각했다|느꼈다|깨달았다|후회했다|떠올렸다|망설였다|두려웠다|슬펐다|외로웠다|그리웠다|마음|기억했다|알았다|믿었다|의심했다)/;
+
+function measureSceneSequelRatio(paragraphs: string[]): { value?: number; measured: boolean } {
+  if (paragraphs.length === 0) return { measured: false };
+
+  let sceneCount = 0;
+  for (const paragraph of paragraphs) {
+    const dialogueHits = DIALOGUE_MARKERS.some((marker) => paragraph.includes(marker)) ? 1 : 0;
+    const saidHits = countMatches(paragraph, SAID_PATTERN);
+    const actionHits = countMatches(paragraph, ACTION_PATTERN);
+    const internalHits = countMatches(paragraph, INTERNAL_PATTERN);
+    if (dialogueHits + saidHits + actionHits > internalHits) {
+      sceneCount += 1;
+    }
+  }
+
+  return { value: roundRatio(sceneCount / paragraphs.length), measured: true };
+}
+
+const HISTORICAL_PATTERN = /(\d{4}년|\d{2,3}년대|[가-힣]+시대|[가-힣]+왕조|[가-힣]+세기|\d{1,2}세기)/g;
+const HISTORICAL_NOUNS = [
+  '조선',
+  '고려',
+  '대한제국',
+  '일제',
+  '해방',
+  '전쟁',
+  '궁궐',
+  '성문',
+  '전차',
+  '순사',
+  '시장',
+  '독립',
+  '왕',
+  '왕조',
+  '식민',
+  '근대',
+  '유물',
+  '문헌',
+  '제사',
+  '서원'
+];
+
+function measureHistoricalDensity(text: string): number {
+  const normalized = text.trim();
+  if (!normalized) return 0;
+
+  const explicitPeriodHits = normalized.match(HISTORICAL_PATTERN)?.length ?? 0;
+  const nounHits = HISTORICAL_NOUNS.reduce((sum, noun) => sum + countLiteral(normalized, noun), 0);
+  // Historical anchors accumulate across a chapter; paragraph normalization punished longer historical scenes.
+  const density = explicitPeriodHits * 45 + nounHits * 20;
+  return clampScore(Math.round(density));
+}
+
+const ETHICAL_COST_TERMS = [
+  '희생',
+  '대가',
+  '죄책감',
+  '갈등',
+  '도덕',
+  '선택의 무게',
+  '책임',
+  '배신',
+  '용서',
+  '상처',
+  '누군가를 살리려면',
+  '포기해야'
+];
+
+function hasEthicalCost(text: string): boolean {
+  return ETHICAL_COST_TERMS.some((term) => text.includes(term));
+}
+
+const MOTIF_TOKEN_PATTERN = /[가-힣]{2,}/g;
+const MOTIF_STOPWORDS = new Set([
+  '그는',
+  '그녀는',
+  '나는',
+  '우리는',
+  '이야기',
+  '작품',
+  '인물',
+  '것은',
+  '것이',
+  '그리고',
+  '하지만',
+  '때문에',
+  '속에서',
+  '앞으로',
+  '여러',
+  '좋은'
+]);
+
+function measureMotifVariations(paragraphs: string[]): { measured: boolean; count?: number } {
+  if (paragraphs.length < 2) return { measured: false };
+
+  const paragraphTokenSets = paragraphs.map((paragraph) => {
+    const tokens = paragraph.match(MOTIF_TOKEN_PATTERN) ?? [];
+    return new Set(tokens.filter((token) => token.length >= 2 && !MOTIF_STOPWORDS.has(token)));
+  });
+  const firstSeen = new Map<string, number>();
+  const recurring = new Set<string>();
+
+  paragraphTokenSets.forEach((tokens, index) => {
+    for (const token of tokens) {
+      const previous = firstSeen.get(token);
+      if (previous === undefined) {
+        firstSeen.set(token, index);
+      } else if (previous !== index) {
+        recurring.add(token);
+      }
+    }
+  });
+
+  return { measured: true, count: recurring.size };
+}
+
+function countMatches(text: string, pattern: RegExp): number {
+  return text.match(new RegExp(pattern.source, 'g'))?.length ?? 0;
+}
+
+function countLiteral(text: string, literal: string): number {
+  return text.split(literal).length - 1;
+}
+
+function roundRatio(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function clampScore(value: number): number {
+  return Math.max(0, Math.min(100, value));
 }

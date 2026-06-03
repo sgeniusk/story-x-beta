@@ -8818,6 +8818,7 @@ body {
   --nx-surface: #0f1011;
   --nx-surface-soft: #131416;
   --nx-ink: #ededf3;
+  --nx-ink-deep: #f7f7fb;
   --nx-slate: rgba(237, 237, 243, 0.72);
   --nx-steel: rgba(237, 237, 243, 0.5);
   --nx-hairline: rgba(255, 255, 255, 0.06);
@@ -8851,7 +8852,7 @@ body {
   gap: 0;
   flex-shrink: 0;
   border-bottom: 1px solid var(--nx-hairline);
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(8, 9, 10, 0.85);
   backdrop-filter: blur(12px);
 }
 .home-page .hx-brand {

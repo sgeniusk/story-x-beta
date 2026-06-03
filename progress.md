@@ -1,211 +1,75 @@
 # Story X — Progress
 
-> Last Updated: 2026-05-29 20:40 KST · Branch: `design/margin-integration`
-
-## Current Objective
-
-**M10 — Margin 통합 Phase 3 (검토 UX 다듬기)** (`implemented_uncommitted`) — 브랜치 `design/margin-integration`.
-
-Phase 3 패킷(`docs/handoff/margin-phase3-task-packet.md`)에 따라 전체 검토 시작 직후 코어 5명 pending skeleton 을 seed 하고, anchor 매칭 실패 리뷰를 단락별 round-robin fallback 으로 분산했다. 도메인 로직과 `/api/review-agent` 호출 경로는 변경하지 않았다.
-
-- 베이스라인(변경 전) — `bash init.sh` 통과 · 38 files / 231 tests.
-- TDD — `src/lib/marginReview.test.ts` 에 anchor fallback 분산, evidence 매칭 우선, pending seed→persona replace 케이스를 먼저 추가하고 RED 확인 후 구현.
-- 수정 8 — `src/lib/marginReview.ts`, `src/lib/marginReview.test.ts`, `src/hooks/useMarginReview.ts`, `src/components/MarginColumn.tsx`, `src/components/AnnotationCard.tsx`, `src/components/CoreStrip.tsx`, `src/StoryXDesk.tsx`, `src/styles.css`.
-- Pending 계약 — `useMarginReview` 가 `corePersonaIds` 를 받아 `MarginReview.pending=true` placeholder 5개를 즉시 seed. 실제 결과 도착 시 같은 persona pending 만 제거하고 확정 리뷰로 교체. CoreStrip 카운트는 pending 제외.
-- Anchor 분산 — `resolveRunReviewAnchor()` 가 evidence/output 매칭 성공은 존중하고, 실패 시 `reviewIndex % paragraphs.length` 로 결정론적 분산.
-- 최종 검증 — `npx tsc --noEmit` exit 0 · `npm test` **38 files / 234 tests 통과** · `npm run build` 성공(js 580.80kB / css 193.00kB, 876ms) · 최종 `bash init.sh` 통과(38 files / 234 tests · 빌드 성공).
-- 로컬 dev 서버 smoke — `http://127.0.0.1:5173/?stage=editor` HTTP 200.
-- 커밋 금지 지시 준수 — 커밋하지 않음.
-
----
-
-## (직전) M9 — 디자인 핸드오프 자료 준비 (`done`)
-
-`design/linear-dark` → `main` ff merge(`bc9f803`) 후 `docs/handoff/` 신설. (1) `design-brief.md` — 4파트 구조 의도 + 자유도/금지선 + 의뢰 항목 7개 + 검증 절차. (2) `token-map.md` — 4 토큰 레이어(`--sx-*` 스튜디오 / `--nx-*` 브릿지 / `--lc-*` 랜딩 / 사용자 트윅) 라인 번호별 매핑. (3) Playwright 1440×900 스크린샷 5종 — 랜딩 다크/라이트·홈·스튜디오·퍼블리시. 외주 인계 패키지로 발송 가능 상태.
-
----
-
-## (직전) M8.5 — 매체 선택 Linear 다크 + 편집기 여백·수정 표시 (`done`)
-
-`.home-page` 의 nx-* 토큰 12개 다크 오버라이드. 매체·자유서술·인터뷰·빌딩 4 step 모두 다크 통일. 편집기 여백 축소(clamp 10~16px). 수정 표시 가시화 — `.sx-manuscript-editor.is-edited` 좌측 라임 글로우 + `.sx-diff-toggle` 강조. **36 files / 220 tests** 통과.
-
----
-
-## (직전) M4.H — 통합·리팩터 (1차 컷 · 핵심 3 작업) (`done`)
-
-M4 청크 H 의 핵심 3 작업 완료. (1) `aiCliHarness.buildHarnessPrompt` 에 16 craft 검토 기준 + 12 품질 게이트 라인 추가 (Gap 10). (2) `canonRefactor.findAffectedChapters` 가 `change.targetCanonId` ↔ `chapter.newCanonFacts.id` 직접 매칭 우선, 없으면 부분문자열 fallback (Gap 8). (3) `storyEngine.validateContinuity` 가 `continuityContract.classifyCanonChange` 호출 — hard-canon 위반만 추가 issue, dedup 으로 기존 흐름 보존 (Gap 3). **36 files / 219 tests** 통과.
-
-청크 H 후속 — `creativeDevelopment.ts` 통합, docs 갱신은 다음 묶음.
-
----
-
-## (직전) M4.G — 매체 투영 (Layer 7) (`done`)
-
-M4 청크 G 완료. `mediaProjection.ts` 신설 — 같은 `StoryOntology` 가 5 매체(novel/essay/webtoon/insta-toon/four-cut) 로 투영. 매체별 필드는 다르지만 핵심 4 (premise.dramaticQuestion · characters[0].desire · worldRules[0].cost · plotThreads[0]) 는 변하지 않음 (PreservationReport 검증). `projectMedia` · `projectAllMedia` 함수. TDD 9 케이스, **36 files / 219 tests** 통과.
-
-다음 단계 — M4 청크 H (통합, 마지막 청크).
-
----
-
-## (직전) M4.F — 에이전트 실행 엔진 (Layer 5) (`done`)
-
-M4 청크 F 완료. 4가지 변경 — (1) `agentRunEngine.ts` 신설 (스케일별 AgentRun 산출), (2) `storyEngine.buildAgentRuns` 하드코딩 5명 → wrapper 로 교체 (Gap 4), (3) `agentOrchestration.ts` + `.test.ts` 삭제 (Gap 2·11), (4) `agentReviewProcess.ts` 에 `criteriaKeys` 필드 + 7 에이전트에 16 craft 기준 키 채움. `AgentRun.agentId` 를 `ValidationAgentId` 로 통합. TDD 8 케이스, **35 files / 210 tests** 통과.
-
-다음 단계 — M4 청크 G (mediaProjection, Layer 7).
-
----
-
-## (직전) M4.E — 품질 게이트 12개 + 바이블 13 카테고리 (Layer 4) (`done`)
-
-M4 청크 E 완료. `qualityGates.ts` 신설 — 12 게이트(common/commercial/literary/essay 트랙) + StoryMode 가중치(commercialWeight/literaryWeight) 로 강제/권고 결정. `storyEngine.ts` SeriesProject/CharacterProfile/Chapter 에 13 바이블 카테고리 optional 필드(pressureTriangle, narratorCard, voiceSignatureId, motifLedger, symbolLayers, formalDesign, historicalAnchors, personaCard, disclosureLedger, stakesLedger, rewardArc) 추가. TDD 12 케이스, **35 files / 204 tests** 통과.
-
-다음 단계 — M4 청크 F (agentRunEngine, Layer 5).
-
----
-
-## (직전) M4.D — 한국어 문체 게이트 (Layer 4 일부) (`done`)
-
-M4 청크 D 완료. `koreanVoiceGate.ts` 신설 — `inspectKoreanVoice(text, signatures?)` 가 6 종 flag(generic AI vocab · noun-heavy · translation-ese · comma-overflow · abstract-emotion · signature mismatch) 산출. `VoiceSignature` 인터페이스로 작가/캐릭터별 톤 기준(sentenceLength · forbiddenWords · preferredRegister · preserveTokens) 도입. 기존 `koreanStyle.ts` 와 6 케이스는 흡수 패턴으로 보존 (폐기 아님). **34 files / 192 tests** 통과.
-
-다음 단계 — M4 청크 E (qualityGates 12개 + SeriesProject 13 바이블 카테고리, Layer 4).
-
----
-
-## (직전) M4.C — 연속성 계약 (Layer 1) (`done`)
-
-M4 청크 C 1차 컷 완료. `continuityContract.ts` 신설 — 캐논 3계층(hard-canon / living-state / soft-signal) 분류, 성장 레저, 컨텍스트 팩, 리페어 제안. 한국어 명사 토큰 ≥ 2 공유 + 부정 마커 차이 휴리스틱으로 "반전" 감지. `memoryBank.ts` memoryBankTemplate 에 `evolution-memory.md` 슬롯 추가 (Gap 9). TDD 11 케이스, **33 files / 186 tests** 통과.
-
-`validateContinuity` 의 continuityContract 호출 리팩터는 기존 통과 테스트 보호를 위해 청크 H 통합 단계로 분리.
-
-다음 단계 — M4 청크 D (koreanVoiceGate, Layer 4 일부).
-
----
-
-## (직전) M4.B — 온톨로지 기반 (Layer 0) (`done`)
-
-M4 청크 B 완료. `storyOntology.ts` + `storyHarness.ts` 두 모듈 신설. 작가 입력 → 작품 그래프(전제·인물·세계 규칙·갈등·플롯) → 6단계 스테이지 점수(100점) → readyForProduction 판정 흐름이 완성됨. TDD 9 케이스, **32 files / 175 tests** 통과.
-
-다음 단계 — M4 청크 C (Layer 1, continuityContract + validateContinuity 리팩터).
-
----
-
-## (직전) M4.A — 캐논 기반 정리 (선행) (`done`)
-
-M4 스토리 하네스 구현의 청크 A. Gap 5 — CanonFact.owner 타입 6개 통일 (voice/visual/audio 포함). Gap 7 — produceNextChapter 시드 모티프(달의 탑·오빠의 표식·이안) 제거 + 빈 프로젝트(인물 0명) 가드. TDD 순서로 storyEngine.test.ts 에 두 케이스 먼저 추가 → 30 files / **166 tests** 통과 (164 → 166).
-
-다음 단계 — M4 청크 B (storyOntology + storyHarness Layer 0 신설).
-
----
-
-## (직전) M6.2.1 — evolution history UI (AiStatusBadge popover) (`done`)
-
-헤더의 작은 AI 상태 뱃지가 클릭 가능한 button 으로 확장. 클릭 시 popover 에 최근 evolution event 시간순 리스트가 펼쳐진다. 색 분기로 성공/주의/실패 한눈에. 비우기 버튼·닫기 버튼·외부 클릭/Escape 닫기. 작가가 자기 작품의 AI 활동 흐름을 한 곳에서 본다 — M6.2 의 누적 인프라가 처음으로 가시화됨.
-
----
-
-## (직전) M6.2 — evolutionMemory 누적 저장 (`done`)
-
----
-
-## (직전) M6.1 — 프로젝트 export/import (JSON 파일) (`done`)
-
-전체 작품 데이터(project · snapshots · 5 preferences)를 한 JSON 으로 백업/복원. 스튜디오 ⚙ 설정 패널의 "프로젝트 데이터" 그룹에서 내보내기/가져오기 두 버튼으로 접근. schema='storyx/export/v1' 버전 관리. 가져오기는 confirm 후 덮어쓰기 + `window.location.reload()`.
-
-M6 (영속성·메모리 싱크) 의 첫 컷. 다음 자연스러운 작업 — M6.2 evolutionMemory 누적 또는 M6.3 storyx CLI 확장.
-
----
-
-## (직전) M5 — 서버측 LLM Vercel Functions (`done`)
-
-5 라우트(`/api/draft`·`/api/review`·`/api/review-agent`·`/api/review-data`·`/api/interview`) 가 production 배포본에서 직접 LLM 호출. 공유 `promptBuilders` + `llmRunner` 모듈로 한 줄 호출 — `runLlmJson(prompt)`. AI Gateway 우선, Anthropic 직결 fallback, 키 없으면 mock. `vercel.json` 의 `includeFiles` 로 페르소나 .md 를 serverless 번들에 포함.
-
-## Current State
-
-- 활성 feature — `M5-vercel-functions` (완료) / 다음 활성 후보 — `M6-persistence-memory-sync` 또는 `M4-story-harness-implementation`
-- 직전 마일스톤 — M3.6.1 퍼블리시 화면 실데이터 연동
-- 마지막 통과 검증 — `npm test` 30 files / 164 tests · `npx tsc --noEmit` exit 0 · `npm run build` 519kb js (963ms)
-- 브랜치 — `design/linear-dark`
-- 배포 블로커 — Vercel Project Settings 에 `AI_GATEWAY_API_KEY` 또는 `ANTHROPIC_API_KEY` 추가 필요
-
-## What Was Done in the Last Session
-
-1. **AI SDK 의존성 추가** — `ai` + `@ai-sdk/anthropic` + `@vercel/node` (npm install background)
-2. **`src/lib/server/promptBuilders.ts` 신설**
-   - buildInterviewPrompt · buildDraftPrompt · buildReviewPrompt · buildAgentReviewPrompt · buildDataReviewPrompt
-   - loadAgentPersona — `.claude/agents/<file>.md` 본문 + 프런트매터 제거
-   - parseLlmJson — LLM 응답에서 첫 `{...}` 추출
-   - `AGENT_FILE_MAP` — 24명 (기본 12 + M4 신설 12) 페르소나 파일 매핑
-3. **`src/lib/server/llmRunner.ts` 신설** — `runLlmJson(prompt)` 공유 헬퍼
-   - AI Gateway 가 있으면 `anthropic/claude-3-5-sonnet-20241022` 문자열로 라우팅
-   - 없으면 `@ai-sdk/anthropic` provider 직결
-   - 둘 다 없으면 `status: 'mock'`
-4. **5 Vercel Functions 신설** — 모두 같은 패턴
-   - `api/interview.ts` · `api/draft.ts` · `api/review.ts` · `api/review-agent.ts` · `api/review-data.ts`
-   - 각각 클라이언트 응답 형태로 정규화 (questions, prose+beats, summary+agentReports, verdict+strengths+issues, summary+notes)
-5. **`vercel.json` 갱신** — `functions.api/review-agent.ts.includeFiles: ".claude/agents/**"`
-6. **`docs/vercel-env-setup.md` 신설** — env 변수 두 가지, 로컬 vs 배포본 동작 차이, curl 검증 예시
-
-## Recommended Next Step
-
-(a) 사용자가 Vercel Project Settings 에 `AI_GATEWAY_API_KEY` 또는 `ANTHROPIC_API_KEY` 추가 → 새 deploy → curl 한 줄 검증
-(b) **M6 영속성·메모리 싱크** — localStorage 에서 파일/클라우드 영속으로 확장. evolutionMemory 누적 저장. `storyx` CLI 확장 (`init`, `serve`, `memory sync`).
-(c) **M4 스토리 하네스 구현 (Layer 0~7)** — `docs/storyx-harness-architecture.md` 청크 A~H TDD.
-
-## Files Touched (M5)
-
-- `src/lib/server/promptBuilders.ts` (신설)
-- `src/lib/server/llmRunner.ts` (신설)
-- `api/interview.ts` · `api/draft.ts` · `api/review.ts` · `api/review-agent.ts` · `api/review-data.ts` (5 신설)
-- `vercel.json` (functions config 추가)
-- `docs/vercel-env-setup.md` (신설)
-- `package.json` (의존성 3개 추가)
-
-## Files NOT Touched
-
-- `tools/storyx.mjs` (로컬 CLI 호환 유지 — 같은 로직 두 곳)
-- `vite.config.ts` storyxBridge (dev 전용)
-- `.claude/agents/*.md` (페르소나 정본)
-- 5 클라이언트(draft/review/review-agent/review-data/interview Client.ts) — 응답 스키마 동일해서 변경 불필요
-
-## Blockers
-
-- **배포본 LLM** — Vercel env 미설정 시 mock 폴백. `docs/vercel-env-setup.md` 안내 따라 설정.
-- **로컬 LLM** — `claude` CLI 401. 사용자가 `claude login` 또는 ANTHROPIC_API_KEY 설정 필요. M5 와 무관.
-
-## Completed Milestones
-
-| ID | Title | Done | Evidence |
+> Last Updated: 2026-06-03 · Branch: `main` (HEAD `1c652fa`, 미커밋)
+> 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
+
+## 현재 활성 — M11 검토 기반 정비 (`in_progress`)
+
+2026-06-01 로컬 구동 점검 + 7에이전트 멀티에이전트 검토 완료. 전체 리포트는 `docs/reviews/2026-06-01-multiagent-review.md`.
+
+**이번 세션 진행 — rank1 · rank2 · rank3 · rank4 + (B) Codex 연결 완료.** 작업 모델 — 로컬 작가진 LLM 을 Codex 로 전환(M12), rank2~4 코딩은 Codex CLI(`codex:codex-rescue`)에 위임하고 Claude 가 검증·머지. rank3·rank4 는 code-reviewer 2차 검증으로 버그를 잡아 Codex 재수정까지 마쳤다.
+- **rank1** (small) — 상태 문서 진실 동기화. feature_list A1~A5 done 등재 + active=M11.
+- **(B) Codex 로컬 연결 (M12)** — dev 작가진(인터뷰·초안·검토) LLM 을 claude→codex 로. vite.config.ts 5 라우트 + storyx 기본값 codex. dev /api/review-agent codex 실호출 JSON 응답 확인.
+- **rank2** (Codex 구현) — 빌딩 단계 LLM 실패 시 빈 에디터 대신 `buildFallbackDraft` 결정론적 폴백 초안 + 실패 배너. 시드 모티프 invent 방지.
+- **rank3** (Codex 구현 + code-reviewer + Codex 수정) — 품질 게이트 12개가 하드코딩 리터럴 대신 본문을 실제로 읽음(voiceMatchScore↔koreanVoiceGate 등). 측정 불가 지표 measured:false skip(거짓 통과 차단). storyHarness ready conjunctive 화. **차별점 "연속성을 제품 요건으로" 실재화.**
+- **rank4** (Codex 구현 + code-reviewer + Codex 수정) — continuity 충돌 감지를 반의어·생사 대립쌍(OPPOSITION_PATTERNS)·숫자 비교·인물ID(hasSameEntity 가드)로 보강. validateContinuity 가 3계층(hard/living/soft)을 실제로 채우고 growthLedger 루프(appendGrowthEntry·buildContextPack) 연결. code-reviewer 가 거짓양성 CRITICAL(숫자 divergence)+HIGH(presence 동사형·3계층 과분류)를 잡아 Codex 재수정 — 엔티티 가드·공유 목적어 요구·확정 사실 hard 유지. 거짓양성 가드 3 케이스 테스트.
+rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
+
+**추가 핫픽스 (사용자 발견 · 다크 스코프 대비 버그 2건)** — 둘 다 M8.5 의 `.home-page` 다크 전환 시 누락된 잔재다.
+1. 매체·포맷 카드 제목이 다크 배경에 묻힘 — `.home-page` 다크 스코프에 `--nx-ink-deep` 오버라이드 누락(12토큰 중 빠짐). `styles.css:8821` 에 `--nx-ink-deep: #f7f7fb` 추가.
+2. 상단 nav(`hx-nav`) 의 "Story X" 브랜드·스텝 라벨이 묻힘 — nav 배경이 흰색(`rgba(255,255,255,0.92)`)으로 하드코딩된 채 남아 다크 스코프의 흰 텍스트(`--nx-ink`)와 흰+흰 충돌. `styles.css:8854` 를 `rgba(8,9,10,0.85)` 다크로 교체.
+각각 `appExperience.test.ts` 회귀 테스트 추가(블록 단위 검사). TDD RED→GREEN, 271 tests. 같은 유형(다크 스코프 속 흰 배경/색 잔재)은 rank 7 토큰 cascade 전수 점검으로 마무리 예정.
+
+### 검토 7단계 로드맵
+| rank | 작업 | 규모 | 상태 |
 |---|---|---|---|
-| M1 | 스토리 하네스 통합 설계 문서 | 2026-05-19 | `docs/storyx-harness-architecture.md` |
-| M2 | Linear 다크 랜딩 재작성 | 2026-05-21 | `src/App.tsx` MarketingLanding v4 |
-| M3 | 4파트 구조 + 랜딩 낮↔밤 토글 | 2026-05-21 | 흰 로고 변형, theme prop |
-| M3.5 | 스튜디오 편집기 설정 패널 | 2026-05-21 | 트윅·캔버스 인라인 오버라이드 |
-| M3.6 | 퍼블리시 파트 신설 | 2026-05-22 | `PublishScreen.tsx`, AppStage 확장 |
-| M3.6.1 | 퍼블리시 화면 실데이터 연동 | 2026-05-21 | 실데이터 + CTA LLM 호출 + 잠금 버튼 |
-| M3.7 | 에디터 리터럴 색 박스 정리 | 2026-05-21 | commits `3e4c9bb` ~ `e835a9b` |
-| M4 | 4단계 매트릭스 + 신설 12명 + 매체 풀 4개 | 2026-05-21 | commits `effba1a` ~ `8b82c26` |
-| M4.5 | 매체 페르소나 풀 ↔ 로컬 LLM 인터뷰 플로우 | 2026-05-21 | interviewClient + storyx.mjs |
-| M5 | 서버측 LLM Vercel Functions | 2026-05-21 | api/*.ts 5 + promptBuilders + llmRunner + vercel.json |
+| 1 | 상태 문서 진실 동기화 | small | ✅ done |
+| 2 | 빌딩 LLM 실패 폴백 초안 + 배너 | medium | ✅ done (Codex) |
+| 3 | 품질 게이트 본문 배선 + ready conjunctive | medium | ✅ done (Codex+리뷰+수정) |
+| 4 | continuity 충돌 감지 보강 + living/soft 3계층 통합 | large | ✅ done (Codex+리뷰+수정) |
+| 5 | StoryXDesk.tsx(6,067줄) 훅·컴포넌트 분리 | large | todo |
+| 6 | 1.0 기준 시장증명 재정의 + 경량 검증 | medium | todo |
+| 7 | 편집기 상단바 압축 + academic 1.0 범위 결정 | medium | todo |
+| (B) | 로컬 작가진 Codex 연결 (M12) | small | ✅ done |
 
-## Blocked Work
+**rank3·rank4 로 해결** — 품질 게이트가 본문을 실제로 읽고(차별점 실재화), continuity 가 부정어 없는 충돌(생사·숫자)도 잡으며 3계층(hard/living/soft)이 실제로 작동한다. 남은 작업은 rank5~7 (StoryXDesk 분리·시장검증·UI 정돈).
 
-| ID | Reason |
-|---|---|
-| M4 — 스토리 하네스 구현 (Layer 0~7) | 디자인·M5 후 착수 가능 |
-| M6 — 영속성·메모리 싱크 | M5 완료 → 다음 활성 후보 |
-| M7 — v1.0-alpha 완성 루프 | M4·M5·M6 의존 |
+## 다음 한 단계
 
-## Verification Evidence (Last Pass)
+rank 5(StoryXDesk 6,067줄 훅·컴포넌트 분리, large) — 이후 작업의 비용 승수라 우선 권장. 또는 rank 6(1.0 시장증명 재정의)·rank 7(편집기 UX 정돈). 모두 Codex 위임 + 도메인/회귀 위험 크면 code-reviewer 2차.
+
+## 최근 검증 (2026-06-03)
 
 ```
-npx tsc --noEmit       → exit 0
-npm test --silent      → Test Files 30 passed (30)
-                         Tests 164 passed (164)
-npm run build          → dist/assets/index-*.js  519.43 kB (gzip 160.27 kB)
-                         dist/assets/index-*.css 174.72 kB (gzip 29.95 kB)
-                         built in 963ms
-api/                   → 5 라우트 (draft, review, review-agent, review-data, interview)
+npx tsc --noEmit   → exit 0
+npm test           → Test Files 42 passed (42) · Tests 293 passed (293) · Failures 0
+bash init.sh       → tsc · vitest · build 전체 통과
 ```
+
+## 완료 마일스톤
+
+| ID | Title | Evidence |
+|---|---|---|
+| M1 | 스토리 하네스 통합 설계 문서 | docs/storyx-harness-architecture.md |
+| M2 | Linear 다크 랜딩 재작성 | src/App.tsx MarketingLanding v4 |
+| M3 · M3.5~3.7 | 4파트 구조·낮밤 토글·스튜디오 설정·에디터 폴리시 | src/App.tsx · src/StoryXDesk.tsx · src/styles.css |
+| M4 (.A~.H) | 스토리 하네스 구현 Layer 0~7 | storyOntology·storyHarness·continuityContract·koreanVoiceGate·qualityGates·agentRunEngine·mediaProjection |
+| M4.5 | 매체 페르소나 풀 ↔ 인터뷰 연결 | interviewClient.ts · tools/storyx.mjs |
+| M5 | 서버측 LLM Vercel Functions (5 라우트) | api/*.ts · src/lib/server/{promptBuilders,llmRunner}.ts |
+| M6.1 · 6.2 · 6.2.1 | export/import · evolutionMemory 누적 · history UI | storage.ts · evolutionMemory.ts · AiStatusBadge.tsx |
+| M8 (.1~.5) | 하네스·게이트·매체·온톨로지 UI 카드 + 홈 다크 | StoryXDesk 좌레일 카드 · DataPanel |
+| M9 | 디자인 핸드오프 패키지 | docs/handoff/ |
+| M10 (P1~P3) | 우레일 Margin 검토 모델 · 좌레일 DataPanel · pending/anchor · 마진 병렬화 | marginReview · DataPanel · perf 88282f1 (80s→16s) |
+| A1~A5 | 사회과학/학술 확장 (매체 골격·주장 레저·인용 무결성·반론/윤리·학술 퍼블리시) | claimLedger·citationGate·academicIntegrity·academicPublish · 커밋 98d6221~513b50e |
+
+## 미완 (백로그)
+
+| ID | Status | Note |
+|---|---|---|
+| M11 rank 2~7 | todo | 위 검토 로드맵 |
+| M6.3-storyx-cli | todo | init / serve / memory sync 3 명령 |
+| M6-persistence-memory-sync | in_progress | M6.3 남음 |
+| M7-alpha-1.0 | todo | 검토 결과 시장증명 게이트 추가 필요(rank 6) |
 
 ## Master Plan
 
