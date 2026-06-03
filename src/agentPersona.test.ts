@@ -6,14 +6,16 @@ const desk = readFileSync(resolve(__dirname, 'StoryXDesk.tsx'), 'utf8');
 const personas = readFileSync(resolve(__dirname, 'lib/agentPersonas.ts'), 'utf8');
 const portrait = readFileSync(resolve(__dirname, 'components/AgentPixelPortrait.tsx'), 'utf8');
 const css = readFileSync(resolve(__dirname, 'styles.css'), 'utf8');
+const componentSrc = (name: string) =>
+  readFileSync(resolve(__dirname, `components/${name}.tsx`), 'utf8');
 
 describe('agent personas', () => {
   it('renders agents as clickable pixel-character personas', () => {
     expect(personas).toContain('const agentPersonas');
     expect(portrait).toContain('function AgentPixelPortrait');
-    expect(desk).toContain('function AgentProfileDialog');
+    expect(componentSrc('AgentProfileDialog')).toContain('function AgentProfileDialog');
     expect(desk).toContain('onSelectAgent');
-    expect(desk).toContain('자세한 지시사항');
+    expect(componentSrc('AgentProfileDialog')).toContain('자세한 지시사항');
     expect(personas).toContain('말풍선 연출가');
     expect(personas).toContain('원화/키프레임 감독');
     expect(personas).toContain('프레임 조립가');

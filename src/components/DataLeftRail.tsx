@@ -3,7 +3,7 @@ import type { Chapter, SeriesProject } from '../lib/storyEngine';
 import type { MemoryApprovalQueue } from '../lib/memoryBank';
 import { BibleRulesAccordion } from './BibleRulesAccordion';
 import { CanonNav } from './CanonNav';
-import { WorkStateGrid } from '../StoryXDesk';
+import { WorkStateGrid } from './WorkStateGrid';
 import type { BibleSection, CanonCategory, DataView } from '../lib/canonDataView';
 
 // 데이터 모드 좌레일 — 작품 상태 + 캐논 nav + 바이블 규칙 + 작품 데이터(개요·캐논·문체·승인) 진입점.

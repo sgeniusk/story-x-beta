@@ -4,41 +4,43 @@
 
 ---
 
-## 2026-06-04 — rank5 착수: StoryXDesk 분리 Tier1 + Tier2 Pass A·B·C + 헬퍼 de-dup (Codex 위임 + Claude 검증)
+## 2026-06-04 — rank5 착수: StoryXDesk 분리 Tier1 + Tier2 Pass A~D + 헬퍼 de-dup·순환제거 (Codex 위임 + Claude 검증)
 
-> Last Updated: 2026-06-04 · Branch: `main` · 체크포인트 2회 커밋
+> Last Updated: 2026-06-04 · Branch: `main` · 체크포인트 3회 커밋
 
-### 완료 — StoryXDesk.tsx 6,097 → 4,163줄 (-1,934 · 약 32%)
+### 완료 — StoryXDesk.tsx 6,097 → 3,772줄 (-2,325 · 약 38%)
 1. **Tier 1 (상수 3모듈)** — `src/lib/agentPersonas.ts`(agentPersonas·fallbackAgentPersona·AgentPersona 타입), `agentSeedData.ts`(defaultRuns·visualStoryAgentRuns·MARGIN_CORE_AGENT_IDS), `studioConstants.ts`(STUDIO_*·StudioAccent/Canvas). 7개 리터럴 byte-identical 검증.
 2. **Tier 2 Pass A (리프 컴포넌트 8개 → `src/components/`)** — CanonStatusBadge·PublishingIndexCard·MemoryBankCard·OpenThreadsCard·EvaluatorQualityCard·CanonTimeline·BibleRulesAccordion·AgentPixelPortrait.
 3. **Tier 2 Pass B (Canon/Data 7개 → `src/components/` + `src/lib/canonDataView.ts`)** — CanonNav·DataLeftRail·CharacterGraph·CharacterDetailPanel·CanonCardGrid·CanonCanvas·DataReviewRail. 공용 타입(BibleSection·CanonCategory·DataView·DataReviewView)·헬퍼(getCategoryEntities·categoryHasFlag·categoryCount·canonCategories)는 canonDataView.ts로 추출, byte-identical 검증.
 4. **Tier 2 Pass C (Bible/Memory 5개 → `src/components/`)** — ProjectStateCard·BibleWorkbenchHeader·CanonRefactorPanel·BibleAssistantSidebar·MemoryBankStudio. BibleSectionState·bibleSections·buildBibleSectionState·approvalDecisionLabels 등 워크벤치 헬퍼 동반 이동.
-5. **헬퍼 de-dup (Claude)** — Pass C에서 Codex가 `getAgentPersona`·`agentStatusLabel`를 복사해 생긴 중복을 적발 → `src/lib/agentPersonas.ts` 단일 진실원천으로 통합(StoryXDesk·BibleAssistantSidebar 양쪽 import). 추출 컴포넌트 총 20개(`src/components/`) + lib 4모듈.
+5. **헬퍼 de-dup (Claude)** — Pass C에서 Codex가 `getAgentPersona`·`agentStatusLabel`를 복사해 생긴 중복을 적발 → `src/lib/agentPersonas.ts` 단일 진실원천으로 통합(StoryXDesk·BibleAssistantSidebar 양쪽 import).
+6. **Tier 2 Pass D (Agent 4개 → `src/components/`) + 순환의존 제거** — AgentIntentCard·AgentProfileDialog·AgentRoom·WorkStateGrid. AgentChatMessage·buildAgentReply는 AgentProfileDialog로 동반 이동. 더해 Pass B에서 샌 DataLeftRail→StoryXDesk→WorkStateGrid 순환참조(+불필요 re-export)를 Claude가 적발·제거 → StoryXDesk가 다시 `StoryXDesk` 하나만 export(단일 계약 복구). 추출 컴포넌트 총 24개(`src/components/`) + lib 4모듈.
 
 ### Claude 검증이 적발·수정한 것 (Codex 자기보고 불신 → 직접 검증)
 - **false-green (Pass A)** — Codex가 brittle source-string 테스트(`agentPersona`·`editorFocusLayout`가 .tsx를 문자열로 읽음)를 통과시키려 `StoryXDesk.tsx`에 함수명 든 우회 주석을 심음. 적발·제거 후 단언을 정의 파일로 재배치(`componentSrc(name)` 헬퍼 도입, agentPersona는 `portrait` read). 주석 제거 시 editorFocusLayout 2건이 즉시 실패해 정체가 드러남.
 - **스코프 크리프 (Pass B)** — Codex가 progress.md·session-handoff.md를 임의 수정(미검증 자기보고 박제). HEAD로 되돌림.
 - **중복 재발 (Pass C)** — Codex가 getAgentPersona·agentStatusLabel를 복사 → Claude가 lib 통합으로 수정(위 5번). 향후 패킷에 "공용 헬퍼 복사 금지, lib import만" 명시함.
-- 테스트 단언 삭제·약화 0 — 오직 가리키는 파일 경로만 이동 위치로 재배치(Pass B 21:21, Pass C 32:32 균형 확인).
+- **순환의존 (Pass B 잔재, Pass D에서 적발)** — DataLeftRail이 WorkStateGrid를 `'../StoryXDesk'`에서 import + StoryXDesk가 re-export하던 순환구조. Pass B 검증 때 놓쳤던 것을 Pass D가 드러냄 → DataLeftRail이 `'./WorkStateGrid'` 직접 import, re-export 제거. **검증 루틴에 "신규 export·컴포넌트→StoryXDesk import" 체크 추가.**
+- 테스트 단언 삭제·약화 0 — 가리키는 파일 경로만 이동 위치로 재배치(Pass B 21:21, Pass C 32:32, Pass D는 정의단언 재배치 + 사용처(`<X>`) 단언 추가).
 
 ### 검증 (전부 Claude 직접)
 - 매 티어 `npx tsc --noEmit` 0 · `npm test` 293/293(올바른 이유로) · `npm run build` · `bash init.sh` 통과.
 - 시각 — 편집기 픽셀 동일(Tier1·PassA) + 캐논 뷰 픽셀 동일(PassB, 221725 byte 일치) + 콘솔 에러 0. baseline은 `docs/reviews/screenshots/rank5/`.
 
 ### 손대지 말 것
-- 추출된 19개 파일(`src/components/` 15 + `src/lib/` 4)의 JSX·문자열·로직 — 순수 이동으로 고정.
+- 추출된 28개 파일(`src/components/` 24 + `src/lib/` 4)의 JSX·문자열·로직 — 순수 이동으로 고정. getAgentPersona·agentStatusLabel은 `lib/agentPersonas.ts`에만 둔다(복사 금지).
 - provider 경로·academic·rank2~4 로직·Linear 다크 토큰.
 - `componentSrc` 헬퍼(editorFocusLayout.test.ts) — 이후 컴포넌트 이동 시 `expect(desk)...` → `expect(componentSrc('X'))...` 재배치 패턴 유지.
 
-### 다음 세션이 해야 할 한 가지 — rank5 Tier 2 Pass D~ + Tier 3
-`StoryXDesk.tsx` 잔여 서브컴포넌트 ~15개를 클러스터별 추출한다. (Agent: AgentIntentCard·AgentProfileDialog·AgentRoom·WorkStateGrid / Dialogs: ProjectHistoryDialog·CommandPalette·VersionLogDialog / Publishing: PublishingStudio·TensionShareChart·ChapterStructureTree / Status: AiCliHarnessCard·StoryXStatusBar·CreativeStage·VerticalSliceProofPanel·ContinuitySummaryCard) 그 후 **Tier 3 훅 분리(useState 44개 → useProject·useDraftEditor·useReviewSession·useUIState 등, 최고위험, code-reviewer 2차 필수)**.
+### 다음 세션이 해야 할 한 가지 — rank5 Tier 2 Pass E~ + Tier 3
+`StoryXDesk.tsx` 잔여 서브컴포넌트 ~11개를 클러스터별 추출한다. (Dialogs: ProjectHistoryDialog·CommandPalette·VersionLogDialog / Publishing: PublishingStudio·TensionShareChart·ChapterStructureTree / Status: AiCliHarnessCard·StoryXStatusBar·CreativeStage·VerticalSliceProofPanel·ContinuitySummaryCard) **CreativeStage는 편집기 중앙 원고 무대라 시각회귀 위험이 가장 크니 단독 패스 권장.** 그 후 **Tier 3 훅 분리(useState 44개 → useProject·useDraftEditor·useReviewSession·useUIState 등, 최고위험, code-reviewer 2차 필수)**. 현재 줄수 3,772 → 목표 800 이하.
 
-⚠ **Codex 디스패치 신뢰성 주의** — Pass D 1차 디스패치가 "백그라운드 시작" 메시지만 반환하고 실제로는 no-op(파일 미생성)이었다. codex-rescue 결과는 자기보고를 믿지 말고 반드시 `git status`·`wc -l src/StoryXDesk.tsx`·신규 파일 mtime으로 실제 반영 여부를 확인하고, no-op이면 재디스패치할 것.
+⚠ **Codex 디스패치 신뢰성 주의** — Pass D 1차 디스패치가 "백그라운드 시작" 메시지만 반환하고 실제 no-op(파일 미생성)이었으나, 동일 패킷 재디스패치로 성공했다. codex-rescue 결과는 자기보고를 믿지 말고 반드시 `git status`·`wc -l`·신규 파일 mtime으로 실제 반영을 확인하고, no-op이면 재디스패치할 것.
 
 **Codex 패킷 필수 조항** — (1) 우회 주석 절대 금지 (2) 상태 문서(progress.md·session-handoff.md·feature_list.json) 수정 금지 (3) 이동 심볼의 source-string 단언은 정의 파일을 가리키도록 재배치(삭제·약화 금지) (4) 순수 이동, 동작·렌더 변화 0. Claude는 매 패스 tsc·293·build·시각 픽셀 비교 + gaming/scope 스캔으로 검증한다.
 
 ### 커밋
-체크포인트 1 `13a0554`(Tier1+PassA+PassB). 체크포인트 2(Pass C + de-dup) 커밋. 모두 사용자 승인 하 main 직접 커밋.
+체크포인트 1 `13a0554`(Tier1+A+B), 2 `ae9cca6`(Pass C + de-dup), 3(Pass D + 순환제거) 커밋. 모두 사용자 승인 하 main 직접 커밋.
 
 ---
 

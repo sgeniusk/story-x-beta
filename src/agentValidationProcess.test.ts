@@ -11,6 +11,8 @@ import {
 
 const desk = readFileSync(resolve(__dirname, 'StoryXDesk.tsx'), 'utf8');
 const skill = readFileSync(resolve(__dirname, '../.claude/skills/storyx-persona-review/SKILL.md'), 'utf8');
+const componentSrc = (name: string) =>
+  readFileSync(resolve(__dirname, `components/${name}.tsx`), 'utf8');
 
 describe('persona validation process', () => {
   it('defines scale-aware review runs before spending tokens', () => {
@@ -62,8 +64,9 @@ describe('persona validation process', () => {
   });
 
   it('surfaces the protocol in the editor and project skill', () => {
-    expect(desk).toContain('검증 프로세스');
-    expect(desk).toContain('성장 메모리');
+    expect(desk).toContain('<AgentProfileDialog');
+    expect(componentSrc('AgentProfileDialog')).toContain('검증 프로세스');
+    expect(componentSrc('AgentProfileDialog')).toContain('성장 메모리');
     // 검토 규모는 에이전트 대화창이 아니라 툴스트립의 최상위 설정으로 노출한다
     expect(desk).toContain('ex-scale-toggle');
     expect(desk).toContain('reviewScale');

@@ -71,9 +71,10 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('function reviewDraft');
     expect(desk).toContain('바이블 열기');
     // P2-B — '이번 회차 의도'는 좌측 레일의 AgentIntentCard(ex-intent-card)에 에이전트 발언으로 들어간다
-    expect(desk).toContain('ex-intent-card');
-    expect(desk).toContain('function AgentIntentCard');
-    expect(desk).toContain('className="ex-intent-textarea"');
+    expect(desk).toContain('<AgentIntentCard');
+    expect(componentSrc('AgentIntentCard')).toContain('ex-intent-card');
+    expect(componentSrc('AgentIntentCard')).toContain('function AgentIntentCard');
+    expect(componentSrc('AgentIntentCard')).toContain('className="ex-intent-textarea"');
     expect(desk).toContain('aria-label="원고 편집기"');
     expect(desk).toContain('const [isFocusMode, setIsFocusMode]');
     expect(desk).toContain('className="sx-expand-editor-button"');
@@ -351,13 +352,14 @@ describe('Story X focused editor layout', () => {
 
   it('P2-B — rebuilds the edit-mode left rail with work state, agent intent, structure tree and tension chart', () => {
     // 작품 상태 4셀 그리드 (마감 없음)
-    expect(desk).toContain('function WorkStateGrid');
-    expect(desk).toContain('총 분량');
-    expect(desk).toContain('이번 회차 분량');
+    expect(desk).toContain('<WorkStateGrid');
+    expect(componentSrc('WorkStateGrid')).toContain('function WorkStateGrid');
+    expect(componentSrc('WorkStateGrid')).toContain('총 분량');
+    expect(componentSrc('WorkStateGrid')).toContain('이번 회차 분량');
     expect(desk).not.toContain('마감');
     // 회차 의도는 AI 에이전트 발언으로 명시된다
-    expect(desk).toContain('가 잡은 ');
-    expect(desk).toContain('className="ex-intent-by"');
+    expect(componentSrc('AgentIntentCard')).toContain('가 잡은 ');
+    expect(componentSrc('AgentIntentCard')).toContain('className="ex-intent-by"');
     // 회차 구조 트리 — 기승전결 act 묶음, 에이전트 선택 스킴
     expect(desk).toContain('STRUCTURE_ACTS');
     expect(desk).toContain('· 에이전트 선택');

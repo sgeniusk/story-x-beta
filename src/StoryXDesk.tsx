@@ -9,7 +9,6 @@ import {
   Database,
   Download,
   FileText,
-  Info,
   ListChecks,
   Lock,
   Maximize2,
@@ -19,7 +18,6 @@ import {
   Plus,
   RotateCcw,
   Save,
-  Send,
   Settings,
   ShieldAlert,
   Upload,
@@ -38,12 +36,14 @@ import {
   type RefObject
 } from 'react';
 import { getAgentValidationProcess, type ValidationAgentId } from './lib/agentReviewProcess';
-import { agentPersonas, fallbackAgentPersona, getAgentPersona, agentStatusLabel, type AgentPersona } from './lib/agentPersonas';
+import { fallbackAgentPersona, getAgentPersona, type AgentPersona } from './lib/agentPersonas';
 import { MARGIN_CORE_AGENT_IDS, defaultRuns, visualStoryAgentRuns } from './lib/agentSeedData';
 import { STUDIO_ACCENT_VALUES, STUDIO_CANVAS_VALUES, type StudioAccent, type StudioCanvas } from './lib/studioConstants';
 import storyXSymbol from './assets/brand/story-x-symbol-light.svg';
 import { AiStatusBadge } from './components/AiStatusBadge';
-import { AgentPixelPortrait } from './components/AgentPixelPortrait';
+import { AgentIntentCard } from './components/AgentIntentCard';
+import { AgentProfileDialog } from './components/AgentProfileDialog';
+import { AgentRoom } from './components/AgentRoom';
 import { BibleAssistantSidebar } from './components/BibleAssistantSidebar';
 import { CanonCanvas } from './components/CanonCanvas';
 import { CanonCardGrid } from './components/CanonCardGrid';
@@ -64,6 +64,7 @@ import { PixelAvatar } from './components/PixelAvatar';
 import { ProjectStateCard } from './components/ProjectStateCard';
 import { PublishingIndexCard } from './components/PublishingIndexCard';
 import { Spotlight } from './components/Spotlight';
+import { WorkStateGrid } from './components/WorkStateGrid';
 import { useMarginReview } from './hooks/useMarginReview';
 import { findPersona } from './lib/extendedPersonas';
 import {
@@ -187,11 +188,6 @@ const mediumOptions = getMediumOptions();
 interface AgentDialogSelection {
   run: AgentRun;
   persona: AgentPersona;
-}
-
-interface AgentChatMessage {
-  role: 'agent' | 'user';
-  text: string;
 }
 
 interface DeskCommand {
@@ -2922,167 +2918,6 @@ function VersionLogDialog({
   );
 }
 
-// 작품 상태 4셀 그리드 — 총 분량 / 회차(연재형) / 현재 분량 / 진행 %. 실제 프로젝트 데이터로 채운다.
-// 단독 완결형은 회차가 없으므로 둘째 셀을 "단계"(초안/검토/완성)로 바꿔 보여준다.
-export function WorkStateGrid({
-  project,
-  latestChapter,
-  isSerial
-}: {
-  project: SeriesProject;
-  latestChapter: Chapter | null;
-  isSerial: boolean;
-}) {
-  const totalChars = project.chapters.reduce(
-    (sum, chapter) => sum + chapter.prose.replace(/\s/g, '').length,
-    0
-  );
-  const chapterCount = project.chapters.length;
-  const currentChars = (latestChapter?.prose ?? '').replace(/\s/g, '').length;
-  // 진행 % — 현재 분량을 목표 5,000자와 비교한 비율
-  const progressPct = Math.min(100, Math.round((currentChars / 5000) * 100));
-  const draftStage = !latestChapter ? '시작 전' : latestChapter.locked ? '완성' : '초안';
-
-  return (
-    <div className="ex-work-state" aria-label="작품 상태">
-      <div>
-        <span className="ex-work-state-label">총 분량</span>
-        <span className="ex-work-state-value">
-          {totalChars.toLocaleString()}
-          <small>자</small>
-        </span>
-      </div>
-      {isSerial ? (
-        <div>
-          <span className="ex-work-state-label">회차</span>
-          <span className="ex-work-state-value">
-            {chapterCount}
-            <small>화</small>
-          </span>
-        </div>
-      ) : (
-        <div>
-          <span className="ex-work-state-label">단계</span>
-          <span className="ex-work-state-value ex-work-state-value-text">{draftStage}</span>
-        </div>
-      )}
-      <div>
-        <span className="ex-work-state-label">{isSerial ? '이번 회차 분량' : '원고 분량'}</span>
-        <span className="ex-work-state-value">
-          {currentChars.toLocaleString()}
-          <small>자</small>
-        </span>
-      </div>
-      <div>
-        <span className="ex-work-state-label">진행</span>
-        <span className="ex-work-state-value">
-          {progressPct}
-          <small>%</small>
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// 작업 의도 — AI 에이전트(쇼러너)가 잡은 프레이밍. 작가는 textarea에서 직접 조정한다.
-// 연재형이면 "다음 회차 의도", 단편·단독 완결형이면 "이번 글의 의도"로 라벨이 바뀐다.
-function AgentIntentCard({
-  latestChapter,
-  isSerial,
-  draftPrompt,
-  isOpen,
-  onToggleOpen,
-  onChangeDraftPrompt,
-  draftPromptPlaceholder,
-  isLatestLocked,
-  generationNote,
-  styleChip
-}: {
-  latestChapter: Chapter | null;
-  isSerial: boolean;
-  draftPrompt: string;
-  isOpen: boolean;
-  onToggleOpen: () => void;
-  onChangeDraftPrompt: (value: string) => void;
-  draftPromptPlaceholder: string;
-  isLatestLocked: boolean;
-  generationNote: string | null;
-  styleChip: React.ReactNode;
-}) {
-  const persona = agentPersonas.showrunner;
-  // 연재형: 회차 단위 의도. 단독 완결형: 작품/원고 하나의 의도.
-  const intentLabel = isSerial
-    ? latestChapter
-      ? '다음 회차 의도'
-      : '이번 회차 의도'
-    : latestChapter
-      ? '이 원고의 의도'
-      : '이번 글의 의도';
-  const intentTextareaLabel = isSerial
-    ? latestChapter
-      ? '다음 회차에 담을 주요 내용'
-      : '이번 회차에 담을 주요 내용'
-    : '이 글에 담을 주요 내용';
-
-  return (
-    <section className="sx-panel ex-intent-card" aria-label={intentLabel}>
-      <button
-        type="button"
-        className="ex-intent-toggle"
-        aria-expanded={isOpen}
-        onClick={onToggleOpen}
-      >
-        <span className="ex-intent-by">
-          <span className="ex-intent-avatar" aria-hidden="true">
-            {persona.title.slice(0, 1)}
-          </span>
-          <span className="ex-intent-by-text">
-            {persona.title}가 잡은 {intentLabel}
-          </span>
-        </span>
-        <ChevronDown
-          size={14}
-          className="ex-intent-chevron"
-          data-open={isOpen ? 'true' : 'false'}
-          aria-hidden="true"
-        />
-      </button>
-      {isOpen && (
-        <div className="ex-intent-body">
-          <p className="ex-intent-frame">
-            {persona.title}가 잡은 작업 프레이밍입니다. 작가가 아래에서 직접 고쳐 쓸 수 있어요.
-          </p>
-          <textarea
-            className="ex-intent-textarea"
-            name="draft-prompt"
-            aria-label={intentTextareaLabel}
-            value={draftPrompt}
-            onChange={(event) => onChangeDraftPrompt(event.target.value)}
-            placeholder={draftPromptPlaceholder}
-            rows={4}
-          />
-          {isLatestLocked && latestChapter && (
-            <p className="ex-intent-lock">
-              <Lock size={11} aria-hidden="true" />
-              <span>
-                {isSerial
-                  ? `${latestChapter.episode}화는 출간 확정됨. 수정 대신 다음 회차로 진행합니다.`
-                  : '이 원고는 출간 확정됨. 잠금을 풀어야 다시 손볼 수 있습니다.'}
-              </span>
-            </p>
-          )}
-          {generationNote && (
-            <p className="ex-intent-note" role="status">
-              {generationNote}
-            </p>
-          )}
-          {styleChip}
-        </div>
-      )}
-    </section>
-  );
-}
-
 // 회차 구조 — 평탄한 beat 목록을 위치 기준 기·승·전·결 4막으로 묶어 트리로 보여준다.
 // beats는 순서가 있는 평탄한 리스트이므로 act 묶음은 순번으로 유도한다(에이전트가 고른 스킴).
 type StructureAct = { id: string; glyph: string; label: string };
@@ -3644,232 +3479,6 @@ function StoryXStatusBar({
       <span>{editedSinceReview ? '수정 미검토' : 'synced'}</span>
       <span>⌘K 명령 · ⌘. 집중</span>
     </footer>
-  );
-}function AgentProfileDialog({
-  run,
-  persona,
-  projectTitle,
-  isReviewing,
-  onRunReview,
-  onClose
-}: {
-  run: AgentRun;
-  persona: AgentPersona;
-  projectTitle: string;
-  isReviewing: boolean;
-  onRunReview: () => void;
-  onClose: () => void;
-}) {
-  const validationProcess = getAgentValidationProcess(persona.id);
-  const [referenceOpen, setReferenceOpen] = useState(false);
-  const [messages, setMessages] = useState<AgentChatMessage[]>([
-    {
-      role: 'agent',
-      text: persona.openingLine
-    }
-  ]);
-  const [draft, setDraft] = useState('');
-  const threadRef = useRef<HTMLDivElement>(null);
-
-  const strengths = run.strengths ?? [];
-  const issues = run.issues ?? [];
-  // 검토 전 상태 — pass/revise/block/complete 중 어떤 결과도 아직 없고, 항목 리스트도 비어 있을 때.
-  const reviewed = run.status !== 'idle' || strengths.length > 0 || issues.length > 0;
-
-  // 새 답변이 도착하면 대화 스레드를 항상 마지막 메시지로 스크롤한다
-  useEffect(() => {
-    const thread = threadRef.current;
-    if (thread) {
-      thread.scrollTop = thread.scrollHeight;
-    }
-  }, [messages]);
-
-  function submitAgentQuestion(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const question = draft.trim();
-
-    if (!question) {
-      return;
-    }
-
-    setMessages((current) => [
-      ...current,
-      { role: 'user', text: question },
-      {
-        role: 'agent',
-        text: buildAgentReply(persona, run, projectTitle, question)
-      }
-    ]);
-    setDraft('');
-  }
-
-  return (
-    <div className="agent-dialog-backdrop" role="presentation" onClick={onClose}>
-      <section
-        className="agent-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="agent-dialog-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <header>
-          <AgentPixelPortrait persona={persona} />
-          <div>
-            <p className="sx-eyebrow">Story X Writers Room</p>
-            <h2 id="agent-dialog-title">{persona.title}</h2>
-            <span>{persona.subtitle}</span>
-          </div>
-          <div className="ex-pro-head-actions">
-            <button
-              type="button"
-              className={`ex-pro-info-btn ${referenceOpen ? 'is-active' : ''}`}
-              aria-label="에이전트 지시사항과 검증 프로세스 보기"
-              aria-expanded={referenceOpen}
-              aria-pressed={referenceOpen}
-              onClick={() => setReferenceOpen((current) => !current)}
-            >
-              <Info size={17} />
-            </button>
-            <button type="button" className="agent-dialog-close" aria-label="에이전트 대화창 닫기" onClick={onClose}>
-              <X size={18} />
-            </button>
-          </div>
-        </header>
-        {referenceOpen && (
-          <aside className="ex-pro-reference" aria-label={`${persona.title} 기준 정보`}>
-            <h3>자세한 지시사항</h3>
-            <p>{persona.instruction}</p>
-            <h4>검수 기준</h4>
-            <ul>
-              {persona.checks.map((check) => (
-                <li key={check}>{check}</li>
-              ))}
-            </ul>
-            <h4>검증 프로세스</h4>
-            <ol className="agent-process-list">
-              <li>{validationProcess.agenda}</li>
-              <li>독립 검토 후 {validationProcess.outputFormat.join(', ')}을 남깁니다.</li>
-              <li>차단 신호 — {validationProcess.blockingSignals.join(' / ')}</li>
-            </ol>
-            <h4>성장 메모리</h4>
-            <ul>
-              {validationProcess.evolutionMemory.map((memory) => (
-                <li key={memory}>{memory}</li>
-              ))}
-            </ul>
-          </aside>
-        )}
-        <div className="agent-dialog-body ex-dialog-scroll">
-          <section className="ex-pro-review" aria-label={`${persona.title} 검토 결과`}>
-            <div className="ex-pro-review-head">
-              <span className="ex-pro-review-overline">이번 회차 검토</span>
-              <span className={`ex-pro-verdict ex-pro-verdict--${run.status}`}>{agentStatusLabel(run.status)}</span>
-            </div>
-            {reviewed ? (
-              <>
-                {run.output && <p className="ex-pro-review-note">{run.output}</p>}
-                <div className="ex-pro-split">
-                  <div className="ex-pro-col ex-pro-col--good">
-                    <h3>
-                      <Check size={14} />
-                      잘된 점
-                    </h3>
-                    {strengths.length > 0 ? (
-                      <ul>
-                        {strengths.map((item, index) => (
-                          <li key={`good-${index}`}>{item}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="ex-pro-col-empty">짚어낸 강점이 아직 없습니다.</p>
-                    )}
-                  </div>
-                  <div className="ex-pro-col ex-pro-col--bad">
-                    <h3>
-                      <ShieldAlert size={14} />
-                      잘못된 점
-                    </h3>
-                    {issues.length > 0 ? (
-                      <ul>
-                        {issues.map((item, index) => (
-                          <li key={`bad-${index}`}>{item}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="ex-pro-col-empty">짚어낸 문제가 아직 없습니다.</p>
-                    )}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="ex-pro-empty">
-                <p className="ex-pro-empty-title">아직 검토 전이에요</p>
-                <p className="ex-pro-empty-body">
-                  {persona.title}이 이번 회차를 읽으면 잘된 점과 잘못된 점이 여기에 항목으로 정리됩니다.
-                </p>
-                <button type="button" className="ex-pro-empty-btn" onClick={onRunReview} disabled={isReviewing}>
-                  <WandSparkles size={15} />
-                  {isReviewing ? '검토 진행 중' : '지금 검토 실행'}
-                </button>
-              </div>
-            )}
-          </section>
-          <section className="ex-pro-chat" aria-label={`${persona.title} 대화`}>
-            <span className="ex-pro-chat-overline">{persona.title}와의 대화</span>
-            <div className="ex-pro-thread" ref={threadRef}>
-              {messages.map((message, index) => (
-                <p key={`${message.role}-${index}`} className={`agent-chat-message is-${message.role}`}>
-                  {message.text}
-                </p>
-              ))}
-            </div>
-          </section>
-        </div>
-        <form className="agent-chat-form ex-dialog-input-pin" onSubmit={submitAgentQuestion}>
-          <label>
-            <span>{persona.title}에게 묻기 — 답은 위 대화창에 표시됩니다</span>
-            <input
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder="예: 이 인물이 여기서 이렇게 행동해도 괜찮을까?"
-              autoComplete="off"
-            />
-          </label>
-          <button type="submit" aria-label="질문 보내기">
-            <Send size={16} />
-          </button>
-        </form>
-      </section>
-    </div>
-  );
-}
-
-function buildAgentReply(persona: AgentPersona, run: AgentRun, projectTitle: string, question: string) {
-  const firstCheck = persona.checks[0] ?? '현재 작품 기준';
-  const evidence = run.evidence[0] ? ` 최근 근거는 "${run.evidence[0]}"입니다.` : '';
-
-  return `${projectTitle} 기준으로 보면, "${question}"은 "${firstCheck}"부터 확인하면 좋겠습니다. ${run.output}${evidence} 다음 단계는 이 결정을 canon, 인물 감정선, 독자 약속 중 어디에 저장할지 정하는 것입니다.`;
-}
-
-function AgentRoom({ runs }: { runs: AgentRun[] }) {
-  return (
-    <section className="sx-agent-room" aria-label="AI 작가진">
-      {runs.map((run, index) => {
-        const persona = getAgentPersona(run);
-
-        return (
-          <article key={`${run.agentId}-${run.title}`}>
-            <AgentPixelPortrait persona={persona} />
-            <div>
-              <span>0{index + 1}</span>
-              <h3>{persona.title}</h3>
-              <p>{run.output}</p>
-            </div>
-            {index < runs.length - 1 && <ChevronRight className="sx-agent-arrow" size={16} />}
-          </article>
-        );
-      })}
-    </section>
   );
 }
 
