@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-03 · Branch: `main` (HEAD `1c652fa`, 미커밋)
+> Last Updated: 2026-06-03 · Branch: `main` (HEAD `8d3aca2` · origin push 완료)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 현재 활성 — M11 검토 기반 정비 (`in_progress`)
@@ -36,7 +36,7 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 ## 다음 한 단계
 
-rank 5(StoryXDesk 6,067줄 훅·컴포넌트 분리, large) — 이후 작업의 비용 승수라 우선 권장. 또는 rank 6(1.0 시장증명 재정의)·rank 7(편집기 UX 정돈). 모두 Codex 위임 + 도메인/회귀 위험 크면 code-reviewer 2차.
+rank 5(StoryXDesk 6,067줄 훅·컴포넌트 분리, large) — 이후 작업의 비용 승수라 우선 권장. 또는 rank 6(1.0 시장증명 재정의)·rank 7(편집기 UX 정돈). 모두 Codex 위임 + 도메인/회귀 위험 크면 code-reviewer 2차. **rank5 상세 task packet 은 `session-handoff.md` 맨 위 노트에 작성해 두었다.**
 
 ## 최근 검증 (2026-06-03)
 

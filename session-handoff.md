@@ -24,9 +24,20 @@
 ### 손대지 말 것
 - academic track, provider paths, `vite.config.ts`, `tools/storyx.mjs`, server code.
 - Linear dark CSS tokens.
+- rank2~4 가 배선한 로직 — `buildFallbackDraft`, qualityGates 본문 측정/measured skip, continuity 대립쌍·3계층·hasSameEntity 가드 (모두 회귀 테스트로 고정).
 
 ### 커밋
-미실행. 사용자 지시가 `Do NOT commit` 이었다.
+**완료 — `8d3aca2` (main · origin push 완료).** 이번 세션 전체(M12 Codex 연결 + rank1~4 + UI 핫픽스 2건 + 검토 리포트 docs/reviews)를 한 커밋으로.
+
+### 다음 세션이 해야 할 한 가지 — rank5: StoryXDesk.tsx 분리 (large · 비용 승수)
+검토 리포트(`docs/reviews/2026-06-01-multiagent-review.md`) code-quality 관점 HIGH. StoryXDesk.tsx 가 6,000줄+ · useState 40개 집중이라 이후 모든 작업이 전체 파일을 훑게 만든다. **Codex 위임 + code-reviewer 2차** 로 진행한다.
+
+Codex 위임 task packet (그대로 `codex:codex-rescue` 에 전달 가능)
+- 목표 — StoryXDesk.tsx 를 관심사별 커스텀 훅(useProject · useDraftEditor · useReviewSession · useUIState 등) + 파일 내 서브컴포넌트(ProjectHistoryDialog · CommandPalette · ChapterStructureTree · PublishingStudio 등) + agentPersonas 거대 리터럴을 src/components/ · src/lib/ 로 추출. 목표 800줄 이하.
+- 곁가지(분리 가능) — 프롬프트 빌더 5개 이중화(tools/storyx.mjs vs src/lib/server/promptBuilders.ts) 해소.
+- 제약(필수) — 순수 리팩토링, 동작·기능 변화 0. 기존 293 tests 전부 그대로 통과. 시각 회귀 없음(중앙 편집기 타이포·앵커 `styles.css:3146-3163` · `StoryXDesk:5944-5959` 보존). provider 경로·academic·rank2~4 로직 무변경. 점진적으로 — 훅 하나 추출 → tsc/test 통과 → 다음. 한 번에 다 뜯지 말 것.
+- 검증 — tsc 0, npm test 293 그대로, build, `?stage=editor` Playwright 화면 회귀 없음. code-reviewer 2차로 기능 보존·렌더 동등성 확인.
+- 위험 — large 리팩토링이라 회귀 위험이 크다. 점진 추출 + 시각 회귀 캡처 비교가 핵심이다.
 
 ---
 

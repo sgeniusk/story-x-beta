@@ -318,7 +318,7 @@
       "status": "in_progress",
       "dependencies": ["M4-story-harness-implementation", "A5-academic-publish"],
       "done_criteria": "rank1~rank4 완료(+ B Codex 연결 M12). rank5~7 은 사용자 우선순위 결정 후 개별 착수.",
-      "evidence": "docs/reviews/2026-06-01-multiagent-review.md · rank1·2·3·4 + M12 완료(Codex 구현/Claude 검증/code-reviewer 2차) · tsc 0 · 293 tests · build 성공"
+      "evidence": "docs/reviews/2026-06-01-multiagent-review.md · rank1·2·3·4 + M12 완료(Codex 구현/Claude 검증/code-reviewer 2차) · tsc 0 · 293 tests · build 성공 · commit 8d3aca2 (origin push)"
     },
     {
       "id": "M12-codex-local-provider",
