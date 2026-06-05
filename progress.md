@@ -1,7 +1,14 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-04 · Branch: `main` (rank5 Tier1~2B 체크포인트 커밋)
+> Last Updated: 2026-06-05 · Branch: `main` (방향 C 플로팅 에디터 시안 체크포인트 머지 · rank5 Pass D 까지)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
+
+## 병행 트랙 — 편집기 재설계: 방향 C "떠 있는 작업실" (시안 체크포인트)
+
+2026-06-05. claude.ai design 에서 발산한 3방향 편집기 시안 중 **방향 C** 를 React 로 이식 착수. `design/floating-editor` 에서 작업 후 main 머지(체크포인트).
+- **들어온 것** — `src/components/FloatingEditor.tsx`(739줄) 비주얼 Phase 1. 어두운 캔버스 + 종이 시트 + 좌측 플로팅 독 + 단락 옆 여백 주석 + 작가별 색 밑줄. 인터랙션 전부(드래그 호출 popover·5명 순차 검토·반영/보류·집중·모드탭·키보드). `?editor=floating` 진입, `.fc-*` 스코프 CSS — 기존 편집기·테스트·전역 토큰 무영향(그래서 게이트 녹색).
+- **아직 시안 데이터** — `SAMPLE_PERSONAS·SAMPLE_REVIEWS·SAMPLE_BODY` 내장. 실제 `editorText·MarginReview·5 페르소나` 배선이 다음 단계.
+- **남은 단계** — (1) 데이터 배선 (2) `floatingEditor.test.ts` 구조 단언(현재 전용 테스트 없음) (3) Phase 2 스왑(편집 모드 기본화 + `editorFocusLayout.test.ts` 갱신) (4) Phase 3 진입 4화면 톤 통일. 계획·매핑 `docs/storyx-floating-editor-plan.md`.
 
 ## 현재 활성 — M11 검토 기반 정비 (`in_progress`)
 
@@ -44,9 +51,9 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 ## 다음 한 단계
 
-rank5 Tier 2 Pass C — `StoryXDesk.tsx` 잔여 서브컴포넌트(Dialogs·Agent·Publishing·Memory/Bible·Status 클러스터 ~20개) 추출 계속. 이후 Tier 3 훅 분리(useProject·useDraftEditor·useReviewSession·useUIState — 최고위험, code-reviewer 2차 필수). 방식은 Codex 위임 + Claude 검증, 패스마다 tsc·293·build·시각 픽셀 비교다. **Codex 패킷 필수 조항 — 우회 주석 금지·상태 문서 수정 금지·이동 심볼 단언은 정의 파일로 재배치.**
+두 갈래 중 택1. **(A · 권장 — 재개 지점) 방향 C 플로팅 에디터 데이터 배선** — `FloatingEditor.tsx` 의 시안 `SAMPLE_PERSONAS·SAMPLE_REVIEWS·SAMPLE_BODY` 를 실제 `editorText·MarginReview·5 페르소나(MARGIN_CORE_AGENT_IDS)` 로 교체(props 주입). 동반 — `floatingEditor.test.ts` 구조 단언 추가(현재 전용 테스트 없음). 기능 작업이니 착수 전 brainstorming 으로 props 계약부터 합의. 계획 `docs/storyx-floating-editor-plan.md`. **(B) rank5 Tier2 Pass E** — `StoryXDesk.tsx` 잔여 ~11개(Dialogs·Publishing·Status) 추출 후 Tier3 훅 분리(useProject·useDraftEditor·useReviewSession·useUIState — 최고위험, code-reviewer 2차 필수). 방식은 Codex 위임 + Claude 검증. **Codex 패킷 필수 조항 — 우회 주석 금지·상태 문서 수정 금지·이동 심볼 단언은 정의 파일로 재배치.**
 
-## 최근 검증 (2026-06-04)
+## 최근 검증 (2026-06-05)
 
 ```
 npx tsc --noEmit   → exit 0

@@ -4,6 +4,38 @@
 
 ---
 
+## 2026-06-05 — 방향 C 플로팅 에디터 시안 체크포인트 (커밋 + main 머지)
+
+> Last Updated: 2026-06-05 · Branch: `main` (design/floating-editor ff 머지)
+
+### 한 일
+claude.ai design 에서 발산한 3방향 편집기 시안 중 **방향 C "떠 있는 작업실"** 의 비주얼 Phase 1 을 커밋하고 main 에 머지했다. 이전 인계(rank5 Pass D) 이후 상태 문서에 누락돼 있던 작업을 기록·정리한 것.
+- `src/components/FloatingEditor.tsx`(739줄) 신설 — 어두운 캔버스 + 종이 시트(max 760px) + 좌측 플로팅 독 + 단락 옆 여백 주석(328px) + 작가별 색 밑줄 + 인터랙션 전부.
+- `src/App.tsx` — `?editor=floating` 플래그 진입(기본 StoryXDesk 유지). `src/styles.css` — `.fc-*` 네임스페이스 205줄(`.fc-app` 스코프 oklch, 전역 토큰 보존).
+- 커밋 `49480c3`(feat 코드+설계문서+4해상도 캡처) + docs 상태 동기화 커밋. `design/floating-editor` → `main` fast-forward.
+
+### 정직한 상태 — "시안 체크포인트"지 완성 아님
+- **아직 SAMPLE 데이터** — `SAMPLE_PERSONAS·SAMPLE_REVIEWS·SAMPLE_BODY` 내장. 실제 `editorText·MarginReview·5 페르소나` 미배선.
+- **전용 테스트 없음** — 계획의 `floatingEditor.test.ts`(RED) 미작성. 게이트 293 녹색은 floating 이 플래그·CSS 로 격리돼 기존 테스트에 안 걸리기 때문(테스트가 floating 을 검증한다는 뜻 아님).
+- Phase 2(스왑)·Phase 3(진입 4화면) 미착수.
+
+### 검증
+- `bash init.sh` 통과 — tsc 0 · 293 tests · build. floating 변경 포함 working tree 에서 실행.
+- 시각 — `?stage=editor&editor=floating` 4해상도 캡처 `docs/handoff/screenshots/floating-c`. 1440 렌더 육안 확인(종이 시트·독·여백 주석 정상).
+
+### 다음 세션이 해야 할 한 가지 — 데이터 배선 (재개 지점)
+`FloatingEditor.tsx` 의 시안 데이터를 실제 프로젝트 데이터로 교체한다. `FloatingEditorProps` 를 확장해 `editorText`·`MarginReview[]`·`5 페르소나(MARGIN_CORE_AGENT_IDS)`·회차구조/곡선/상태·검토 콜백(`runMarginReviewAll`·`summonMarginReviewAgent`·`acceptMarginDiff`)을 주입. 매핑표는 `docs/storyx-floating-editor-plan.md` §"현재 → C방향 데이터 매핑". 동반으로 `floatingEditor.test.ts` 구조 단언 추가(TDD). **기능 작업이니 착수 전 brainstorming 으로 props 계약부터 합의.** (대안 B — rank5 Tier2 Pass E 재개.)
+
+### 손대지 말 것
+- 기본 편집기(StoryXDesk)·`editorFocusLayout.test.ts` — floating 은 플래그 격리 상태. Phase 2 스왑 전까지 기본 경로 불변.
+- 전역 Linear 다크 토큰(`--sx-*`/`--nx-*`/`--lc-*`). floating 은 `.fc-app` 지역 oklch 만 사용.
+- rank2~4 도메인 로직, academic, provider 경로.
+
+### 참고 — `.claude/scheduled_tasks.lock`
+working tree 에 삭제로 떠 있던 이 런타임 락 파일은 floating 작업과 무관해 `git checkout` 으로 복원(커밋 제외)했다. 추적 대상이지만 본래 런타임 산출물이라 gitignore 가 맞다 — 별도 정리 후보(미실행).
+
+---
+
 ## 2026-06-04 — rank5 착수: StoryXDesk 분리 Tier1 + Tier2 Pass A~D + 헬퍼 de-dup·순환제거 (Codex 위임 + Claude 검증)
 
 > Last Updated: 2026-06-04 · Branch: `main` · 체크포인트 3회 커밋
