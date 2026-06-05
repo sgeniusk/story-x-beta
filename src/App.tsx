@@ -29,6 +29,7 @@ import {
 import { requestLlmInterview } from './lib/interviewClient';
 import { AiStatusBadge } from './components/AiStatusBadge';
 import { PublishScreen } from './components/PublishScreen';
+import { FloatingEditor } from './components/FloatingEditor';
 import { buildAcademicPublishSummary } from './lib/academicPublish';
 
 // 매체 코드를 사용자 표시용 한국어 라벨로 매핑. 헤더·퍼블리시 화면 등에 노출.
@@ -155,6 +156,12 @@ function App() {
   }
 
   if (stage === 'editor') {
+    if (
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('editor') === 'floating'
+    ) {
+      return <FloatingEditor />;
+    }
     return (
       <StoryXDesk
         initialMedium={medium}
