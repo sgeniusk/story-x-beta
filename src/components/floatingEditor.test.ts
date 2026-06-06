@@ -33,6 +33,14 @@ function baseProps(over: Partial<FloatingEditorProps> = {}): FloatingEditorProps
     beats: [], onSelectBeat: vi.fn(),
     stats: { chars: 1284, chapters: 1, canon: 3, characters: 3 },
     intentMemo: '모순으로 1화를 연다.',
+    editable: true,
+    bodyVersion: 0,
+    onBodyChange: vi.fn(),
+    onIntentChange: vi.fn(),
+    onGenerateDraft: vi.fn(),
+    onSwitchTrack: vi.fn(),
+    onOpenPublish: vi.fn(),
+    isGenerating: false,
     ...over,
   };
 }
@@ -78,6 +86,35 @@ describe('FloatingEditor 실데이터 배선', () => {
   it('빈 reviews·빈 paragraphs 에서도 안전하다', () => {
     const { host, unmount } = mount(baseProps({ reviews: [], paragraphs: [] }));
     expect(host.querySelectorAll('.mnote').length).toBe(0);
+    unmount();
+  });
+
+  it('초안 생성 버튼이 onGenerateDraft 를 호출한다', () => {
+    const onGenerateDraft = vi.fn();
+    const { host, click, unmount } = mount(baseProps({ onGenerateDraft }));
+    click(host.querySelector('.btn-primary'));
+    expect(onGenerateDraft).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('출간 버튼이 onOpenPublish 를 호출한다 (우상단 단일 버튼)', () => {
+    const onOpenPublish = vi.fn();
+    const { host, click, unmount } = mount(baseProps({ onOpenPublish }));
+    const publishButtons = host.querySelectorAll('.btn-publish');
+    expect(publishButtons.length).toBe(1);
+    click(publishButtons[0]);
+    expect(onOpenPublish).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('데이터 탭이 onSwitchTrack(bible) 를 호출한다', () => {
+    const onSwitchTrack = vi.fn();
+    const { host, click, unmount } = mount(baseProps({ onSwitchTrack }));
+    const dataTab = Array.from(host.querySelectorAll('[role="tab"]')).find(
+      (t) => t.textContent?.includes('데이터')
+    );
+    click(dataTab ?? null);
+    expect(onSwitchTrack).toHaveBeenCalledWith('bible');
     unmount();
   });
 });

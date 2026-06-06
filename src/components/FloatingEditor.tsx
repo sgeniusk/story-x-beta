@@ -32,6 +32,15 @@ export interface FloatingEditorProps {
   onSelectBeat: (id: string) => void;
   stats: { chars: number; chapters: number; canon: number; characters: number };
   intentMemo: string;
+  // Phase 2a — 편집·네비 콜백 (StoryXDesk 단일 원천에서 주입)
+  editable?: boolean;
+  bodyVersion?: number;
+  onBodyChange?: (text: string) => void;
+  onIntentChange?: (text: string) => void;
+  onGenerateDraft?: () => void;
+  onSwitchTrack?: (track: 'draft' | 'bible') => void;
+  onOpenPublish?: () => void;
+  isGenerating?: boolean;
 }
 
 const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
@@ -57,7 +66,17 @@ export function FloatingEditor({
   onSelectBeat,
   stats,
   intentMemo,
+  editable = true,
+  bodyVersion = 0,
+  onBodyChange,
+  onIntentChange,
+  onGenerateDraft,
+  onSwitchTrack,
+  onOpenPublish,
+  isGenerating = false,
 }: FloatingEditorProps) {
+  // Phase 2a Task3 에서 사용
+  void editable; void bodyVersion; void onBodyChange; void onIntentChange;
   const personaById = useCallback(
     (id: string): PersonaCard =>
       personas.find((p) => p.id === id) ?? { id, name: id, role: '', tint: '#62666d', isCore: false },
@@ -273,13 +292,13 @@ export function FloatingEditor({
         </div>
         <div className="vr" />
         <div className="modes" role="tablist">
-          <button role="tab" aria-selected="true">
+          <button role="tab" aria-selected="true" onClick={() => onSwitchTrack?.('draft')}>
             편집
           </button>
           <button
             role="tab"
             aria-selected="false"
-            onClick={() => toast('데이터 모드 — 인물 관계도·캐논·타임라인 (이번 범위 밖)')}
+            onClick={() => (onSwitchTrack ? onSwitchTrack('bible') : toast('데이터 모드 — 인물 관계도·캐논·타임라인 (이번 범위 밖)'))}
           >
             데이터
           </button>
@@ -287,7 +306,7 @@ export function FloatingEditor({
         <div className="vr" />
         <button
           className="btn-publish"
-          onClick={() => toast('출간 — 회차를 매체로 내보냅니다 (이번 범위 밖)')}
+          onClick={() => (onOpenPublish ? onOpenPublish() : toast('출간 — 회차를 매체로 내보냅니다 (이번 범위 밖)'))}
           title="출간"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -297,7 +316,8 @@ export function FloatingEditor({
         </button>
         <button
           className="btn-primary"
-          onClick={() => toast('초안 생성 — 데모에서는 본문이 채워져 있습니다')}
+          onClick={() => (onGenerateDraft ? onGenerateDraft() : toast('초안 생성 — 데모에서는 본문이 채워져 있습니다'))}
+          disabled={isGenerating}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
             <path d="M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5z" />
