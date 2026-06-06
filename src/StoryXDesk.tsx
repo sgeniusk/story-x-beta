@@ -593,6 +593,9 @@ export function StoryXDesk({
   const [canonChanges, setCanonChanges] = useState<CanonChangeEntry[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
+  // Phase 2a — floating 본문 외부 변경(초안 생성·diff 반영·회차 전환) 시드 카운터.
+  // 사용자 타이핑(onBodyChange)에서는 절대 올리지 않는다 — 타이핑 중 본문 재시드를 막아 커서 보존.
+  const [bodyVersion, setBodyVersion] = useState(0);
   // 데이터 모드 분야별 검토 — 결과는 분야 id로 캐싱하고, 검토 중인 분야는 따로 표시한다.
   const [dataReviewResults, setDataReviewResults] = useState<Partial<Record<CanonCategory, DataReviewView>>>({});
   const [dataReviewingCategory, setDataReviewingCategory] = useState<CanonCategory | null>(null);
@@ -1183,6 +1186,7 @@ export function StoryXDesk({
           .join('\n\n');
       });
       setEditedSinceReview(true);
+      setBodyVersion((v) => v + 1); // diff 반영(외부 변경) — floating 본문 재시드
     },
     [latestChapter?.prose, marginReview]
   );
@@ -1194,6 +1198,30 @@ export function StoryXDesk({
       new URLSearchParams(window.location.search).get('editor') === 'classic',
     []
   );
+  const openMarginReviewChat = useCallback(
+    (review: MarginReview) => {
+      const run =
+        displayedAgentRuns.find((item) => item.agentId === review.persona) ?? marginReviewToRun(review);
+      setSelectedAgent({ run, persona: getAgentPersona(run) });
+    },
+    [displayedAgentRuns]
+  );
+  const isLatestLocked = latestChapter?.locked === true;
+  const actionLabels = getCreativeActionLabels(blueprint.medium);
+  const mainActionLabel = !latestChapter
+    ? actionLabels.draft
+    : isLatestLocked
+      ? actionLabels.nextDraft
+      : actionLabels.review;
+  const mainActionRun = !latestChapter || isLatestLocked ? produceEpisode : reviewDraft;
+  const MainActionIcon = !latestChapter || isLatestLocked ? WandSparkles : ClipboardCheck;
+
+  // Phase 2a — floating 본문 편집 쓰기-백(단일 원천 editorText). 타이핑 경로는 bodyVersion 을 올리지 않는다.
+  const handleFloatingBodyChange = useCallback((text: string) => {
+    setEditorText(text);
+    setEditedSinceReview(true);
+  }, []);
+  // floating 이 편집 기본이므로 props 를 mainActionRun 정의 아래에서 구성한다(const 호이스팅 회피).
   const floatingEditorProps = useMemo(
     () => ({
       title: project.title,
@@ -1219,6 +1247,14 @@ export function StoryXDesk({
         characters: project.characters.length,
       },
       intentMemo: draftPrompt,
+      editable: true,
+      bodyVersion,
+      onBodyChange: handleFloatingBodyChange,
+      onIntentChange: (text: string) => setDraftPrompt(text),
+      onGenerateDraft: mainActionRun,
+      onSwitchTrack: (track: 'draft' | 'bible') => switchToTrack(track),
+      onOpenPublish: openPublishingMode,
+      isGenerating,
     }),
     [
       project,
@@ -1230,26 +1266,12 @@ export function StoryXDesk({
       acceptMarginDiff,
       activeBeatId,
       draftPrompt,
+      bodyVersion,
+      handleFloatingBodyChange,
+      mainActionRun,
+      isGenerating,
     ]
   );
-
-  const openMarginReviewChat = useCallback(
-    (review: MarginReview) => {
-      const run =
-        displayedAgentRuns.find((item) => item.agentId === review.persona) ?? marginReviewToRun(review);
-      setSelectedAgent({ run, persona: getAgentPersona(run) });
-    },
-    [displayedAgentRuns]
-  );
-  const isLatestLocked = latestChapter?.locked === true;
-  const actionLabels = getCreativeActionLabels(blueprint.medium);
-  const mainActionLabel = !latestChapter
-    ? actionLabels.draft
-    : isLatestLocked
-      ? actionLabels.nextDraft
-      : actionLabels.review;
-  const mainActionRun = !latestChapter || isLatestLocked ? produceEpisode : reviewDraft;
-  const MainActionIcon = !latestChapter || isLatestLocked ? WandSparkles : ClipboardCheck;
   const draftPromptPlaceholder = isLatestLocked
     ? isSerial
       ? `잠긴 ${unitNoun} 다음에 담을 내용을 적어주세요.`
@@ -1443,6 +1465,7 @@ export function StoryXDesk({
     setEditorText(latestChapter.prose);
     setEditedSinceReview(false);
     setActiveBeatId(null);
+    setBodyVersion((v) => v + 1); // 외부 변경(회차 로드·새 초안 생성) — floating 본문 재시드
   }, [latestChapter]);
 
   // 새 프로젝트 플로우에서 만든 첫 초안으로 에디터를 시작하고, 작가진 검토를 자동 시작한다.
@@ -1938,6 +1961,7 @@ export function StoryXDesk({
     setDraftPrompt(defaultEpisodeIntent);
     setEditorText('');
     setEditedSinceReview(false);
+    setBodyVersion((v) => v + 1); // 프로젝트 초기화(외부 변경) — floating 본문 재시드
     setActiveTrack('draft');
     setDataView({ kind: 'canon', category: 'characters' });
     setApprovalDecisions({});

@@ -177,4 +177,11 @@ describe('FloatingEditor 실데이터 배선', () => {
     expect(onIntentChange).toHaveBeenCalledWith('모순으로 1화를 연다 — 수정.');
     unmount();
   });
+
+  it('StoryXDesk 가 floating 을 편집 기본으로 + ?editor=classic 폴백 분기를 가진다', () => {
+    const desk = readFileSync(resolve(__dirname, '../StoryXDesk.tsx'), 'utf8');
+    expect(desk).toContain("get('editor') === 'classic'");
+    expect(desk).toContain('isDraftMode && !isClassicEditor');
+    expect(desk).toContain('<FloatingEditor {...floatingEditorProps} />');
+  });
 });
