@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-06-05 (이어서) — 방향 C 플로팅 에디터 실데이터 배선 (브레인스토밍→스펙→계획→TDD)
+
+> Branch: `design/floating-data-wiring` → main 머지. 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-05-floating-editor-data-wiring*`.
+
+### 한 일
+체크포인트(시안 데이터)였던 플로팅 에디터를 실데이터로 배선. brainstorming 3결정(실데이터 프리뷰 · StoryXDesk 경유 접근 A · 읽기 본문+완전 검토) → 스펙 → 계획 → TDD 5 태스크.
+- `FloatingEditor.tsx` — `SAMPLE_*` 제거 → 순수 표현 컴포넌트(`FloatingEditorProps`). 실 `MarginReview·CORE_PERSONAS·Paragraph·검토 콜백`을 props 로. present/stateMap 로컬 state → reviews 파생.
+- `StoryXDesk.tsx` — `isFloatingPreview && isDraftMode` → `<FloatingEditor {...floatingEditorProps}/>`. 기존 `editorText·marginParagraphs·marginReview·acceptMarginDiff·beats·draftPrompt·CORE_PERSONAS` 단일 원천 주입. 기본 편집기 경로 불변(추가 분기만).
+- `App.tsx` — standalone 우회(`?editor=floating`) 제거 → StoryXDesk 경유 일원화.
+- 신설 `src/components/floatingEditor.test.ts` — react-dom+jsdom 렌더 4 케이스(시안제거·reviews 렌더·onRunAll 호출·빈 상태 안전).
+
+### 검증
+- `bash init.sh` — tsc 0 · 297 tests(기존 293 + 신규 4) · build.
+- 라이브(Playwright 1440·360) — 실 헤더(작품명 "샘플 작품"·logline 부제·"소설" medium·0자), 작가실 실 5 페르소나(쇼러너·캐릭터 큐레이터·세계 키퍼·장르 스타일리스트·연속성 감수자), 전체검토→검토 5건 도착(badge 5), 콘솔 0, 모바일 상단바 축약·하단 독·인라인 점 정상. 캡처 `docs/handoff/screenshots/floating-c-wired/`.
+
+### 정직한 범위 — 읽기 본문 프리뷰
+**라이브 타이핑(contentEditable)·의도 메모 쓰기-백·Phase 2 스왑·Phase 3 진입화면 미착수.** floating 은 여전히 `?editor=floating` opt-in, StoryXDesk 가 기본 편집기. 반영(accept-diff)은 `acceptMarginDiff`가 editorText 를 고쳐 동작.
+
+### 다음 한 단계
+Phase 2 스왑(편집 모드 기본화 + `editorFocusLayout.test.ts` 갱신 + 라이브 타이핑) 또는 rank5 Tier2 Pass E.
+
+### 손대지 말 것
+- `.fc-*` CSS(데이터 배선 단계엔 미변경 보존) · 전역 `--sx-/--nx-/--lc-` 토큰 · 기본 편집기(StoryXDesk) 경로 · rank2~4 도메인 · academic · provider 경로.
+- `FloatingEditorProps` 계약 — 표현 컴포넌트 순수성 유지(데이터/콜백은 StoryXDesk 단일 원천). 시안 `SAMPLE_*` 부활 금지.
+
+---
+
 ## 2026-06-05 — 방향 C 플로팅 에디터 시안 체크포인트 (커밋 + main 머지)
 
 > Last Updated: 2026-06-05 · Branch: `main` (design/floating-editor ff 머지)
