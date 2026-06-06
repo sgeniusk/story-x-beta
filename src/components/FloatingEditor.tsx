@@ -1,151 +1,90 @@
-// 방향 C "떠 있는 작업실" 에디터 — 어두운 캔버스 위 종이 시트 + 좌우 플로팅 독 + 단락 옆 여백 주석.
-// claude.ai design 의 direction-c.html 을 React 로 재현한다. 1차는 시안 데이터를 내장해 standalone 렌더가 되고,
-// 실제 프로젝트 데이터(editorText·MarginReview·5 페르소나)는 이후 props 로 주입한다.
+// 방향 C "떠 있는 작업실" 에디터 — 어두운 캔버스 위 종이 시트 + 좌측 플로팅 독 + 단락 옆 여백 주석.
+// claude.ai design 의 direction-c.html 레이아웃을 React 로 재현한다. 데이터는 전부 props 주입(순수 표현 컴포넌트).
+// 실 원고(paragraphs)·작가진 검토(reviews)·5 페르소나(personas)·검토 콜백은 StoryXDesk 가 단일 원천에서 넘긴다.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import type { InlineDiff, MarginReview, Paragraph, PersonaCard, SummonHandler } from '../lib/marginReview';
+import { SEVERITY_LABEL } from '../lib/marginReview';
 
-type PersonaKey = 'show' | 'char' | 'world' | 'style' | 'cont';
-type ReviewState = 'done' | 'work' | 'wait';
-
-interface FloatingPersona {
-  key: PersonaKey;
-  name: string;
-  role: string;
-  av: string;
-  color: string;
-}
-
-interface ReviewDatum {
-  txt: string;
-  was: string | null;
-  is: string | null;
-  reply: string | null;
-}
-
-interface BodyParagraph {
-  key: PersonaKey | null;
-  lead?: boolean;
-  before: string;
-  mark?: string;
-  after?: string;
+interface ChapterBeatLike {
+  id: string;
+  no?: string | number;
+  name?: string;
+  label?: string;
+  summary?: string;
 }
 
 export interface FloatingEditorProps {
-  title?: string;
-  episodeLabel?: string;
-  kicker?: string;
-  charCount?: string;
-  chapterTitle?: string;
-  chapterSub?: string;
+  title: string;
+  episodeLabel: string;
+  kicker: string;
+  charCount: string;
+  chapterTitle: string;
+  chapterSub: string;
+  paragraphs: Paragraph[];
+  reviews: MarginReview[];
+  personas: PersonaCard[];
+  onSummon: SummonHandler;
+  onRunAll: () => void;
+  onAcceptDiff: (diff: InlineDiff) => void;
+  onRejectReview: (review: MarginReview) => void;
+  beats: ChapterBeatLike[];
+  activeBeatId?: string | null;
+  onSelectBeat: (id: string) => void;
+  stats: { chars: number; chapters: number; canon: number; characters: number };
+  intentMemo: string;
 }
 
-const SAMPLE_PERSONAS: FloatingPersona[] = [
-  { key: 'show', name: '쇼러너', role: '회차 프레이밍·훅', av: '쇼', color: 'var(--p-show)' },
-  { key: 'char', name: '캐릭터 담당', role: '욕망·상처·목소리', av: '캐', color: 'var(--p-char)' },
-  { key: 'world', name: '세계관 담당', role: '설정 규칙·지리', av: '세', color: 'var(--p-world)' },
-  { key: 'style', name: '문체 담당', role: '톤·리듬·한국어', av: '문', color: 'var(--p-style)' },
-  { key: 'cont', name: '연속성 담당', role: '캐논·떡밥·시간선', av: '연', color: 'var(--p-cont)' },
-];
+const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
 
-const SAMPLE_REVIEWS: Record<PersonaKey, ReviewDatum> = {
-  style: {
-    txt: '첫 문단의 리듬이 좋습니다. 장르 톤(잔잔한 환상)에 맞게, 두 번째 문단의 만연체 한 곳만 끊어 주면 호흡이 살겠습니다.',
-    was: '한 층을 오를 때마다 사람들은 자기 이름을 한 글자씩 내려놓았고, 꼭대기에 닿은 이는…',
-    is: '한 층을 오를 때마다 이름을 한 글자씩 내려놓았다. 꼭대기에 닿은 이는…',
-    reply: null,
-  },
-  char: {
-    txt: '필사관의 망설임이 행동으로 드러나서 좋습니다. 다만 오빠를 떠올리는 대목에서 감정이 너무 빨리 가라앉아요. 한 박자 더 머물게 하면 인물의 상처가 살아납니다.',
-    was: '…알면서도, 고개를 끄덕였다.',
-    is: '…알면서도, 펜 끝을 잉크에 담갔다. 손이 먼저 오빠를 기억하고 있었다.',
-    reply: '상처 한 줄 더 — 반영',
-  },
-  world: {
-    txt: '탑의 대가 규칙이 선명합니다. 다만 7층까지 올랐다면 오빠는 이미 일곱 글자를 잃었어야 합니다. 명부에 이름이 "적혀" 있었다는 설정과 어긋나지 않는지 점검해 주세요.',
-    was: null,
-    is: null,
-    reply: null,
-  },
-  cont: {
-    txt: '3화에서 "이름은 한 번만 빌릴 수 있다"고 못 박았습니다. 마지막 줄의 "한 번 더 빌리기로 한 것이다"는 그 규칙과 충돌합니다. 의도된 파격인지 확인이 필요합니다.',
-    was: null,
-    is: null,
-    reply: '의도된 파격 — 4화에서 대가 회수',
-  },
-  show: {
-    txt: '마지막 줄이 다음 회차 훅으로 완벽합니다. 2화는 "이름을 빌린 대가"가 즉시 닥치는 장면으로 열면 연재 동력이 강해집니다.',
-    was: null,
-    is: null,
-    reply: null,
-  },
-};
-
-const SAMPLE_BODY: BodyParagraph[] = [
-  {
-    key: 'style',
-    lead: true,
-    before: '필사관은 잉크가 마르기 전에 한 줄을 더 고쳤다. 고친 기억은 늘 그렇듯, ',
-    mark: '손대기 전보다 매끄럽고 또 그만큼 거짓이었다',
-    after: '.',
-  },
-  {
-    key: 'char',
-    before:
-      '탑은 이름을 받고 움직였다. 한 층을 오를 때마다 사람들은 자기 이름을 한 글자씩 내려놓았고, 꼭대기에 닿은 이는 자신이 누구였는지 끝내 기억하지 못했다. 의뢰인은 죽은 어머니의 마지막 말을 듣고 싶다고 했다. 필사관은 그 말이 처음부터 존재하지 않았다는 것을 알면서도, ',
-    mark: '고개를 끄덕였다',
-    after: '.',
-  },
-  {
-    key: 'world',
-    before: '오빠가 사라진 건 작년 겨울, ',
-    mark: '탑의 7층 명부에 그의 이름이 마지막으로 적힌 날',
-    after:
-      '이었다. 명부지기는 그런 이름은 없다고 했다. 필사관은 명부를 직접 펼쳐 보았고, 오빠의 자리에는 누군가 급하게 그어 지운 한 줄과, 그 위에 덧쓴 낯선 이름만 남아 있었다.',
-  },
-  {
-    key: null,
-    before:
-      '그날부터 그녀는 남의 기억을 고치는 손으로 자기 기억을 지켰다. 잉크는 거짓을 만들지만, 거짓을 오래 들여다본 사람만이 진짜가 어디서 끊겼는지 안다. 탑은 그것을 가장 두려워했다.',
-  },
-  {
-    key: 'cont',
-    before:
-      '의뢰인이 떠난 뒤에도 필사관은 책상을 떠나지 않았다. 창밖으로 탑의 그림자가 길어졌고, 그림자 끝이 그녀의 이름 첫 글자를 천천히 덮어 왔다. 그녀는 펜을 내려놓는 대신, 빈 종이의 맨 윗줄에 오빠의 이름을 또박또박 적었다. ',
-    mark: '한 번 더 빌리기로 한 것이다',
-    after: '.',
-  },
-];
-
-const PHASES = ['생각 중', '읽는 중', '표시 중', '쓰는 중'];
+type PopState = { x: number; y: number; selectedText?: string; anchor?: string } | null;
 
 export function FloatingEditor({
-  title = '샘플 작품',
-  episodeLabel = '1화',
-  kicker = '장편소설 · 1화',
-  charCount = '1,284자',
-  chapterTitle = '이름을 빌리는 자',
-  chapterSub = '기억을 고치는 필사관이 사라진 오빠의 흔적을 따라 탑에 든다.',
+  title,
+  episodeLabel,
+  kicker,
+  charCount,
+  chapterTitle,
+  chapterSub,
+  paragraphs,
+  reviews,
+  personas,
+  onSummon,
+  onRunAll,
+  onAcceptDiff,
+  onRejectReview,
+  beats,
+  activeBeatId,
+  onSelectBeat,
+  stats,
+  intentMemo,
 }: FloatingEditorProps) {
-  const personaByKey = (key: PersonaKey) => SAMPLE_PERSONAS.find((p) => p.key === key)!;
+  const personaById = useCallback(
+    (id: string): PersonaCard =>
+      personas.find((p) => p.id === id) ?? { id, name: id, role: '', tint: '#62666d', isCore: false },
+    [personas]
+  );
 
-  const [present, setPresent] = useState<Record<PersonaKey, boolean>>({
-    style: true,
-    char: true,
-    world: true,
-    cont: false,
-    show: false,
-  });
-  const [stateMap, setStateMap] = useState<Record<PersonaKey, ReviewState>>({
-    style: 'done',
-    char: 'done',
-    world: 'done',
-    cont: 'wait',
-    show: 'wait',
-  });
+  const liveReviews = reviews.filter((r) => !r.pending);
+  const reviewForAnchor = (anchorId: string) => liveReviews.find((r) => r.anchor === anchorId) ?? null;
+  const splitByMark = (text: string, review: MarginReview | null) => {
+    const from = review?.diffs?.[0]?.from;
+    if (!from) return { before: text, mark: undefined as string | undefined, after: undefined as string | undefined };
+    const i = text.indexOf(from);
+    if (i < 0) return { before: text, mark: undefined as string | undefined, after: undefined as string | undefined };
+    return { before: text.slice(0, i), mark: from, after: text.slice(i + from.length) };
+  };
+  const personaState = (id: string): 'done' | 'work' | 'wait' => {
+    if (liveReviews.some((r) => r.persona === id)) return 'done';
+    if (reviews.some((r) => r.persona === id && r.pending)) return 'work';
+    return 'wait';
+  };
+  const presentCount = liveReviews.length;
+
   const [openPanel, setOpenPanel] = useState<'struct' | 'curve' | 'state' | 'writers' | null>(null);
-  const [detailKey, setDetailKey] = useState<PersonaKey | null>(null);
+  const [openReview, setOpenReview] = useState<MarginReview | null>(null);
   const [isFocus, setIsFocus] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
-  const [pop, setPop] = useState<{ x: number; y: number } | null>(null);
+  const [pop, setPop] = useState<PopState>(null);
   const [marginTops, setMarginTops] = useState<Record<string, number>>({});
 
   const appRef = useRef<HTMLDivElement>(null);
@@ -153,9 +92,6 @@ export function FloatingEditor({
   const deckRef = useRef<HTMLDivElement>(null);
   const marginNoteRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hintTimer = useRef<number | null>(null);
-  const assignTimers = useRef<number[]>([]);
-
-  const presentCount = Object.values(present).filter(Boolean).length;
 
   const toast = useCallback((msg: string) => {
     setHint(msg);
@@ -163,7 +99,7 @@ export function FloatingEditor({
     hintTimer.current = window.setTimeout(() => setHint(null), 2400);
   }, []);
 
-  // 여백 주석을 해당 단락 옆에 정렬 (위 주석과 겹치지 않게) — direction-c renderMargin 포팅
+  // 여백 주석을 앵커 단락 옆에 정렬 (위 주석과 겹치지 않게) — direction-c renderMargin 포팅
   const layoutMargin = useCallback(() => {
     if (typeof window === 'undefined') return;
     if (window.innerWidth <= 1080) {
@@ -175,18 +111,18 @@ export function FloatingEditor({
     const deckTop = deck.getBoundingClientRect().top;
     const tops: Record<string, number> = {};
     let prevBottom = -Infinity;
-    SAMPLE_BODY.forEach((para) => {
-      if (!para.key || !present[para.key]) return;
-      const anchorEl = deck.querySelector<HTMLElement>(`.ms .anchor[data-key="${para.key}"]`);
-      const noteEl = marginNoteRefs.current[para.key];
+    liveReviews.forEach((review) => {
+      const anchorEl = deck.querySelector<HTMLElement>(`.ms .anchor[data-anchor="${review.anchor}"]`);
+      const noteEl = marginNoteRefs.current[review.persona];
       if (!anchorEl || !noteEl) return;
       let off = anchorEl.getBoundingClientRect().top - deckTop;
       if (off < prevBottom + 12) off = prevBottom + 12;
-      tops[para.key] = off;
+      tops[review.persona] = off;
       prevBottom = off + noteEl.offsetHeight;
     });
     setMarginTops(tops);
-  }, [present]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviews]);
 
   useLayoutEffect(() => {
     layoutMargin();
@@ -196,7 +132,7 @@ export function FloatingEditor({
     const onResize = () => {
       layoutMargin();
       setOpenPanel(null);
-      setDetailKey(null);
+      setOpenReview(null);
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
@@ -209,22 +145,22 @@ export function FloatingEditor({
         else {
           setPop(null);
           setOpenPanel(null);
-          setDetailKey(null);
+          setOpenReview(null);
         }
       }
       if (
         e.key === 'Enter' &&
-        detailKey &&
+        openReview &&
         (document.activeElement as HTMLElement)?.tagName !== 'INPUT'
       ) {
         e.preventDefault();
-        resolveReview(detailKey, true);
+        resolveReview(openReview, true);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detailKey, isFocus]);
+  }, [openReview, isFocus]);
 
   useEffect(() => {
     const t = window.setTimeout(
@@ -236,63 +172,42 @@ export function FloatingEditor({
 
   useEffect(() => {
     return () => {
-      assignTimers.current.forEach((t) => window.clearTimeout(t));
       if (hintTimer.current) window.clearTimeout(hintTimer.current);
     };
   }, []);
 
-  const openDetail = useCallback((key: PersonaKey) => {
-    setOpenPanel(null);
-    setDetailKey(key);
-  }, []);
-
-  const closeDetail = useCallback(() => setDetailKey(null), []);
-
-  function resolveReview(key: PersonaKey, ok: boolean) {
-    setPresent((p) => ({ ...p, [key]: false }));
-    setStateMap((s) => ({ ...s, [key]: 'wait' }));
-    setDetailKey(null);
-    toast(ok ? '<b>반영</b> 완료' : '보류함');
-  }
-
-  const togglePanel = useCallback((id: 'struct' | 'curve' | 'state' | 'writers') => {
-    setDetailKey(null);
-    setOpenPanel((cur) => (cur === id ? null : id));
-  }, []);
-
   const closeAll = useCallback(() => {
     setOpenPanel(null);
-    setDetailKey(null);
+    setOpenReview(null);
     setPop(null);
   }, []);
 
+  const togglePanel = useCallback((id: 'struct' | 'curve' | 'state' | 'writers') => {
+    setOpenReview(null);
+    setOpenPanel((cur) => (cur === id ? null : id));
+  }, []);
+
   const callOne = useCallback(
-    (key: PersonaKey) => {
+    (id: string, selectedText?: string, anchor?: string) => {
       setPop(null);
-      setPresent((p) => ({ ...p, [key]: true }));
-      setStateMap((s) => ({ ...s, [key]: 'done' }));
-      toast(`<b>${personaByKey(key).name}</b> 호출 — 이 대목을 검토했습니다`);
-      window.setTimeout(() => openDetail(key), 120);
+      onSummon(id, { selectedText, anchor });
+      toast(`<b>${personaById(id).name}</b> 호출 — 이 대목을 검토합니다`);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [openDetail, toast]
+    [onSummon, toast, personaById]
   );
 
   const assignAll = useCallback(() => {
-    assignTimers.current.forEach((t) => window.clearTimeout(t));
-    assignTimers.current = [];
-    setPresent({ show: false, char: false, world: false, style: false, cont: false });
-    setStateMap({ show: 'work', char: 'work', world: 'work', style: 'work', cont: 'work' });
     setOpenPanel('writers');
+    onRunAll();
     toast('<b>5명에게 전체 검토</b>를 맡겼습니다');
-    SAMPLE_PERSONAS.forEach((p, i) => {
-      const done = window.setTimeout(() => {
-        setPresent((cur) => ({ ...cur, [p.key]: true }));
-        setStateMap((cur) => ({ ...cur, [p.key]: 'done' }));
-      }, i * 600 + PHASES.length * 380 + 150);
-      assignTimers.current.push(done);
-    });
-  }, [toast]);
+  }, [onRunAll, toast]);
+
+  function resolveReview(review: MarginReview, ok: boolean) {
+    if (ok && review.diffs[0]) onAcceptDiff(review.diffs[0]);
+    else onRejectReview(review);
+    setOpenReview(null);
+    toast(ok ? '<b>반영</b> 완료' : '보류함');
+  }
 
   const onBodyMouseUp = useCallback(() => {
     const sel = window.getSelection();
@@ -302,7 +217,16 @@ export function FloatingEditor({
       const x = Math.max(12, Math.min(r.left + r.width / 2 - 115, window.innerWidth - 242));
       let y = r.bottom + 8;
       if (y > window.innerHeight - 230) y = r.top - 238;
-      setPop({ x, y });
+      let node: HTMLElement | null = sel.anchorNode as HTMLElement | null;
+      let anchor: string | undefined;
+      while (node && node !== document.body) {
+        if (node instanceof HTMLElement && node.dataset?.anchor) {
+          anchor = node.dataset.anchor;
+          break;
+        }
+        node = node?.parentElement ?? null;
+      }
+      setPop({ x, y, selectedText: text, anchor });
     }
   }, []);
 
@@ -315,7 +239,21 @@ export function FloatingEditor({
     return () => document.removeEventListener('mousedown', onDown);
   }, []);
 
-  const scrimShown = openPanel !== null || detailKey !== null;
+  // 회차 긴장 곡선 — beats 순서로 균등 분포(기→결 상승, 결말 직전 최고점). 정밀 점수 계산은 범위 밖.
+  const curvePath = (() => {
+    const n = beats.length;
+    if (n < 2) return '';
+    const pts = beats.map((_, i) => {
+      const t = i / (n - 1);
+      const x = t * 290;
+      const y = 88 - 70 * Math.sin(t * Math.PI * 0.85);
+      return `${x.toFixed(0)} ${y.toFixed(0)}`;
+    });
+    return 'M' + pts.join(' L');
+  })();
+  const curveLine = curvePath || 'M0 88 L290 88';
+
+  const scrimShown = openPanel !== null || openReview !== null;
 
   return (
     <div ref={appRef} className={`fc-app${isFocus ? ' focus' : ''}`} id="fc-app">
@@ -341,7 +279,7 @@ export function FloatingEditor({
           <button
             role="tab"
             aria-selected="false"
-            onClick={() => toast('데이터 모드 — 인물 관계도·캐논·타임라인')}
+            onClick={() => toast('데이터 모드 — 인물 관계도·캐논·타임라인 (이번 범위 밖)')}
           >
             데이터
           </button>
@@ -383,27 +321,28 @@ export function FloatingEditor({
             <h1 className="ep-title">{chapterTitle}</h1>
             <p className="ep-sub">{chapterSub}</p>
             <div className="ms" onMouseUp={onBodyMouseUp}>
-              {SAMPLE_BODY.map((para, i) => {
-                const hasNote = !!para.key && present[para.key];
-                const cls = ['anchor', para.lead ? 'lead' : '', hasNote ? 'has-note' : '']
+              {paragraphs.map((para, i) => {
+                const review = reviewForAnchor(para.id);
+                const persona = review ? personaById(review.persona) : null;
+                const { before, mark, after } = splitByMark(para.text, review);
+                const cls = ['anchor', i === 0 ? 'lead' : '', review ? 'has-note' : '']
                   .filter(Boolean)
                   .join(' ');
-                const style = para.key
-                  ? ({ ['--ac' as string]: `var(--p-${para.key})` } as CSSProperties)
+                const style = persona
+                  ? ({ ['--ac' as string]: persona.tint } as CSSProperties)
                   : undefined;
                 return (
-                  <p key={i} className={cls} style={style} data-key={para.key ?? undefined}>
-                    {para.before}
-                    {para.mark && (
-                      <span
-                        className="mark"
-                        data-key={para.key ?? undefined}
-                        onClick={() => para.key && hasNote && openDetail(para.key)}
-                      >
-                        {para.mark}
-                      </span>
-                    )}
-                    {para.after}
+                  <p
+                    key={para.id}
+                    className={cls}
+                    style={style}
+                    data-anchor={para.id}
+                    data-key={review?.persona}
+                    onClick={review ? () => setOpenReview(review) : undefined}
+                  >
+                    {before}
+                    {mark && <span className="mark">{mark}</span>}
+                    {after}
                   </p>
                 );
               })}
@@ -412,36 +351,34 @@ export function FloatingEditor({
 
           {/* margin notes (wide screens) */}
           <div className="margin" id="fc-margin">
-            {SAMPLE_BODY.map((para) => {
-              if (!para.key || !present[para.key]) return null;
-              const p = personaByKey(para.key);
-              const d = SAMPLE_REVIEWS[para.key];
-              const top = marginTops[para.key];
+            {liveReviews.map((review) => {
+              const p = personaById(review.persona);
+              const top = marginTops[review.persona];
               return (
                 <div
-                  key={para.key}
+                  key={review.persona}
                   ref={(el) => {
-                    marginNoteRefs.current[para.key as string] = el;
+                    marginNoteRefs.current[review.persona] = el;
                   }}
                   className="mnote"
                   style={
                     {
-                      ['--ac' as string]: p.color,
+                      ['--ac' as string]: p.tint,
                       position: top != null ? 'absolute' : undefined,
                       top: top != null ? `${top}px` : undefined,
                       width: top != null ? '100%' : undefined,
                     } as CSSProperties
                   }
-                  onClick={() => openDetail(para.key as PersonaKey)}
+                  onClick={() => setOpenReview(review)}
                 >
                   <div className="who">
-                    <span className="av" style={{ background: p.color }}>
-                      {p.av}
+                    <span className="av" style={{ background: p.tint }}>
+                      {avatarText(p)}
                     </span>
                     <span className="nm">{p.name}</span>
-                    <span className="st">완료</span>
+                    <span className="st">{SEVERITY_LABEL[review.severity]}</span>
                   </div>
-                  <div className="txt">{d.txt}</div>
+                  <div className="txt">{review.body}</div>
                   <div className="more">자세히 · 응답 →</div>
                 </div>
               );
@@ -513,22 +450,22 @@ export function FloatingEditor({
           </button>
         </div>
         <div className="pb">
-          <div className="tree-li on">
-            <span className="n">기</span>
-            <span className="label">잉크가 마르기 전 — 고친 기억의 거짓</span>
-          </div>
-          <div className="tree-li">
-            <span className="n">승</span>
-            <span className="label">탑의 두 번째 거래 — 어머니의 말</span>
-          </div>
-          <div className="tree-li">
-            <span className="n">전</span>
-            <span className="label">7층 명부에 지워진 오빠의 이름</span>
-          </div>
-          <div className="tree-li">
-            <span className="n">결</span>
-            <span className="label">한 번 더 이름을 빌리다 — 다음 층 훅</span>
-          </div>
+          {beats.length === 0 ? (
+            <div className="tree-li">
+              <span className="label">아직 회차 구조가 없습니다 · 초안을 생성하면 채워집니다</span>
+            </div>
+          ) : (
+            beats.map((beat) => (
+              <div
+                key={beat.id}
+                className={`tree-li${beat.id === activeBeatId ? ' on' : ''}`}
+                onClick={() => onSelectBeat(beat.id)}
+              >
+                <span className="n">{beat.no ?? ''}</span>
+                <span className="label">{beat.name ?? beat.label ?? beat.summary ?? ''}</span>
+              </div>
+            ))
+          )}
         </div>
       </div>
       <div className={`panel${openPanel === 'curve' ? ' show' : ''}`} id="fc-p-curve">
@@ -540,16 +477,8 @@ export function FloatingEditor({
         </div>
         <div className="pb curve">
           <svg viewBox="0 0 290 104" preserveAspectRatio="none">
-            <path
-              d="M0 78 C40 72 50 32 92 38 S152 84 184 58 246 16 290 24 L290 104 L0 104 Z"
-              fill="color-mix(in oklch,var(--accent) 16%,transparent)"
-            />
-            <path
-              d="M0 78 C40 72 50 32 92 38 S152 84 184 58 246 16 290 24"
-              fill="none"
-              stroke="var(--accent)"
-              strokeWidth="2"
-            />
+            <path d={`${curveLine} L290 104 L0 104 Z`} fill="color-mix(in oklch,var(--accent) 16%,transparent)" />
+            <path d={curveLine} fill="none" stroke="var(--accent)" strokeWidth="2" />
           </svg>
           <div className="cap">기 → 승 → 전 → 결 · 결말 직전 긴장 최고점</div>
         </div>
@@ -565,25 +494,29 @@ export function FloatingEditor({
           <div className="stat">
             <div className="cell">
               <div className="v">
-                1,284<small>자</small>
+                {stats.chars.toLocaleString()}
+                <small>자</small>
               </div>
               <div className="k">이번 회차 분량</div>
             </div>
             <div className="cell">
               <div className="v">
-                1<small>화</small>
+                {stats.chapters}
+                <small>화</small>
               </div>
               <div className="k">전체 회차</div>
             </div>
             <div className="cell">
               <div className="v">
-                3<small>개</small>
+                {stats.canon}
+                <small>개</small>
               </div>
               <div className="k">캐논</div>
             </div>
             <div className="cell">
               <div className="v">
-                3<small>명</small>
+                {stats.characters}
+                <small>명</small>
               </div>
               <div className="k">캐릭터</div>
             </div>
@@ -607,34 +540,35 @@ export function FloatingEditor({
               </span>{' '}
               쇼러너가 잡은 이번 회차 프레이밍
             </div>
-            <textarea
-              rows={3}
-              defaultValue="'거짓을 고치는 손'과 '진짜를 지키는 손'의 모순으로 1화를 연다. 오빠의 지워진 이름을 마지막 줄 훅으로."
-            />
+            <textarea rows={3} defaultValue={intentMemo} readOnly />
           </div>
         </div>
       </div>
       <div className={`panel${openPanel === 'writers' ? ' show' : ''}`} id="fc-p-writers">
         <div className="ph">
-          <h4>작가실 · 5명</h4>
+          <h4>작가실 · {personas.length}명</h4>
           <button className="x" onClick={closeAll}>
             ✕
           </button>
         </div>
         <div className="pb">
           <div>
-            {SAMPLE_PERSONAS.map((p) => {
-              const st = stateMap[p.key];
+            {personas.map((p) => {
+              const st = personaState(p.id);
               const lbl = st === 'done' ? '완료' : st === 'work' ? '검토 중' : '대기';
               return (
                 <div
-                  key={p.key}
+                  key={p.id}
                   className="wrow"
                   data-state={st}
-                  onClick={() => (present[p.key] ? openDetail(p.key) : callOne(p.key))}
+                  onClick={() => {
+                    const review = liveReviews.find((r) => r.persona === p.id);
+                    if (review) setOpenReview(review);
+                    else callOne(p.id);
+                  }}
                 >
-                  <span className="av" style={{ background: p.color }}>
-                    {p.av}
+                  <span className="av" style={{ background: p.tint }}>
+                    {avatarText(p)}
                   </span>
                   <div className="meta">
                     <div className="nm">{p.name}</div>
@@ -652,70 +586,71 @@ export function FloatingEditor({
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm13 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
-            5명에게 전체 검토 맡기기
+            {personas.length}명에게 전체 검토 맡기기
           </button>
         </div>
       </div>
 
       {/* note detail */}
-      {detailKey && (() => {
-        const p = personaByKey(detailKey);
-        const d = SAMPLE_REVIEWS[detailKey];
-        return (
-          <div
-            className="detail show"
-            id="fc-detail"
-            style={{ ['--ac' as string]: p.color } as CSSProperties}
-          >
-            <div className="dh">
-              <span className="av" style={{ background: p.color }}>
-                {p.av}
-              </span>
-              <div>
-                <div className="nm">{p.name}</div>
-                <div className="role">{p.role}</div>
-              </div>
-              <button className="x" onClick={closeDetail}>
-                ✕
-              </button>
-            </div>
-            <div className="db">
-              <div className="txt">{d.txt}</div>
-              {d.was && (
-                <div className="diff">
-                  <div className="row was">{d.was}</div>
-                  <div className="row is">{d.is}</div>
+      {openReview &&
+        (() => {
+          const p = personaById(openReview.persona);
+          const diff = openReview.diffs[0];
+          return (
+            <div
+              className="detail show"
+              id="fc-detail"
+              style={{ ['--ac' as string]: p.tint } as CSSProperties}
+            >
+              <div className="dh">
+                <span className="av" style={{ background: p.tint }}>
+                  {avatarText(p)}
+                </span>
+                <div>
+                  <div className="nm">{p.name}</div>
+                  <div className="role">{p.role}</div>
                 </div>
-              )}
-              <div className="reply">
-                <span className="rav">나</span>
-                <input defaultValue={d.reply ?? ''} placeholder="작가 응답 남기기…" />
+                <button className="x" onClick={() => setOpenReview(null)}>
+                  ✕
+                </button>
               </div>
-              <div className="acts">
-                <button className="ok" onClick={() => resolveReview(detailKey, true)}>
-                  반영
-                </button>
-                <button className="no" onClick={() => resolveReview(detailKey, false)}>
-                  보류
-                </button>
-                <span className="key">⏎ · Esc</span>
+              <div className="db">
+                <div className="txt">{openReview.body}</div>
+                {diff && (
+                  <div className="diff">
+                    <div className="row was">{diff.from}</div>
+                    <div className="row is">{diff.to}</div>
+                  </div>
+                )}
+                <div className="reply">
+                  <span className="rav">나</span>
+                  <input defaultValue="" placeholder="작가 응답 남기기…" />
+                </div>
+                <div className="acts">
+                  <button className="ok" onClick={() => resolveReview(openReview, true)}>
+                    반영
+                  </button>
+                  <button className="no" onClick={() => resolveReview(openReview, false)}>
+                    보류
+                  </button>
+                  <span className="key">⏎ · Esc</span>
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {/* selection popover */}
       <div className={`pop${pop ? ' show' : ''}`} id="fc-pop" style={pop ? { left: pop.x, top: pop.y } : undefined}>
         <div className="ph2">이 대목을 누구에게 맡길까요?</div>
         <div>
-          {SAMPLE_PERSONAS.map((p) => (
-            <button key={p.key} className="pr" onClick={() => callOne(p.key)}>
-              <span className="av" style={{ background: p.color }}>
-                {p.av}
+          {personas.map((p) => (
+            <button key={p.id} className="pr" onClick={() => callOne(p.id, pop?.selectedText, pop?.anchor)}>
+              <span className="av" style={{ background: p.tint }}>
+                {avatarText(p)}
               </span>
               <span className="nm">{p.name}</span>
-              <span className="role">{p.role.split('·')[0]}</span>
+              <span className="role">{p.role.split('·')[0].trim()}</span>
             </button>
           ))}
         </div>
@@ -727,7 +662,7 @@ export function FloatingEditor({
               setPop(null);
             }}
           >
-            5명 모두에게 맡기기
+            {personas.length}명 모두에게 맡기기
           </button>
         </div>
       </div>
