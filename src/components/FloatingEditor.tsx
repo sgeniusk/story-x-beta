@@ -118,14 +118,15 @@ export function FloatingEditor({
     if (composingRef.current) return;
     const el = msElRef.current;
     if (!el) return;
-    // 블록(<p>/<div>) 단위로 단락 줄바꿈을 보존한다. contentEditable 본문은 <p> 블록이라
-    // textContent 만 쓰면 단락이 한 줄로 뭉친다. 블록이 없으면(테스트의 flat textContent 등) textContent.
+    // 블록(<p>/<div>) 단위로 단락을 빈 줄(\n\n)로 구분한다. splitIntoParagraphs 가
+    // /\n\s*\n+/ 로 단락을 나누므로, 라운드트립(editorText→marginParagraphs)이 단락을 보존하려면
+    // 블록 사이를 단일 \n 이 아니라 빈 줄로 join 해야 한다. 블록이 없으면 textContent fallback.
     const blocks = el.querySelectorAll('p, div');
     const text =
       blocks.length > 0
         ? Array.from(blocks)
             .map((b) => b.textContent ?? '')
-            .join('\n')
+            .join('\n\n')
         : (el.textContent ?? '');
     onBodyChange?.(text);
   }, [onBodyChange]);

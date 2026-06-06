@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import { FloatingEditor, type FloatingEditorProps } from './FloatingEditor';
 import { CORE_PERSONAS } from '../lib/extendedPersonas';
 import type { MarginReview, Paragraph } from '../lib/marginReview';
+import { splitIntoParagraphs } from '../lib/marginReview';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -148,13 +149,14 @@ describe('FloatingEditor 실데이터 배선', () => {
     unmount();
   });
 
-  it('렌더된 <p> 블록을 줄바꿈으로 join 해 단락 경계를 보존한다', () => {
+  it('렌더된 <p> 블록을 빈 줄로 구분해 라운드트립 단락을 보존한다', () => {
     const onBodyChange = vi.fn();
     const { host, unmount } = mount(baseProps({ editable: true, onBodyChange }));
     const ms = host.querySelector('.ms') as HTMLElement;
     act(() => { ms.dispatchEvent(new Event('input', { bubbles: true })); });
     const text = (onBodyChange.mock.calls.at(-1)?.[0] as string) ?? '';
-    expect(text.split('\n').length).toBe(2);
+    // 실제 라운드트립 — editorText 로 들어가 splitIntoParagraphs 로 도로 2단락이 되어야 한다.
+    expect(splitIntoParagraphs(text).length).toBe(2);
     expect(text).toContain('필사관');
     expect(text).toContain('탑은 이름을');
     unmount();
