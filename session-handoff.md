@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-06-06 (이어서) — 플로팅 Phase 2b 지표 독 패널 (브레인스토밍→스펙→계획→인라인 실행→머지)
+
+> main `8bc9d4a` 머지 완료(브랜치 `design/floating-phase2b` 삭제). 스펙/계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2b-metrics-dock*`.
+
+### 한 일
+floating 독에 옛 좌레일 "지표" 지능을 흡수. "지표" 버튼 1개 + `fc-p-metrics` 패널 4 접이식 섹션(하니스·품질게이트·매체투사+commercial↔literary 슬라이더·온톨로지), **floating-네이티브 `.fc-*`**(DataPanel sx 재사용 아님 — 사용자 선택). `FloatingEditor` 에 `metrics: StudioMetrics`(필수)+`onMediaAxisChange?` prop 추가, StoryXDesk 가 이미 계산한 `studioMetrics`(856)·`updateStoryModeAxis`(868) 주입(둘 다 floatingEditorProps 위라 호이스팅 무문제). 섹션 접이는 `openMetric` 로컬 state(warn 우선 오픈). 패널·슬라이더 CSS `.fc-app` 스코프(`--warn` fallback).
+
+### 검증
+- `bash init.sh` — tsc 0 · **309 tests**(+3) · build. 라이브(Playwright) — 기본 `?stage=editor` 지표 버튼→패널 4섹션 실데이터(하니스 7/8·95/100·8스테이지, 품질 2/7) floating 톤 · 360 모바일 독 6버튼·패널(width 317·12px 여백) 뷰포트 내·가로스크롤 0 · 콘솔 0. 캡처 `docs/handoff/screenshots/floating-phase2b/01-metrics-panel-1440.png`.
+- Task1(컴포넌트)+Task3(StoryXDesk 배선)은 `metrics` 필수라 컴파일 상호의존 → 한 커밋(`015fc9b`). Task2 CSS(`8bc9d4a`).
+
+### 다음 한 단계 — 2c (또는 회차/곡선 리치판)
+- **2c** — 데이터(캐논/바이블) 모드 floating 화. 이어 2d 출간, 2e 옛 3컬럼 제거 + `editorFocusLayout.test.ts` 새 구조 이관 + `?editor=classic` 제거.
+- (선택) 회차/곡선 패널을 옛 리치판(ChapterStructureTree/TensionShareChart)으로 업그레이드 — 사용자가 "별도로 두자"로 보류.
+- **rank5 잔여** — 죽은 코드 3개(AiCliHarnessCard·VerticalSliceProofPanel·ContinuitySummaryCard) 삭제 vs 추출 · PublishingStudio · Tier3 훅.
+
+### 손대지 말 것
+- `fc-p-metrics` 패널의 `metrics` 순수 표현 계약(데이터/계산은 StoryXDesk `studioMetrics`). `openMetric` warn-우선 기본.
+- Phase 2a 의 contentEditable bodyVersion-메모·IME 가드·emitBody `\n\n` join(라운드트립).
+- 전역 `--sx-*`/`--nx-*`/`--lc-*` · provider · academic · rank2~4.
+
+---
+
 ## 2026-06-06 — rank5 Pass E(6개) + 플로팅 Phase 2a 스왑 (브레인스토밍→스펙→계획→서브에이전트 구동)
 
 > main 에 rank5 Pass E(`bcca914`) + Phase 2a 스왑 ff-merge(`389a997`) + 가운데 정렬(`488b5e8`) **머지 완료**(브랜치 `design/floating-phase2a` 삭제). 사용자가 실제 한글 타이핑 정상 확인. 스펙/계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2a-swap*`.
