@@ -8,6 +8,7 @@ import { FloatingEditor, type FloatingEditorProps } from './FloatingEditor';
 import { CORE_PERSONAS } from '../lib/extendedPersonas';
 import type { MarginReview, Paragraph } from '../lib/marginReview';
 import { splitIntoParagraphs } from '../lib/marginReview';
+import type { StudioMetrics } from '../lib/studioMetrics';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -42,6 +43,22 @@ function baseProps(over: Partial<FloatingEditorProps> = {}): FloatingEditorProps
     onSwitchTrack: vi.fn(),
     onOpenPublish: vi.fn(),
     isGenerating: false,
+    metrics: {
+      harness: { lead: '95/100', tone: 'warn', sub: '보강 필요', layers: [
+        { name: '진단', pass: true }, { name: '제작', pass: false },
+      ]},
+      quality: { lead: '2/7 통과', tone: 'warn', sub: '강제 실패 5', gates: [
+        { key: 'hook_first_300', pass: false, note: '첫 300자 평이' },
+        { key: 'voice_match_70', pass: true },
+      ]},
+      media: { lead: '소설 · 핵심 100%', tone: 'good', sub: '6개 매체', axis: 0.5, projections: [
+        { medium: '소설', fit: 100, current: true },
+      ]},
+      ontology: { lead: '중심 질문 있음', tone: 'good', sub: '1개 미해결', entities: [
+        { kind: '인물', count: 1 }, { kind: '세계', count: 1 },
+      ]},
+    } as StudioMetrics,
+    onMediaAxisChange: vi.fn(),
     ...over,
   };
 }
@@ -183,5 +200,37 @@ describe('FloatingEditor 실데이터 배선', () => {
     expect(desk).toContain("get('editor') === 'classic'");
     expect(desk).toContain('isDraftMode && !isClassicEditor');
     expect(desk).toContain('<FloatingEditor {...floatingEditorProps} />');
+  });
+
+  it('지표 버튼을 누르면 지표 패널이 열린다', () => {
+    const { host, unmount } = mount(baseProps());
+    const btn = Array.from(host.querySelectorAll('.tool')).find((b) => b.textContent?.includes('지표'));
+    act(() => { btn?.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(host.querySelector('#fc-p-metrics')?.classList.contains('show')).toBe(true);
+    unmount();
+  });
+
+  it('지표 패널이 4섹션과 값을 렌더한다', () => {
+    const { host, unmount } = mount(baseProps());
+    const panel = host.querySelector('#fc-p-metrics') as HTMLElement;
+    expect(panel.textContent).toContain('하니스');
+    expect(panel.textContent).toContain('95/100');
+    expect(panel.textContent).toContain('품질 게이트');
+    expect(panel.textContent).toContain('hook_first_300');
+    expect(panel.textContent).toContain('매체 투사');
+    expect(panel.textContent).toContain('온톨로지');
+    expect(panel.textContent).toContain('인물');
+    unmount();
+  });
+
+  it('매체 슬라이더가 onMediaAxisChange 를 호출한다', () => {
+    const onMediaAxisChange = vi.fn();
+    const { host, unmount } = mount(baseProps({ onMediaAxisChange }));
+    const slider = host.querySelector('#fc-p-metrics .fc-axis-input') as HTMLInputElement;
+    const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    nativeSetter.call(slider, '80');
+    act(() => { slider.dispatchEvent(new Event('input', { bubbles: true })); });
+    expect(onMediaAxisChange).toHaveBeenCalledWith(0.8);
+    unmount();
   });
 });

@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { InlineDiff, MarginReview, Paragraph, PersonaCard, SummonHandler } from '../lib/marginReview';
 import { SEVERITY_LABEL } from '../lib/marginReview';
+import type { StudioMetrics } from '../lib/studioMetrics';
 
 interface ChapterBeatLike {
   id: string;
@@ -41,6 +42,9 @@ export interface FloatingEditorProps {
   onSwitchTrack?: (track: 'draft' | 'bible') => void;
   onOpenPublish?: () => void;
   isGenerating?: boolean;
+  // Phase 2b — 지표 패널 (studioMetrics: 하니스·품질·매체·온톨로지)
+  metrics: StudioMetrics;
+  onMediaAxisChange?: (axis: number) => void;
 }
 
 const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
@@ -74,6 +78,8 @@ export function FloatingEditor({
   onSwitchTrack,
   onOpenPublish,
   isGenerating = false,
+  metrics,
+  onMediaAxisChange,
 }: FloatingEditorProps) {
   const personaById = useCallback(
     (id: string): PersonaCard =>
@@ -97,7 +103,12 @@ export function FloatingEditor({
   };
   const presentCount = liveReviews.length;
 
-  const [openPanel, setOpenPanel] = useState<'struct' | 'curve' | 'state' | 'writers' | null>(null);
+  const [openPanel, setOpenPanel] = useState<'struct' | 'curve' | 'state' | 'writers' | 'metrics' | null>(null);
+  const [openMetric, setOpenMetric] = useState<'harness' | 'quality' | 'media' | 'ontology'>(
+    metrics.harness.tone === 'warn'
+      ? 'harness'
+      : (['quality', 'media', 'ontology'] as const).find((k) => metrics[k].tone === 'warn') ?? 'harness'
+  );
   const [openReview, setOpenReview] = useState<MarginReview | null>(null);
   const [isFocus, setIsFocus] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
@@ -244,7 +255,7 @@ export function FloatingEditor({
     setPop(null);
   }, []);
 
-  const togglePanel = useCallback((id: 'struct' | 'curve' | 'state' | 'writers') => {
+  const togglePanel = useCallback((id: 'struct' | 'curve' | 'state' | 'writers' | 'metrics') => {
     setOpenReview(null);
     setOpenPanel((cur) => (cur === id ? null : id));
   }, []);
@@ -473,6 +484,16 @@ export function FloatingEditor({
             </svg>
             <span className="t">상태</span>
           </button>
+          <button
+            className={`tool${openPanel === 'metrics' ? ' on' : ''}`}
+            onClick={() => togglePanel('metrics')}
+            title="지표"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+              <path d="M3 12h4l3-8 4 16 3-8h4" />
+            </svg>
+            <span className="t">지표</span>
+          </button>
           <div className="sep" />
           <button
             className={`tool assign${openPanel === 'writers' ? ' on' : ''}`}
@@ -599,6 +620,85 @@ export function FloatingEditor({
               readOnly={!onIntentChange}
               onChange={(e) => onIntentChange?.(e.target.value)}
             />
+          </div>
+        </div>
+      </div>
+      <div className={`panel${openPanel === 'metrics' ? ' show' : ''}`} id="fc-p-metrics">
+        <div className="ph">
+          <h4>작품 지표</h4>
+          <button className="x" onClick={closeAll}>✕</button>
+        </div>
+        <div className="pb fc-metrics">
+          <div className={`fc-metric tone-${metrics.harness.tone}${openMetric === 'harness' ? ' open' : ''}`}>
+            <button className="fc-metric-h" onClick={() => setOpenMetric('harness')}>
+              <span className="nm">하니스</span>
+              <span className="lead">{metrics.harness.lead}</span>
+              <span className="sub">{metrics.harness.sub}</span>
+            </button>
+            <div className="fc-metric-b">
+              {metrics.harness.layers.map((l) => (
+                <span key={l.name} className={`fc-row${l.pass ? '' : ' fail'}`}>
+                  {l.pass ? '✓' : '!'} {l.name}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className={`fc-metric tone-${metrics.quality.tone}${openMetric === 'quality' ? ' open' : ''}`}>
+            <button className="fc-metric-h" onClick={() => setOpenMetric('quality')}>
+              <span className="nm">품질 게이트</span>
+              <span className="lead">{metrics.quality.lead}</span>
+              <span className="sub">{metrics.quality.sub}</span>
+            </button>
+            <div className="fc-metric-b">
+              {metrics.quality.gates.map((g) => (
+                <span key={g.key} className={`fc-row${g.pass ? '' : ' fail'}`}>
+                  {g.key}{g.note ? ` · ${g.note}` : ''}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className={`fc-metric tone-${metrics.media.tone}${openMetric === 'media' ? ' open' : ''}`}>
+            <button className="fc-metric-h" onClick={() => setOpenMetric('media')}>
+              <span className="nm">매체 투사</span>
+              <span className="lead">{metrics.media.lead}</span>
+              <span className="sub">{metrics.media.sub}</span>
+            </button>
+            <div className="fc-metric-b">
+              <div className="fc-axis">
+                <div className="fc-axis-labels">
+                  <span>commercial</span>
+                  <span>literary</span>
+                </div>
+                {onMediaAxisChange && (
+                  <input
+                    className="fc-axis-input"
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={Math.round(metrics.media.axis * 100)}
+                    onChange={(e) => onMediaAxisChange(Number(e.target.value) / 100)}
+                    aria-label="작품 무게중심 (좌: 대중성 / 우: 작품성)"
+                  />
+                )}
+              </div>
+              {metrics.media.projections.map((p) => (
+                <span key={p.medium} className={`fc-row${p.current ? ' cur' : ''}`}>
+                  {p.medium} · {p.fit}%
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className={`fc-metric tone-${metrics.ontology.tone}${openMetric === 'ontology' ? ' open' : ''}`}>
+            <button className="fc-metric-h" onClick={() => setOpenMetric('ontology')}>
+              <span className="nm">온톨로지</span>
+              <span className="lead">{metrics.ontology.lead}</span>
+              <span className="sub">{metrics.ontology.sub}</span>
+            </button>
+            <div className="fc-metric-b">
+              {metrics.ontology.entities.map((e) => (
+                <span key={e.kind} className="fc-row">{e.kind} {e.count}</span>
+              ))}
+            </div>
           </div>
         </div>
       </div>

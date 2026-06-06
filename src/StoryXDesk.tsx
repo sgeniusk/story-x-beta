@@ -1255,6 +1255,8 @@ export function StoryXDesk({
       onSwitchTrack: (track: 'draft' | 'bible') => switchToTrack(track),
       onOpenPublish: openPublishingMode,
       isGenerating,
+      metrics: studioMetrics,
+      onMediaAxisChange: updateStoryModeAxis,
     }),
     [
       project,
@@ -1270,6 +1272,8 @@ export function StoryXDesk({
       handleFloatingBodyChange,
       mainActionRun,
       isGenerating,
+      studioMetrics,
+      updateStoryModeAxis,
     ]
   );
   const draftPromptPlaceholder = isLatestLocked
