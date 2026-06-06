@@ -39,15 +39,16 @@ claude.ai design 에서 발산한 3방향 중 **방향 C "떠 있는 작업실"*
 - 새 구조 단언은 `floatingEditor.test.ts` 로 추가(TDD). 완성·검증 후 floating 을 기본으로 스왑하고 그때 기존 테스트를 갱신.
 
 ## 단계 체크리스트
-### 1. 편집 모드 floating (이번 핵심)
-- [ ] `docs/handoff/direction-c.html` 원본 사본 보관
-- [ ] `floatingEditor.test.ts` 작성(RED) — 핵심 클래스/구조 단언
-- [ ] styles.css 에 `.fc-*` CSS 블록 추가 (토큰·topbar·canvas·sheet·split docks·margin·panels·detail·popover·focus·반응형 1320/1180/1080/768/560)
-- [ ] `FloatingEditor.tsx` — 레이아웃 + props 인터페이스 + 시안 fallback 데이터
-- [ ] 데이터 배선 — editorText·5 persona·MarginReview·회차구조/곡선/상태·검토 콜백
-- [ ] 인터랙션 — 드래그 호출 popover·전체 검토 순차·반영/보류·집중·모드탭·출간버튼·구절 밑줄
-- [ ] StoryXDesk 플래그 렌더 연결
-- [ ] 검증 — tsc·test·build + `?stage=editor&editor=floating` 360/768/1024/1440 캡처
+### 1. 편집 모드 floating (이번 핵심) — ✅ 데이터 배선 완료 (2026-06-05)
+> 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-05-floating-editor-data-wiring*`. 브랜치 `design/floating-data-wiring`. 캡처 `docs/handoff/screenshots/floating-c-wired/`.
+- [x] `floatingEditor.test.ts` 작성(RED→GREEN) — react-dom+jsdom 렌더, props·콜백·시안제거 단언
+- [x] styles.css 에 `.fc-*` CSS 블록 (체크포인트 · 데이터 배선 단계엔 미변경 보존)
+- [x] `FloatingEditor.tsx` — 레이아웃 + props 인터페이스 (시안 데이터 제거 → 순수 표현 컴포넌트)
+- [x] 데이터 배선 — editorText·5 persona(CORE_PERSONAS)·MarginReview·회차구조/곡선/상태·검토 콜백
+- [x] 인터랙션 — 드래그 호출 popover·전체 검토·반영/보류·집중·모드탭(no-op)·구절 밑줄(diff.from)
+- [x] StoryXDesk 플래그 렌더 연결 (isFloatingPreview && isDraftMode → props 주입)
+- [x] 검증 — tsc 0·297 tests·build + `?editor=floating` 1440·360 캡처(실 페르소나·검토 5건·콘솔 0). 768/1024 는 `.fc-*` 미변경이라 체크포인트 기검증과 동일
+- [ ] `docs/handoff/direction-c.html` 원본 사본 보관 (선택)
 ### 2. 스왑 + 테스트 갱신
 - [ ] floating 을 편집 모드 기본으로, 기존 3컬럼 셸 제거
 - [ ] `editorFocusLayout.test.ts` 편집 모드 단언을 새 구조로 갱신(데이터/출간/캐논 단언은 보존)
