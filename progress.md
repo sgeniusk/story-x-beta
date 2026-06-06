@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-05 · Branch: `main` (방향 C 플로팅 에디터 시안 체크포인트 머지 · rank5 Pass D 까지)
+> Last Updated: 2026-06-06 · Branch: `design/floating-phase2a` (플로팅 Phase 2a 스왑 · 머지 대기) · main 은 rank5 Pass E(`bcca914`)까지
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 편집기 재설계: 방향 C "떠 있는 작업실" (실데이터 배선 완료)
@@ -8,7 +8,8 @@
 2026-06-05. claude.ai design 에서 발산한 3방향 편집기 시안 중 **방향 C** 를 React 로 이식 착수. `design/floating-editor` 에서 작업 후 main 머지(체크포인트).
 - **들어온 것** — `src/components/FloatingEditor.tsx`(739줄) 비주얼 Phase 1. 어두운 캔버스 + 종이 시트 + 좌측 플로팅 독 + 단락 옆 여백 주석 + 작가별 색 밑줄. 인터랙션 전부(드래그 호출 popover·5명 순차 검토·반영/보류·집중·모드탭·키보드). `?editor=floating` 진입, `.fc-*` 스코프 CSS — 기존 편집기·테스트·전역 토큰 무영향(그래서 게이트 녹색).
 - **실데이터 배선 완료 (2026-06-05)** — `SAMPLE_*` 제거 → 순수 표현 컴포넌트. StoryXDesk 가 `?editor=floating` 일 때 실 `editorText·MarginReview·CORE_PERSONAS·beats·검토 콜백(onSummon/onRunAll/onAcceptDiff/onRejectReview)`을 props 주입(접근 A). `floatingEditor.test.ts`(react-dom+jsdom 렌더) 추가. 라이브 검증 — 실 페르소나 5명·전체검토 5건 도착·콘솔 0. 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-05-floating-editor-data-wiring*`.
-- **남은 단계** — Phase 2 스왑(편집 모드 기본화 + `editorFocusLayout.test.ts` 갱신 + 라이브 타이핑 contentEditable) · Phase 3 진입 4화면 톤 통일. 계획 `docs/storyx-floating-editor-plan.md`.
+- **Phase 2a 스왑 완료 (2026-06-06, 브랜치 `design/floating-phase2a` · 머지 대기)** — floating 이 편집 기본(`isDraftMode && !isClassicEditor`, `?editor=classic` 한시 폴백). 본문 contentEditable 라이브 타이핑(IME compositionstart/end 가드 + bodyVersion-메모로 커서 클로버 차단) + 의도메모 쓰기-백 + 초안생성/편집·데이터/출간 네비 배선. emitBody 는 블록을 `\n\n`(splitIntoParagraphs 라운드트립)로 join. 라이브 검증 — 기본=floating·편집→글자수 0→24자·본문 단락 보존·콘솔 0·classic=옛 3컬럼. **미완 — 실제 한글 IME 조합 타이핑 사람 확인 1회 + 머지.** 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2a-swap*`. 캡처 `docs/handoff/screenshots/floating-phase2a/`.
+- **남은 단계 — 단계적 대체 2b~2e** — 2b 좌측 독에 하니스·품질·온톨로지·구조·곡선 흡수 · 2c 데이터(캐논/바이블) floating 화 · 2d 출간 floating 화 · 2e 옛 3컬럼 제거 + `editorFocusLayout.test.ts` 새 구조 이관 + `?editor=classic` 제거. 계획 `docs/storyx-floating-editor-plan.md`.
 
 ## 현재 활성 — M11 검토 기반 정비 (`in_progress`)
 
@@ -28,7 +29,8 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 - **Tier 2 Pass B (Canon/Data 7개 + `canonDataView.ts`)** — CanonNav·DataLeftRail·CharacterGraph·CharacterDetailPanel·CanonCardGrid·CanonCanvas·DataReviewRail. 공용 타입·헬퍼는 `src/lib/canonDataView.ts`로. 테스트 단언 21:21 재배치(삭제·약화 0). Codex 스코프 크리프(상태 문서 임의 수정)는 Claude가 되돌림.
 - **Tier 2 Pass C (Bible/Memory 5개) + 헬퍼 de-dup** — ProjectStateCard·BibleWorkbenchHeader·CanonRefactorPanel·BibleAssistantSidebar·MemoryBankStudio. Codex가 getAgentPersona·agentStatusLabel를 복사해 만든 중복을 Claude가 적발 → `lib/agentPersonas.ts` 단일 진실원천으로 통합(드리프트 위험 제거).
 - **Tier 2 Pass D (Agent 4개) + 순환의존 제거** — AgentIntentCard·AgentProfileDialog·AgentRoom·WorkStateGrid. Pass B에서 샌 DataLeftRail→StoryXDesk→WorkStateGrid 순환참조(+불필요 re-export)를 Claude가 적발·제거 → StoryXDesk가 다시 `StoryXDesk` 하나만 export(단일 계약 복구).
-- 검증 — 매 티어 tsc 0 · 293 tests(올바른 이유로) · build · 편집기·캐논 뷰 렌더·콘솔 0. 남은 작업 — Tier2 잔여 ~11개(Dialogs·Publishing·Status 클러스터) + Tier3 훅(최고위험, code-reviewer 2차).
+- 검증 — 매 티어 tsc 0 · 293 tests(올바른 이유로) · build · 편집기·캐논 뷰 렌더·콘솔 0.
+- **Pass E (2026-06-06, Claude 직접, `bcca914`)** — Dialogs 3(ProjectHistoryDialog·CommandPalette·VersionLogDialog) + StoryXStatusBar + ChapterStructureTree(+구조 헬퍼블록) + TensionShareChart = **살아있는 6개 추출**. StoryXDesk **3,824→3,317**. 테스트 단언 componentSrc 재배치(삭제·약화 0). **발견 — Status 클러스터 3개(AiCliHarnessCard·VerticalSliceProofPanel·ContinuitySummaryCard)는 죽은 코드(JSX 사용처 0)라 추출 보류 → 삭제 vs 추출 사용자 결정 대기.** PublishingStudio(최대·단독 패스 권장)·Tier3 훅도 잔여.
 
 **추가 핫픽스 (사용자 발견 · 다크 스코프 대비 버그 2건)** — 둘 다 M8.5 의 `.home-page` 다크 전환 시 누락된 잔재다.
 1. 매체·포맷 카드 제목이 다크 배경에 묻힘 — `.home-page` 다크 스코프에 `--nx-ink-deep` 오버라이드 누락(12토큰 중 빠짐). `styles.css:8821` 에 `--nx-ink-deep: #f7f7fb` 추가.
@@ -42,7 +44,7 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 2 | 빌딩 LLM 실패 폴백 초안 + 배너 | medium | ✅ done (Codex) |
 | 3 | 품질 게이트 본문 배선 + ready conjunctive | medium | ✅ done (Codex+리뷰+수정) |
 | 4 | continuity 충돌 감지 보강 + living/soft 3계층 통합 | large | ✅ done (Codex+리뷰+수정) |
-| 5 | StoryXDesk.tsx 훅·컴포넌트 분리 (6,097→3,772, Tier1·2A~2D done) | large | 🔄 진행 중 |
+| 5 | StoryXDesk.tsx 훅·컴포넌트 분리 (6,097→3,317, Tier1·2A~E live done) | large | 🔄 진행 중 |
 | 6 | 1.0 기준 시장증명 재정의 + 경량 검증 | medium | todo |
 | 7 | 편집기 상단바 압축 + academic 1.0 범위 결정 | medium | todo |
 | (B) | 로컬 작가진 Codex 연결 (M12) | small | ✅ done |
@@ -53,12 +55,14 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 두 갈래 중 택1. **(A) 플로팅 Phase 2 스왑** — floating 을 편집 모드 기본으로(StoryXDesk 3컬럼 제거 또는 토글) + `editorFocusLayout.test.ts` 새 구조로 갱신 + 라이브 타이핑(contentEditable)·의도 메모 쓰기-백. 위험 — 기존 편집기 테스트 다수 갱신, 시각 회귀. **(B) rank5 Tier2 Pass E** — `StoryXDesk.tsx` 잔여 ~11개(Dialogs·Publishing·Status) 추출 후 Tier3 훅 분리(useProject·useDraftEditor·useReviewSession·useUIState — 최고위험, code-reviewer 2차 필수). 방식은 Codex 위임 + Claude 검증. **Codex 패킷 필수 조항 — 우회 주석 금지·상태 문서 수정 금지·이동 심볼 단언은 정의 파일로 재배치.**
 
-## 최근 검증 (2026-06-05)
+## 최근 검증 (2026-06-06 · 브랜치 `design/floating-phase2a`)
 
 ```
 npx tsc --noEmit   → exit 0
-npm test           → Test Files 43 passed (43) · Tests 297 passed (297) · Failures 0
+npm test           → Test Files 43 passed (43) · Tests 305 passed (305) · Failures 0
 bash init.sh       → tsc · vitest · build 전체 통과
+라이브(Playwright) → 기본 ?stage=editor = floating · 편집→글자수 0→24자 · 본문 단락 보존 · 콘솔 0 · ?editor=classic = 옛 3컬럼
+미완              → 실제 한글 IME 조합 타이핑 사람 확인 1회 + 브랜치 머지
 ```
 
 ## 완료 마일스톤

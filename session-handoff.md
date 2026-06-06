@@ -4,6 +4,35 @@
 
 ---
 
+## 2026-06-06 — rank5 Pass E(6개) + 플로팅 Phase 2a 스왑 (브레인스토밍→스펙→계획→서브에이전트 구동)
+
+> main 은 rank5 Pass E(`bcca914`)까지. Phase 2a 는 브랜치 `design/floating-phase2a`(7커밋, **머지 대기**). 스펙/계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2a-swap*`.
+
+### 한 일
+1. **로컬 구동 + 개발계획 제시** — `npm run dev`(127.0.0.1:5173) 띄우고 두 에디터 라이브 확인. 향후 로드맵(rank5~7·플로팅 2a~2e) 작성.
+2. **rank5 Tier2 Pass E (main, `bcca914`)** — 살아있는 6개 컴포넌트 추출(Dialogs 3·StoryXStatusBar·ChapterStructureTree+구조헬퍼블록·TensionShareChart). StoryXDesk **3,824→3,317**. 단언 componentSrc 재배치(삭제·약화 0). **죽은 코드 3개(AiCliHarnessCard·VerticalSliceProofPanel·ContinuitySummaryCard)는 JSX 사용처 0 → 추출 보류**(삭제 vs 추출 사용자 결정 대기). PublishingStudio·Tier3 훅 잔여.
+3. **플로팅 Phase 2a 스왑 (브랜치 `design/floating-phase2a`)** — 사용자가 "floating 을 기본 에디터로, 기능을 floating 방식으로 흡수" 요청 → 단계적 대체(2a~2e) 합의. 2a 구현 — ① 트리거 플립(`isDraftMode && !isClassicEditor`, `?editor=classic` 한시 폴백) ② 본문 **contentEditable 라이브 타이핑**(compositionstart/end IME 가드 + bodyVersion-메모로 타이핑 중 커서 클로버 차단) ③ 의도메모 쓰기-백 ④ 초안생성/편집·데이터/출간 네비 배선 ⑤ StoryXDesk bodyVersion state + 외부변경 3곳 bump(회차로드·diff반영·초기화) + 호이스팅 위해 floatingEditorProps useMemo 를 mainActionRun 아래로 이동. emitBody 는 블록을 `\n\n`로 join(splitIntoParagraphs 라운드트립 보존).
+
+### 검증
+- `bash init.sh` — tsc 0 · **305 tests** · build. 라이브(Playwright) — 기본 `?stage=editor` = floating(`.fc-app`·`.sx-desk-grid` 없음) · 편집→헤더 글자수 0→24자 · 본문 단락 2개 보존(커서 메커니즘) · 콘솔 0 · `?editor=classic` = 옛 3컬럼+상태바. 캡처 `docs/handoff/screenshots/floating-phase2a/01-default-floating-1440.png`.
+- 옛 `editorFocusLayout.test.ts`(20)·`version.test.ts`(4) 단언 그대로 green — classic 경로로 옛 3컬럼 JSX 가 소스에 남아 source-string 단언 보존.
+
+### 미완 — 다음 세션이 해야 할 한 가지
+1. **실제 한글 IME 조합 타이핑 사람 확인 1회** — Playwright 는 IME 조합 시뮬레이트 불가. 사람이 `?stage=editor` 본문에 한글을 직접 쳐서 (a) 글자 안 끊김 (b) 커서 안 튐 확인. **이게 머지 전 게이트.**
+2. 확인되면 **`design/floating-phase2a` → main 머지**(finishing-a-development-branch).
+3. 이후 **Phase 2b** — 좌측 독에 하니스·품질·온톨로지·구조·곡선 흡수.
+
+### 손대지 말 것
+- main 의 rank5 Pass E 추출 6 컴포넌트(순수 이동 고정). 죽은 코드 3개는 사용자 결정 전 손대지 말 것.
+- contentEditable 본문의 **bodyVersion-메모 패턴**(타이핑 중 본문 재시드 금지 — 커서 보존 핵심) · **emitBody `\n\n` join**(라운드트립) · **IME 가드**. 약화 금지.
+- `editorFocusLayout.test.ts` 옛 편집 구조 단언 — 2e(옛 3컬럼 제거) 전까지 보존.
+- 전역 `--sx-*`/`--nx-*`/`--lc-*` 토큰 · provider 경로 · academic · rank2~4 도메인.
+
+### 운영 메모
+- Phase 2a 는 서브에이전트 구동(Task1~3 구현자 디스패치 + Claude 검증, Task4~6 Claude 직접). Task3 구현자가 정직하게 보고한 정확성 우려(textContent 단락 붕괴)를 Claude 가 `\n\n` join + splitIntoParagraphs 라운드트립 테스트로 해소 — **서브에이전트 자기보고 신뢰하되 검증·보강 필요**.
+
+---
+
 ## 2026-06-05 (이어서) — 방향 C 플로팅 에디터 실데이터 배선 (브레인스토밍→스펙→계획→TDD)
 
 > Branch: `design/floating-data-wiring` → main 머지. 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-05-floating-editor-data-wiring*`.
