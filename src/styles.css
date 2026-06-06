@@ -10835,6 +10835,8 @@ body {
 .fc-app .anchor.has-note .mark:hover,.fc-app .mark.hl{background:color-mix(in oklch,var(--ac) 18%,transparent);box-shadow:inset 0 -2px 0 var(--ac)}
 /* margin notes */
 .fc-app .margin{width:328px;flex:none;position:relative;padding-top:122px}
+/* 여백 주석이 없을 땐(빈 원고·검토 전) 마진을 레이아웃에서 빼 종이 시트를 화면 가운데로 정렬한다. */
+.fc-app .margin:empty{display:none}
 .fc-app .mnote{background:var(--bg-2);border:1px solid var(--rule-soft);border-left:3px solid var(--ac,var(--rule));border-radius:11px;padding:11px 13px;margin-bottom:12px;cursor:pointer;transition:border-color .15s,transform .15s}
 .fc-app .mnote:hover{border-color:var(--rule);transform:translateX(-3px)}
 .fc-app .mnote .who{display:flex;align-items:center;gap:7px;margin-bottom:6px}
