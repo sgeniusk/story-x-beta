@@ -1,7 +1,7 @@
 // 방향 C "떠 있는 작업실" 에디터 — 어두운 캔버스 위 종이 시트 + 좌측 플로팅 독 + 단락 옆 여백 주석.
 // claude.ai design 의 direction-c.html 레이아웃을 React 로 재현한다. 데이터는 전부 props 주입(순수 표현 컴포넌트).
 // 실 원고(paragraphs)·작가진 검토(reviews)·5 페르소나(personas)·검토 콜백은 StoryXDesk 가 단일 원천에서 넘긴다.
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { InlineDiff, MarginReview, Paragraph, PersonaCard, SummonHandler } from '../lib/marginReview';
 import { SEVERITY_LABEL } from '../lib/marginReview';
 
@@ -75,8 +75,8 @@ export function FloatingEditor({
   onOpenPublish,
   isGenerating = false,
 }: FloatingEditorProps) {
-  // Phase 2a Task3 에서 사용
-  void editable; void bodyVersion; void onBodyChange; void onIntentChange;
+  // onIntentChange 는 다음 태스크에서 배선 — 그전까지 미사용 경고만 억제
+  void onIntentChange;
   const personaById = useCallback(
     (id: string): PersonaCard =>
       personas.find((p) => p.id === id) ?? { id, name: id, role: '', tint: '#62666d', isCore: false },
@@ -111,6 +111,40 @@ export function FloatingEditor({
   const deckRef = useRef<HTMLDivElement>(null);
   const marginNoteRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hintTimer = useRef<number | null>(null);
+
+  // contentEditable 본문 — 한글 IME 조합 중 input 은 무시하고 compositionend 에서 1회만 커밋
+  const composingRef = useRef(false);
+  const msElRef = useRef<HTMLDivElement>(null);
+
+  const emitBody = useCallback(() => {
+    if (composingRef.current) return;
+    const text = msElRef.current?.textContent ?? '';
+    onBodyChange?.(text);
+  }, [onBodyChange]);
+
+  // 본문 자식은 bodyVersion 으로만 재생성한다. 타이핑 중에는 DOM 이 본문을 소유하고,
+  // 외부 변경(초안 생성·diff 반영·회차 전환)으로 부모가 bodyVersion++ 할 때만 다시 시드해 커서 보존.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const bodyChildren = useMemo(
+    () =>
+      paragraphs.map((para, i) => {
+        const review = reviewForAnchor(para.id);
+        const persona = review ? personaById(review.persona) : null;
+        const { before, mark, after } = splitByMark(para.text, review);
+        const cls = ['anchor', i === 0 ? 'lead' : '', review ? 'has-note' : '']
+          .filter(Boolean)
+          .join(' ');
+        const style = persona ? ({ ['--ac' as string]: persona.tint } as CSSProperties) : undefined;
+        return (
+          <p key={para.id} className={cls} style={style} data-anchor={para.id} data-key={review?.persona}>
+            {before}
+            {mark && <span className="mark">{mark}</span>}
+            {after}
+          </p>
+        );
+      }),
+    [bodyVersion] // 의도적으로 paragraphs 제외 — 타이핑 중 DOM 이 본문 소유, 외부 변경(bodyVersion++) 때만 재시드
+  );
 
   const toast = useCallback((msg: string) => {
     setHint(msg);
@@ -340,32 +374,22 @@ export function FloatingEditor({
             </div>
             <h1 className="ep-title">{chapterTitle}</h1>
             <p className="ep-sub">{chapterSub}</p>
-            <div className="ms" onMouseUp={onBodyMouseUp}>
-              {paragraphs.map((para, i) => {
-                const review = reviewForAnchor(para.id);
-                const persona = review ? personaById(review.persona) : null;
-                const { before, mark, after } = splitByMark(para.text, review);
-                const cls = ['anchor', i === 0 ? 'lead' : '', review ? 'has-note' : '']
-                  .filter(Boolean)
-                  .join(' ');
-                const style = persona
-                  ? ({ ['--ac' as string]: persona.tint } as CSSProperties)
-                  : undefined;
-                return (
-                  <p
-                    key={para.id}
-                    className={cls}
-                    style={style}
-                    data-anchor={para.id}
-                    data-key={review?.persona}
-                    onClick={review ? () => setOpenReview(review) : undefined}
-                  >
-                    {before}
-                    {mark && <span className="mark">{mark}</span>}
-                    {after}
-                  </p>
-                );
-              })}
+            <div
+              className="ms"
+              ref={msElRef}
+              contentEditable={editable}
+              suppressContentEditableWarning
+              onMouseUp={onBodyMouseUp}
+              onInput={emitBody}
+              onCompositionStart={() => {
+                composingRef.current = true;
+              }}
+              onCompositionEnd={() => {
+                composingRef.current = false;
+                emitBody();
+              }}
+            >
+              {bodyChildren}
             </div>
           </article>
 

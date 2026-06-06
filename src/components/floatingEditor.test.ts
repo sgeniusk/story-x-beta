@@ -117,4 +117,34 @@ describe('FloatingEditor 실데이터 배선', () => {
     expect(onSwitchTrack).toHaveBeenCalledWith('bible');
     unmount();
   });
+
+  it('editable 일 때 본문 .ms 가 contentEditable 이다', () => {
+    const { host, unmount } = mount(baseProps({ editable: true }));
+    expect(host.querySelector('.ms')?.getAttribute('contenteditable')).toBe('true');
+    unmount();
+  });
+
+  it('editable 본문에 input 이 일어나면 onBodyChange 가 텍스트로 호출된다', () => {
+    const onBodyChange = vi.fn();
+    const { host, unmount } = mount(baseProps({ editable: true, onBodyChange }));
+    const ms = host.querySelector('.ms') as HTMLElement;
+    ms.textContent = '필사관은 한 줄을 더 고쳤다.\n탑은 이름을 받고 움직였다.';
+    act(() => { ms.dispatchEvent(new Event('input', { bubbles: true })); });
+    expect(onBodyChange).toHaveBeenCalled();
+    expect(onBodyChange.mock.calls.at(-1)?.[0]).toContain('한 줄을 더 고쳤다');
+    unmount();
+  });
+
+  it('한글 조합 중에는 onBodyChange 를 보류하고 compositionend 에서 1회 커밋한다', () => {
+    const onBodyChange = vi.fn();
+    const { host, unmount } = mount(baseProps({ editable: true, onBodyChange }));
+    const ms = host.querySelector('.ms') as HTMLElement;
+    act(() => { ms.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true })); });
+    ms.textContent = '조합중ㅎ';
+    act(() => { ms.dispatchEvent(new Event('input', { bubbles: true })); });
+    expect(onBodyChange).not.toHaveBeenCalled();
+    act(() => { ms.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true })); });
+    expect(onBodyChange).toHaveBeenCalledTimes(1);
+    unmount();
+  });
 });
