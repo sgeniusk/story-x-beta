@@ -6,7 +6,7 @@
 
 ## 2026-06-06 — rank5 Pass E(6개) + 플로팅 Phase 2a 스왑 (브레인스토밍→스펙→계획→서브에이전트 구동)
 
-> main 은 rank5 Pass E(`bcca914`)까지. Phase 2a 는 브랜치 `design/floating-phase2a`(7커밋, **머지 대기**). 스펙/계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2a-swap*`.
+> main 에 rank5 Pass E(`bcca914`) + Phase 2a 스왑 ff-merge(`389a997`) + 가운데 정렬(`488b5e8`) **머지 완료**(브랜치 `design/floating-phase2a` 삭제). 사용자가 실제 한글 타이핑 정상 확인. 스펙/계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2a-swap*`.
 
 ### 한 일
 1. **로컬 구동 + 개발계획 제시** — `npm run dev`(127.0.0.1:5173) 띄우고 두 에디터 라이브 확인. 향후 로드맵(rank5~7·플로팅 2a~2e) 작성.
@@ -17,10 +17,11 @@
 - `bash init.sh` — tsc 0 · **305 tests** · build. 라이브(Playwright) — 기본 `?stage=editor` = floating(`.fc-app`·`.sx-desk-grid` 없음) · 편집→헤더 글자수 0→24자 · 본문 단락 2개 보존(커서 메커니즘) · 콘솔 0 · `?editor=classic` = 옛 3컬럼+상태바. 캡처 `docs/handoff/screenshots/floating-phase2a/01-default-floating-1440.png`.
 - 옛 `editorFocusLayout.test.ts`(20)·`version.test.ts`(4) 단언 그대로 green — classic 경로로 옛 3컬럼 JSX 가 소스에 남아 source-string 단언 보존.
 
-### 미완 — 다음 세션이 해야 할 한 가지
-1. **실제 한글 IME 조합 타이핑 사람 확인 1회** — Playwright 는 IME 조합 시뮬레이트 불가. 사람이 `?stage=editor` 본문에 한글을 직접 쳐서 (a) 글자 안 끊김 (b) 커서 안 튐 확인. **이게 머지 전 게이트.**
-2. 확인되면 **`design/floating-phase2a` → main 머지**(finishing-a-development-branch).
-3. 이후 **Phase 2b** — 좌측 독에 하니스·품질·온톨로지·구조·곡선 흡수.
+### 완료 후 — 다음 세션 우선순위
+- **한글 타이핑·머지·가운데 정렬 모두 완료.** 사용자가 "소소한 UI/UX 개선 필요"라고 함 — 가운데 정렬은 처리(`488b5e8`), **나머지 구체 항목은 사용자 지정 대기**(어떤 화면/요소인지 물어볼 것).
+- **Phase 2b** — 좌측 독에 하니스·품질·온톨로지·구조트리·곡선을 floating 패널로 흡수(옛 좌레일 지능 이식). 그 다음 2c(데이터)·2d(출간)·2e(옛 3컬럼 제거 + editorFocusLayout 이관 + classic 제거).
+- **rank5 잔여 결정** — 죽은 코드 3개(AiCliHarnessCard·VerticalSliceProofPanel·ContinuitySummaryCard) 삭제 vs 추출 · PublishingStudio 단독 추출 · Tier3 훅 분리.
+- **정리 후보** — 옛 design/* 브랜치 다수가 main 보다 뒤처짐(design/floating-editor 등). 사용자 확인 후 삭제 가능.
 
 ### 손대지 말 것
 - main 의 rank5 Pass E 추출 6 컴포넌트(순수 이동 고정). 죽은 코드 3개는 사용자 결정 전 손대지 말 것.

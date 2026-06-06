@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-06 · Branch: `design/floating-phase2a` (플로팅 Phase 2a 스왑 · 머지 대기) · main 은 rank5 Pass E(`bcca914`)까지
+> Last Updated: 2026-06-06 · Branch: `main` (플로팅 Phase 2a 스왑 머지 `389a997` + 가운데 정렬 `488b5e8` · rank5 Pass E 포함)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 편집기 재설계: 방향 C "떠 있는 작업실" (실데이터 배선 완료)
@@ -8,7 +8,7 @@
 2026-06-05. claude.ai design 에서 발산한 3방향 편집기 시안 중 **방향 C** 를 React 로 이식 착수. `design/floating-editor` 에서 작업 후 main 머지(체크포인트).
 - **들어온 것** — `src/components/FloatingEditor.tsx`(739줄) 비주얼 Phase 1. 어두운 캔버스 + 종이 시트 + 좌측 플로팅 독 + 단락 옆 여백 주석 + 작가별 색 밑줄. 인터랙션 전부(드래그 호출 popover·5명 순차 검토·반영/보류·집중·모드탭·키보드). `?editor=floating` 진입, `.fc-*` 스코프 CSS — 기존 편집기·테스트·전역 토큰 무영향(그래서 게이트 녹색).
 - **실데이터 배선 완료 (2026-06-05)** — `SAMPLE_*` 제거 → 순수 표현 컴포넌트. StoryXDesk 가 `?editor=floating` 일 때 실 `editorText·MarginReview·CORE_PERSONAS·beats·검토 콜백(onSummon/onRunAll/onAcceptDiff/onRejectReview)`을 props 주입(접근 A). `floatingEditor.test.ts`(react-dom+jsdom 렌더) 추가. 라이브 검증 — 실 페르소나 5명·전체검토 5건 도착·콘솔 0. 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-05-floating-editor-data-wiring*`.
-- **Phase 2a 스왑 완료 (2026-06-06, 브랜치 `design/floating-phase2a` · 머지 대기)** — floating 이 편집 기본(`isDraftMode && !isClassicEditor`, `?editor=classic` 한시 폴백). 본문 contentEditable 라이브 타이핑(IME compositionstart/end 가드 + bodyVersion-메모로 커서 클로버 차단) + 의도메모 쓰기-백 + 초안생성/편집·데이터/출간 네비 배선. emitBody 는 블록을 `\n\n`(splitIntoParagraphs 라운드트립)로 join. 라이브 검증 — 기본=floating·편집→글자수 0→24자·본문 단락 보존·콘솔 0·classic=옛 3컬럼. **미완 — 실제 한글 IME 조합 타이핑 사람 확인 1회 + 머지.** 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2a-swap*`. 캡처 `docs/handoff/screenshots/floating-phase2a/`.
+- **Phase 2a 스왑 완료·머지 (2026-06-06, main `389a997` ff-merge + 정렬 `488b5e8`)** — floating 이 편집 기본(`isDraftMode && !isClassicEditor`, `?editor=classic` 한시 폴백). 본문 contentEditable 라이브 타이핑(IME compositionstart/end 가드 + bodyVersion-메모로 커서 클로버 차단) + 의도메모 쓰기-백 + 초안생성/편집·데이터/출간 네비 배선. emitBody 는 블록을 `\n\n`(splitIntoParagraphs 라운드트립)로 join. **사용자가 실제 한글 타이핑 정상 확인** → 머지. 추가 — 빈 마진 `display:none` 으로 종이 시트 가운데 정렬. 라이브 — 기본=floating·편집→글자수 0→24자·본문 단락 보존·시트 정중앙·콘솔 0·classic=옛 3컬럼. 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2a-swap*`. 캡처 `docs/handoff/screenshots/floating-phase2a/`.
 - **남은 단계 — 단계적 대체 2b~2e** — 2b 좌측 독에 하니스·품질·온톨로지·구조·곡선 흡수 · 2c 데이터(캐논/바이블) floating 화 · 2d 출간 floating 화 · 2e 옛 3컬럼 제거 + `editorFocusLayout.test.ts` 새 구조 이관 + `?editor=classic` 제거. 계획 `docs/storyx-floating-editor-plan.md`.
 
 ## 현재 활성 — M11 검토 기반 정비 (`in_progress`)
@@ -55,14 +55,14 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 두 갈래 중 택1. **(A) 플로팅 Phase 2 스왑** — floating 을 편집 모드 기본으로(StoryXDesk 3컬럼 제거 또는 토글) + `editorFocusLayout.test.ts` 새 구조로 갱신 + 라이브 타이핑(contentEditable)·의도 메모 쓰기-백. 위험 — 기존 편집기 테스트 다수 갱신, 시각 회귀. **(B) rank5 Tier2 Pass E** — `StoryXDesk.tsx` 잔여 ~11개(Dialogs·Publishing·Status) 추출 후 Tier3 훅 분리(useProject·useDraftEditor·useReviewSession·useUIState — 최고위험, code-reviewer 2차 필수). 방식은 Codex 위임 + Claude 검증. **Codex 패킷 필수 조항 — 우회 주석 금지·상태 문서 수정 금지·이동 심볼 단언은 정의 파일로 재배치.**
 
-## 최근 검증 (2026-06-06 · 브랜치 `design/floating-phase2a`)
+## 최근 검증 (2026-06-06 · `main` Phase 2a 머지 + 정렬)
 
 ```
 npx tsc --noEmit   → exit 0
-npm test           → Test Files 43 passed (43) · Tests 305 passed (305) · Failures 0
+npm test           → Test Files 43 passed (43) · Tests 306 passed (306) · Failures 0
 bash init.sh       → tsc · vitest · build 전체 통과
-라이브(Playwright) → 기본 ?stage=editor = floating · 편집→글자수 0→24자 · 본문 단락 보존 · 콘솔 0 · ?editor=classic = 옛 3컬럼
-미완              → 실제 한글 IME 조합 타이핑 사람 확인 1회 + 브랜치 머지
+라이브(Playwright) → 기본 ?stage=editor = floating · 편집→글자수 0→24자 · 본문 단락 보존 · 시트 정중앙 · 콘솔 0 · ?editor=classic = 옛 3컬럼
+사용자 확인        → 실제 한글 타이핑 정상 (머지 게이트 통과)
 ```
 
 ## 완료 마일스톤
