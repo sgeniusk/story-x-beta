@@ -50,7 +50,7 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain("event.key.toLowerCase() === 'k'");
     // 일하는 바 — 저장 상태 칩은 좌측 존에 있다
     expect(desk).toContain('sx-save-chip ex-workbar-save');
-    expect(desk).toContain('function StoryXStatusBar');
+    expect(componentSrc('StoryXStatusBar')).toContain('function StoryXStatusBar');
     expect(desk).toContain('<StoryXStatusBar');
     expect(desk).toContain('alphaReport={alphaReport}');
     expect(desk).not.toContain('AI 작가진과 함께, 흔들림 없는 세계관을 만듭니다.');
@@ -86,10 +86,10 @@ describe('Story X focused editor layout', () => {
     // 회차 이동은 상단바 회차 선택기로 일원화했다
     expect(desk).toContain('aria-label="회차 이동"');
     // P2-B — 좌측 레일은 평탄한 beat 목록 대신 기승전결 구조 트리를 보여준다
-    expect(desk).toContain('function ChapterStructureTree');
-    expect(desk).toContain('회차 구조');
-    expect(desk).toContain('function groupBeatsIntoActs');
-    expect(desk).toContain('function resolveActTitle');
+    expect(componentSrc('ChapterStructureTree')).toContain('function ChapterStructureTree');
+    expect(componentSrc('ChapterStructureTree')).toContain('회차 구조');
+    expect(componentSrc('ChapterStructureTree')).toContain('function groupBeatsIntoActs');
+    expect(componentSrc('ChapterStructureTree')).toContain('function resolveActTitle');
     expect(desk).toContain("const [studioRailTab, setStudioRailTab]");
     expect(desk).toContain("window.localStorage.getItem('storyx.studio.railTab')");
     expect(desk).toContain('<DataPanel metrics={studioMetrics} onMediaAxisChange={updateStoryModeAxis} />');
@@ -132,11 +132,11 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('const [isCommandPaletteOpen, setIsCommandPaletteOpen]');
     expect(desk).toContain('const [commandQuery, setCommandQuery]');
     expect(desk).toContain('const commandItems = useMemo<DeskCommand[]>');
-    expect(desk).toContain('function CommandPalette');
+    expect(componentSrc('CommandPalette')).toContain('function CommandPalette');
     // P2 — 팔레트는 ⌘K 단축키로 연다. 상단 클러터를 줄이려 시각 버튼은 제거했다
     expect(desk).toContain("event.key.toLowerCase() === 'k'");
     expect(desk).toContain('setIsCommandPaletteOpen((current) => !current)');
-    expect(desk).toContain('명령 또는 화면 검색');
+    expect(componentSrc('CommandPalette')).toContain('명령 또는 화면 검색');
     expect(desk).toContain('승인 대기 열기');
     expect(desk).toContain('집중 모드 토글');
     // 매체 변경도 팔레트 명령으로 유지된다
@@ -219,10 +219,10 @@ describe('Story X focused editor layout', () => {
   it('keeps editor rails focused and moves memory, quality, and harness work into the bible flow', () => {
     expect(desk).toContain('buildAlphaReadinessReport');
     expect(desk).toContain('const alphaReport = useMemo');
-    expect(desk).toContain('function StoryXStatusBar');
+    expect(componentSrc('StoryXStatusBar')).toContain('function StoryXStatusBar');
     expect(desk).toContain('alphaReport={alphaReport}');
-    expect(desk).toContain('알파 셀프체크');
-    expect(desk).toContain('report.nextActions[0]');
+    expect(componentSrc('StoryXStatusBar')).toContain('알파 셀프체크');
+    expect(componentSrc('StoryXStatusBar')).toContain('report.nextActions[0]');
     expect(desk).not.toContain('<CurrentBlueprintCard');
     expect(desk).not.toContain('<MemoryBankCard bank={memoryBank} />');
     expect(desk).not.toContain('<AiCliHarnessCard');
@@ -361,13 +361,13 @@ describe('Story X focused editor layout', () => {
     expect(componentSrc('AgentIntentCard')).toContain('가 잡은 ');
     expect(componentSrc('AgentIntentCard')).toContain('className="ex-intent-by"');
     // 회차 구조 트리 — 기승전결 act 묶음, 에이전트 선택 스킴
-    expect(desk).toContain('STRUCTURE_ACTS');
-    expect(desk).toContain('· 에이전트 선택');
-    expect(desk).toContain('className="ex-act-body"');
+    expect(componentSrc('ChapterStructureTree')).toContain('STRUCTURE_ACTS');
+    expect(componentSrc('ChapterStructureTree')).toContain('· 에이전트 선택');
+    expect(componentSrc('ChapterStructureTree')).toContain('className="ex-act-body"');
     // 긴장 · 분량 곡선 — SVG 라인차트, 분량 비중은 계획값으로 라벨링
-    expect(desk).toContain('function TensionShareChart');
-    expect(desk).toContain('분량 비중 · 계획');
-    expect(desk).toContain('beat.tension');
+    expect(componentSrc('TensionShareChart')).toContain('function TensionShareChart');
+    expect(componentSrc('TensionShareChart')).toContain('분량 비중 · 계획');
+    expect(componentSrc('TensionShareChart')).toContain('beat.tension');
     expect(css).toContain('.sx-desk .ex-work-state');
     expect(css).toContain('.sx-desk .ex-structure-tree');
     expect(css).toContain('.sx-desk .ex-chart-svg');

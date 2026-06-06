@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { STORYX_VERSION, storyxVersionLog } from './version';
 
 const desk = readFileSync(resolve(__dirname, '../StoryXDesk.tsx'), 'utf8');
+// rank5 — VersionLogDialog는 components로 추출됨. 정의 단언은 해당 파일에서 검사한다.
+const versionLogDialog = readFileSync(resolve(__dirname, '../components/VersionLogDialog.tsx'), 'utf8');
 const docs = readFileSync(resolve(__dirname, '../../docs/storyx-version-log.md'), 'utf8');
 
 describe('Story X version log', () => {
@@ -40,7 +42,7 @@ describe('Story X version log', () => {
   it('exposes the version and changelog in the app shell', () => {
     expect(desk).toContain("import { STORYX_VERSION, storyxVersionLog } from './lib/version'");
     expect(desk).toContain('const [isVersionLogOpen, setIsVersionLogOpen]');
-    expect(desk).toContain('function VersionLogDialog');
+    expect(versionLogDialog).toContain('function VersionLogDialog');
     expect(desk).toContain('변경 로그 보기');
     expect(desk).toContain('version={STORYX_VERSION}');
     expect(desk).toContain('entries={storyxVersionLog}');
