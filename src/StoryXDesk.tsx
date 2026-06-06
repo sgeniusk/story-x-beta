@@ -1187,11 +1187,11 @@ export function StoryXDesk({
     [latestChapter?.prose, marginReview]
   );
 
-  // 방향 C 플로팅 에디터 프리뷰 — ?editor=floating 일 때만. 실 상태/검토/페르소나를 props 로 주입.
-  const isFloatingPreview = useMemo(
+  // Phase 2a — floating 이 편집 기본. ?editor=classic 일 때만 옛 3컬럼 셸(한시적 폴백, 2e 에서 제거).
+  const isClassicEditor = useMemo(
     () =>
       typeof window !== 'undefined' &&
-      new URLSearchParams(window.location.search).get('editor') === 'floating',
+      new URLSearchParams(window.location.search).get('editor') === 'classic',
     []
   );
   const floatingEditorProps = useMemo(
@@ -1991,7 +1991,7 @@ export function StoryXDesk({
     });
   }
 
-  if (isFloatingPreview && isDraftMode) {
+  if (isDraftMode && !isClassicEditor) {
     return <FloatingEditor {...floatingEditorProps} />;
   }
 
