@@ -118,7 +118,17 @@ export function FloatingEditor({
 
   const emitBody = useCallback(() => {
     if (composingRef.current) return;
-    const text = msElRef.current?.textContent ?? '';
+    const el = msElRef.current;
+    if (!el) return;
+    // 블록(<p>/<div>) 단위로 단락 줄바꿈을 보존한다. contentEditable 본문은 <p> 블록이라
+    // textContent 만 쓰면 단락이 한 줄로 뭉친다. 블록이 없으면(테스트의 flat textContent 등) textContent.
+    const blocks = el.querySelectorAll('p, div');
+    const text =
+      blocks.length > 0
+        ? Array.from(blocks)
+            .map((b) => b.textContent ?? '')
+            .join('\n')
+        : (el.textContent ?? '');
     onBodyChange?.(text);
   }, [onBodyChange]);
 

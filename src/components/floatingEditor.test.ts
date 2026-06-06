@@ -147,4 +147,16 @@ describe('FloatingEditor 실데이터 배선', () => {
     expect(onBodyChange).toHaveBeenCalledTimes(1);
     unmount();
   });
+
+  it('렌더된 <p> 블록을 줄바꿈으로 join 해 단락 경계를 보존한다', () => {
+    const onBodyChange = vi.fn();
+    const { host, unmount } = mount(baseProps({ editable: true, onBodyChange }));
+    const ms = host.querySelector('.ms') as HTMLElement;
+    act(() => { ms.dispatchEvent(new Event('input', { bubbles: true })); });
+    const text = (onBodyChange.mock.calls.at(-1)?.[0] as string) ?? '';
+    expect(text.split('\n').length).toBe(2);
+    expect(text).toContain('필사관');
+    expect(text).toContain('탑은 이름을');
+    unmount();
+  });
 });
