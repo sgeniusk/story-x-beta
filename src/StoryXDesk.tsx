@@ -65,8 +65,9 @@ import { ProjectStateCard } from './components/ProjectStateCard';
 import { PublishingIndexCard } from './components/PublishingIndexCard';
 import { Spotlight } from './components/Spotlight';
 import { WorkStateGrid } from './components/WorkStateGrid';
+import { FloatingEditor } from './components/FloatingEditor';
 import { useMarginReview } from './hooks/useMarginReview';
-import { findPersona } from './lib/extendedPersonas';
+import { findPersona, CORE_PERSONAS } from './lib/extendedPersonas';
 import {
   applyDiff,
   resolveRunReviewAnchor,
@@ -1189,6 +1190,53 @@ export function StoryXDesk({
     },
     [latestChapter?.prose, marginReview]
   );
+
+  // 방향 C 플로팅 에디터 프리뷰 — ?editor=floating 일 때만. 실 상태/검토/페르소나를 props 로 주입.
+  const isFloatingPreview = useMemo(
+    () =>
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('editor') === 'floating',
+    []
+  );
+  const floatingEditorProps = useMemo(
+    () => ({
+      title: project.title,
+      episodeLabel: latestChapter ? chapterLabel(latestChapter) : '새 초안',
+      kicker: `${blueprint.mediumLabel} · ${latestChapter ? chapterLabel(latestChapter) : '새 초안'}`,
+      charCount: `${chapterCharCount.toLocaleString()}자`,
+      chapterTitle: latestChapter?.title ?? '제목 없음',
+      chapterSub: project.logline,
+      paragraphs: marginParagraphs,
+      reviews: marginReview.reviews,
+      personas: CORE_PERSONAS,
+      onSummon: marginReview.onSummon,
+      onRunAll: marginReview.onRunAll,
+      onAcceptDiff: acceptMarginDiff,
+      onRejectReview: marginReview.onRejectReview,
+      beats: latestChapter?.beats ?? [],
+      activeBeatId,
+      onSelectBeat: (id: string) => setActiveBeatId(id),
+      stats: {
+        chars: chapterCharCount,
+        chapters: project.chapters.length,
+        canon: project.canonFacts.length,
+        characters: project.characters.length,
+      },
+      intentMemo: draftPrompt,
+    }),
+    [
+      project,
+      latestChapter,
+      blueprint,
+      chapterCharCount,
+      marginParagraphs,
+      marginReview,
+      acceptMarginDiff,
+      activeBeatId,
+      draftPrompt,
+    ]
+  );
+
   const openMarginReviewChat = useCallback(
     (review: MarginReview) => {
       const run =
@@ -1945,6 +1993,10 @@ export function StoryXDesk({
     runWithWorkbenchFade(() => {
       setIsPublishingMode(false);
     });
+  }
+
+  if (isFloatingPreview && isDraftMode) {
+    return <FloatingEditor {...floatingEditorProps} />;
   }
 
   return (
