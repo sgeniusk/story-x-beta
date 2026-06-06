@@ -159,4 +159,20 @@ describe('FloatingEditor 실데이터 배선', () => {
     expect(text).toContain('탑은 이름을');
     unmount();
   });
+
+  it('의도 메모 편집이 onIntentChange 를 호출한다', () => {
+    const onIntentChange = vi.fn();
+    const { host, unmount } = mount(baseProps({ onIntentChange }));
+    const memo = host.querySelector('.memo textarea') as HTMLTextAreaElement;
+    // 실제 타이핑은 네이티브 value setter 를 거쳐 React 의 value tracker 가 변경을 감지한다.
+    // 테스트에서 memo.value 직접 대입은 tracker 를 함께 갱신해 onChange 가 안 뜨므로 네이티브 setter 사용.
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      'value'
+    )!.set!;
+    nativeSetter.call(memo, '모순으로 1화를 연다 — 수정.');
+    act(() => { memo.dispatchEvent(new Event('input', { bubbles: true })); });
+    expect(onIntentChange).toHaveBeenCalledWith('모순으로 1화를 연다 — 수정.');
+    unmount();
+  });
 });

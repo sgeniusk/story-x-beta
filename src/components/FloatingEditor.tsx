@@ -75,8 +75,6 @@ export function FloatingEditor({
   onOpenPublish,
   isGenerating = false,
 }: FloatingEditorProps) {
-  // onIntentChange 는 다음 태스크에서 배선 — 그전까지 미사용 경고만 억제
-  void onIntentChange;
   const personaById = useCallback(
     (id: string): PersonaCard =>
       personas.find((p) => p.id === id) ?? { id, name: id, role: '', tint: '#62666d', isCore: false },
@@ -594,7 +592,12 @@ export function FloatingEditor({
               </span>{' '}
               쇼러너가 잡은 이번 회차 프레이밍
             </div>
-            <textarea rows={3} defaultValue={intentMemo} readOnly />
+            <textarea
+              rows={3}
+              defaultValue={intentMemo}
+              readOnly={!onIntentChange}
+              onChange={(e) => onIntentChange?.(e.target.value)}
+            />
           </div>
         </div>
       </div>
