@@ -104,4 +104,28 @@ describe('storyOntology', () => {
     expect(codes).toContain('no-conflict');
     expect(codes).toContain('no-plot-thread');
   });
+
+  // 갭 B 회귀 방지 — 온보딩이 메타(logline·characters)를 안 채워도,
+  // 회차에 쌓인 canonFacts 가 온톨로지(캐논 시드·세계 규칙·인물)를 채운다.
+  it('seeds ontology entities from accumulated canonFacts when seed fields are empty', () => {
+    const ontology = buildStoryOntology({
+      material: '',
+      storySeed: '',
+      characterSeed: '',
+      audience: '',
+      constraints: '',
+      canonFacts: [
+        { owner: 'character', statement: '강태준은 F급으로 재각성했다' },
+        { owner: 'world', statement: '각성 등급은 고정이고 스킬 운용법만 바꿀 수 있다' },
+        { owner: 'plot', statement: '강태준은 흑문 던전에서 배신으로 사망한다' }
+      ]
+    });
+
+    // 누적 캐논이 시드로 승격된다
+    expect(ontology.canonSeeds.length).toBeGreaterThanOrEqual(3);
+    // owner 별로 세계 규칙·인물에도 반영된다
+    expect(ontology.worldRules.length).toBeGreaterThan(0);
+    expect(ontology.characters.length).toBeGreaterThan(0);
+    expect(ontology.characters[0].name).toBe('강태준');
+  });
 });

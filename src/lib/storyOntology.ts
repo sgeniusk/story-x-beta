@@ -81,6 +81,8 @@ export interface BuildOntologyInput {
   characterSeed: string;
   audience: string;
   constraints: string;
+  /** 회차에 누적된 승인 캐논(project.canonFacts). 온보딩이 메타를 안 채워도 온톨로지를 채운다 — 갭 B. */
+  canonFacts?: Array<{ owner: string; statement: string }>;
 }
 
 export interface OntologyWarning {
@@ -102,6 +104,12 @@ export interface OntologyValidationReport {
 
 /** dramaticQuestion 이 비어 있을 때 채우는 placeholder — 검증자가 이 값을 'missing' 으로 잡는다. */
 const MISSING_DRAMATIC_QUESTION = '아직 정해지지 않은 중심 질문';
+
+// 캐논 문장에서 주체 이름을 추출한다 — "강태준은 …" → "강태준". 조사/구두점 앞의 첫 토큰.
+function extractEntityName(statement: string): string {
+  const match = statement.match(/^\s*([^\s,.:은는이가을를]+)(?:은|는|이|가|을|를|:)/);
+  return match && match[1] ? match[1] : '주요 인물';
+}
 
 // 입력 텍스트만으로 첫 컷 그래프를 만든다. 빈 영역은 빈 채로 둔다 (silent fix 금지).
 export function buildStoryOntology(input: BuildOntologyInput): StoryOntology {
@@ -161,6 +169,25 @@ export function buildStoryOntology(input: BuildOntologyInput): StoryOntology {
   if (characterSeed) canonSeeds.push({ owner: 'character', statement: characterSeed });
   if (storySeed) canonSeeds.push({ owner: 'world', statement: storySeed });
   if (material) canonSeeds.push({ owner: 'plot', statement: material });
+
+  // 갭 B — 회차에 누적된 승인 캐논(project.canonFacts)을 온톨로지 시드로 승격한다.
+  // 발명 없이 이미 승인된 사실만 반영하므로 보수적 휴리스틱 원칙을 지킨다.
+  for (const fact of input.canonFacts ?? []) {
+    const statement = typeof fact?.statement === 'string' ? fact.statement.trim() : '';
+    if (!statement) continue;
+    const owner: CanonSeed['owner'] =
+      fact.owner === 'character' || fact.owner === 'world' || fact.owner === 'plot' ? fact.owner : 'plot';
+    canonSeeds.push({ owner, statement });
+    if (owner === 'world') {
+      worldRules.push({ id: `world-canon-${worldRules.length + 1}`, rule: statement, cost: extractCost(statement) });
+    }
+    if (owner === 'character') {
+      const name = extractEntityName(statement);
+      if (!characters.some((character) => character.name === name)) {
+        characters.push({ id: `char-canon-${characters.length + 1}`, name, desire: statement, wound: '', falseBelief: '', need: '', taboo: '' });
+      }
+    }
+  }
 
   return {
     premise: {

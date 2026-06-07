@@ -1,7 +1,15 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-06 · Branch: `main` (플로팅 Phase 2a 머지 + 정렬 + **2b 지표 패널 머지 `8bc9d4a`** · rank5 Pass E 포함)
+> Last Updated: 2026-06-07 · Branch: `main` (**실증 테스트 착수 · 온톨로지 갭B 수정 — 미커밋** · 이전 플로팅 2b `8bc9d4a`)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
+
+## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
+
+페르소나 실증 테스트로 이야기 품질·연속성을 검증하고 새 제작 계획을 만든다. 설계 정본 `docs/superpowers/specs/2026-06-07-persona-live-test-design.md`, 실행 `docs/superpowers/plans/2026-06-07-persona-live-test-plan.md`.
+- **방식** — 실사용 창작자 10인(소설6·만화1·에세이1·오디오1·학술1) 풀 라이브 직접조작(Playwright+codex). 장편 #1~3 완권(~20~25화) 연속, #3·#4 캐릭터 일관성 집중. 6축 평가. 멀티세션 S0~S15.
+- **S0 파일럿 #1 (웹소설 장편 회귀) 완료** — 1화 생성+검토 풀라이브. 인터뷰 freewrite 받아씀·1화 품질 높음·**검토 5명 중 3명이 "미래지식 과잉확정" 수렴 포착(차별점 실증)**. 로그 `docs/reviews/2026-06-07-persona-live-test/`.
+- **중대 발견 — 온톨로지 0 (구조적 배선 갭)** — (A) 온보딩→project 메타 미배선 (B) 회차 canonFacts↔온톨로지 미연결. **갭 B 수정 완료(TDD)** — buildStoryOntology `canonFacts` 반영 → **온톨로지 0→9·하니스 22→53**. **갭 A 남음(다음 단계 권장).**
+- **다음** — 갭 A 수정 → 나머지 페르소나 #2~#10 → 종합 리포트 → 새 제작 계획.
 
 ## 병행 트랙 — 편집기 재설계: 방향 C "떠 있는 작업실" (실데이터 배선 완료)
 
@@ -56,14 +64,14 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 두 갈래 중 택1. **(A) 플로팅 Phase 2 스왑** — floating 을 편집 모드 기본으로(StoryXDesk 3컬럼 제거 또는 토글) + `editorFocusLayout.test.ts` 새 구조로 갱신 + 라이브 타이핑(contentEditable)·의도 메모 쓰기-백. 위험 — 기존 편집기 테스트 다수 갱신, 시각 회귀. **(B) rank5 Tier2 Pass E** — `StoryXDesk.tsx` 잔여 ~11개(Dialogs·Publishing·Status) 추출 후 Tier3 훅 분리(useProject·useDraftEditor·useReviewSession·useUIState — 최고위험, code-reviewer 2차 필수). 방식은 Codex 위임 + Claude 검증. **Codex 패킷 필수 조항 — 우회 주석 금지·상태 문서 수정 금지·이동 심볼 단언은 정의 파일로 재배치.**
 
-## 최근 검증 (2026-06-06 · `main` Phase 2b 지표 패널 머지)
+## 최근 검증 (2026-06-07 · `main` 미커밋 · 온톨로지 갭B 수정)
 
 ```
 npx tsc --noEmit   → exit 0
-npm test           → Test Files 43 passed (43) · Tests 309 passed (309) · Failures 0
-bash init.sh       → tsc · vitest · build 전체 통과
-라이브(Playwright) → 기본 ?stage=editor = floating · 지표 버튼→4섹션 실데이터(하니스 7/8·95/100, 품질 2/7) · 360 모바일 독 6버튼·패널 뷰포트 내·가로스크롤 0 · 콘솔 0
-이전 확인          → 한글 타이핑 정상·시트 정중앙·?editor=classic 옛 3컬럼
+init.sh            → 43 files · 310 tests (+1 storyOntology) · build 전체 통과
+라이브(Playwright) → 신규 인터뷰 작품 1화: 온톨로지 0→9 · 하니스 22→53/100 · 콘솔 0 (갭B 수정 효과 실증)
+파일럿 #1          → 웹소설 장편 1화 생성+검토 5명 풀라이브, 검토 3명 "미래지식 과잉확정" 수렴
+참고               → createSeedProject(샘플)는 하니스 95/100 — 신규 인터뷰 작품이 낮은 건 갭 A(메타 미배선) 탓
 ```
 
 ## 완료 마일스톤

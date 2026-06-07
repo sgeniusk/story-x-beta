@@ -791,14 +791,16 @@ export function StoryXDesk({
           ? `${project.characters[0].name}: ${project.characters[0].desire}`
           : '',
         audience: project.audiencePromise || '',
-        constraints: blueprint.formatLabel || ''
+        constraints: blueprint.formatLabel || '',
+        canonFacts: project.canonFacts
       }),
     [
       blueprint.formatLabel,
       project.logline,
       project.deepQuestion,
       project.audiencePromise,
-      project.characters
+      project.characters,
+      project.canonFacts
     ]
   );
   // M8.3 — 5 매체 투영. storyOntology 의존.
@@ -841,6 +843,7 @@ export function StoryXDesk({
           : '',
         audience: project.audiencePromise || '',
         constraints: blueprint.formatLabel || '',
+        canonFacts: project.canonFacts,
         qualityGatesReport
       }),
     [
@@ -850,6 +853,7 @@ export function StoryXDesk({
       project.deepQuestion,
       project.audiencePromise,
       project.characters,
+      project.canonFacts,
       qualityGatesReport
     ]
   );

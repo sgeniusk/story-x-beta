@@ -4,6 +4,34 @@
 
 ---
 
+## 2026-06-07 — 실사용 창작자 10인 실증 테스트 (설계+파일럿#1) + 온톨로지 갭 B 수정
+
+> 새 세션 목표 — 페르소나 실증 테스트를 거쳐 새 제작 계획 작성. 오늘 = 설계확정 + 파일럿#1 + 온톨로지 갭 규명·수정(갭B). **main 미커밋.**
+
+### 한 일
+1. **설계 (brainstorming→spec→plan)** — 실사용 창작자 10인(소설6·만화1·에세이1·오디오1·학술1) 풀 라이브 **직접조작**(Playwright+codex). 장편 #1~3 은 **완권(~20~25화) 연속**, **#3·#4 캐릭터 일관성 집중**, 6축(생성·수정반응·연속성·매체·UX·상업성). 멀티세션 S0~S15. spec `docs/superpowers/specs/2026-06-07-persona-live-test-design.md`, plan `docs/superpowers/plans/2026-06-07-persona-live-test-plan.md`. "클로드 코워크 vs 로컬" — 코워크는 로컬 dev 접근 불가로 시뮬레이션 회귀(이전 5인 테스트 선례) → **로컬(직접조작) 확정**.
+2. **파일럿 #1 (웹소설 장편 회귀, 풀 라이브)** — 랜딩→인터뷰(freewrite 정확 받아씀, 라인업 웹소설 맞춤 배정)→1화 생성(강태준·F급·잔류감각·백도현·흑문던전, 2090자, 클리프행어)→검토 5명. **검토 3명(연속성·캐릭터·세계)이 "백도현을 캐논 미확정인데 미래지식으로 과잉확정" 수렴 포착 → 차별점 실증.** 로그 `docs/reviews/2026-06-07-persona-live-test/01-webnovel-regression.md` + 스크린샷 `01/`.
+3. **온톨로지 0 규명** — 버그 아니라 구조적 배선 갭 2개. **(A)** 온보딩→project 메타(logline·characters·worldRules·deepQuestion) 미배선 — `DraftChapterPayload`에 그 필드 없음, `chapterFromDraftPayload`가 chapter만 추가. **(B)** 회차 `canonFacts`(5개 쌓임) ↔ 온톨로지 `canonSeeds`/`characters` 미연결. FINDING `docs/reviews/2026-06-07-persona-live-test/FINDING-ontology-gap.md`.
+4. **갭 B 수정 (TDD)** — `buildStoryOntology`(storyOntology.ts)에 `canonFacts?` 입력 추가 → 누적 캐논을 `canonSeeds`·`worldRules`(owner=world)·`characters`(owner=character, `extractEntityName`) 시드로 승격. StoryXDesk `storyOntology`(787)·`harnessReport`(836) 두 useMemo에 `project.canonFacts` 전달. `storyOntology.test.ts` +1(RED→GREEN). **라이브 — 온톨로지 0→9, 하니스 22→53.**
+
+### 검증
+- `bash init.sh` — tsc 0 · **310 tests** · build. 라이브(Playwright) — `?stage=editor` 온톨로지 9·하니스 53/100·콘솔 0.
+
+### 다음 한 단계 — 갭 A (권장) → 나머지 페르소나 → 새 계획
+- **갭 A 수정** — 온보딩(인터뷰+freewrite)이 project 메타(logline·dramaticQuestion·characters·worldRules)를 채우게. `DraftChapterPayload` 확장(LLM이 바이블 메타 반환) 또는 인터뷰 답변 구조화 매핑. 이게 돼야 온톨로지 빌더 스테이지 통과·하니스 70+·갭 완전 해소.
+- **나머지 페르소나 #2~#10** (plan S1~S15, 장편은 완권). **갭 A 먼저 권장** — 안 그러면 전 페르소나가 같은 메타 결손 위에서 테스트됨.
+- **새 제작 계획** — 파일럿 발견(온톨로지 갭·검토 수렴·매체 적합)+12인/20인+thesis 종합. 이번 세션 최종 목표.
+
+### 손대지 말 것
+- `buildStoryOntology` canonFacts 반영 로직·`extractEntityName` (테스트 고정). 보수적 휴리스틱 원칙 — 발명 금지, 승인된 캐논만 반영.
+- 파일럿 로그·FINDING 노트 (실증 기록).
+- 전역 `--sx-/--nx-/--lc-` 토큰·provider·rank2~4·academic·플로팅 2a/2b.
+
+### 커밋
+미실행(사용자 지시 대기). 변경 — `storyOntology.ts`·`storyOntology.test.ts`·`StoryXDesk.tsx` + `docs/superpowers/{specs,plans}/2026-06-07-*` + `docs/reviews/2026-06-07-persona-live-test/`.
+
+---
+
 ## 2026-06-06 (이어서) — 플로팅 Phase 2b 지표 독 패널 (브레인스토밍→스펙→계획→인라인 실행→머지)
 
 > main `8bc9d4a` 머지 완료(브랜치 `design/floating-phase2b` 삭제). 스펙/계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2b-metrics-dock*`.
