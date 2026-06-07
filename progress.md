@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-08 · Branch: `main` (**#2 5~8화 테스트 + P5(드리프트)/캐논화후 고정 실증 — 코드변경0·docs 미커밋** · P4 `131eb12`·P3·P2 `c4a9761` 커밋됨 · #2 8화까지)
+> Last Updated: 2026-06-08 · Branch: `main` (**#2 9~10화 테스트 + 5인검토 — 캐논화후 고정 4연속·검토 일관성·게이트 본문반응 실증 — 코드변경0·docs 미커밋** · P4 `131eb12`·P3·P2 `c4a9761` 커밋됨 · #2 10화까지)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -13,7 +13,8 @@
 - **발견 수정 (A) — P3·P2 완료 (TDD+라이브, 2026-06-07 이어서)** — P3(`defaultEpisodeIntent` 데모문구 '용사와 외계인'→'')·P2(`onConfirmChapterLock` 에 `setLatestChapter` 동기화). `editorFocusLayout.test.ts` +2(RED→GREEN), 314 tests. 라이브 — #2 3화 "동부 물류 검인권" 용사/외계인 오염 0 · 새로고침 없이 잠금→생성 · canonFacts 8→11. 캡처 `02/03-ch3-p2p3-fix-verified.png`.
 - **발견 수정 (A) — P4 인물 캐논화 완료 (TDD+라이브)** — extractEntityName 개선(공백 이름·조사 확장·generic/조직 가드, export)·commitChapter 가 owner=character 캐논을 `characters` 로 승격. storyOntology.test +5·storyEngine.test +3, 322 tests. 라이브 — #2 4화 생성 시 characters [] → ["레나 위클리프"]·데이터 인물 1·canonFacts 11→15. 갭B 시드도 동반 개선.
 - **#2 5·6·7화 테스트 + P5 발견 (2026-06-08)** — 연속성 우수·오염 0·canonFacts 15→27·characters [레나,리아나]. **P5 — P4 한계(가족 이름 드리프트: 둘째 오빠 에드릭·노엘→레오니드→루시안). 단 7화 = 캐논화 후 고정 실증(6화 루시안 캐논화 → 7화 유지) — canonFacts→digest 메커니즘 작동.** 생성시간 누적 증가(40→95초). 로그 `docs/reviews/2026-06-07-persona-live-test/02-romancefantasy-regression.md`.
-- **다음** — (사용자 방침) P1·관계·P5·floating 2c·2d 는 **실증 테스트 완료 후 일괄 수정** → #2 7화+ 완권·수정사이클·6축 → 종합 리포트 → 새 제작 계획.
+- **#2 9·10화 테스트 + 각 5인 검토 (2026-06-08 이어서, 코드변경 0)** — 9화 "오른편으로 돌아가는 종이"·10화 "오른편의 첫 날짜" 생성+검토 풀라이브. 연속성 ★★★★★·오염 0·canonFacts 27→40·온톨로지 46→55. **4가지 실증 — (1) 캐논화 후 고정 4연속(루시안 ch7~10) (2) 검토 일관성(세계=기록실 접근권한·연속성=확정강도를 ch9→ch10 일관 포착, 랜덤 아님) (3) 품질게이트 본문반응(hook_last_200 ch9 FAIL→ch10 PASS, hook_first_300 반대로 뒤집힘 = rank3 "게이트가 본문을 읽는다" 라이브) (4) 미스터리 자가교정(캐논 digest가 ch9 검토우려 '루시안 권한'을 ch10 타임라인으로 해소).** P1(쇼러너 빈응답) 이번 0/2. 생성시간 단조증가 아님(ch10 39초, codex 지연 변동으로 정정). 검토 둘 다 차단 0·[수정]. 로그 동일 파일 `## 9·10화` 절.
+- **다음** — (사용자 방침) P1·관계·P5·floating 2c·2d 는 **실증 테스트 완료 후 일괄 수정** → #2 11화+ 완권·수정사이클·6축 → 종합 리포트 → 새 제작 계획.
 
 ## 병행 트랙 — 편집기 재설계: 방향 C "떠 있는 작업실" (실데이터 배선 완료)
 
@@ -68,13 +69,14 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 두 갈래 중 택1. **(A) 플로팅 Phase 2 스왑** — floating 을 편집 모드 기본으로(StoryXDesk 3컬럼 제거 또는 토글) + `editorFocusLayout.test.ts` 새 구조로 갱신 + 라이브 타이핑(contentEditable)·의도 메모 쓰기-백. 위험 — 기존 편집기 테스트 다수 갱신, 시각 회귀. **(B) rank5 Tier2 Pass E** — `StoryXDesk.tsx` 잔여 ~11개(Dialogs·Publishing·Status) 추출 후 Tier3 훅 분리(useProject·useDraftEditor·useReviewSession·useUIState — 최고위험, code-reviewer 2차 필수). 방식은 Codex 위임 + Claude 검증. **Codex 패킷 필수 조항 — 우회 주석 금지·상태 문서 수정 금지·이동 심볼 단언은 정의 파일로 재배치.**
 
-## 최근 검증 (2026-06-08 · #2 5·6화 테스트 — 코드변경 0)
+## 최근 검증 (2026-06-08 · #2 9·10화 테스트 — 코드변경 0)
 
 ```
-init.sh            → 43 files · 322 tests · build · tsc 통과 (직전 P4 기준, 5·6화는 코드 변경 없음)
-#2 5~8화 라이브    → 연속성 우수·오염 0·canonFacts 15→32. P5(가족 드리프트)·7·8화 캐논화후 고정 견고(루시안 2회 연속 유지). 생성시간 40→110초. 콘솔 0
-P4 라이브(이전)    → #2 4화 characters [] → ["레나 위클리프"]·인물 1
-P3·P2 라이브(이전) → #2 3화 새로고침 없이 잠금→생성·오염 0
+init.sh            → tsc · vitest(43 files) · build 전체 통과 (세션 시작·종료 2회. 9·10화는 코드 변경 없음)
+#2 9·10화 라이브   → 연속성 ★★★★★·오염 0·canonFacts 32→40·온톨로지 46→55. 캐논화후 고정 4연속(루시안 ch7~10). 5인검토 각 차단0·[수정]. 생성 ch10 39초(단조증가 아님). 콘솔 0
+실증 4종           → 캐논화후고정4연속 · 검토일관성(세계·연속성 ch9→ch10) · 게이트본문반응(hook_last_200/first_300 뒤집힘) · 미스터리 자가교정(루시안권한 ch9우려→ch10해소)
+#2 5~8화 라이브(이전) → canonFacts 15→32·7·8화 캐논화후 고정 견고
+P4/P3/P2 라이브(이전) → 인물승격·오염0·새로고침없이 잠금→생성
 ```
 
 ## 완료 마일스톤
