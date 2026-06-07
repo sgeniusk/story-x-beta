@@ -6,6 +6,7 @@ import {
   buildFallbackDraft,
   buildStoryEditorWorkspace,
   chapterFromDraftPayload,
+  commitChapter,
   createEmptyProject,
   createSeedProject,
   deriveOnboardingSeed,
@@ -723,5 +724,52 @@ describe('onboarding seed (갭 A — 온보딩 메타 배선)', () => {
     expect(project.logline).toBe('회귀한 헌터가 자신의 죽음을 추적한다');
     expect(project.audiencePromise).toBe('매 화 사이다와 다음 화 훅');
     expect(project.deepQuestion).toBe('약함은 끝인가');
+  });
+});
+
+describe('commitChapter 인물 캐논화 (P4)', () => {
+  const minimalChapter = (
+    episode: number,
+    newCanonFacts: Array<{ id: string; episode: number; owner: 'character' | 'world' | 'plot'; statement: string }>
+  ) => ({
+    id: `episode-${episode}`,
+    episode,
+    title: `${episode}화`,
+    hook: '',
+    outline: [],
+    beats: [],
+    prose: '',
+    memoryAnchors: [],
+    newCanonFacts
+  });
+
+  it('owner=character 새 캐논의 인물을 characters 로 승격하고 world·generic 은 제외한다', () => {
+    const updated = commitChapter(createEmptyProject({ title: '테스트' }), minimalChapter(2, [
+      { id: 'c1', episode: 2, owner: 'character', statement: '레나 위클리프는 하급 회계 보좌다' },
+      { id: 'c2', episode: 2, owner: 'world', statement: '은여우 상단은 동부 상단이다' },
+      { id: 'c3', episode: 2, owner: 'character', statement: '주인공은 결정을 미룬다' }
+    ]));
+    const names = updated.characters.map((character) => character.name);
+    expect(names).toContain('레나 위클리프');
+    expect(names).not.toContain('은여우 상단');
+    expect(names).not.toContain('주인공');
+  });
+
+  it('이미 있는 인물을 중복 승격하지 않는다', () => {
+    const ch2 = commitChapter(createEmptyProject({ title: '테스트' }), minimalChapter(2, [
+      { id: 'c1', episode: 2, owner: 'character', statement: '레나 위클리프는 회계 보좌다' }
+    ]));
+    const ch3 = commitChapter(ch2, minimalChapter(3, [
+      { id: 'c2', episode: 3, owner: 'character', statement: '레나 위클리프는 동쪽 문을 경고한다' }
+    ]));
+    expect(ch3.characters.filter((character) => character.name === '레나 위클리프')).toHaveLength(1);
+  });
+
+  it('승격된 인물은 캐논 문장을 canonAnchors 로 보존한다', () => {
+    const updated = commitChapter(createEmptyProject({ title: '테스트' }), minimalChapter(2, [
+      { id: 'c1', episode: 2, owner: 'character', statement: '레나 위클리프는 하급 회계 보좌다' }
+    ]));
+    const lena = updated.characters.find((character) => character.name === '레나 위클리프');
+    expect(lena?.canonAnchors).toContain('레나 위클리프는 하급 회계 보좌다');
   });
 });

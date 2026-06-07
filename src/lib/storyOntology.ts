@@ -106,9 +106,23 @@ export interface OntologyValidationReport {
 const MISSING_DRAMATIC_QUESTION = '아직 정해지지 않은 중심 질문';
 
 // 캐논 문장에서 주체 이름을 추출한다 — "강태준은 …" → "강태준". 조사/구두점 앞의 첫 토큰.
-function extractEntityName(statement: string): string {
-  const match = statement.match(/^\s*([^\s,.:은는이가을를]+)(?:은|는|이|가|을|를|:)/);
-  return match && match[1] ? match[1] : '주요 인물';
+// generic 역할어·대명사는 고유 인물이 아니므로 시드하지 않는다(가짜 "주인공" 인물 방지 — P4).
+const GENERIC_ENTITY_NAMES = new Set([
+  '주인공', '주요 인물', '동료', '그', '그녀', '그들', '누군가', '사람', '인물', '아버지', '어머니', '오빠', '언니', '누나', '형'
+]);
+// 조직·가문·장소 접미사로 끝나면 인물이 아니다(은여우 상단·벨로트 가문 등). '성'·'문'은 인물명 오탐이 많아 제외.
+const NON_PERSON_SUFFIXES = ['상단', '가문', '저택', '왕국', '제국', '기사단', '상회', '길드', '교단', '학파', '마을', '도시', '대륙'];
+
+// 캐논 문장에서 주체 인물 이름을 추출한다. 조사(은/는/이/가/을/를/의/에게/와/과) 앞의
+// 명사구(공백 포함, 성+이름 허용)를 첫 주체로 본다. 인물이 아니면 null — 발명 없이 보수적으로.
+export function extractEntityName(statement: string): string | null {
+  const match = statement.trim().match(/^([가-힣A-Za-z][가-힣A-Za-z\s]*?)(?:은|는|이|가|을|를|의|에게|와|과)\s/);
+  if (!match || !match[1]) return null;
+  const name = match[1].trim();
+  if (name.length < 2 || name.length > 12) return null;
+  if (GENERIC_ENTITY_NAMES.has(name)) return null;
+  if (NON_PERSON_SUFFIXES.some((suffix) => name.endsWith(suffix))) return null;
+  return name;
 }
 
 // 입력 텍스트만으로 첫 컷 그래프를 만든다. 빈 영역은 빈 채로 둔다 (silent fix 금지).
@@ -183,7 +197,7 @@ export function buildStoryOntology(input: BuildOntologyInput): StoryOntology {
     }
     if (owner === 'character') {
       const name = extractEntityName(statement);
-      if (!characters.some((character) => character.name === name)) {
+      if (name && !characters.some((character) => character.name === name)) {
         characters.push({ id: `char-canon-${characters.length + 1}`, name, desire: statement, wound: '', falseBelief: '', need: '', taboo: '' });
       }
     }

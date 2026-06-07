@@ -1,7 +1,7 @@
 // M4 청크 B · storyOntology TDD 케이스.
 // Chunk 1 정본(docs/superpowers/plans/2026-05-12-story-ontology-harness.md) 의 테스트 스켈레톤 + 검증 케이스.
 import { describe, expect, it } from 'vitest';
-import { buildStoryOntology, validateStoryOntology, type StoryOntology } from './storyOntology';
+import { buildStoryOntology, validateStoryOntology, extractEntityName, type StoryOntology } from './storyOntology';
 
 describe('storyOntology', () => {
   // Chunk 1 / Task 1 — 완전한 입력에서 핵심 엔티티가 모두 채워진다.
@@ -127,5 +127,25 @@ describe('storyOntology', () => {
     expect(ontology.worldRules.length).toBeGreaterThan(0);
     expect(ontology.characters.length).toBeGreaterThan(0);
     expect(ontology.characters[0].name).toBe('강태준');
+  });
+});
+
+describe('extractEntityName — 인물 이름 추출 (P4)', () => {
+  it('단일 토큰 이름을 조사 앞에서 뽑는다', () => {
+    expect(extractEntityName('강태준은 F급으로 각성했다')).toBe('강태준');
+  });
+  it('공백 포함 이름(성+이름)을 뽑는다', () => {
+    expect(extractEntityName('레나 위클리프는 하급 회계 보좌다')).toBe('레나 위클리프');
+  });
+  it('조사가 바로 붙은 이름도 뽑는다', () => {
+    expect(extractEntityName('리아나는 장부를 덮었다')).toBe('리아나');
+  });
+  it('generic 대명사·역할어는 인물이 아니다 (null)', () => {
+    expect(extractEntityName('주인공은 결정을 미룬다')).toBeNull();
+    expect(extractEntityName('동료는 한 마디를 삼켰다')).toBeNull();
+  });
+  it('조직·가문·장소 접미사는 인물이 아니다 (null)', () => {
+    expect(extractEntityName('은여우 상단은 동부 상단이다')).toBeNull();
+    expect(extractEntityName('벨로트 가문은 3년 뒤 멸문한다')).toBeNull();
   });
 });
