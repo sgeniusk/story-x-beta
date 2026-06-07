@@ -49,12 +49,36 @@ claude.ai design 에서 발산한 3방향 중 **방향 C "떠 있는 작업실"*
 - [x] StoryXDesk 플래그 렌더 연결 (isFloatingPreview && isDraftMode → props 주입)
 - [x] 검증 — tsc 0·297 tests·build + `?editor=floating` 1440·360 캡처(실 페르소나·검토 5건·콘솔 0). 768/1024 는 `.fc-*` 미변경이라 체크포인트 기검증과 동일
 - [ ] `docs/handoff/direction-c.html` 원본 사본 보관 (선택)
-### 2. 스왑 + 테스트 갱신
-- [ ] floating 을 편집 모드 기본으로, 기존 3컬럼 셸 제거
-- [ ] `editorFocusLayout.test.ts` 편집 모드 단언을 새 구조로 갱신(데이터/출간/캐논 단언은 보존)
-### 3. 진입 4화면 톤 통일
-- [ ] 랜딩·로그인·프로젝트·홈을 C방향 다크 editorial 톤으로
-- [ ] 5화면 톤 일관 캡처
+### 2a. 스왑 + 라이브 타이핑 — ✅ 완료·머지 (2026-06-06, main `389a997`·`488b5e8`)
+- [x] 트리거 플립 — floating 편집 기본(`isDraftMode && !isClassicEditor`), `?editor=classic` 한시 폴백
+- [x] 본문 contentEditable 라이브 타이핑 — IME compositionstart/end 가드 + bodyVersion-메모 커서 보존
+- [x] 의도메모 쓰기-백 + 초안생성/편집·데이터/출간 네비 배선
+- [x] emitBody 블록 `\n\n` join(splitIntoParagraphs 라운드트립) · **사용자 한글 타이핑 정상 확인**
+- [x] 종이 시트 가운데 정렬(빈 마진 `display:none`)
+- [x] 옛 `editorFocusLayout` 단언 보존(classic 경로) — 일괄 갱신은 2e 로 이월
+> 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2a-swap*`
+
+### 2b. 지표 독 패널 — ✅ 완료·머지 (2026-06-06, main `8bc9d4a`)
+- [x] 독 "지표" 버튼 + `fc-p-metrics` 4섹션(하니스·품질·매체+commercial↔literary 슬라이더·온톨로지) floating-네이티브 `.fc-*`
+- [x] `studioMetrics`·`updateStoryModeAxis` 주입(순수 표현) · 360 모바일 검증(독 6버튼·패널 뷰포트 내)
+> 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2b-metrics-dock*`
+
+### 2c. 데이터(캐논/바이블) 모드 floating 화 — ⬜ 다음 후보
+- [ ] "데이터" 탭이 옛 3컬럼 대신 floating 형태로 캐논/바이블을 보여주게
+- [ ] 현재는 데이터 탭 → `isDraftMode=false` → 옛 3컬럼 셸(한시 chrome 전환)
+
+### 2d. 출간 모드 floating 화 — ⬜
+- [ ] 출간 버튼 → floating 형태 출간 흐름
+
+### 2e. 옛 3컬럼 제거 (대체 완료) — ⬜
+- [ ] 옛 3컬럼 에디터 JSX 제거 + `editorFocusLayout.test.ts` 새 구조 이관 + `?editor=classic` 제거
+- [ ] (전제) 2b~2d 로 floating 이 기능 동등성 도달
+
+### 곁가지 후보 (독립 · 우선순위 자유)
+- [ ] **회차/곡선 패널 리치판** — 현 간단판을 옛 `ChapterStructureTree`/`TensionShareChart` 로 업그레이드 (사용자 "별도로 두자" 보류)
+- [ ] **rank5 잔여** — 죽은 코드 3개(`AiCliHarnessCard`·`VerticalSliceProofPanel`·`ContinuitySummaryCard`) 삭제 vs 추출 결정 · `PublishingStudio` 단독 추출 · Tier3 훅 분리(useState 46→`useProject`/`useDraftEditor`/`useReviewSession`/`useUIState`)
+- [ ] **옛 `design/*` 브랜치 정리** — `design/floating-editor`·`design/linear-dark`·`design/margin-integration`·`design/review-parallel` 등 main 보다 뒤처진 브랜치 삭제
+- [ ] (선택) `docs/handoff/direction-c.html` 원본 사본 보관
 
 ## 리스크
 - **editorFocusLayout.test.ts 박제** — 편집 모드 직접 변경 시 수십 단언 붕괴. → 병행 신설로 격리, 스왑 시점에 일괄 갱신.
