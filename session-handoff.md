@@ -13,14 +13,15 @@
 2. **파일럿 #1 (웹소설 장편 회귀, 풀 라이브)** — 랜딩→인터뷰(freewrite 정확 받아씀, 라인업 웹소설 맞춤 배정)→1화 생성(강태준·F급·잔류감각·백도현·흑문던전, 2090자, 클리프행어)→검토 5명. **검토 3명(연속성·캐릭터·세계)이 "백도현을 캐논 미확정인데 미래지식으로 과잉확정" 수렴 포착 → 차별점 실증.** 로그 `docs/reviews/2026-06-07-persona-live-test/01-webnovel-regression.md` + 스크린샷 `01/`.
 3. **온톨로지 0 규명** — 버그 아니라 구조적 배선 갭 2개. **(A)** 온보딩→project 메타(logline·characters·worldRules·deepQuestion) 미배선 — `DraftChapterPayload`에 그 필드 없음, `chapterFromDraftPayload`가 chapter만 추가. **(B)** 회차 `canonFacts`(5개 쌓임) ↔ 온톨로지 `canonSeeds`/`characters` 미연결. FINDING `docs/reviews/2026-06-07-persona-live-test/FINDING-ontology-gap.md`.
 4. **갭 B 수정 (TDD)** — `buildStoryOntology`(storyOntology.ts)에 `canonFacts?` 입력 추가 → 누적 캐논을 `canonSeeds`·`worldRules`(owner=world)·`characters`(owner=character, `extractEntityName`) 시드로 승격. StoryXDesk `storyOntology`(787)·`harnessReport`(836) 두 useMemo에 `project.canonFacts` 전달. `storyOntology.test.ts` +1(RED→GREEN). **라이브 — 온톨로지 0→9, 하니스 22→53.** 커밋 `ebe46b5`.
-5. **갭 A 수정 (TDD)** — `deriveOnboardingSeed`(storyEngine) 신규: freewrite 첫 문장→logline, 인터뷰 첫 답("→" 뒤)→audiencePromise, 물음표 문장→deepQuestion. `createEmptyProject` 가 메타 입력 받게 확장. `DraftChapterPayload.seed?` 추가, App.goToBuilding 이 `deriveOnboardingSeed`→`payload.seed` 전달, StoryXDesk 첫 회차 생성 시 `createEmptyProject` 에 반영. `storyEngine.test.ts` +2(RED→GREEN). **라이브 새 온보딩 검증 미확인(#2 세션 첫 화면에서).**
+5. **갭 A 수정 (TDD)** — `deriveOnboardingSeed`(storyEngine) 신규: freewrite 첫 문장→logline, 인터뷰 첫 답("→" 뒤)→audiencePromise, 물음표 문장→deepQuestion. `createEmptyProject` 가 메타 입력 받게 확장. `DraftChapterPayload.seed?` 추가, App.goToBuilding 이 `deriveOnboardingSeed`→`payload.seed` 전달, StoryXDesk 첫 회차 생성 시 `createEmptyProject` 에 반영. `storyEngine.test.ts` +2(RED→GREEN). **라이브 확인됨** — 새 작품(백작가 빙의 freewrite) 온보딩 시 `logline`="몰락한 백작가의 막내딸로 빙의했다"·`audiencePromise`="가문을 무너뜨릴 첫 배신자를 암시한다" 시드 확인. 효과: 하니스 2/8·22 → **7/8·93/100**, 온톨로지 0→**12**, 온톨로지빌더 **pass ✓**, 콘솔 0. 잔여 fail=전제 단조 1개(품질, 갭 아님). 캡처 `gapA-live-harness93.png`.
 
 ### 검증
-- `bash init.sh` — tsc 0 · **312 tests** · build. 라이브(Playwright) — 갭B `?stage=editor` 온톨로지 0→9·하니스 22→53·콘솔 0. 갭A는 코드 게이트만(라이브 미확인).
+- `bash init.sh` — tsc 0 · **312 tests** · build. 라이브(Playwright) — 갭B(강태준) 온톨로지 0→9·하니스 22→53. **갭A(백작가 새 작품) 하니스 7/8·93/100·온톨로지 12·온톨로지빌더 pass·콘솔 0.** 둘 다 라이브 확인.
 
-### 다음 한 단계 — 갭A 라이브 확인 → 나머지 페르소나 → 새 계획
-- **갭 A 라이브 확인** — 다음 새 온보딩(페르소나 #2) 첫 화면에서 logline·온톨로지·하니스가 채워지는지 확인(코드 TDD GREEN·tsc 0, 라이브 미확인). 여전히 0 이면 `deriveOnboardingSeed`→`payload.seed`→`createEmptyProject` 전달 경로 점검.
-- **나머지 페르소나 #2~#10** (plan S1~S15, 장편은 완권). 갭 A·B 수정으로 온톨로지·캐릭터 추적 기반이 채워진 상태에서 테스트.
+### 다음 한 단계 — 나머지 페르소나 → 종합 리포트 → 새 계획
+- **갭 A·B 라이브 확인 완료** — 새 작품은 하니스 93/100, 온톨로지 12. "온톨로지 0" 문제 실증 해소. 잔여 = 전제 단조(품질 진단) + relationships 0.
+- **#2(백작가 빙의 로판 장편) 1화 검토 완료** (`02-romancefantasy-regression.md`) — 하니스 93·온톨로지 12, 검토 5명 우수(세계 키퍼가 캐논 축적 제안). **발견 P1 — 쇼러너 빈 응답(codex가 검토 의견을 빈으로 반환, 재시도·폴백·표시 개선 필요).** 2화 연속성·~10회 수정·완권은 미착수 — 다음 세션 plan대로. (localStorage = 백작가 작품, ?stage=editor 로 이어가기 가능.)
+- **#3~#10** 미착수 (plan S7~S13).
 - **새 제작 계획** — 파일럿 발견(온톨로지 갭·검토 수렴·매체 적합)+12인/20인+thesis 종합. 이번 세션 최종 목표.
 
 ### 손대지 말 것
