@@ -448,3 +448,26 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-desk .ex-bible-rules');
   });
 });
+
+describe('회차 생성 동작 회귀 — 의도 메모 오염·잠금 동기화 (P2·P3)', () => {
+  // P3 — 모든 작품의 기본 회차 의도가 장르 데모 문구면, 사용자가 의도 메모를 비워도
+  // produceEpisode 가 그 문구를 LLM intent(freewrite)로 넘겨 다음 회차를 오염시킨다.
+  // 실증(2026-06-07 #2 로판) — 2화가 "용사와 외계인이 처음 충돌…"로 시작한 사고.
+  it('기본 회차 의도에 장르 데모 문구("용사와 외계인")를 박지 않는다 (P3)', () => {
+    expect(desk).not.toContain('용사와 외계인이 처음 충돌하는 장면으로 시작한다');
+    const match = desk.match(/const defaultEpisodeIntent = (''|""|'[^']*'|"[^"]*")/);
+    expect(match).not.toBeNull();
+    // 기본값은 빈 문자열 — 비우면 캐논 digest 만으로 다음 회차를 생성한다.
+    expect(match?.[1]).toBe("''");
+  });
+
+  // P2 — 출간에서 회차를 잠근 직후 편집으로 돌아가면 latestChapter 가 stale 해서
+  // mainActionRun 이 여전히 reviewDraft 였다(새로고침해야 produceEpisode 로 전환).
+  // onConfirmChapterLock 이 setLatestChapter 도 동기화해야 같은 세션에서 다음 회차 생성이 된다.
+  it('회차 잠금(onConfirmChapterLock) 시 latestChapter 를 동기화한다 (P2)', () => {
+    const start = desk.indexOf('onConfirmChapterLock');
+    expect(start).toBeGreaterThan(-1);
+    const block = desk.slice(start, start + 700);
+    expect(block).toContain('setLatestChapter');
+  });
+});

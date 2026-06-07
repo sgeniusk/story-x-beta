@@ -552,7 +552,9 @@ export function StoryXDesk({
   onOpenLanding,
   onOpenPublish
 }: StoryXDeskProps) {
-  const defaultEpisodeIntent = '용사와 외계인이 처음 충돌하는 장면으로 시작한다';
+  // 기본 회차 의도는 빈 값 — 의도 메모를 비워두면 produceEpisode 가 캐논 digest 만으로 다음 회차를 만든다.
+  // 데모 장르 문구를 박으면 사용자가 안 건드릴 때 다음 회차 intent(freewrite)로 새어 오염된다 (P3, #2 로판 2화 "용사와 외계인" 사고).
+  const defaultEpisodeIntent = '';
   const [medium, setMedium] = useState<CreativeMedium>(initialMedium);
   const [format, setFormat] = useState<CreativeFormat>(initialFormat);
   const [project, setProject] = useState<SeriesProject>(() => loadProject());
@@ -2562,6 +2564,11 @@ export function StoryXDesk({
                   saveProject(locked);
                   return locked;
                 });
+                // P2 — 잠금 직후 편집으로 돌아가면 latestChapter 가 stale 해 mainActionRun 이 여전히
+                // reviewDraft 다(새로고침해야 produceEpisode). latestChapter 도 동기화해 같은 세션에서 다음 회차를 만든다.
+                setLatestChapter((current) =>
+                  current && current.id === chapterId ? { ...current, locked: true } : current
+                );
               }}
             />
           ) : activeTrack === 'draft' ? (
