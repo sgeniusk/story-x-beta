@@ -124,8 +124,29 @@
 - **P4 인물 캐논화** — characters 배열 0(인물 세부 미캐논화 → 드리프트 + 검토 사각). storyEngine chapterFromDraftPayload/produceNextChapter 가 newCanonFacts(owner=character)를 project.characters 로 승격하도록. 구조적, 별도 TDD. (우선순위 결정 대기)
 - **P1 쇼러너 빈 응답** — 간헐(~2/3). codex 빈 응답 재시도·폴백·표시. (마지막)
 
+## 발견 수정 — P4 인물 캐논화 (2026-06-07 이어서, storyEngine TDD+라이브)
+> 사용자 결정 (A) 계속 + "제대로(추출 개선 포함)". extractEntityName 한계 발견 → 추출 개선 선행. init.sh 322 tests·tsc·build 녹색.
+
+### 수정
+- **extractEntityName 개선** (storyOntology.ts, export화) — 공백 포함 이름("레나 위클리프")·조사 확장(의/에게/와/과)·generic 역할어(주인공·동료·아버지…)와 조직 접미사(상단·가문·저택…) 제외 → `string | null`. 갭B canonFacts 시드도 동반 개선(가짜 "주요 인물" 방지). 호출부(185) null 가드.
+- **commitChapter 인물 승격** (storyEngine.ts) — owner=character newCanonFacts 에서 extractEntityName 으로 이름 추출 → 유효+중복아님이면 최소 CharacterProfile(canonAnchors=캐논문장)로 `project.characters` 승격. produceNextChapter·chapterFromDraftPayload 두 경로 모두 commitChapter 경유라 자동 커버.
+
+### TDD
+- storyOntology.test.ts extractEntityName 5 단언(강태준·레나 위클리프·리아나·generic null·조직 null) RED→GREEN.
+- storyEngine.test.ts commitChapter 승격 3 단언(character 승격·world/generic 제외·중복방지·canonAnchors 보존) RED→GREEN.
+- 전체 322 tests(+8). 기존 회귀 0.
+
+### 라이브 실증 (#2 작품 4화)
+- 3화 잠금 → 새로고침 없이 4화 "동쪽 문에 남은 이름"(1917자) 생성. 레나·동쪽 문(3화 캐논)·은여우·인장·위임장·L 전부 계승, "당신이 L이야?" 클라이맥스. 용사/외계인 오염 0.
+- **characters: [] → ["레나 위클리프"]** 승격. canonAnchors 에 캐논 문장 보존, currentState "4화 등장". 데이터 모드 인물 1(이전 0)·화면에 "레나 위클리프" 표시. canonFacts 11→15.
+- (P4 스크린샷은 MCP 타임아웃으로 생략 — localStorage/evaluate 로 실증.)
+
+### 남은 발견
+- **관계(relations) 추출** — 인물이 characters 로 승격됐으나 relations 는 빈 배열. 인물 간 엣지(온톨로지 관계 0 의 다음 단계)는 별도.
+- **P1 쇼러너 빈 응답** — 간헐(~2/3). (마지막)
+- **드리프트 실효 검증** — P4 로 인물이 캐논화됐으니, 5화+ 에서 가족 이름(에드릭·노엘 vs 레오니드) 드리프트가 줄어드는지는 다음 세션에서 확인.
+
 ## 미완 (다음 세션)
-- **P4 인물 캐논화·P1 빈응답 가드** — 수정 우선순위 결정 대기.
-- #2 4화~ → 추가 연속성·드리프트(P4 미수정 시 가족이름 드리프트 재현) 관찰. (현재 3화까지 누적)
-- ~10회 수정 사이클 → 수정 반응성.
-- 완권(~20~25화) → 장기 연속성.
+- **P1 빈응답 가드** — 간헐, 마지막 발견.
+- **관계(relations) 추출** — 인물 간 엣지(온톨로지 관계 그래프 완성).
+- #2 5화~ → P4 후 드리프트 실효 관찰 + ~10회 수정 사이클 + 완권(~20~25화).

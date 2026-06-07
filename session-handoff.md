@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-06-07 (이어서 3) — 발견 P4 인물 캐논화 (storyEngine TDD+라이브)
+
+> P4(인물 미캐논화 → 드리프트·관계0) 수정. extractEntityName 한계 발견 → 사용자 결정 "제대로(추출 개선 포함)". 코드+테스트. init.sh 322 tests 녹색.
+
+### 한 일
+1. **extractEntityName 개선** (storyOntology.ts, export화) — 공백 포함 이름("레나 위클리프")·조사 확장(의/에게/와/과)·generic 역할어와 조직 접미사(상단·가문…) 제외 → `string | null`. 갭B canonFacts 시드도 동반 개선(가짜 "주요 인물" 방지), 호출부 null 가드.
+2. **commitChapter 인물 승격** (storyEngine.ts) — owner=character 캐논 → 최소 CharacterProfile(canonAnchors=캐논문장) 로 `project.characters` 승격(중복·generic·조직 가드). produceNextChapter·chapterFromDraftPayload 두 경로 자동 커버.
+3. **TDD** — storyOntology.test +5, storyEngine.test +3. 전체 322 tests, 회귀 0.
+4. **라이브(#2 4화)** — 새로고침 없이 4화 "동쪽 문에 남은 이름"(1917자) 생성, **characters [] → ["레나 위클리프"]** 승격, 데이터 모드 인물 1, canonFacts 11→15. 용사/외계인 오염 0.
+
+### 검증
+- `bash init.sh` — tsc 0 · **322 tests**(+8) · build. 라이브 콘솔 0. (P4 스크린샷은 MCP 타임아웃으로 생략 — localStorage/evaluate 로 실증.)
+
+### 다음
+- **P1 빈응답 가드**(간헐 ~2/3, 마지막) · **관계(relations) 추출**(인물 간 엣지 — 온톨로지 관계 0 의 다음 단계) · **#2 5화+** P4 후 드리프트 실효 관찰·완권.
+
+### 손대지 말 것
+- extractEntityName 개선(string|null·GENERIC/SUFFIX 가드)·commitChapter promoteCharactersFromCanon. P3·P2 수정. #2 작품 localStorage(4화까지·1~3화 locked·레나 승격).
+
+### 커밋
+P4 = `storyOntology.ts`·`storyEngine.ts`·두 test + 로그·handoff·progress. 커밋 예정.
+
+---
+
 ## 2026-06-07 (이어서 2) — 발견 P3·P2 수정 (TDD+라이브, 사용자 결정 A)
 
 > 실증 테스트에서 나온 발견 중 작고 명확한 **P3(의도메모 오염)·P2(잠금 후 state)를 TDD로 수정·라이브 실증**. **코드 변경 + 테스트 추가. init.sh 314 tests 녹색.** P4·P1 은 다음.
