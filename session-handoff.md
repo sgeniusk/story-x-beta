@@ -4,6 +4,66 @@
 
 ---
 
+## 2026-06-07 (이어서 2) — 발견 P3·P2 수정 (TDD+라이브, 사용자 결정 A)
+
+> 실증 테스트에서 나온 발견 중 작고 명확한 **P3(의도메모 오염)·P2(잠금 후 state)를 TDD로 수정·라이브 실증**. **코드 변경 + 테스트 추가. init.sh 314 tests 녹색.** P4·P1 은 다음.
+
+### 한 일
+1. **P3 수정** — `StoryXDesk.tsx:555` `defaultEpisodeIntent` 데모 문구('용사와 외계인…') → `''`. 모든 작품 의도 메모 기본값이 데모 문구라 2화부터 produceEpisode intent 로 새던 것. 빈 값이면 캐논 digest 만으로 생성.
+2. **P2 수정** — `StoryXDesk.tsx` onConfirmChapterLock 에 `setLatestChapter` 동기화 추가(setProject 만 하던 것). 잠금 직후 새로고침 없이 produceEpisode 전환.
+3. **TDD** — `editorFocusLayout.test.ts` describe('회차 생성 동작 회귀 — P2·P3') 2 단언. RED(2 fail) → GREEN. 전체 314 tests.
+4. **라이브 실증(#2)** — 2화 잠금 → 새로고침 없이 3화 "제3화: 동부 물류 검인권" 생성(P2 ✓). 첫 문장 "아침은 다시 찾아왔다…" 용사/외계인 오염 0(P3 ✓). 캐논 전부 계승·canonFacts 8→11. 캡처 `docs/reviews/2026-06-07-persona-live-test/02/03-ch3-p2p3-fix-verified.png`.
+
+### 검증
+- `bash init.sh` — tsc 0 · **314 tests**(+2: P2·P3 회귀) · build 전체 통과. 라이브 콘솔 0.
+
+### 다음 한 단계 — P4·P1 수정 우선순위 결정
+- **P4 인물 캐논화(구조적)** — chapterFromDraftPayload/produceNextChapter 가 newCanonFacts(owner=character)를 project.characters 로 승격. 드리프트(가족 이름)·온톨로지 관계 0 근본 해소. storyEngine.test.ts 정통 TDD. **착수 전 범위 재확인 권장.**
+- **P1 빈 응답 가드** — 간헐(~2/3), 마지막.
+- 또는 테스트 계속(#2 4화~·완권, #3 헌터물).
+
+### 손대지 말 것
+- P3/P2 수정(defaultEpisodeIntent=''·onConfirmChapterLock setLatestChapter)·관련 회귀 테스트. 약화 금지.
+- #2 작품 localStorage(이제 3화까지, 1·2화 locked). 이전 손대지 말 것 유지.
+
+### 커밋
+P3·P2 = `StoryXDesk.tsx`·`editorFocusLayout.test.ts` + 로그·캡처. 커밋 예정.
+
+---
+
+## 2026-06-07 (이어서) — #2 백작가 빙의 로판 2화 회차 연속성 라이브 검증
+
+> 새 세션 목표 — 페르소나 실증 테스트 계속. 이번 = #2 작품으로 **회차 연속성**(#1·#2 공통 미검증 핵심 축) 첫 실증. 로그 `docs/reviews/2026-06-07-persona-live-test/02-romancefantasy-regression.md` + 캡처 `02/`. **코드 변경 0 — 라이브 실증·기록만.**
+
+### 한 일
+1. **Preflight** — init.sh 녹색(312 tests). dev 5173. Playwright 1440. #2 작품 localStorage 유지, `?stage=editor` 이어받기. 1화 기준선(하니스 7/8·93, 온톨로지 12, 품질 6/8) 캡처.
+2. **2화 생성(produceEpisode, codex 실호출)** — "2화. 은여우의 첫 발자국"(2158자). 생성 경로에서 마찰 다수(아래 P2).
+3. **회차 연속성 ★★★★★** — 리아나·벨로트·은여우·인장·3년멸문 정확 계승, **L 단서 → 레나 위클리프 추적 발전**. **온톨로지 12→17(+5)·canonFacts 5→8·memoryAnchors 4개**(갭B가 회차 누적에서 작동함을 실증).
+4. **5명 전체 검토** — 결정 3·수정 2·차단 0. **3명(연속성·세계·장르)이 의도 메모 오염을 독립 포착(차별점 실증).** P1(쇼러너 빈 응답) 이번엔 정상 → 간헐적.
+
+### 발견 (P1~P4)
+- **P1 쇼러너 빈 응답** — 재현율 ~2/3(1화 2회 빈, 2화 정상). 간헐적, 재시도·폴백·표시 개선 필요.
+- **P2 floating 회차 생성 경로** — floating 에 잠금 UI 없음 → 출간 경유 1화 잠금 → **편집 state 미갱신(`onConfirmChapterLock`이 setLatestChapter 누락, StoryXDesk:2560)으로 새로고침 필요** → 그제서야 produceEpisode 동작. 버튼 라벨도 검토/생성 미구분.
+- **P3 의도 메모 잔류 오염** — 2화 첫 문장 "용사와 외계인…"은 draftPrompt 잔류값("용사와 외계인이 처음 충돌하는 장면", placeholder 예시 문구)이 intent 로 사용된 것. 생성 후 draftPrompt 미초기화. codex 가 로판에 은유 흡수했으나 톤 이탈.
+- **P4 캐논화 안 된 세부 드리프트** — 1화 오빠 "에드릭·노엘" → 2화 "레오니드"(불일치). `characters` 배열 0 이라 인물 세부 미캐논화 → 드리프트 + 검토 사각. 온톨로지 관계 0 과 동근.
+
+### 검증
+- `bash init.sh` 세션 시작 시 녹색(312 tests). **코드 변경 0.** 라이브 콘솔 0. 캡처 3장(`02/`).
+
+### 다음 한 단계
+- **발견 P1~P4 수정 우선순위 결정** — 테스트 계속(#2 3화·완권 또는 #3 헌터물) vs P2~P4 먼저 수정. P2·P3·P4 는 #1 완권에서도 재발 가능 → S1 전 확인 권장.
+- #2 3화 — 의도 메모 비우고 생성, 1화 클리프행어(문밖 남자) 회수·드리프트 누적 관찰.
+- 또는 plan S7 #3 헌터물(다수 캐릭터 일관성).
+
+### 손대지 말 것
+- #2 작품 localStorage(백작가, 2화까지·1화 locked). 발견 재현 보존 위해 2화 본문 오염·드리프트 수정 안 함.
+- 이전 손대지 말 것(갭A·B·deriveOnboardingSeed·전역 토큰·provider·rank2~4·academic·플로팅 2a/2b) 유지.
+
+### 커밋
+이번 세션 = 로그·캡처만(코드 변경 0). docs 커밋 예정.
+
+---
+
 ## 2026-06-07 — 실사용 창작자 10인 실증 테스트 (설계+파일럿#1) + 온톨로지 갭 B 수정
 
 > 새 세션 목표 — 페르소나 실증 테스트를 거쳐 새 제작 계획 작성. 오늘 = 설계확정 + 파일럿#1 + 온톨로지 갭 규명·수정(갭B). **main 미커밋.**
