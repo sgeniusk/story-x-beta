@@ -12,23 +12,24 @@
 1. **설계 (brainstorming→spec→plan)** — 실사용 창작자 10인(소설6·만화1·에세이1·오디오1·학술1) 풀 라이브 **직접조작**(Playwright+codex). 장편 #1~3 은 **완권(~20~25화) 연속**, **#3·#4 캐릭터 일관성 집중**, 6축(생성·수정반응·연속성·매체·UX·상업성). 멀티세션 S0~S15. spec `docs/superpowers/specs/2026-06-07-persona-live-test-design.md`, plan `docs/superpowers/plans/2026-06-07-persona-live-test-plan.md`. "클로드 코워크 vs 로컬" — 코워크는 로컬 dev 접근 불가로 시뮬레이션 회귀(이전 5인 테스트 선례) → **로컬(직접조작) 확정**.
 2. **파일럿 #1 (웹소설 장편 회귀, 풀 라이브)** — 랜딩→인터뷰(freewrite 정확 받아씀, 라인업 웹소설 맞춤 배정)→1화 생성(강태준·F급·잔류감각·백도현·흑문던전, 2090자, 클리프행어)→검토 5명. **검토 3명(연속성·캐릭터·세계)이 "백도현을 캐논 미확정인데 미래지식으로 과잉확정" 수렴 포착 → 차별점 실증.** 로그 `docs/reviews/2026-06-07-persona-live-test/01-webnovel-regression.md` + 스크린샷 `01/`.
 3. **온톨로지 0 규명** — 버그 아니라 구조적 배선 갭 2개. **(A)** 온보딩→project 메타(logline·characters·worldRules·deepQuestion) 미배선 — `DraftChapterPayload`에 그 필드 없음, `chapterFromDraftPayload`가 chapter만 추가. **(B)** 회차 `canonFacts`(5개 쌓임) ↔ 온톨로지 `canonSeeds`/`characters` 미연결. FINDING `docs/reviews/2026-06-07-persona-live-test/FINDING-ontology-gap.md`.
-4. **갭 B 수정 (TDD)** — `buildStoryOntology`(storyOntology.ts)에 `canonFacts?` 입력 추가 → 누적 캐논을 `canonSeeds`·`worldRules`(owner=world)·`characters`(owner=character, `extractEntityName`) 시드로 승격. StoryXDesk `storyOntology`(787)·`harnessReport`(836) 두 useMemo에 `project.canonFacts` 전달. `storyOntology.test.ts` +1(RED→GREEN). **라이브 — 온톨로지 0→9, 하니스 22→53.**
+4. **갭 B 수정 (TDD)** — `buildStoryOntology`(storyOntology.ts)에 `canonFacts?` 입력 추가 → 누적 캐논을 `canonSeeds`·`worldRules`(owner=world)·`characters`(owner=character, `extractEntityName`) 시드로 승격. StoryXDesk `storyOntology`(787)·`harnessReport`(836) 두 useMemo에 `project.canonFacts` 전달. `storyOntology.test.ts` +1(RED→GREEN). **라이브 — 온톨로지 0→9, 하니스 22→53.** 커밋 `ebe46b5`.
+5. **갭 A 수정 (TDD)** — `deriveOnboardingSeed`(storyEngine) 신규: freewrite 첫 문장→logline, 인터뷰 첫 답("→" 뒤)→audiencePromise, 물음표 문장→deepQuestion. `createEmptyProject` 가 메타 입력 받게 확장. `DraftChapterPayload.seed?` 추가, App.goToBuilding 이 `deriveOnboardingSeed`→`payload.seed` 전달, StoryXDesk 첫 회차 생성 시 `createEmptyProject` 에 반영. `storyEngine.test.ts` +2(RED→GREEN). **라이브 새 온보딩 검증 미확인(#2 세션 첫 화면에서).**
 
 ### 검증
-- `bash init.sh` — tsc 0 · **310 tests** · build. 라이브(Playwright) — `?stage=editor` 온톨로지 9·하니스 53/100·콘솔 0.
+- `bash init.sh` — tsc 0 · **312 tests** · build. 라이브(Playwright) — 갭B `?stage=editor` 온톨로지 0→9·하니스 22→53·콘솔 0. 갭A는 코드 게이트만(라이브 미확인).
 
-### 다음 한 단계 — 갭 A (권장) → 나머지 페르소나 → 새 계획
-- **갭 A 수정** — 온보딩(인터뷰+freewrite)이 project 메타(logline·dramaticQuestion·characters·worldRules)를 채우게. `DraftChapterPayload` 확장(LLM이 바이블 메타 반환) 또는 인터뷰 답변 구조화 매핑. 이게 돼야 온톨로지 빌더 스테이지 통과·하니스 70+·갭 완전 해소.
-- **나머지 페르소나 #2~#10** (plan S1~S15, 장편은 완권). **갭 A 먼저 권장** — 안 그러면 전 페르소나가 같은 메타 결손 위에서 테스트됨.
+### 다음 한 단계 — 갭A 라이브 확인 → 나머지 페르소나 → 새 계획
+- **갭 A 라이브 확인** — 다음 새 온보딩(페르소나 #2) 첫 화면에서 logline·온톨로지·하니스가 채워지는지 확인(코드 TDD GREEN·tsc 0, 라이브 미확인). 여전히 0 이면 `deriveOnboardingSeed`→`payload.seed`→`createEmptyProject` 전달 경로 점검.
+- **나머지 페르소나 #2~#10** (plan S1~S15, 장편은 완권). 갭 A·B 수정으로 온톨로지·캐릭터 추적 기반이 채워진 상태에서 테스트.
 - **새 제작 계획** — 파일럿 발견(온톨로지 갭·검토 수렴·매체 적합)+12인/20인+thesis 종합. 이번 세션 최종 목표.
 
 ### 손대지 말 것
-- `buildStoryOntology` canonFacts 반영 로직·`extractEntityName` (테스트 고정). 보수적 휴리스틱 원칙 — 발명 금지, 승인된 캐논만 반영.
+- `buildStoryOntology` canonFacts 반영·`extractEntityName`·`deriveOnboardingSeed`·`createEmptyProject` 메타 시드 (테스트 고정). 보수적 휴리스틱 — 발명 금지, 입력 정제·승인 캐논만 반영.
 - 파일럿 로그·FINDING 노트 (실증 기록).
 - 전역 `--sx-/--nx-/--lc-` 토큰·provider·rank2~4·academic·플로팅 2a/2b.
 
 ### 커밋
-미실행(사용자 지시 대기). 변경 — `storyOntology.ts`·`storyOntology.test.ts`·`StoryXDesk.tsx` + `docs/superpowers/{specs,plans}/2026-06-07-*` + `docs/reviews/2026-06-07-persona-live-test/`.
+갭B = `ebe46b5` 완료. 갭A = `storyEngine.ts`·`storyEngine.test.ts`·`App.tsx`·`StoryXDesk.tsx` (이번 커밋 예정).
 
 ---
 

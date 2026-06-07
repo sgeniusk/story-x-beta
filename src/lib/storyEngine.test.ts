@@ -8,6 +8,7 @@ import {
   chapterFromDraftPayload,
   createEmptyProject,
   createSeedProject,
+  deriveOnboardingSeed,
   getCanonReviewCategoryLabel,
   lockChapter,
   normalizeChapterBeats,
@@ -698,5 +699,29 @@ describe('storyEngine', () => {
       expect(review.notes.some((note) => note.kind === '제안')).toBe(true);
       expect(review.notes.every((note) => note.body.trim().length > 0)).toBe(true);
     }
+  });
+});
+
+describe('onboarding seed (갭 A — 온보딩 메타 배선)', () => {
+  it('deriveOnboardingSeed 가 freewrite 첫 문장을 logline, 인터뷰 답을 audiencePromise 로 추출한다', () => {
+    const seed = deriveOnboardingSeed({
+      freewrite: '회사에서 정리해고 통보받은 날 죽었다. 눈을 뜨니 10년 전이다.',
+      interviewAnswers: ['- 첫 5화 약속 → 각성 시험에서 전생과 다른 결과']
+    });
+    expect(seed.logline).toContain('정리해고');
+    expect(seed.logline).not.toContain('눈을 뜨니'); // 첫 문장만
+    expect(seed.audiencePromise).toBe('각성 시험에서 전생과 다른 결과'); // "→" 뒤 답만
+  });
+
+  it('createEmptyProject 가 주어진 logline/audiencePromise/deepQuestion 을 시드한다', () => {
+    const project = createEmptyProject({
+      title: '시험작',
+      logline: '회귀한 헌터가 자신의 죽음을 추적한다',
+      audiencePromise: '매 화 사이다와 다음 화 훅',
+      deepQuestion: '약함은 끝인가'
+    });
+    expect(project.logline).toBe('회귀한 헌터가 자신의 죽음을 추적한다');
+    expect(project.audiencePromise).toBe('매 화 사이다와 다음 화 훅');
+    expect(project.deepQuestion).toBe('약함은 끝인가');
   });
 });

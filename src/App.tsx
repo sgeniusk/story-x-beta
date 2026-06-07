@@ -48,7 +48,7 @@ function mediumDisplayLabel(medium: CreativeMedium): string {
       return medium;
   }
 }
-import { buildFallbackDraft, type DraftChapterPayload, type SeriesProject } from './lib/storyEngine';
+import { buildFallbackDraft, deriveOnboardingSeed, type DraftChapterPayload, type SeriesProject } from './lib/storyEngine';
 import { loadProject } from './lib/storage';
 import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
@@ -779,18 +779,24 @@ function StoryXHome({
     });
 
     setIsBuilding(false);
+    // 갭 A — 온보딩 freewrite·인터뷰 답을 project 메타 시드로 끌어내 payload 에 실어 보낸다.
+    const onboardingSeed = deriveOnboardingSeed({
+      freewrite: freewriteText,
+      interviewAnswers: [...answerLines, interviewNote.trim()].filter(Boolean)
+    });
     if (llm.ok && llm.payload) {
-      onOpenEditor(llm.payload);
+      onOpenEditor({ ...llm.payload, seed: onboardingSeed });
       return;
     }
 
-    onOpenEditor(
-      buildFallbackDraft({
+    onOpenEditor({
+      ...buildFallbackDraft({
         freewrite: freewriteText,
         interviewAnswers: [...answerLines, interviewNote.trim()].filter(Boolean),
         chapterNumber: 1
-      })
-    );
+      }),
+      seed: onboardingSeed
+    });
   }
 
   const homeFlowSteps: Array<{ id: HomeFlowStep; label: string; caption: string }> = [

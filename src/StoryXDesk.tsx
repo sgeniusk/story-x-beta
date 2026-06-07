@@ -1484,7 +1484,12 @@ export function StoryXDesk({
     }
     draftBootRef.current = true;
 
-    const seed = createEmptyProject({ title: initialDraftPayload.title });
+    const seed = createEmptyProject({
+      title: initialDraftPayload.title,
+      logline: initialDraftPayload.seed?.logline,
+      audiencePromise: initialDraftPayload.seed?.audiencePromise,
+      deepQuestion: initialDraftPayload.seed?.deepQuestion
+    });
     const bootRequest: ProductionRequest = {
       genre: seed.genre,
       intent: initialDraftPayload.title || '새 작품 첫 원고',

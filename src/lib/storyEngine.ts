@@ -381,6 +381,8 @@ export interface DraftChapterPayload {
   newCanonFacts: DraftChapterPayloadCanonFact[];
   /** LLM 실패 시 작가 입력만 재구성한 임시 초안인지 표시한다. */
   isFallback?: boolean;
+  /** 갭 A — 온보딩에서 끌어낸 project 메타 시드. 첫 회차 생성 시 createEmptyProject 에 반영된다. */
+  seed?: OnboardingSeed;
 }
 
 export interface FallbackDraftInput {
@@ -881,16 +883,52 @@ function deriveProjectTitle(rawTitle: string | undefined): string {
 // 새 프로젝트의 빈 캔버스 — 샘플 작품의 인물·장소·떡밥을 전혀 담지 않는다.
 // 새 프로젝트 플로우(initialDraftPayload)가 에디터를 열 때 이걸로 시작해야 샘플 데이터가 새지 않는다.
 // 인물/장소/사물/사건/시간선/캐논/열린 질문은 비어 있고, 작가와 에이전트가 채운다.
-export function createEmptyProject(input: { title?: string } = {}): SeriesProject {
+export interface OnboardingSeedInput {
+  freewrite: string;
+  interviewAnswers?: string[];
+}
+
+export interface OnboardingSeed {
+  logline: string;
+  audiencePromise: string;
+  deepQuestion: string;
+}
+
+// 갭 A — 온보딩(freewrite + 인터뷰 답)에서 project 메타 시드를 끌어낸다.
+// 발명 없이 입력 텍스트만 정제한다: logline=freewrite 첫 문장, audiencePromise=인터뷰 첫 답("→" 뒤), deepQuestion=freewrite 의 물음표 문장.
+export function deriveOnboardingSeed(input: OnboardingSeedInput): OnboardingSeed {
+  const freewrite = (input.freewrite || '').trim();
+  const answers = (input.interviewAnswers || [])
+    .map((answer) => {
+      const arrow = answer.lastIndexOf('→');
+      const cleaned = arrow >= 0 ? answer.slice(arrow + 1) : answer.replace(/^[-•\s]+/, '');
+      return cleaned.trim();
+    })
+    .filter(Boolean);
+  const firstSentence = freewrite.split(/(?<=[.!?。！？])\s+|\n+/u)[0] || freewrite;
+  const questionSentence = freewrite
+    .split(/(?<=[?？])\s+|\n+/u)
+    .map((sentence) => sentence.trim())
+    .find((sentence) => /[?？]$/.test(sentence));
+  return {
+    logline: firstSentence.trim().slice(0, 120),
+    audiencePromise: answers[0] ?? '',
+    deepQuestion: questionSentence ? questionSentence.slice(0, 120) : ''
+  };
+}
+
+export function createEmptyProject(
+  input: { title?: string; logline?: string; audiencePromise?: string; deepQuestion?: string } = {}
+): SeriesProject {
   return {
     id: `project-${Date.now().toString(36)}`,
     title: deriveProjectTitle(input.title),
-    logline: '',
+    logline: input.logline?.trim() || '',
     localization: createDefaultLocalizationPolicy(),
     genre: 'urban-fantasy',
     tone: '',
-    audiencePromise: '',
-    deepQuestion: '',
+    audiencePromise: input.audiencePromise?.trim() || '',
+    deepQuestion: input.deepQuestion?.trim() || '',
     creativeWeight: 'balanced',
     formIntent: '',
     currentEpisode: 0,
