@@ -78,14 +78,14 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 두 갈래 중 택1. **(A) 플로팅 Phase 2 스왑** — floating 을 편집 모드 기본으로(StoryXDesk 3컬럼 제거 또는 토글) + `editorFocusLayout.test.ts` 새 구조로 갱신 + 라이브 타이핑(contentEditable)·의도 메모 쓰기-백. 위험 — 기존 편집기 테스트 다수 갱신, 시각 회귀. **(B) rank5 Tier2 Pass E** — `StoryXDesk.tsx` 잔여 ~11개(Dialogs·Publishing·Status) 추출 후 Tier3 훅 분리(useProject·useDraftEditor·useReviewSession·useUIState — 최고위험, code-reviewer 2차 필수). 방식은 Codex 위임 + Claude 검증. **Codex 패킷 필수 조항 — 우회 주석 금지·상태 문서 수정 금지·이동 심볼 단언은 정의 파일로 재배치.**
 
-## 최근 검증 (2026-06-08 · 일괄 수정 P6·P5·relations — 코드 변경)
+## 최근 검증 (2026-06-08 · 페르소나 10인 브레드스 완주 + 코드 3수정)
 
 ```
-init.sh            → tsc · vitest(43 files, 325 tests) · build 전체 통과
-P6 수정            → extractEntityName "(이)라는" 처리 — "레오르 벨로트라"→"레오르 벨로트" (storyOntology.test +1)
-P5 수정            → extractCharacterNames 서술부 명명 추출 — "리아나의 둘째 오빠 이름은 루시안 벨로트" → 루시안 승격 (storyEngine.test +1)
-relations 수정     → extractRelation+linkRelationsFromCanon — 리아나→루시안 "둘째 오빠" 엣지 생성 (storyEngine.test +1)
-#2 9~13화(직전)    → 연속성 ★★★★★·오염 0·canonFacts 32→52·온톨로지 46→68. 캐논화후 고정 7연속. 게이트본문반응 5→5→6→4→6/8. P1 0/5
+init.sh            → tsc · vitest(327 tests) · build 전체 통과 (세션 중 8회 녹색)
+세션 종합 정리     → docs/reviews/2026-06-07-persona-live-test/SESSION-SUMMARY-2026-06-08.md (테스트내용·결과·반영사항·권고)
+테스트             → #2 로판 23화 완결 + #3 헌터 다캐릭터 + 만화·에세이·오디오·학술 스모크 = 5매체 전수
+코드 수정 3        → e4a2ea2(P6/P5/relations 인물·관계) · aa98137(검토 전제진척 프롬프트) · 3eae1da(매체/포맷 크래시 폴백). 모두 TDD+라이브
+핵심 발견          → 차별점 5매체 일반화 · continuity≠payoff(근본=쇼러너 연재편향) · 매체특화 게이트(8/11/7)·검토 매체무관(갭) · 크래시 버그(수정됨)
 ```
 
 ## 완료 마일스톤
