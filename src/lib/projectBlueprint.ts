@@ -619,8 +619,10 @@ export function getFormatOptions(medium: CreativeMedium): FormatOption[] {
 
 export function buildCreativeBlueprint(selection: CreativeSelection): CreativeBlueprint {
   const medium = mediumOptions.find((option) => option.id === selection.medium);
-  const availableFormats = [...formatOptions[selection.medium], ...(hiddenFormatOptions[selection.medium] ?? [])];
-  const format = availableFormats.find((option) => option.id === selection.format);
+  const availableFormats = medium ? [...formatOptions[selection.medium], ...(hiddenFormatOptions[selection.medium] ?? [])] : [];
+  // 매체 전환 직후 이전 매체의 포맷이 남아 조합이 어긋나면(comics + 소설 포맷 등) throw 대신
+  // 매체의 기본(첫) 포맷으로 폴백한다 — App.tsx useMemo 가 렌더 중 호출하므로 throw 는 앱 전체 크래시였다.
+  const format = availableFormats.find((option) => option.id === selection.format) ?? availableFormats[0];
 
   if (!medium || !format) {
     throw new Error('Invalid creative selection');
@@ -629,8 +631,8 @@ export function buildCreativeBlueprint(selection: CreativeSelection): CreativeBl
   return {
     medium: selection.medium,
     mediumLabel: medium.label,
-    format: selection.format,
+    format: format.id,
     formatLabel: format.label,
-    ...blueprintByFormat[selection.format]
+    ...blueprintByFormat[format.id]
   };
 }

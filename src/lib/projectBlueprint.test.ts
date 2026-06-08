@@ -147,6 +147,15 @@ describe('projectBlueprint', () => {
     ]);
   });
 
+  it('falls back to the medium default format on a mismatched selection (앱 크래시 방지)', () => {
+    // 회귀 — 매체 전환 직후 이전 매체 포맷이 남으면(comics + 소설 'short-novel') buildCreativeBlueprint 가
+    // throw 했고, App.tsx useMemo 가 렌더 중 호출해 에러 바운더리 없이 앱 전체가 화이트스크린으로 죽었다.
+    // 무효 조합은 매체의 기본(첫) 포맷으로 폴백해 크래시를 막아야 한다.
+    const blueprint = buildCreativeBlueprint({ medium: 'comics', format: 'short-novel' as never });
+    expect(blueprint.mediumLabel).toBe('만화');
+    expect(blueprint.formatLabel).toBe('인스타툰');
+  });
+
   it('maps an academic selection to English APA argument operations', () => {
     const options = getFormatOptions('academic');
     const blueprint = buildCreativeBlueprint({
