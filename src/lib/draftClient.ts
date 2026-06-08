@@ -58,7 +58,9 @@ async function _runLlmDraft(input: DraftRequestInput): Promise<LlmDraftResult> {
         outline: Array.isArray(data.outline) ? data.outline.filter((line): line is string => typeof line === 'string') : [],
         beats: normalizeBeats(data.beats),
         prose,
-        newCanonFacts: normalizeCanonFacts(data.newCanonFacts)
+        newCanonFacts: normalizeCanonFacts(data.newCanonFacts),
+        rewardArc: normalizeRewardArc(data.rewardArc),
+        stakesLedger: normalizeStakesLedger(data.stakesLedger)
       }
     };
   } catch (error) {
@@ -98,4 +100,37 @@ function normalizeCanonFacts(value: unknown): DraftChapterPayload['newCanonFacts
       statement: typeof item.statement === 'string' ? item.statement : ''
     }))
     .filter((fact) => fact.statement.trim().length > 0);
+}
+
+// 아크 페이오프 1단계 — 브리지 응답의 rewardArc/stakesLedger 를 정규화한다. 누락·오형식은 빈 배열/생략.
+export function normalizeRewardArc(value: unknown): DraftChapterPayload['rewardArc'] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((e): e is Record<string, unknown> => typeof e === 'object' && e !== null)
+    .map((e) => {
+      const promise = typeof e.promise === 'string' ? e.promise.trim() : '';
+      const payoff = typeof e.payoff === 'string' ? e.payoff.trim() : '';
+      const out: { promise: string; payoff: string; intensity?: number } = { promise, payoff };
+      if (typeof e.intensity === 'number' && Number.isFinite(e.intensity)) {
+        out.intensity = Math.max(0, Math.min(100, Math.round(e.intensity)));
+      }
+      return out;
+    })
+    .filter((e) => e.promise.length > 0);
+}
+
+export function normalizeStakesLedger(value: unknown): DraftChapterPayload['stakesLedger'] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((e): e is Record<string, unknown> => typeof e === 'object' && e !== null)
+    .map((e) => {
+      const stake = typeof e.stake === 'string' ? e.stake.trim() : '';
+      const atRisk = typeof e.atRisk === 'string' ? e.atRisk.trim() : '';
+      const out: { stake: string; atRisk: string; resolution?: 'lost' | 'kept' | 'deferred' } = { stake, atRisk };
+      if (e.resolution === 'lost' || e.resolution === 'kept' || e.resolution === 'deferred') {
+        out.resolution = e.resolution;
+      }
+      return out;
+    })
+    .filter((e) => e.stake.length > 0);
 }
