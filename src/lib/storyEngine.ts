@@ -373,6 +373,18 @@ function normalizeTension(value: unknown): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+export interface DraftChapterPayloadRewardArc {
+  promise: string;
+  payoff: string;
+  intensity?: number;
+}
+
+export interface DraftChapterPayloadStakes {
+  stake: string;
+  atRisk: string;
+  resolution?: 'lost' | 'kept' | 'deferred';
+}
+
 export interface DraftChapterPayload {
   title: string;
   hook: string;
@@ -381,6 +393,10 @@ export interface DraftChapterPayload {
   beats: DraftChapterPayloadBeat[];
   prose: string;
   newCanonFacts: DraftChapterPayloadCanonFact[];
+  /** 아크 페이오프 1단계 — LLM 이 산출한 이 회차의 약속·회수. 누락 가능. */
+  rewardArc?: DraftChapterPayloadRewardArc[];
+  /** 아크 페이오프 1단계 — LLM 이 산출한 이 회차의 stake 결말. 누락 가능. */
+  stakesLedger?: DraftChapterPayloadStakes[];
   /** LLM 실패 시 작가 입력만 재구성한 임시 초안인지 표시한다. */
   isFallback?: boolean;
   /** 갭 A — 온보딩에서 끌어낸 project 메타 시드. 첫 회차 생성 시 createEmptyProject 에 반영된다. */
@@ -1236,7 +1252,21 @@ export function chapterFromDraftPayload(
     beats: normalizeChapterBeats(episode, payload.beats),
     prose: payload.prose ?? '',
     memoryAnchors,
-    newCanonFacts
+    newCanonFacts,
+    rewardArc: (payload.rewardArc ?? [])
+      .filter((e) => typeof e?.promise === 'string' && e.promise.trim().length > 0)
+      .map((e) => ({
+        promise: e.promise.trim(),
+        payoff: typeof e.payoff === 'string' ? e.payoff.trim() : '',
+        ...(typeof e.intensity === 'number' ? { intensity: Math.max(0, Math.min(100, Math.round(e.intensity))) } : {})
+      })),
+    stakesLedger: (payload.stakesLedger ?? [])
+      .filter((e) => typeof e?.stake === 'string' && e.stake.trim().length > 0)
+      .map((e) => ({
+        stake: e.stake.trim(),
+        atRisk: typeof e.atRisk === 'string' ? e.atRisk.trim() : '',
+        ...(e.resolution === 'lost' || e.resolution === 'kept' || e.resolution === 'deferred' ? { resolution: e.resolution } : {})
+      }))
   };
   const agentRuns = buildAgentRuns(project, request, chapter, continuityIssues);
   const updatedProject = recordChapterGrowth(commitChapter(project, chapter), project, chapter, request);

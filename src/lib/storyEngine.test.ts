@@ -79,28 +79,32 @@ describe('storyEngine', () => {
     expect(withPressure.characters[0].pressureTriangle?.taboo).toContain('거짓');
   });
 
-  it('Chapter.stakesLedger / rewardArc 가 optional 로 보존된다', () => {
+  it('chapterFromDraftPayload 가 payload 의 rewardArc/stakesLedger 를 chapter 로 매핑한다', () => {
     const empty = createEmptyProject({ title: '단편' });
     const result = chapterFromDraftPayload(
       empty,
       {
-        title: '1화',
-        hook: '문이 열렸다',
-        outline: ['들어간다'],
-        beats: [{ label: 'a', summary: 'b' }],
-        prose: '본문.',
-        newCanonFacts: []
+        title: '1화', hook: '문이 열렸다', outline: ['들어간다'],
+        beats: [{ label: 'a', summary: 'b' }], prose: '본문.', newCanonFacts: [],
+        rewardArc: [{ promise: '문의 비밀', payoff: '문 너머의 메모', intensity: 70 }],
+        stakesLedger: [{ stake: '신뢰', atRisk: '서윤', resolution: 'deferred' }]
       },
       { genre: 'urban-fantasy', intent: '진입', pressure: '' }
     );
-    const chapter = result.chapter;
-    const enriched = {
-      ...chapter,
-      stakesLedger: [{ stake: '신뢰', atRisk: '서윤', resolution: 'deferred' as const }],
-      rewardArc: [{ promise: '문의 비밀', payoff: '문 너머의 메모', intensity: 70 }]
-    };
-    expect(enriched.stakesLedger?.[0].stake).toBe('신뢰');
-    expect(enriched.rewardArc?.[0].intensity).toBe(70);
+    expect(result.chapter.rewardArc?.[0].payoff).toBe('문 너머의 메모');
+    expect(result.chapter.rewardArc?.[0].intensity).toBe(70);
+    expect(result.chapter.stakesLedger?.[0].resolution).toBe('deferred');
+  });
+
+  it('rewardArc/stakesLedger 가 없는 payload 도 안전하게 커밋된다', () => {
+    const empty = createEmptyProject({ title: '단편' });
+    const result = chapterFromDraftPayload(
+      empty,
+      { title: '1화', hook: 'h', outline: [], beats: [], prose: 'p', newCanonFacts: [] },
+      { genre: 'urban-fantasy', intent: '진입', pressure: '' }
+    );
+    expect(result.chapter.rewardArc ?? []).toEqual([]);
+    expect(result.chapter.stakesLedger ?? []).toEqual([]);
   });
 
   it('SeriesProject 의 8개 신설 optional 필드는 기본값이 undefined 이며 누락돼도 createEmptyProject 가 동작', () => {
