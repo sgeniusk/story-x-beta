@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-08 · Branch: `main` (**#2 라이브 테스트 — 23화 완결(전제 이행·수미상관) + 종합 리포트(6축·권고·새 제작계획)** · 일괄수정 P6·P5·relations `e4a2ea2`+ch19 라이브검증 · ★발견 continuity≠payoff(근본=쇼러너 연재편향)·권고A intent유도 실증 · 다음 = #3 헌터물 / 아크 페이오프 게이트 설계)
+> Last Updated: 2026-06-08 · Branch: `main` (**#2 23화 완결 + 종합 리포트 + 개선 2건(P6/P5/relations `e4a2ea2` · 검토 전제진척 프롬프트 `aa98137`) 모두 라이브 검증** · ★발견 continuity≠payoff(근본=쇼러너 연재편향·criteriaKeys 라이브 dead) · 다음 = #3 헌터물 / 아크 페이오프 게이트 정량화)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -15,6 +15,7 @@
 - **#2 5·6·7화 테스트 + P5 발견 (2026-06-08)** — 연속성 우수·오염 0·canonFacts 15→27·characters [레나,리아나]. **P5 — P4 한계(가족 이름 드리프트: 둘째 오빠 에드릭·노엘→레오니드→루시안). 단 7화 = 캐논화 후 고정 실증(6화 루시안 캐논화 → 7화 유지) — canonFacts→digest 메커니즘 작동.** 생성시간 누적 증가(40→95초). 로그 `docs/reviews/2026-06-07-persona-live-test/02-romancefantasy-regression.md`.
 - **#2 9~13화 테스트 + 각 5인 검토 (2026-06-08 이어서, 코드변경 0)** — 9~13화(오른편으로 돌아가는 종이·오른편의 첫 날짜·지워진 오른편·첫 오른편의 약속·비어 있는 오른편) 생성+검토 풀라이브. 연속성 ★★★★★·오염 0·canonFacts 27→52·온톨로지 46→68·characters 2→3. **실증 — (1) 캐논화 후 고정 7연속(루시안 ch7~13) (2) 검토 일관성(세계 키퍼=미설명 비용/메커니즘 ch9~13 5연속·연속성=확정강도 ch10·11·13·캐릭터=리아나 신뢰속도 ch10·13 = 각 페르소나가 원칙을 반복 적용, 랜덤 아님) (3) 캐논 고정 이름이 미스터리 논리 규정 → ch12 페이오프(첫 배신자=죽은 벨로트 레오르)·ch13 덫 회수 (4) 게이트 본문반응 5/8→5/8→6/8→4/8→6/8 + ch12 게이트↔페르소나 분기 (5) 미스터리 자가교정(ch9 우려→ch10·ch11 우려→ch12).** **P6 신규 — extractEntityName 조사 버그**(ch12 "레오르 벨로트라"). P1 이번 0/5. 9·10 `aaf6d41`·11 `8ff27bf`·12 `d37159b` 커밋. 로그 `## 9~13화` 절.
 - **#2 14~23화 테스트 + 완결 + 종합 리포트 (2026-06-08 이어서, 코드변경 0)** — ch14~21 무드리프트·검토 샘플링. **배신자 reveal(백작부인 ch19) → P5/P6 라이브 검증**(첫 character 캐논 "백작부인" 클린 승격). **★ 최대 발견 continuity ≠ payoff** — 21화 연속성 완벽하나 전제 페이오프 0, codex reveal 무한 연기. **근본 원인(피날레 확정)= 쇼러너 연재 편향**(완결에 역행). **권고 A 실증** — intent 유도 ch22·23 로 deferral 끊고 **23화 완결**(전제 이행·수미상관·연속성 무결점, L.B.=라비니아 벨로트). 연속성 감수자가 결말 캐논↔프로즈 불일치도 포착. **종합 리포트** `FINAL-REPORT-romancefantasy.md`(6축 연속성5·평균~3.8·권고1=아크 페이오프 게이트). P1 0/13·14.
+- **개선 (B) — 검토 전제진척 프롬프트 (TDD+라이브, 2026-06-08 이어서)** — continuity≠payoff 근본 원인 = `criteriaKeys`(showrunner `stakes_progression_audit`)가 라이브 검토 프롬프트에 미주입돼 dead. `buildAgentReviewPrompt`(promptBuilders.ts·storyx.mjs) "## 지시"에 "연재면 중심 질문(전제) 진척도 본다" 가산. promptBuilders.test +1, 326 tests. **라이브 검증** — 새 프롬프트로 쇼러너가 ch20류 연기를 revise("선택·대가·전술 변화 없어 추적 못 끝냄")로 전환(이전 통과→revise). 커밋 `aa98137`. #2 상태 백업 `docs/reviews/.../backups/02-work-backup-ch23.json`(로컬).
 - **일괄 수정 (A) — P6·P5·relations 완료 (TDD, 2026-06-08 이어서)** — 사용자 "일괄 수정 착수" 선택. **P6** `extractEntityName` 정규식에 명명 계사 "(이)라는" 추가("레오르 벨로트라"→"레오르 벨로트"). **P5** `extractCharacterNames`(주어 + 서술부 "이름은 X" 명명) 신설 → `promoteCharactersFromCanon` 가 서술부 인물도 승격(루시안 벨로트 등). **relations** `extractRelation`("A의 [관계] 이름은 B" 보수 파서) + `linkRelationsFromCanon` 신설 → commitChapter 가 관계 엣지 생성(리아나→루시안 "둘째 오빠"). storyOntology.test +1·storyEngine.test +2, **325 tests**·tsc·build 녹색. (#2 localStorage 의 "레오르 벨로트라"는 재현 보존 위해 안 건드림 — 수정은 향후 커밋부터 적용.)
 - **다음** — 남은 일괄 수정(P1 빈응답 가드·floating 2c·2d)은 잔여. #2 14화+ 완권·수정사이클·6축 → 종합 리포트 → 새 제작 계획.
 

@@ -39,11 +39,14 @@ intent 메모로 페이오프를 직접 유도하자 **2회차 만에 codex defe
 - **결론** — 아크 페이오프 게이트(권고 1)는 **수동 우회로 효과가 실증됐다.** 자동화하면 codex 의 무한 연기를 제품이 끊을 수 있다.
 
 ## 개선 — 완료 + 검증
-- **P6** `extractEntityName` 명명 계사 "(이)라는" → "레오르 벨로트라"→"레오르 벨로트". **P5** `extractCharacterNames` 서술부 명명 추출 → 루시안 등 승격. **relations** `extractRelation`+`linkRelationsFromCanon` → "A의 [관계] 이름은 B" 엣지. TDD(RED→GREEN), 325 tests, 커밋 `e4a2ea2`.
-- **라이브 검증** — ch19 character 캐논 등장 시 "백작부인" 클린 승격(조사버그 0·canonAnchors 보존) 실증.
+- **P6** `extractEntityName` 명명 계사 "(이)라는" → "레오르 벨로트라"→"레오르 벨로트". **P5** `extractCharacterNames` 서술부 명명 추출 → 루시안 등 승격. **relations** `extractRelation`+`linkRelationsFromCanon` → "A의 [관계] 이름은 B" 엣지. TDD, 커밋 `e4a2ea2`.
+  - **라이브 검증** — ch19 character 캐논 등장 시 "백작부인" 클린 승격(조사버그 0·canonAnchors 보존) 실증.
+- **★ 검토 프롬프트 전제 진척 지시 (continuity≠payoff 직접 보정)** — 근본 원인 발견: `criteriaKeys`(showrunner `stakes_progression_audit` 등)가 라이브 검토 프롬프트(`buildAgentReviewPrompt`)에 **미주입돼 dead**. `promptBuilders.ts` + `storyx.mjs` 양쪽 "## 지시"에 "연재 장편이면 중심 질문(전제) 진척도 본다 — 발견만 쌓고 약속이 제자리면 지적한다" 가산. TDD(promptBuilders.test +1), 326 tests, 커밋 `aa98137`.
+  - **라이브 검증(before/after)** — 새 프롬프트로 쇼러너가 ch20류 연기 텍스트를 **revise** 판정("리아나의 선택·대가·전술적 위치 변화가 없어 추적 국면을 끝내지 못함")·issues 3건. 이전 라이브 ch19~21에선 같은 연기를 관찰/통과시켰음 → **연재 편향 보정 실증.**
 
 ## 권고 (우선순위)
 1. **[높음] 아크 페이오프 게이트** — audiencePromise/dramaticQuestion 의 진척을 회차마다 측정·강제. 예: N회차 이상 핵심 질문이 "발견"에만 머물고 "행동/대가/전환"이 없으면 경고. (continuity≠payoff 갭의 직접 처방. rank6 시장증명과 직결.)
+   - **1차 착수 완료(`aa98137`)** — 검토 프롬프트에 전제 진척 점검 지시 가산 → 쇼러너가 연기를 revise 로 잡음(라이브 검증). 다음 — 결정론 게이트(premise-progress 스테이지)로 정량화 + criteriaKeys 를 라이브 프롬프트에 정식 배선(현재 dead).
 2. **[중] codex 과확정 억제** — 생성 프롬프트에 "미해결 미스터리는 추론 톤 유지(확정 금지)" 지시. ch15 5인 수렴 포착·ch19 자가회피 사례로 보아 효과 기대. (고위험 — before/after 품질 비교 필요.)
 3. **[중] 캐릭터 캐논 밀도** — codex 가 `owner:'character'` 캐논을 불규칙 산출(ch14~18 5연속 0개) → 관계 그래프 희소. 생성 프롬프트에 "새 인물 등장 시 character 캐논 명시" 유도. (plot 캐논 스캔 자동승격은 오탐 위험으로 비권장.)
 4. **[중] hook 게이트 생성 반영** — hook_first_300/last_200 빈번 실패 → 생성 시 후크 강화 지시.

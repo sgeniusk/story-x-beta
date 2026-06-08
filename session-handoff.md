@@ -20,7 +20,8 @@
 
 ### 다음 (새 제작계획)
 - **A. #2 완결 ✅** — 이번 세션 완료(intent 유도).
-- **B. #3 헌터물** 전환(다수 캐릭터 일관성·강태준/백도현) — **1순위.** **C. 아크 페이오프 게이트 설계**(권고1·1.0 rank6 — storyHarness premise-progress 스테이지 + 쇼러너 검토에 '전제 완성' 키 추가로 연재 편향 보정).
+- **C. 아크 페이오프 게이트 — 1차 착수 ✅ (`aa98137`)** — 검토 프롬프트 전제진척 지시 가산 → 쇼러너가 연기를 revise 로 잡음(라이브 검증). **남은 것** — (1) criteriaKeys 를 라이브 `buildAgentReviewPrompt` 에 정식 배선(현재 agentRunEngine/aiCliHarness 만 사용, review 경로 dead) (2) 결정론 premise-progress 스테이지로 정량화.
+- **B. #3 헌터물** 전환(다수 캐릭터 일관성·강태준/백도현) — **다음 세션 1순위.** #2 상태는 `docs/reviews/.../backups/02-work-backup-ch23.json` 백업됨(로컬, import 로 복원 가능).
 
 ### 손대지 말 것
 - P6·P5·relations 수정·테스트. #2 localStorage(**23화 완결**·1~22 locked·characters [레나,리아나,레오르 벨로트라,백작부인]·canonFacts 91). "레오르 벨로트라"(P6 이전 데이터) 보존.
