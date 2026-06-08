@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-08 · Branch: `main` (**#2 9~13화 테스트 + 5인검토 — 캐논화후 고정 7연속·검토 일관성 5연속·게이트↔페르소나 분기·미스터리 페이오프 · P6 신규 · 9·10 `aaf6d41`·11 `8ff27bf`·12 `d37159b`** · #2 13화까지)
+> Last Updated: 2026-06-08 · Branch: `main` (**일괄 수정 P6·P5·relations 완료(TDD, 325 tests) — 코드 변경 · 커밋 대기** · 직전 #2 9~13화 테스트 9·10 `aaf6d41`·11 `8ff27bf`·12 `d37159b`·13 `bad83c3` · #2 13화까지)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -14,7 +14,8 @@
 - **발견 수정 (A) — P4 인물 캐논화 완료 (TDD+라이브)** — extractEntityName 개선(공백 이름·조사 확장·generic/조직 가드, export)·commitChapter 가 owner=character 캐논을 `characters` 로 승격. storyOntology.test +5·storyEngine.test +3, 322 tests. 라이브 — #2 4화 생성 시 characters [] → ["레나 위클리프"]·데이터 인물 1·canonFacts 11→15. 갭B 시드도 동반 개선.
 - **#2 5·6·7화 테스트 + P5 발견 (2026-06-08)** — 연속성 우수·오염 0·canonFacts 15→27·characters [레나,리아나]. **P5 — P4 한계(가족 이름 드리프트: 둘째 오빠 에드릭·노엘→레오니드→루시안). 단 7화 = 캐논화 후 고정 실증(6화 루시안 캐논화 → 7화 유지) — canonFacts→digest 메커니즘 작동.** 생성시간 누적 증가(40→95초). 로그 `docs/reviews/2026-06-07-persona-live-test/02-romancefantasy-regression.md`.
 - **#2 9~13화 테스트 + 각 5인 검토 (2026-06-08 이어서, 코드변경 0)** — 9~13화(오른편으로 돌아가는 종이·오른편의 첫 날짜·지워진 오른편·첫 오른편의 약속·비어 있는 오른편) 생성+검토 풀라이브. 연속성 ★★★★★·오염 0·canonFacts 27→52·온톨로지 46→68·characters 2→3. **실증 — (1) 캐논화 후 고정 7연속(루시안 ch7~13) (2) 검토 일관성(세계 키퍼=미설명 비용/메커니즘 ch9~13 5연속·연속성=확정강도 ch10·11·13·캐릭터=리아나 신뢰속도 ch10·13 = 각 페르소나가 원칙을 반복 적용, 랜덤 아님) (3) 캐논 고정 이름이 미스터리 논리 규정 → ch12 페이오프(첫 배신자=죽은 벨로트 레오르)·ch13 덫 회수 (4) 게이트 본문반응 5/8→5/8→6/8→4/8→6/8 + ch12 게이트↔페르소나 분기 (5) 미스터리 자가교정(ch9 우려→ch10·ch11 우려→ch12).** **P6 신규 — extractEntityName 조사 버그**(ch12 "레오르 벨로트라"). P1 이번 0/5. 9·10 `aaf6d41`·11 `8ff27bf`·12 `d37159b` 커밋. 로그 `## 9~13화` 절.
-- **다음** — (사용자 방침) P1·관계·P5·P6·floating 2c·2d 는 **실증 테스트 완료 후 일괄 수정** → #2 14화+ 완권·수정사이클·6축 → 종합 리포트 → 새 제작 계획.
+- **일괄 수정 (A) — P6·P5·relations 완료 (TDD, 2026-06-08 이어서)** — 사용자 "일괄 수정 착수" 선택. **P6** `extractEntityName` 정규식에 명명 계사 "(이)라는" 추가("레오르 벨로트라"→"레오르 벨로트"). **P5** `extractCharacterNames`(주어 + 서술부 "이름은 X" 명명) 신설 → `promoteCharactersFromCanon` 가 서술부 인물도 승격(루시안 벨로트 등). **relations** `extractRelation`("A의 [관계] 이름은 B" 보수 파서) + `linkRelationsFromCanon` 신설 → commitChapter 가 관계 엣지 생성(리아나→루시안 "둘째 오빠"). storyOntology.test +1·storyEngine.test +2, **325 tests**·tsc·build 녹색. (#2 localStorage 의 "레오르 벨로트라"는 재현 보존 위해 안 건드림 — 수정은 향후 커밋부터 적용.)
+- **다음** — 남은 일괄 수정(P1 빈응답 가드·floating 2c·2d)은 잔여. #2 14화+ 완권·수정사이클·6축 → 종합 리포트 → 새 제작 계획.
 
 ## 병행 트랙 — 편집기 재설계: 방향 C "떠 있는 작업실" (실데이터 배선 완료)
 
@@ -69,14 +70,14 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 두 갈래 중 택1. **(A) 플로팅 Phase 2 스왑** — floating 을 편집 모드 기본으로(StoryXDesk 3컬럼 제거 또는 토글) + `editorFocusLayout.test.ts` 새 구조로 갱신 + 라이브 타이핑(contentEditable)·의도 메모 쓰기-백. 위험 — 기존 편집기 테스트 다수 갱신, 시각 회귀. **(B) rank5 Tier2 Pass E** — `StoryXDesk.tsx` 잔여 ~11개(Dialogs·Publishing·Status) 추출 후 Tier3 훅 분리(useProject·useDraftEditor·useReviewSession·useUIState — 최고위험, code-reviewer 2차 필수). 방식은 Codex 위임 + Claude 검증. **Codex 패킷 필수 조항 — 우회 주석 금지·상태 문서 수정 금지·이동 심볼 단언은 정의 파일로 재배치.**
 
-## 최근 검증 (2026-06-08 · #2 9~13화 테스트 — 코드변경 0)
+## 최근 검증 (2026-06-08 · 일괄 수정 P6·P5·relations — 코드 변경)
 
 ```
-init.sh            → tsc · vitest(43 files) · build 전체 통과 (세션 중 4회. 9~13화는 코드 변경 없음)
-#2 9~13화 라이브   → 연속성 ★★★★★·오염 0·canonFacts 32→52·온톨로지 46→68·characters 2→3. 캐논화후 고정 7연속(루시안 ch7~13). 5인검토 각 차단0. 생성 39~54초(단조증가 아님). 콘솔 0
-실증                → 캐논화후고정7연속 · 검토일관성(세계키퍼 ch9~13 5연속·연속성 확정강도·캐릭터 신뢰속도 반복) · 캐논이름이 미스터리논리 규정→ch12 페이오프·ch13 덫회수 · 게이트본문반응 5→5→6→4→6/8 + 게이트↔페르소나 분기 · P1 0/5
-P6 신규            → extractEntityName 조사 버그 — ch12 인물승격이 "레오르 벨로트라"(조사 "라" 오염). 일괄수정 묶음 추가
-#2 5~8화(이전)     → canonFacts 15→32·7·8화 캐논화후 고정 견고
+init.sh            → tsc · vitest(43 files, 325 tests) · build 전체 통과
+P6 수정            → extractEntityName "(이)라는" 처리 — "레오르 벨로트라"→"레오르 벨로트" (storyOntology.test +1)
+P5 수정            → extractCharacterNames 서술부 명명 추출 — "리아나의 둘째 오빠 이름은 루시안 벨로트" → 루시안 승격 (storyEngine.test +1)
+relations 수정     → extractRelation+linkRelationsFromCanon — 리아나→루시안 "둘째 오빠" 엣지 생성 (storyEngine.test +1)
+#2 9~13화(직전)    → 연속성 ★★★★★·오염 0·canonFacts 32→52·온톨로지 46→68. 캐논화후 고정 7연속. 게이트본문반응 5→5→6→4→6/8. P1 0/5
 ```
 
 ## 완료 마일스톤

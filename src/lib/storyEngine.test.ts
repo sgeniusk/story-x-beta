@@ -772,4 +772,24 @@ describe('commitChapter 인물 캐논화 (P4)', () => {
     const lena = updated.characters.find((character) => character.name === '레나 위클리프');
     expect(lena?.canonAnchors).toContain('레나 위클리프는 하급 회계 보좌다');
   });
+
+  it('서술부 명명("…이름은 X")의 인물도 승격한다 (P5)', () => {
+    // 회귀 — "리아나의 둘째 오빠 이름은 루시안 벨로트"에서 주어 리아나만 잡고 서술부 루시안을 놓치던 버그.
+    const updated = commitChapter(createEmptyProject({ title: '테스트' }), minimalChapter(6, [
+      { id: 'c1', episode: 6, owner: 'character', statement: '리아나의 둘째 오빠 이름은 루시안 벨로트이며, 그는 가문의 채무를 알고 있었다' }
+    ]));
+    const names = updated.characters.map((character) => character.name);
+    expect(names).toContain('루시안 벨로트');
+  });
+
+  it('"A의 [관계] 이름은 B" 캐논에서 관계 엣지를 만든다 (relations)', () => {
+    // 회귀 — 인물은 승격돼도 relations 가 늘 빈 배열이던 갭. 관계어("둘째 오빠")로 엣지를 만든다.
+    const updated = commitChapter(createEmptyProject({ title: '테스트' }), minimalChapter(6, [
+      { id: 'c1', episode: 6, owner: 'character', statement: '리아나의 둘째 오빠 이름은 루시안 벨로트이며, 그는 가문의 채무를 알고 있었다' }
+    ]));
+    const riana = updated.characters.find((character) => character.name === '리아나');
+    const lucian = updated.characters.find((character) => character.name === '루시안 벨로트');
+    expect(lucian).toBeDefined();
+    expect(riana?.relations.some((relation) => relation.targetId === lucian?.id && relation.label === '둘째 오빠')).toBe(true);
+  });
 });

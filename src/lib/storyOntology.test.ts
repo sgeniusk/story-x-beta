@@ -148,4 +148,9 @@ describe('extractEntityName — 인물 이름 추출 (P4)', () => {
     expect(extractEntityName('은여우 상단은 동부 상단이다')).toBeNull();
     expect(extractEntityName('벨로트 가문은 3년 뒤 멸문한다')).toBeNull();
   });
+  it('명명 계사 "(이)라는"을 이름에 포함하지 않는다 (P6)', () => {
+    // 회귀 — ch12 인물 승격이 "레오르 벨로트라"(조사 "라" 오염)로 새던 버그.
+    expect(extractEntityName('레오르 벨로트라는 벨로트 성을 가진 인물이 장례 명부에 기록되어 있다')).toBe('레오르 벨로트');
+    expect(extractEntityName('강태준이라는 사람이 시험장에 나타났다')).toBe('강태준');
+  });
 });

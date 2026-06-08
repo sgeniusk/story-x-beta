@@ -1,7 +1,7 @@
 import { createDefaultLocalizationPolicy, type LocalizationPolicy } from './localization';
 import { planAgentRuns } from './agentRunEngine';
 // P4 — 회차 캐논(owner=character)에서 인물 이름을 보수적으로 추출(공백 이름·조사·조직 가드)해 characters 로 승격.
-import { extractEntityName } from './storyOntology';
+import { extractCharacterNames, extractRelation } from './storyOntology';
 // M4 청크 F — AgentRun.agentId 를 ValidationAgentId 로 통합. 신설 12 에이전트도 AgentRun 의 source 가 될 수 있게.
 import type { ValidationAgentId } from './agentReviewProcess';
 // M4 청크 H — validateContinuity 가 continuityContract.classifyCanonChange 로 의미적 충돌 감지를 보강.
@@ -1575,31 +1575,56 @@ export function commitChapter(project: SeriesProject, chapter: Chapter): SeriesP
     currentEpisode: chapter.episode,
     canonFacts: [...project.canonFacts, ...chapter.newCanonFacts],
     chapters: [...project.chapters, chapter],
-    // P4 — owner=character 캐논에 처음 등장한 인물을 characters 로 승격(드리프트·관계 그래프 토대).
-    characters: promoteCharactersFromCanon(project.characters, chapter.newCanonFacts)
+    // P4·P5 — owner=character 캐논의 인물을 characters 로 승격(드리프트 방지), 그 뒤 관계 엣지를 연결한다.
+    characters: linkRelationsFromCanon(
+      promoteCharactersFromCanon(project.characters, chapter.newCanonFacts),
+      chapter.newCanonFacts
+    )
   };
 }
 
-// P4 — 회차의 owner=character 캐논에서 새 인물을 characters 로 승격한다.
-// 발명하지 않는다 — 캐논에 등장한 이름만, 중복·generic·조직은 extractEntityName 가드로 제외한다.
+// relations — 승격이 끝난 인물 목록에 owner=character 캐논의 "A의 [관계] 이름은 B" 엣지를 더한다.
+// 양쪽 인물이 모두 승격돼 있을 때만, 중복 라벨은 건너뛴다. 발명 없음(extractRelation 가 보수적으로 거른다).
+function linkRelationsFromCanon(characters: CharacterProfile[], newFacts: CanonFact[]): CharacterProfile[] {
+  let result = characters;
+  for (const fact of newFacts) {
+    if (fact.owner !== 'character') continue;
+    const rel = extractRelation(fact.statement);
+    if (!rel) continue;
+    const subjectIndex = result.findIndex((character) => character.name === rel.subject);
+    const target = result.find((character) => character.name === rel.target);
+    if (subjectIndex < 0 || !target) continue;
+    const subject = result[subjectIndex];
+    if (subject.relations.some((relation) => relation.targetId === target.id && relation.label === rel.label)) continue;
+    result = result.map((character, index) =>
+      index === subjectIndex
+        ? { ...character, relations: [...character.relations, { targetId: target.id, label: rel.label }] }
+        : character
+    );
+  }
+  return result;
+}
+
+// P4·P5 — 회차의 owner=character 캐논에서 새 인물을 characters 로 승격한다.
+// 발명하지 않는다 — 캐논에 등장한 이름만(주어 + 서술부 명명), 중복·generic·조직은 extractCharacterNames 가드로 제외한다.
 function promoteCharactersFromCanon(existing: CharacterProfile[], newFacts: CanonFact[]): CharacterProfile[] {
   const characters = [...existing];
   for (const fact of newFacts) {
     if (fact.owner !== 'character') continue;
-    const name = extractEntityName(fact.statement);
-    if (!name) continue;
-    if (characters.some((character) => character.name === name)) continue;
-    characters.push({
-      id: `char-${fact.id}`,
-      name,
-      role: '',
-      desire: '',
-      wound: '',
-      currentState: `${fact.episode}화 등장`,
-      voiceRules: [],
-      canonAnchors: [fact.statement],
-      forbiddenContradictions: [],
-      relations: []
+    extractCharacterNames(fact.statement).forEach((name, index) => {
+      if (characters.some((character) => character.name === name)) return;
+      characters.push({
+        id: index === 0 ? `char-${fact.id}` : `char-${fact.id}-${index}`,
+        name,
+        role: '',
+        desire: '',
+        wound: '',
+        currentState: `${fact.episode}화 등장`,
+        voiceRules: [],
+        canonAnchors: [fact.statement],
+        forbiddenContradictions: [],
+        relations: []
+      });
     });
   }
   return characters;

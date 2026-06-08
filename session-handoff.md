@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-06-08 (이어서 3) — 일괄 수정 P6·P5·relations (TDD, 코드 변경)
+
+> 5화 테스트 후 사용자 "일괄 수정 착수"(옵션 2) 선택. 테스트에서 나온 추출 버그를 TDD로 수정. **코드 변경 — init.sh 325 tests·tsc·build 녹색.**
+
+### 한 일 (모두 RED→GREEN)
+- **P6 — extractEntityName 명명 계사** (`storyOntology.ts`) — 정규식 조사 목록에 "(이)라는"을 단일 조사보다 먼저 추가. "레오르 벨로트라는…" → "레오르 벨로트"(이전 "레오르 벨로트라"). `isPlausiblePersonName` 가드 헬퍼로 분리. storyOntology.test +1.
+- **P5 — 서술부 인물 추출** (`storyOntology.ts`+`storyEngine.ts`) — `extractCharacterNames`(주어 + "이름은 X" 서술부 명명) 신설, `extractPredicateName` 내부 헬퍼. `promoteCharactersFromCanon` 가 두 이름 모두 승격(다중 이름 id `char-{factId}-{idx}`). "리아나의 둘째 오빠 이름은 루시안 벨로트" → 루시안 승격. storyEngine.test +1.
+- **relations** (`storyOntology.ts`+`storyEngine.ts`) — `RELATION_TERMS`+`extractRelation`("A의 [관계] 이름은 B" 보수 파서, 관계어 없으면 null) 신설, `linkRelationsFromCanon` 신설 → commitChapter 가 승격 후 관계 엣지 연결. 리아나→루시안 "둘째 오빠" 엣지. 양쪽 승격+중복 라벨 가드. storyEngine.test +1.
+
+### 검증
+- `bash init.sh` — tsc 0 · **325 tests**(+3) · build 녹색. 단위 테스트가 #2 실제 캐논 문자열("레오르 벨로트라는…"·"리아나의 둘째 오빠 이름은 루시안 벨로트")로 검증.
+- 라이브 실증(#2 14화)은 진행/예정 — 본 노트 갱신 시 결과 반영.
+
+### 다음
+- 라이브 실증 — #2 14화 생성 시 새 인물·관계가 정상 추출되는지(레오르 클린 승격·관계 그래프). 또는 테스트 계속(14화+).
+- 남은 일괄 수정 — P1 빈응답 가드 · floating 2c·2d.
+
+### 손대지 말 것
+- P6·P5·relations 수정(extractEntityName 계사·extractCharacterNames·extractRelation·linkRelationsFromCanon)·관련 테스트. 약화 금지.
+- #2 작품 localStorage(13화까지·1~12 locked·characters [레나,리아나,**레오르 벨로트라**(P6 이전 데이터 — 재현 보존, 향후 커밋부터 클린)]·canonFacts 52). 본문·기존 데이터 수정 안 함.
+
+### 커밋
+- 코드(storyOntology.ts·storyEngine.ts) + 테스트 2 + docs 한 묶음. 커밋 예정.
+
+---
+
 ## 2026-06-08 (이어서 2) — #2 9~13화 테스트 + 각 5인 검토 / 다종 실증 + P6 신규
 
 > 사용자 "테스트 계속" → "커밋+11화 계속" → "계속"(×3). #2 9~13화(5화) 라이브 생성 + 각 5인 검토 풀라이브. 방침대로 발견은 기록만. **코드 변경 0(라이브 테스트만).** 로그 = `docs/reviews/2026-06-07-persona-live-test/02-romancefantasy-regression.md` 의 `## 9~13화` 절. (세션 중 dev 서버 2회 사망→재시작, #2 localStorage 무손실. **dev 재시작은 `nohup npm run dev > /tmp/storyx-dev.log 2>&1 < /dev/null & disown` — macOS엔 setsid 없음.**)

@@ -112,17 +112,57 @@ const GENERIC_ENTITY_NAMES = new Set([
 ]);
 // 조직·가문·장소 접미사로 끝나면 인물이 아니다(은여우 상단·벨로트 가문 등). '성'·'문'은 인물명 오탐이 많아 제외.
 const NON_PERSON_SUFFIXES = ['상단', '가문', '저택', '왕국', '제국', '기사단', '상회', '길드', '교단', '학파', '마을', '도시', '대륙'];
+// 관계어 — "A의 [관계] 이름은 B" 에서 엣지 라벨로 인정할 친족·사회 관계 핵심어.
+const RELATION_TERMS = ['오빠', '형', '누나', '언니', '동생', '남동생', '여동생', '아버지', '어머니', '아들', '딸', '남편', '아내', '형제', '자매', '약혼자', '약혼녀', '삼촌', '이모', '고모', '사촌', '할아버지', '할머니', '스승', '제자', '친구', '연인'];
+
+// 추출한 토큰이 발명 아닌 실제 인물 이름인지 보수적으로 판정한다(길이·대명사·조직 접미사 가드).
+function isPlausiblePersonName(name: string): boolean {
+  if (name.length < 2 || name.length > 12) return false;
+  if (GENERIC_ENTITY_NAMES.has(name)) return false;
+  if (NON_PERSON_SUFFIXES.some((suffix) => name.endsWith(suffix))) return false;
+  return true;
+}
 
 // 캐논 문장에서 주체 인물 이름을 추출한다. 조사(은/는/이/가/을/를/의/에게/와/과) 앞의
 // 명사구(공백 포함, 성+이름 허용)를 첫 주체로 본다. 인물이 아니면 null — 발명 없이 보수적으로.
+// P6 — 명명 계사 "(이)라는"을 조사보다 먼저 매칭해 이름에 "라"가 새지 않게 한다("레오르 벨로트라는" → "레오르 벨로트").
 export function extractEntityName(statement: string): string | null {
-  const match = statement.trim().match(/^([가-힣A-Za-z][가-힣A-Za-z\s]*?)(?:은|는|이|가|을|를|의|에게|와|과)\s/);
+  const match = statement.trim().match(/^([가-힣A-Za-z][가-힣A-Za-z\s]*?)(?:이라는|라는|은|는|이|가|을|를|의|에게|와|과)\s/);
   if (!match || !match[1]) return null;
   const name = match[1].trim();
-  if (name.length < 2 || name.length > 12) return null;
-  if (GENERIC_ENTITY_NAMES.has(name)) return null;
-  if (NON_PERSON_SUFFIXES.some((suffix) => name.endsWith(suffix))) return null;
-  return name;
+  return isPlausiblePersonName(name) ? name : null;
+}
+
+// P5 — 서술부 명명("…이름은 X(이며/이다/…)")의 인물 이름을 추출한다. 주어만 잡던 한계 보강.
+function extractPredicateName(statement: string): string | null {
+  const match = statement.match(/이름은\s+([가-힣A-Za-z][가-힣A-Za-z\s]*?)(?:이며|이다|이고|입니다|,|\.|$)/);
+  if (!match || !match[1]) return null;
+  const name = match[1].trim();
+  return isPlausiblePersonName(name) ? name : null;
+}
+
+// P5 — 캐논 문장에 등장하는 모든 인물 이름(주어 + 서술부 명명)을 발명 없이 추출한다.
+// "리아나의 둘째 오빠 이름은 루시안 벨로트…" → ["리아나", "루시안 벨로트"].
+export function extractCharacterNames(statement: string): string[] {
+  const names: string[] = [];
+  const subject = extractEntityName(statement);
+  if (subject) names.push(subject);
+  const predicate = extractPredicateName(statement);
+  if (predicate && !names.includes(predicate)) names.push(predicate);
+  return names;
+}
+
+// relations — "A의 [관계구] 이름은 B(이며/…)" 패턴만 보수적으로 인식해 관계 엣지를 추출한다.
+// 관계어가 없거나 인물이 아니면 null — 발명 없이, 명시적 친족·사회 관계 캐논만 엣지로 올린다.
+export function extractRelation(statement: string): { subject: string; label: string; target: string } | null {
+  const match = statement.match(/^([가-힣A-Za-z][가-힣A-Za-z\s]*?)의\s+([가-힣\s]*?)\s*이름은\s+([가-힣A-Za-z][가-힣A-Za-z\s]*?)(?:이며|이다|이고|입니다|,|\.|$)/);
+  if (!match) return null;
+  const subject = match[1].trim();
+  const label = match[2].trim();
+  const target = match[3].trim();
+  if (!isPlausiblePersonName(subject) || !isPlausiblePersonName(target) || subject === target) return null;
+  if (!RELATION_TERMS.some((term) => label.includes(term))) return null;
+  return { subject, label, target };
 }
 
 // 입력 텍스트만으로 첫 컷 그래프를 만든다. 빈 영역은 빈 채로 둔다 (silent fix 금지).
