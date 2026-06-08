@@ -68,6 +68,12 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 **rank3·rank4 로 해결** — 품질 게이트가 본문을 실제로 읽고(차별점 실재화), continuity 가 부정어 없는 충돌(생사·숫자)도 잡으며 3계층(hard/living/soft)이 실제로 작동한다. 남은 작업은 rank5~7 (StoryXDesk 분리·시장검증·UI 정돈).
 
+## 병행 트랙 — 10인 매체별 브레드스 (`in_progress` · 2026-06-08)
+사용자 "10인 완주" 선택. #2(소설 로판) 완권 깊이 검증 후, 매체별 브레드스로 전환.
+- **#3 헌터 회귀물 (소설·다수 캐릭터) — 1화 (2026-06-08)** — 로그 `docs/reviews/2026-06-07-persona-live-test/03-hunter-multichar.md`. **★ P5/P6 수정 다캐릭터 스케일 실증 — 1화에 4인(한지욱·서가을·마도협·백도현) 클린 승격.** 차별점 새 작품/다캐릭터에서도 일관(세계키퍼 비용·캐릭터 4인 동기·연속성 미회수장치). 하니스 7/8·95 첫 화부터. **발견 — 온보딩 첫 회차 build codex transient 폴백("Reading additional input from stdin" 프로즈 누수) → CLI 격리로 transient 확인·재생성 정상. 개선 후보(폴백 raw에러 가드+재시도).** #2는 `backups/02-work-backup-ch23.json` 백업.
+- **미진행 매체** — 만화·에세이·오디오·학술 4종 (각 온보딩+포커스 테스트 필요). 소설 잔여 페르소나도.
+- **방식 결정 대기** — UI 온보딩 마찰(리셋·codex 간헐 폴백)로 매체별 풀온보딩 비용 큼. 사용자 방향(4매체 풀 진행 vs 집중 vs 합본) 정하는 중.
+
 ## 다음 한 단계
 
 두 갈래 중 택1. **(A) 플로팅 Phase 2 스왑** — floating 을 편집 모드 기본으로(StoryXDesk 3컬럼 제거 또는 토글) + `editorFocusLayout.test.ts` 새 구조로 갱신 + 라이브 타이핑(contentEditable)·의도 메모 쓰기-백. 위험 — 기존 편집기 테스트 다수 갱신, 시각 회귀. **(B) rank5 Tier2 Pass E** — `StoryXDesk.tsx` 잔여 ~11개(Dialogs·Publishing·Status) 추출 후 Tier3 훅 분리(useProject·useDraftEditor·useReviewSession·useUIState — 최고위험, code-reviewer 2차 필수). 방식은 Codex 위임 + Claude 검증. **Codex 패킷 필수 조항 — 우회 주석 금지·상태 문서 수정 금지·이동 심볼 단언은 정의 파일로 재배치.**

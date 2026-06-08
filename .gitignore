@@ -12,3 +12,8 @@ memory-bank/**/private/
 .vercel
 .env*.local
 story x design/
+
+# persona-test local artifacts (large backups, scratch screenshots)
+docs/reviews/2026-06-07-persona-live-test/backups/
+/onboarding-*.jpeg
+/storyx-ch*.png
