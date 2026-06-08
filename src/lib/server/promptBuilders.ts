@@ -359,6 +359,8 @@ export function buildAgentReviewPrompt(input: AgentReviewPromptInput): string {
     '- 잘된 점(strengths)과 잘못된 점(issues)을 각각 짧고 또렷한 항목으로 나눠 적습니다. 한 항목은 한 문장으로 씁니다.',
     '- 한국어로 쓰고, 번역투와 과한 AI식 설명을 피합니다.',
     '- 새 사실은 canon으로 확정하지 말고 memoryCandidates에만 둡니다.',
+    // continuity≠payoff 보정 — 검토가 연속성만 보고 전제 정체를 묵인하지 않도록 강제한다.
+    '- 연재 장편이라면, 이 회차가 작품의 중심 질문(전제·독자 약속)을 진척시키는지도 본다 — 발견·추론만 쌓고 같은 질문이 여러 회차 제자리면, 인물의 행동·대가·선택 변화로 약속에 다가가지 못한 점을 지적한다.',
     '',
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',
