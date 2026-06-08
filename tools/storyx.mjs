@@ -800,6 +800,8 @@ function normalizeDraftOutput(rawOutput, options) {
     beats: normalizeDraftBeats(parsed?.beats),
     prose: readString(parsed?.prose) || summarizeRawProviderOutput(rawOutput, options.title || 'Story X draft'),
     newCanonFacts: normalizeDraftCanonFacts(parsed?.newCanonFacts),
+    rewardArc: normalizeDraftRewardArc(parsed?.rewardArc),
+    stakesLedger: normalizeDraftStakes(parsed?.stakesLedger),
     approvalRequiredBeforeSync: true
   };
 }
@@ -848,6 +850,38 @@ function normalizeDraftCanonFacts(value) {
       statement: readString(fact.statement) || readString(fact.note)
     }))
     .filter((fact) => fact.statement);
+}
+
+// 아크 페이오프 1단계 — provider 응답의 rewardArc/stakesLedger 를 정규화한다(normalizeDraftBeats 패턴).
+function normalizeDraftRewardArc(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(isRecord)
+    .map((e) => {
+      const out = {
+        promise: readString(e.promise),
+        payoff: readString(e.payoff)
+      };
+      if (typeof e.intensity === 'number' && Number.isFinite(e.intensity)) {
+        out.intensity = Math.max(0, Math.min(100, Math.round(e.intensity)));
+      }
+      return out;
+    })
+    .filter((e) => e.promise);
+}
+
+function normalizeDraftStakes(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(isRecord)
+    .map((e) => {
+      const out = { stake: readString(e.stake), atRisk: readString(e.atRisk) };
+      if (e.resolution === 'lost' || e.resolution === 'kept' || e.resolution === 'deferred') {
+        out.resolution = e.resolution;
+      }
+      return out;
+    })
+    .filter((e) => e.stake);
 }
 
 function writeDraftFile(outDir, provider, payload) {
