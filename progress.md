@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-08 · Branch: `main` (**일괄 수정 P6·P5·relations 완료(TDD, 325 tests) — 코드 변경 · 커밋 대기** · 직전 #2 9~13화 테스트 9·10 `aaf6d41`·11 `8ff27bf`·12 `d37159b`·13 `bad83c3` · #2 13화까지)
+> Last Updated: 2026-06-08 · Branch: `main` (**일괄 수정 P6·P5·relations 완료(TDD, 325 tests) `e4a2ea2` + #2 14화 라이브 스모크** · 직전 #2 9~13화 테스트 `aaf6d41`~`bad83c3` · #2 14화까지)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)

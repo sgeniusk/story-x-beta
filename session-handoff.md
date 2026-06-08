@@ -15,18 +15,18 @@
 
 ### 검증
 - `bash init.sh` — tsc 0 · **325 tests**(+3) · build 녹색. 단위 테스트가 #2 실제 캐논 문자열("레오르 벨로트라는…"·"리아나의 둘째 오빠 이름은 루시안 벨로트")로 검증.
-- 라이브 실증(#2 14화)은 진행/예정 — 본 노트 갱신 시 결과 반영.
+- **라이브 스모크(#2 14화 "오른편 보관함" 생성)** — 새 코드로 생성·커밋 정상(canonFacts 52→55·콘솔 0). **단 ch14 새 캐논 3개가 전부 world/plot owner(character 캐논 0개)라 승격·관계 경로 미트리거 — characters·relations 불변.** 정확성은 단위 테스트로 증명됨. **인사이트 — codex 의 `owner:'character'` 캐논 산출이 불규칙(이번 0개)해 인물 승격이 드문드문(14화에 characters 2→3) = 루시안 캐논화가 늦은 구조적 이유.**
 
 ### 다음
-- 라이브 실증 — #2 14화 생성 시 새 인물·관계가 정상 추출되는지(레오르 클린 승격·관계 그래프). 또는 테스트 계속(14화+).
+- 라이브 효과 재확인 — 다음에 `owner:'character'` 캐논(특히 "A의 [관계] 이름은 B")이 나오는 회차에서 클린 승격·관계 엣지 확인. (또는 검토에서 character 캐논 비중을 높이는 별도 개선 — 잔여 검토.)
 - 남은 일괄 수정 — P1 빈응답 가드 · floating 2c·2d.
 
 ### 손대지 말 것
 - P6·P5·relations 수정(extractEntityName 계사·extractCharacterNames·extractRelation·linkRelationsFromCanon)·관련 테스트. 약화 금지.
-- #2 작품 localStorage(13화까지·1~12 locked·characters [레나,리아나,**레오르 벨로트라**(P6 이전 데이터 — 재현 보존, 향후 커밋부터 클린)]·canonFacts 52). 본문·기존 데이터 수정 안 함.
+- #2 작품 localStorage(이제 **14화까지·1~13 locked·14화 미잠금·미검토**·characters [레나,리아나,**레오르 벨로트라**(P6 이전 데이터 — 재현 보존, 향후 커밋부터 클린)]·canonFacts 55). 본문·기존 데이터 수정 안 함.
 
 ### 커밋
-- 코드(storyOntology.ts·storyEngine.ts) + 테스트 2 + docs 한 묶음. 커밋 예정.
+- 코드(storyOntology.ts·storyEngine.ts) + 테스트 2 + docs = `e4a2ea2`. 이후 라이브 스모크 결과 docs 추가 커밋 예정.
 
 ---
 
