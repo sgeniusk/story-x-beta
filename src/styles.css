@@ -11010,6 +11010,8 @@ body {
 .fc-data-review-row .nm{font-size:13px;color:var(--paper)}
 .fc-data-review-row .st{font-size:12px;color:var(--ink-dim)}
 .fc-data-detail{display:flex;flex-direction:column;gap:14px;max-width:980px;margin:0 auto;width:100%}
+/* 파고들기 세부는 sx-desk 스코프를 빌려 CanonCanvas/MemoryBankStudio 스타일(--sx-* · .sx-desk .ex-*)을 적용한다. .sx-desk 의 레이아웃(min-height:100vh·padding·background)만 무력화. */
+.fc-app .fc-data-detail.sx-desk{min-height:0;padding:0;background:transparent;font-family:inherit;line-height:inherit}
 .fc-data-crumb-board{align-self:flex-start;font-size:12px;color:var(--ink-dim);padding:6px 11px;border-radius:8px;border:1px solid var(--rule-soft);background:var(--bg-2);transition:background .15s,color .15s}
 .fc-data-crumb-board:hover{background:var(--bg-3);color:var(--paper)}
 .fc-pd-review-cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
@@ -11020,3 +11022,17 @@ body {
 .fc-pd-health{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:12px;color:var(--ink-dim)}
 .fc-pd-health .track{flex:1;height:5px;border-radius:3px;background:var(--rule-soft);overflow:hidden}
 .fc-pd-health .track i{display:block;height:100%;background:var(--accent)}
+/* Phase 2c — 정제 지표 요약(MetricSummary). board·독 지표 패널 공유, floating-네이티브(DataPanel 대체). */
+.fc-data-metrics{display:flex;flex-direction:column;gap:1px}
+.fc-data-metric{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;transition:background .15s}
+.fc-data-metric:hover{background:var(--bg-2)}
+.fc-data-metric .dot{width:7px;height:7px;border-radius:50%;background:var(--ink-faint);flex:none}
+.fc-data-metric.tone-good .dot{background:var(--ok)}
+.fc-data-metric.tone-warn .dot{background:var(--accent)}
+.fc-data-metric .txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fc-data-metric .label{font-size:13px;color:var(--paper);font-weight:550}
+.fc-data-metric .sub{font-size:11.5px;color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc-data-metric .lead{margin-left:auto;font-size:13px;font-weight:650;color:var(--ink);white-space:nowrap;padding-left:12px}
+.fc-data-axis{margin-top:16px;padding:13px 14px;border-radius:10px;background:var(--bg-2)}
+.fc-data-axis .lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-dim);margin-bottom:7px}
+.fc-data-axis input{width:100%;accent-color:var(--accent)}

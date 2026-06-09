@@ -2,8 +2,7 @@
 import { useCallback, useState, type ReactNode } from 'react';
 import type { Chapter, SeriesProject } from '../lib/storyEngine';
 import type { MemoryApprovalQueue } from '../lib/memoryBank';
-import type { StudioMetrics } from '../lib/studioMetrics';
-import { DataPanel } from './DataPanel';
+import type { MetricTone, StudioMetrics } from '../lib/studioMetrics';
 import { CanonNav } from './CanonNav';
 import { WorkStateGrid } from './WorkStateGrid';
 import { DataReviewRail } from './DataReviewRail';
@@ -43,6 +42,37 @@ const BIBLE_ENTRIES: Array<{ id: BibleSection; label: string }> = [
 ];
 
 type DataPanelId = 'metrics' | 'review' | 'canon' | 'bible' | 'state';
+
+// 정제 지표 요약 — board·독 지표 패널 공유. DataPanel(.sx-* 스코프)이 .fc-app 에서 깨져 floating-네이티브로 대체.
+function MetricSummary({ metrics }: { metrics: StudioMetrics }) {
+  const p = metrics.payoff;
+  const cards: Array<{ label: string; lead: string; tone: MetricTone; sub: string }> = [
+    { label: '하니스', lead: metrics.harness.lead, tone: metrics.harness.tone, sub: metrics.harness.sub },
+    { label: '품질 게이트', lead: metrics.quality.lead, tone: metrics.quality.tone, sub: metrics.quality.sub },
+    { label: '매체 투사', lead: metrics.media.lead, tone: metrics.media.tone, sub: metrics.media.sub },
+    { label: '온톨로지', lead: metrics.ontology.lead, tone: metrics.ontology.tone, sub: metrics.ontology.sub },
+    {
+      label: '전제 진척',
+      lead: !p || !p.measured ? '—' : p.isStalled ? `${p.deferredStreak}회 정체` : p.lastPayoffEpisode != null ? `${p.lastPayoffEpisode}화 회수` : '진행 중',
+      tone: (!p || !p.measured ? 'neutral' : p.isStalled ? 'warn' : 'good') as MetricTone,
+      sub: !p || !p.measured ? '회차 데이터 없음' : `열린 약속 ${p.openPromises} · 완결 ${p.paidPromises}`,
+    },
+  ];
+  return (
+    <div className="fc-data-metrics">
+      {cards.map((c) => (
+        <div key={c.label} className={`fc-data-metric tone-${c.tone}`}>
+          <span className="dot" />
+          <span className="txt">
+            <span className="label">{c.label}</span>
+            <span className="sub">{c.sub}</span>
+          </span>
+          <span className="lead">{c.lead}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function FloatingDataWorkspace(props: FloatingDataWorkspaceProps) {
   const { dataView } = props;
@@ -99,7 +129,7 @@ export function FloatingDataWorkspace(props: FloatingDataWorkspaceProps) {
                 <p>지표와 검토 요약만 정제해 보여줍니다. 세부는 왼쪽 도구로 파고드세요.</p>
               </header>
               <div className="fc-data-board-metrics">
-                <DataPanel metrics={props.metrics} onMediaAxisChange={props.onMediaAxisChange} />
+                <MetricSummary metrics={props.metrics} />
               </div>
               <div className="fc-data-board-reviews">
                 <h2>분야별 검토</h2>
@@ -116,7 +146,7 @@ export function FloatingDataWorkspace(props: FloatingDataWorkspaceProps) {
               </div>
             </section>
           ) : (
-            <section className="fc-data-detail" aria-label="데이터 세부">
+            <section className="fc-data-detail sx-desk" aria-label="데이터 세부">
               <button type="button" className="fc-data-crumb-board" onClick={props.onShowBoard}>← 현황 보드</button>
               {props.centerSlot}
             </section>
@@ -170,7 +200,16 @@ export function FloatingDataWorkspace(props: FloatingDataWorkspaceProps) {
       {/* panels — FloatingEditor .panel/.ph/.pb 차용 */}
       <div className={`panel${openPanel === 'metrics' ? ' show' : ''}`} id="fc-pd-metrics">
         <div className="ph"><h4>작품 지표</h4><button className="x" onClick={closeAll}>✕</button></div>
-        <div className="pb"><DataPanel metrics={props.metrics} onMediaAxisChange={props.onMediaAxisChange} /></div>
+        <div className="pb">
+          <MetricSummary metrics={props.metrics} />
+          {props.onMediaAxisChange && (
+            <div className="fc-data-axis">
+              <div className="lbl"><span>commercial</span><span>literary</span></div>
+              <input type="range" min={0} max={100} value={Math.round(props.metrics.media.axis * 100)}
+                onChange={(e) => props.onMediaAxisChange!(Number(e.target.value) / 100)} aria-label="작품 무게중심" />
+            </div>
+          )}
+        </div>
       </div>
 
       <div className={`panel${openPanel === 'review' ? ' show' : ''}`} id="fc-pd-review">
