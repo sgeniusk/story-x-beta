@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-06-09 (3) — 아크 페이오프 게이트 라이브 실증 완료 (엔드투엔드 fixture 3케이스)
+
+> spec §10 LLM 신뢰도 리스크 검증. payload→chapter→ledger→harness 전 파이프라인이 fixture 로 검증됨.
+
+### 이번 세션에서 한 것
+- `storyEngine.test.ts`에 `Arc Payoff Gate 엔드투엔드 실증` describe 블록 추가
+  - 케이스 1: LLM payoff 채움 → pass(10)
+  - 케이스 2: 3회차 연속 payoff 빔 → block(0), readyForProduction=false
+  - 케이스 3: 중간 회수 후 재정체 → streak 리셋, 차단 안 됨
+- 348 tests · tsc 0 · vite build GREEN. 커밋 `1271a60`.
+
+### 손대지 말 것
+- `payoffLedger.ts` · `storyHarness.ts` premise-progress 로직 — 모든 케이스가 엔드투엔드 커버됨
+
+### 다음 권고
+- **(main 머지)** — `feat/arc-payoff-gate` → main. 1~2단계 + 실증 10커밋, 전부 GREEN.
+- **(A) 플로팅 Phase 2 스왑** or **(B) rank5 Pass E** 이후.
+
+---
+
 ## 2026-06-09 (2) — 아크 페이오프 게이트 2단계 완료 (premise-progress 차단 스테이지)
 
 > 1단계(드러냄)에서 2단계(차단)로. `isStalled=true` 시 `readyForProduction=false` 연결 완료.

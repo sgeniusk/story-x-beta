@@ -76,32 +76,22 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 ## 다음 한 단계
 
-**아크 페이오프 게이트 1~2단계 완료.** 다음 갈래 중 택1.
-- **(D) 라이브 실증** — codex 로 회차 생성 후 rewardArc/stakesLedger 실제 산출률 확인. premise-progress 가 실제로 stall 을 잡는지 엔드투엔드 검증. 브랜치 main 머지 전에 권장.
+**아크 페이오프 게이트 1~2단계 + 실증 완료.** 다음 갈래 중 택1.
+- **(main 머지)** — `feat/arc-payoff-gate` 브랜치 → main 머지. 10커밋 모두 green.
 - **(A) 플로팅 Phase 2 스왑** — floating 을 편집 모드 기본으로(StoryXDesk 3컬럼 제거 또는 토글) + `editorFocusLayout.test.ts` 새 구조로 갱신.
 - **(B) rank5 Tier2 Pass E** — `StoryXDesk.tsx` 잔여 ~11개(Dialogs·Publishing·Status) 추출 후 Tier3 훅 분리.
-- **(main 머지)** — `feat/arc-payoff-gate` 브랜치 → main 머지.
 
-## 최근 검증 (2026-06-09 · 아크 페이오프 게이트 2단계 완료)
+## 최근 검증 (2026-06-09 · 아크 페이오프 게이트 라이브 실증 완료)
 
 ```
-init.sh            → tsc · vitest(345 tests) · build 전체 통과
-아크 페이오프 게이트 2단계 — TDD 완료 (브랜치 feat/arc-payoff-gate)
-  커밋 2d82586 — storyHarness premise-progress 7번째 스테이지
-                  HarnessStageId 확장, RunStoryHarnessInput chapters? 추가
-                  measured=false→pass(5), not stalled→pass(10), stalled→block(0)
-                  creativeDevelopment.test.ts 6→7 갱신, 9+1 TDD 케이스 GREEN
-  커밋 1076232 — StoryXDesk harnessReport에 project.chapters 배선
-1~2단계 전체 커밋 로그:
-  b81e90f Task1 payoffLedger 코어
-  2932b4b Task2 DraftChapterPayload 매핑
-  71e8b94 Task3 draftClient 정규화
-  9b0f3c7 Task4 storyx CLI 미러
-  ba74b6f Task5 생성 프롬프트 rewardArc/stakesLedger
-  2e76f9d Task6 검토 프롬프트 정체 evidence
-  f20d2f3 Task7 지표 패널 전제 진척 카드
-  2d82586 2단계 premise-progress 스테이지
-  1076232 StoryXDesk chapters 배선
+init.sh            → tsc · vitest(348 tests) · build 전체 통과
+아크 페이오프 게이트 엔드투엔드 실증 (커밋 1271a60)
+  fixture 3 케이스 → payload→chapterFromDraftPayload→computePayoffLedger→runStoryHarness
+  케이스1: LLM payoff 채움 → measured=true, isStalled=false, premise-progress pass(10)
+  케이스2: 3회 연속 payoff 빔 → deferredStreak=3, isStalled=true, block(0), readyForProduction=false
+  케이스3: 중간 회수 후 재정체 → streak 리셋, STALL_THRESHOLD 미달, isStalled=false
+브랜치 feat/arc-payoff-gate 누적 커밋:
+  b81e90f~1271a60 (총 10커밋 = 1·2단계 + 실증)
 ```
 
 ## 완료 마일스톤
