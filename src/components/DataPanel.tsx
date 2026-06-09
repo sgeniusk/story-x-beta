@@ -7,10 +7,11 @@ interface Props {
 }
 
 export function DataPanel({ metrics, onMediaAxisChange }: Props) {
+  const TONE_KEYS: (keyof StudioMetrics)[] = ['harness', 'quality', 'media', 'ontology'];
   const initial =
     metrics.quality.tone === 'warn'
       ? 'quality'
-      : (Object.keys(metrics) as (keyof StudioMetrics)[]).find((key) => metrics[key].tone === 'warn') ?? 'harness';
+      : TONE_KEYS.find((key) => (metrics[key] as { tone?: string } | undefined)?.tone === 'warn') ?? 'harness';
   const [open, setOpen] = useState<string | null>(initial);
   const toggle = (id: string) => setOpen((current) => (current === id ? null : id));
 

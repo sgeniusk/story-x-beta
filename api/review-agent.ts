@@ -14,6 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     target?: string;
     medium?: string;
     context?: string;
+    payoffStatus?: { isStalled?: boolean; deferredStreak?: number; openPromises?: number };
   };
 
   const agentId = String(body.agent ?? 'showrunner');
@@ -22,7 +23,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const context = String(body.context ?? '');
   const persona = loadAgentPersona(agentId);
 
-  const prompt = buildAgentReviewPrompt({ agentId, persona, target, medium, context });
+  const payoffStatus =
+    body.payoffStatus &&
+    typeof body.payoffStatus === 'object' &&
+    typeof body.payoffStatus.deferredStreak === 'number'
+      ? {
+          isStalled: Boolean(body.payoffStatus.isStalled),
+          deferredStreak: body.payoffStatus.deferredStreak,
+          openPromises: typeof body.payoffStatus.openPromises === 'number' ? body.payoffStatus.openPromises : 0
+        }
+      : undefined;
+
+  const prompt = buildAgentReviewPrompt({ agentId, persona, target, medium, context, payoffStatus });
   const result = await runLlmJson(prompt);
 
   if (result.status === 'mock') {

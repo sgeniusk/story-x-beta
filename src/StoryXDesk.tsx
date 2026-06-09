@@ -122,6 +122,7 @@ import {
 } from './lib/storyEngine';
 import { requestLlmDraft } from './lib/draftClient';
 import { requestAgentReview } from './lib/reviewClient';
+import { computePayoffLedger } from './lib/payoffLedger';
 import { requestDataReview } from './lib/dataReviewClient';
 import type { BibleSection, CanonCategory, DataReviewView, DataView } from './lib/canonDataView';
 import { describeKoreanStyleLevel, evaluateKoreanProse } from './lib/koreanStyle';
@@ -1025,7 +1026,8 @@ export function StoryXDesk({
               agentId,
               target: currentReviewText,
               medium: blueprint.medium,
-              context
+              context,
+              payoffStatus: computePayoffLedger(project.chapters)
             });
 
             if (res.ok && res.report) {
@@ -1130,7 +1132,8 @@ export function StoryXDesk({
         agentId: personaId,
         target,
         medium: blueprint.medium,
-        context
+        context,
+        payoffStatus: computePayoffLedger(project.chapters)
       });
 
       if (res.ok && res.report) {
@@ -1812,7 +1815,8 @@ export function StoryXDesk({
           agentId,
           target: reviewTarget,
           medium: blueprint.medium,
-          context
+          context,
+          payoffStatus: computePayoffLedger(project.chapters)
         });
 
         if (res.ok && res.report) {

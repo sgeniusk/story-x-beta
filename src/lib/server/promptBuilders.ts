@@ -40,6 +40,8 @@ export interface AgentReviewPromptInput {
   target: string;
   medium: string;
   context: string;
+  /** 아크 페이오프 1단계 — 연재 정체 측정값. 있으면 검토에 evidence 로 주입한다. */
+  payoffStatus?: { isStalled: boolean; deferredStreak: number; openPromises: number };
 }
 
 export interface DataReviewPromptInput {
@@ -346,7 +348,12 @@ export function buildReviewPrompt(input: ReviewPromptInput): string {
 
 // 에이전트 1명씩 분리 검토 — 페르소나 .md 를 정체성으로 주입.
 export function buildAgentReviewPrompt(input: AgentReviewPromptInput): string {
-  const { agentId, persona, target, medium, context } = input;
+  const { agentId, persona, target, medium, context, payoffStatus } = input;
+  const payoffEvidence = payoffStatus?.isStalled
+    ? [
+        `- [측정] 전제 진척 정체 신호 — 회수 없이 ${payoffStatus.deferredStreak}회차 연속(열린 약속 ${payoffStatus.openPromises}개). criteriaKey: stakes_progression_audit. 이 회차가 행동·대가·전환으로 약속에 다가가는지 특히 엄격히 본다.`
+      ]
+    : [];
   return [
     `Story X 작가진 검토 — 당신은 한 명의 에이전트입니다: ${agentId}.`,
     `매체: ${medium}`,
@@ -368,6 +375,8 @@ export function buildAgentReviewPrompt(input: AgentReviewPromptInput): string {
     '- 새 사실은 canon으로 확정하지 말고 memoryCandidates에만 둡니다.',
     // continuity≠payoff 보정 — 검토가 연속성만 보고 전제 정체를 묵인하지 않도록 강제한다.
     '- 연재 장편이라면, 이 회차가 작품의 중심 질문(전제·독자 약속)을 진척시키는지도 본다 — 발견·추론만 쌓고 같은 질문이 여러 회차 제자리면, 인물의 행동·대가·선택 변화로 약속에 다가가지 못한 점을 지적한다.',
+    // 정체 측정값이 있으면 결정론적 evidence 로 추가 주입한다 (아크 페이오프 1단계).
+    ...payoffEvidence,
     '',
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',

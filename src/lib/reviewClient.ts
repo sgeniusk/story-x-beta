@@ -15,6 +15,8 @@ export interface AgentReviewInput {
   target: string;
   medium: string;
   context: string;
+  /** 아크 페이오프 1단계 — 정체 측정값. 있으면 검토 프롬프트에 evidence 로 주입된다. */
+  payoffStatus?: { isStalled: boolean; deferredStreak: number; openPromises: number };
 }
 
 export interface AgentReviewResult {
@@ -77,7 +79,8 @@ async function _runAgentReview(input: AgentReviewInput): Promise<AgentReviewResu
         agent: input.agentId,
         target: input.target,
         medium: input.medium,
-        context: input.context
+        context: input.context,
+        ...(input.payoffStatus ? { payoffStatus: input.payoffStatus } : {})
       })
     });
 
