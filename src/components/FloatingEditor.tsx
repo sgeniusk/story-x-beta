@@ -337,7 +337,7 @@ export function FloatingEditor({
           <span className="title">{title}</span>
           <span className="sep">›</span>
           <span className="ep">
-            <b>{episodeLabel}</b> · 새 초안
+            <b>{episodeLabel}</b>
           </span>
         </div>
         <div className="saved">
