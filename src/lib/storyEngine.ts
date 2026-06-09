@@ -316,6 +316,9 @@ export interface SeriesProject {
   growthLedger?: GrowthLedger;
 }
 
+/** SeriesProject 의 공개 별칭 — 외부 모듈에서 짧게 참조할 때 사용한다. */
+export type StoryProject = SeriesProject;
+
 export interface ProductionRequest {
   genre: GenreId;
   intent: string;
