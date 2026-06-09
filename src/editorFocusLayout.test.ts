@@ -454,6 +454,13 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain("setDataView({ kind: 'board' })");
     expect(desk).toContain('centerSlot=');
   });
+
+  it('Phase 2c — floating 데이터 작업실 전용 CSS 가 있다', () => {
+    expect(css).toContain('.fc-data');
+    expect(css).toContain('.fc-data-board');
+    expect(css).toContain('.fc-data-review-row');
+    expect(css).toContain('.fc-data-crumb-board');
+  });
 });
 
 describe('회차 생성 동작 회귀 — 의도 메모 오염·잠금 동기화 (P2·P3)', () => {
