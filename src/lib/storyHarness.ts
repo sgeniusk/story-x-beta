@@ -1,7 +1,8 @@
-// M4 청크 B · Layer 0 사전 제작 게이트 2/2 — 스토리 하네스 6단계 스테이지.
-// runStoryHarness(input) 가 진단·전제·온톨로지·압력·문체·매체 6 단계를 순서대로 돌리며 점수를 합산한다.
+// M4 청크 B · Layer 0 사전 제작 게이트 2/2 — 스토리 하네스 7단계 스테이지.
+// runStoryHarness(input) 가 진단·전제·온톨로지·압력·문체·매체·전제진척 7 단계를 순서대로 돌리며 점수를 합산한다.
 // qualityScore ≥ 70 이면 readyForProduction=true, 그 미만이면 차단·리페어 제안.
 // 정본 — docs/storyx-harness-architecture.md § 3-1, ontology-harness plan Chunk 2.
+// + 페이오프 게이트 2단계 — premise-progress 스테이지 (2026-06-09).
 import {
   buildStoryOntology,
   validateStoryOntology,
@@ -9,6 +10,8 @@ import {
   type StoryOntology
 } from './storyOntology';
 import type { QualityGatesReport } from './qualityGates';
+import type { Chapter } from './storyEngine';
+import { computePayoffLedger, STALL_THRESHOLD } from './payoffLedger';
 
 export type HarnessStageId =
   | 'story-sense'
@@ -16,7 +19,8 @@ export type HarnessStageId =
   | 'ontology-builder'
   | 'pressure-test'
   | 'korean-voice-gate'
-  | 'media-projection';
+  | 'media-projection'
+  | 'premise-progress';
 
 export type StageStatus = 'pass' | 'warning' | 'block';
 
@@ -35,11 +39,13 @@ export interface RunStoryHarnessInput extends BuildOntologyInput {
   medium: string;
   formatLabel: string;
   qualityGatesReport?: Pick<QualityGatesReport, 'blockingPassed'>;
+  /** 회차 배열 — premise-progress 스테이지에서 페이오프 레저를 계산한다. 없으면 측정 불가(중립 pass). */
+  chapters?: Chapter[];
 }
 
 export interface StoryHarnessReport {
   stages: HarnessStageResult[];
-  /** 0~100 — 6 stage 점수 합. ≥ 70 이면 readyForProduction. */
+  /** 0~105 — 7 stage 점수 합. ≥ 70 이면 readyForProduction. */
   qualityScore: number;
   readyForProduction: boolean;
   ontology: StoryOntology;
@@ -58,7 +64,8 @@ export function runStoryHarness(input: RunStoryHarnessInput): StoryHarnessReport
     runOntologyBuilderStage(ontology),
     runPressureTestStage(ontology),
     runKoreanVoiceGateStage(input),
-    runMediaProjectionStage(input)
+    runMediaProjectionStage(input),
+    runPremiseProgressStage(input.chapters ?? [])
   ];
 
   const qualityScore = stages.reduce((sum, stage) => sum + stage.score, 0);
@@ -227,6 +234,61 @@ function runMediaProjectionStage(input: RunStoryHarnessInput): HarnessStageResul
       : ['매체 미지정 — 같은 온톨로지를 어떤 형태로 보여 줄지 모릅니다.'],
     requiredRepairs: ok ? [] : ['매체와 포맷을 정해 주세요.'],
     score: ok ? 10 : 5,
+    maxScore: 10
+  };
+}
+
+// Stage 7 — 전제 진척 게이트 (페이오프 게이트 2단계).
+// chapters 없음 = 측정 불가 → pass, score=5 (수집 전 중립).
+// isStalled=false → pass, score=10.
+// isStalled=true (STALL_THRESHOLD 회차 연속 회수 없음) → block, score=0 → readyForProduction=false.
+function runPremiseProgressStage(chapters: Chapter[]): HarnessStageResult {
+  const ledger = computePayoffLedger(chapters);
+
+  if (!ledger.measured) {
+    return {
+      id: 'premise-progress',
+      title: '전제 진척',
+      status: 'pass',
+      findings: ['회차 데이터 없음 — 연재 시작 전이거나 약속↔회수 필드가 아직 채워지지 않았습니다.'],
+      requiredRepairs: [],
+      score: 5,
+      maxScore: 10
+    };
+  }
+
+  if (!ledger.isStalled) {
+    const lastMsg =
+      ledger.lastPayoffEpisode != null
+        ? `마지막 회수 ${ledger.lastPayoffEpisode}화.`
+        : '회수 기록 없음.';
+    return {
+      id: 'premise-progress',
+      title: '전제 진척',
+      status: 'pass',
+      findings: [
+        `열린 약속 ${ledger.openPromises}개 · 완결 ${ledger.paidPromises}개. ${lastMsg}`,
+        '전제 진척 중 — 약속이 회수되고 있습니다.'
+      ],
+      requiredRepairs: [],
+      score: 10,
+      maxScore: 10
+    };
+  }
+
+  // isStalled=true — 차단.
+  return {
+    id: 'premise-progress',
+    title: '전제 진척',
+    status: 'block',
+    findings: [
+      `전제 진척 정체 — ${ledger.deferredStreak}회차 연속 약속 회수 없음 (기준 ${STALL_THRESHOLD}회).`,
+      `열린 약속 ${ledger.openPromises}개 · 완결 ${ledger.paidPromises}개.`
+    ],
+    requiredRepairs: [
+      `다음 회차에서 열린 약속 중 하나 이상을 해소하거나 명시적 대가를 치르게 하세요. ${ledger.deferredStreak}회 연속 정체는 독자 이탈 위험입니다.`
+    ],
+    score: 0,
     maxScore: 10
   };
 }

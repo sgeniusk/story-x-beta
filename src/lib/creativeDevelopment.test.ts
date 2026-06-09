@@ -149,8 +149,8 @@ describe('creativeDevelopment', () => {
     expect(result.storyOntology?.characters[0]?.desire).toBeTruthy();
     expect(result.storyOntology?.worldRules[0]?.cost).toBeTruthy();
 
-    // harnessReport — 6단계 스테이지 + 점수.
-    expect(result.harnessReport?.stages.length).toBe(6);
+    // harnessReport — 7단계 스테이지 + 점수 (premise-progress 추가 2026-06-09).
+    expect(result.harnessReport?.stages.length).toBe(7);
     expect(result.harnessReport?.qualityScore).toBeGreaterThanOrEqual(70);
     expect(result.harnessReport?.readyForProduction).toBe(true);
 
