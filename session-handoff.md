@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-06-09 (6) — 코드성 개선 (P1 빈응답 + 매체별 검토 배선)
+
+> 사용자 "코드성 개선 쭉 이어가". 보고서 4항목 중 항목 2(P1)·3(매체검토) 완료. 항목 1(2f)·4(polish)는 사용자가 보류 선택.
+
+### 한 것
+- **항목 2 — P1 빈응답 (`fe13581`)** — `tools/storyx.mjs` runProvider `spawnSync` 에 `input:''` 추가(codex exec 가 stdin 대기하다 'Reading additional input from stdin' 누수 → 빈 note 합류하던 근본 제거). `api/review-agent.ts` mock note 문구화. `reviewClient.ts` 빈응답 폴백 actionable.
+- **항목 3 — 매체별 검토 (`0011749`)** — `getMediumReviewAgentIds(medium)` = CORE + `MEDIUM_REVIEW_SPECIALISTS`. comics→스토리보드·말풍선 / audiobook→낭독 연출 / essay→에세이 큐레이터 / novel·academic→CORE. `runMarginReviewAll`·`corePersonaIds`·`floatingEditorProps.personas` 를 medium-aware. 단위 5 케이스.
+- 364 tests·tsc·build GREEN. 라이브 — 편집 작가실 CORE 5 렌더·콘솔 0.
+
+### 손대지 말 것
+- `getMediumReviewAgentIds`·`MEDIUM_REVIEW_SPECIALISTS`(agentSeedData) · storyx.mjs `input:''` · reviewClient 폴백 메시지.
+
+### 보류 (사용자 선택)
+- **항목 1 (2f dead code)** — StoryXDesk early-return 후 `isDraftMode &&` 가드 8곳(출간 모드 dead). 제거하면 `editorFocusLayout` 의 classic 편집 구조 source-string 단언 재구성 동반(Explore '수정 불필요'는 부정확). harmless 라 보류.
+- **항목 4 (상단바 polish)** — floating 전환으로 과밀 해소. 잔여 minor(FloatingEditor '· 새 초안' 중복 라벨).
+
+### 다음
+- (2d) 출간 floating화 · main 머지(`feat/floating-phase2c-data`).
+- 항목 3 comics 작품 specialist 7인 라이브 검증(사용자 실사용).
+
+---
+
 ## 2026-06-09 (5) — floating Phase 2c 데이터 모드 floating화 완료 (FloatingDataWorkspace 신설)
 
 > 데이터 모드(`activeTrack==='bible'`)가 옛 3컬럼 대신 "떠 있는 작업실"로. 진입 첫인상 = 정제 보드(지표·검토 요약), raw 세부는 파고들기. 브랜치 `feat/floating-phase2c-data`.
