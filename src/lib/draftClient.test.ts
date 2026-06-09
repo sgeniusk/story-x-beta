@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { normalizeRewardArc, normalizeStakesLedger, requestLlmDraft } from './draftClient';
 
 describe('draftClient 약속↔회수 정규화', () => {
@@ -27,6 +27,8 @@ describe('draftClient 약속↔회수 정규화', () => {
 });
 
 describe('requestLlmDraft — payoffStatus 전달', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
   it('payoffStatus 를 /api/draft 요청 body 로 전달한다', async () => {
     let captured: Record<string, unknown> = {};
     vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {

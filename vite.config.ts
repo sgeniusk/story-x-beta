@@ -116,7 +116,10 @@ export default defineConfig({
       '--title',
       String(input.title ?? ''),
       '--context',
-      String(input.context ?? '')
+      String(input.context ?? ''),
+      ...(input.payoffStatus != null
+        ? ['--payoff-status', JSON.stringify(input.payoffStatus)]
+        : [])
     ]),
     storyxBridge('/api/review', (input) => [
       'tools/storyx.mjs',
