@@ -1,6 +1,7 @@
 // 스튜디오 작가진 실행 시드 정적 데이터.
 
 import type { ValidationAgentId } from './agentReviewProcess';
+import type { CreativeMedium } from './projectBlueprint';
 import type { AgentRun } from './storyEngine';
 
 export const defaultRuns: AgentRun[] = [
@@ -48,6 +49,26 @@ export const MARGIN_CORE_AGENT_IDS: ValidationAgentId[] = [
   'genre-stylist',
   'continuity-editor'
 ];
+
+// 매체별 라이브 검토 특화 작가진 — CORE 5인에 더한다. 인터뷰(buildPersonaLineup)는 이미 매체별인데
+// 검토만 고정 5인이던 비대칭을 해소한다. id 는 ValidationAgentId·.claude/agents/*.md 에 정의된 것만 쓴다.
+export const MEDIUM_REVIEW_SPECIALISTS: Partial<Record<CreativeMedium, ValidationAgentId[]>> = {
+  comics: ['storyboard-agent', 'speech-bubble-agent'],
+  audiobook: ['audio-narration-director'],
+  essay: ['essay-curator']
+};
+
+// 한 매체의 라이브 검토 작가진 id 목록 — CORE + 매체 specialist(중복 가드). novel·academic 은 CORE 만.
+export function getMediumReviewAgentIds(medium: CreativeMedium): ValidationAgentId[] {
+  const specialists = MEDIUM_REVIEW_SPECIALISTS[medium] ?? [];
+  const merged = [...MARGIN_CORE_AGENT_IDS];
+  for (const id of specialists) {
+    if (!merged.includes(id)) {
+      merged.push(id);
+    }
+  }
+  return merged;
+}
 
 export const visualStoryAgentRuns: AgentRun[] = [
   {

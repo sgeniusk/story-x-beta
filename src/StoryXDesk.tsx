@@ -37,7 +37,7 @@ import {
 } from 'react';
 import { getAgentValidationProcess, type ValidationAgentId } from './lib/agentReviewProcess';
 import { fallbackAgentPersona, getAgentPersona, type AgentPersona } from './lib/agentPersonas';
-import { MARGIN_CORE_AGENT_IDS, defaultRuns, visualStoryAgentRuns } from './lib/agentSeedData';
+import { defaultRuns, getMediumReviewAgentIds, visualStoryAgentRuns } from './lib/agentSeedData';
 import { STUDIO_ACCENT_VALUES, STUDIO_CANVAS_VALUES, type StudioAccent, type StudioCanvas } from './lib/studioConstants';
 import storyXSymbol from './assets/brand/story-x-symbol-light.svg';
 import { AiStatusBadge } from './components/AiStatusBadge';
@@ -74,7 +74,7 @@ import { StoryXStatusBar } from './components/StoryXStatusBar';
 import { ChapterStructureTree } from './components/ChapterStructureTree';
 import { TensionShareChart } from './components/TensionShareChart';
 import { useMarginReview } from './hooks/useMarginReview';
-import { findPersona, CORE_PERSONAS } from './lib/extendedPersonas';
+import { findPersona } from './lib/extendedPersonas';
 import {
   applyDiff,
   resolveRunReviewAnchor,
@@ -1004,11 +1004,12 @@ export function StoryXDesk({
       }
 
       const context = buildProjectContextDigest(project);
+      const reviewAgentIds = getMediumReviewAgentIds(blueprint.medium);
       setIsReviewing(true);
       setGenerationNote(null);
       setEditedSinceReview(false);
       setAgentRuns(
-        MARGIN_CORE_AGENT_IDS.map((agentId) => ({
+        reviewAgentIds.map((agentId) => ({
           agentId,
           title: getAgentLabel(agentId),
           status: 'idle',
@@ -1018,7 +1019,7 @@ export function StoryXDesk({
       );
 
       try {
-        const reviewTasks = MARGIN_CORE_AGENT_IDS.map(async (agentId, reviewIndex) => {
+        const reviewTasks = reviewAgentIds.map(async (agentId, reviewIndex) => {
           setAgentRuns((current) =>
             current.map((run) =>
               run.agentId === agentId ? { ...run, output: '지금 원고를 읽고 있습니다…' } : run
@@ -1162,9 +1163,10 @@ export function StoryXDesk({
     },
     [blueprint.medium, currentReviewText, marginDefaultAnchor, project]
   );
+  const mediumReviewAgentIds = useMemo(() => getMediumReviewAgentIds(blueprint.medium), [blueprint.medium]);
   const marginReview = useMarginReview({
     paragraphs: marginParagraphs,
-    corePersonaIds: MARGIN_CORE_AGENT_IDS,
+    corePersonaIds: mediumReviewAgentIds,
     runAll: runMarginReviewAll,
     summonOne: summonMarginReviewAgent
   });
@@ -1239,7 +1241,6 @@ export function StoryXDesk({
       chapterSub: project.logline,
       paragraphs: marginParagraphs,
       reviews: marginReview.reviews,
-      personas: CORE_PERSONAS,
       onSummon: marginReview.onSummon,
       onRunAll: marginReview.onRunAll,
       onAcceptDiff: acceptMarginDiff,
@@ -1254,6 +1255,7 @@ export function StoryXDesk({
         characters: project.characters.length,
       },
       intentMemo: draftPrompt,
+      personas: mediumReviewAgentIds.map((id) => findPersona(id)),
       editable: true,
       bodyVersion,
       onBodyChange: handleFloatingBodyChange,
@@ -1281,6 +1283,7 @@ export function StoryXDesk({
       isGenerating,
       studioMetrics,
       updateStoryModeAxis,
+      mediumReviewAgentIds,
     ]
   );
   const draftPromptPlaceholder = isLatestLocked
