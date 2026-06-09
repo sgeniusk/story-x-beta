@@ -1748,7 +1748,8 @@ export function StoryXDesk({
         format: blueprint.format,
         freewrite: draftPrompt || request.intent,
         title: project.title,
-        context: buildProjectContextDigest(project)
+        context: buildProjectContextDigest(project),
+        payoffStatus: computePayoffLedger(project.chapters)
       });
 
       if (llm.ok && llm.payload) {

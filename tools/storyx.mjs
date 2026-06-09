@@ -232,7 +232,19 @@ if (command === 'draft') {
   const context = readFlag(args, '--context', '');
   const outDir = readFlag(args, '--out-dir', join(process.cwd(), '.storyx-runs'));
   const dryRun = args.includes('--dry-run');
-  const prompt = buildDraftPrompt({ medium, format, freewrite, title, context });
+  const payoffStatusRaw = readFlag(args, '--payoff-status', '');
+  let payoffStatus;
+  try {
+    const parsed = payoffStatusRaw ? JSON.parse(payoffStatusRaw) : null;
+    if (parsed && typeof parsed.deferredStreak === 'number') {
+      payoffStatus = {
+        isStalled: Boolean(parsed.isStalled),
+        deferredStreak: parsed.deferredStreak,
+        openPromises: typeof parsed.openPromises === 'number' ? parsed.openPromises : 0
+      };
+    }
+  } catch { /* 오형식 플래그는 무시 — 프롬프트 무변화 */ }
+  const prompt = buildDraftPrompt({ medium, format, freewrite, title, context, payoffStatus });
 
   if (provider === 'mock') {
     const result = {
@@ -707,7 +719,7 @@ function normalizeDataReviewNotes(value) {
     .filter((note) => note.title || note.body);
 }
 
-function buildDraftPrompt({ medium, format, freewrite, title, context }) {
+function buildDraftPrompt({ medium, format, freewrite, title, context, payoffStatus }) {
   const isEssay = medium === 'essay';
   const isSerial = isSerialFormat(format);
 
@@ -741,6 +753,14 @@ function buildDraftPrompt({ medium, format, freewrite, title, context }) {
           '- prose는 1500~3000자 분량의 실제 본문입니다.'
         ];
 
+  // 정체 측정값이 있으면 회수 의무를 생성 규칙으로 주입한다 (검토 evidence 와 동일 측정값 — 생성·검토 정합).
+  const stallRules =
+    isSerial && payoffStatus && payoffStatus.isStalled
+      ? [
+          `- [측정] 전제 진척 정체 — 회수 없이 ${payoffStatus.deferredStreak}회차 연속(열린 약속 ${payoffStatus.openPromises}개). 이번 회차는 새 약속을 만들지 말고, 열린 약속 중 최소 하나를 인물의 선택·대가·전환으로 실제 회수합니다. 그 회수를 rewardArc 의 payoff 에 기록합니다.`
+        ]
+      : [];
+
   return [
     isEssay
       ? 'Story X 에세이 초안 생성 요청.'
@@ -761,6 +781,7 @@ function buildDraftPrompt({ medium, format, freewrite, title, context }) {
     '',
     '## 규칙',
     ...rules,
+    ...stallRules,
     '',
     isSerial ? '## 회차 구성(beats)' : '## 원고 구성(beats)',
     isEssay

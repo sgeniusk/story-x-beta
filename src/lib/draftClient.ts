@@ -9,6 +9,8 @@ export interface DraftRequestInput {
   title?: string;
   /** 기존 캐논·인물·세계를 담은 연속성 컨텍스트. 2화 이상에서 채워진다. */
   context?: string;
+  /** 아크 페이오프 측정값 — 정체 시 생성 프롬프트가 회수를 강제한다. */
+  payoffStatus?: { isStalled: boolean; deferredStreak: number; openPromises: number };
 }
 
 export interface LlmDraftResult {
