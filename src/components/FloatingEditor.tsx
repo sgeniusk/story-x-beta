@@ -104,7 +104,7 @@ export function FloatingEditor({
   const presentCount = liveReviews.length;
 
   const [openPanel, setOpenPanel] = useState<'struct' | 'curve' | 'state' | 'writers' | 'metrics' | null>(null);
-  const [openMetric, setOpenMetric] = useState<'harness' | 'quality' | 'media' | 'ontology'>(
+  const [openMetric, setOpenMetric] = useState<'harness' | 'quality' | 'media' | 'ontology' | 'payoff'>(
     metrics.harness.tone === 'warn'
       ? 'harness'
       : (['quality', 'media', 'ontology'] as const).find((k) => metrics[k].tone === 'warn') ?? 'harness'
@@ -700,6 +700,36 @@ export function FloatingEditor({
               ))}
             </div>
           </div>
+          {metrics.payoff && (() => {
+            const p = metrics.payoff;
+            const tone = !p.measured ? 'neutral' : p.isStalled ? 'warn' : 'good';
+            const lead = !p.measured ? '—' : p.isStalled ? `${p.deferredStreak}회 정체` : p.lastPayoffEpisode != null ? `${p.lastPayoffEpisode}화 회수` : '진행 중';
+            const sub = !p.measured ? '회차 데이터 없음' : `열린 약속 ${p.openPromises} · 완결 ${p.paidPromises}`;
+            return (
+              <div className={`fc-metric tone-${tone}${openMetric === 'payoff' ? ' open' : ''}`}>
+                <button className="fc-metric-h" onClick={() => setOpenMetric('payoff')}>
+                  <span className="nm">전제 진척</span>
+                  <span className="lead">{lead}</span>
+                  <span className="sub">{sub}</span>
+                </button>
+                <div className="fc-metric-b">
+                  {!p.measured ? (
+                    <span className="fc-row">회차에 약속↔회수 데이터가 아직 없습니다.</span>
+                  ) : (
+                    <>
+                      <span className={`fc-row${p.isStalled ? ' fail' : ''}`}>
+                        {p.isStalled ? '!' : '✓'} {p.isStalled ? `${p.deferredStreak}회차 연속 회수 없음 — 전제 정체` : '전제 진척 중'}
+                      </span>
+                      <span className="fc-row">열린 약속 {p.openPromises}개 · 완결 {p.paidPromises}개</span>
+                      {p.lastPayoffEpisode != null && (
+                        <span className="fc-row">마지막 회수 — {p.lastPayoffEpisode}화</span>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
       <div className={`panel${openPanel === 'writers' ? ' show' : ''}`} id="fc-p-writers">

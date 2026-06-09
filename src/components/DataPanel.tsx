@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import type { MetricTone, StudioMetrics } from '../lib/studioMetrics';
+import type { PayoffLedgerReport } from '../lib/payoffLedger';
 
 interface Props {
   metrics: StudioMetrics;
@@ -112,6 +113,8 @@ export function DataPanel({ metrics, onMediaAxisChange }: Props) {
           </span>
         </div>
       </MetricCard>
+
+      {metrics.payoff && <PayoffCard payoff={metrics.payoff} open={open === 'payoff'} onToggle={() => toggle('payoff')} />}
     </div>
   );
 }
@@ -124,6 +127,53 @@ interface CardProps {
   open: boolean;
   onToggle: () => void;
   children: ReactNode;
+}
+
+interface PayoffCardProps {
+  payoff: PayoffLedgerReport;
+  open: boolean;
+  onToggle: () => void;
+}
+
+function PayoffCard({ payoff, open, onToggle }: PayoffCardProps) {
+  const tone: MetricTone = !payoff.measured ? 'neutral' : payoff.isStalled ? 'warn' : 'good';
+  const lead = !payoff.measured
+    ? '—'
+    : payoff.isStalled
+      ? `${payoff.deferredStreak}회 정체`
+      : payoff.lastPayoffEpisode != null
+        ? `${payoff.lastPayoffEpisode}화 회수`
+        : '진행 중';
+  const sub = !payoff.measured
+    ? '회차 데이터 없음'
+    : `열린 약속 ${payoff.openPromises} · 완결 ${payoff.paidPromises}`;
+
+  return (
+    <MetricCard title="전제 진척" lead={lead} tone={tone} sub={sub} open={open} onToggle={onToggle}>
+      {!payoff.measured ? (
+        <span className="sx-payoff-empty">회차에 약속↔회수 데이터가 아직 없습니다.</span>
+      ) : (
+        <div className="sx-layer-grid">
+          <span className="sx-layer-row">
+            <span className={`sx-tick ${payoff.isStalled ? 'fail' : ''}`}>{payoff.isStalled ? '!' : '✓'}</span>
+            {payoff.isStalled
+              ? `${payoff.deferredStreak}회차 연속 회수 없음 — 전제 정체`
+              : '전제 진척 중'}
+          </span>
+          <span className="sx-layer-row">
+            <span className="sx-tick" />
+            {`열린 약속 ${payoff.openPromises}개 · 완결 ${payoff.paidPromises}개`}
+          </span>
+          {payoff.lastPayoffEpisode != null && (
+            <span className="sx-layer-row">
+              <span className="sx-tick" />
+              {`마지막 회수 — ${payoff.lastPayoffEpisode}화`}
+            </span>
+          )}
+        </div>
+      )}
+    </MetricCard>
+  );
 }
 
 function MetricCard({ title, lead, tone, sub, open, onToggle, children }: CardProps) {

@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-06-09 — 아크 페이오프 게이트 1단계 완료 (7 태스크 TDD)
+
+> continuity≠payoff 처방 1단계. dead 였던 `rewardArc`/`stakesLedger`를 완전히 살렸다.
+
+### 한 일
+
+- **Task 1 `b81e90f`** — `src/lib/payoffLedger.ts` 신규: `computePayoffLedger(chapters)` 순수 함수. `deferredStreak`, `isStalled`(≥3), `measured`, `openPromises`, `paidPromises`, `lastPayoffEpisode` 계산.
+- **Task 2 `2932b4b`** — `DraftChapterPayload`에 `rewardArc?`/`stakesLedger?` 그릇 추가. `chapterFromDraftPayload`가 payload → chapter 로 매핑.
+- **Task 3 `71e8b94`** — `draftClient.ts` 서버 응답 정규화: `normalizeRewardArc`/`normalizeStakesLedger` export.
+- **Task 4 `9b0f3c7`** — `tools/storyx.mjs` CLI 경로 정규화 미러: `normalizeDraftRewardArc`/`normalizeDraftStakes`.
+- **Task 5 `ba74b6f`** — `buildDraftPrompt` (서버+CLI) 출력 스키마에 `rewardArc`/`stakesLedger` 필드 + 산출 지시 추가.
+- **Task 6 `2e76f9d`** — `buildAgentReviewPrompt` (서버+CLI): `payoffStatus.isStalled=true` 시 `deferredStreak`·`openPromises` 수치를 `criteriaKey: stakes_progression_audit` 와 함께 evidence 주입. `api/review-agent.ts`, `reviewClient.ts`, `StoryXDesk.tsx` 3 call site 배선.
+- **Task 7 (이번)** — `studioMetrics.ts`/`studioMetrics.test.ts` payoff 측정 포함(이미 구현됨). `toStudioMetrics` 호출부에 `chapters` 주입. `FloatingEditor.tsx` + `DataPanel.tsx` 양쪽에 **"전제 진척"** 카드 추가(measured=false → "—", isStalled=true → 빨강).
+
+### 검증
+
+- `bash init.sh` 녹색 (342 tests). 라이브 — 지표 패널 "전제 진척 — —" 렌더 확인, 콘솔 0.
+
+### 다음 권고
+
+- **(C-2) 페이오프 게이트 2단계** — `storyHarness` 에 `premise-progress` 결정론 스테이지 추가(점수·차단). `isStalled` 를 `readyForProduction` 에 연결.
+- **라이브 실증** — codex 로 회차 생성 후 `rewardArc`/`stakesLedger` 실제 산출률 확인 필요(LLM 산출 신뢰도 리스크 — spec §10).
+- **feat/arc-payoff-gate 브랜치** — main 머지 전 검토 필요.
+
+### 손대지 말 것
+
+- Task 1~7 코드 + 테스트. 특히 `payoffLedger.ts`·`storyEngine.ts` 타입 계약 약화 금지.
+
+---
+
 ## 2026-06-08 (이어서 5) — 10인 브레드스 완주 (#3 다캐릭터 + 4매체 스모크) + 크래시 수정
 
 > 사용자 "10인 완주 → 매체별 경량 스모크". #3 헌터(다캐릭터) + 만화·에세이·오디오·학술 4매체 스모크. **5매체 전수 커버.**

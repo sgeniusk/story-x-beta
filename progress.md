@@ -76,16 +76,24 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 ## 다음 한 단계
 
-두 갈래 중 택1. **(A) 플로팅 Phase 2 스왑** — floating 을 편집 모드 기본으로(StoryXDesk 3컬럼 제거 또는 토글) + `editorFocusLayout.test.ts` 새 구조로 갱신 + 라이브 타이핑(contentEditable)·의도 메모 쓰기-백. 위험 — 기존 편집기 테스트 다수 갱신, 시각 회귀. **(B) rank5 Tier2 Pass E** — `StoryXDesk.tsx` 잔여 ~11개(Dialogs·Publishing·Status) 추출 후 Tier3 훅 분리(useProject·useDraftEditor·useReviewSession·useUIState — 최고위험, code-reviewer 2차 필수). 방식은 Codex 위임 + Claude 검증. **Codex 패킷 필수 조항 — 우회 주석 금지·상태 문서 수정 금지·이동 심볼 단언은 정의 파일로 재배치.**
+**아크 페이오프 게이트 1단계 완료.** 다음 갈래 중 택1.
+- **(C-2) 페이오프 게이트 2단계** — `storyHarness` 에 `premise-progress` 결정론 스테이지 추가(점수·차단), criteriaKeys 전면 정식화, `isStalled` 를 `readyForProduction` 에 연결.
+- **(A) 플로팅 Phase 2 스왑** — floating 을 편집 모드 기본으로(StoryXDesk 3컬럼 제거 또는 토글) + `editorFocusLayout.test.ts` 새 구조로 갱신. 위험 — 기존 편집기 테스트 다수 갱신.
+- **(B) rank5 Tier2 Pass E** — `StoryXDesk.tsx` 잔여 ~11개(Dialogs·Publishing·Status) 추출 후 Tier3 훅 분리. Codex 위임 + Claude 검증.
 
-## 최근 검증 (2026-06-08 · 페르소나 10인 브레드스 완주 + 코드 3수정)
+## 최근 검증 (2026-06-09 · 아크 페이오프 게이트 1단계 완료)
 
 ```
-init.sh            → tsc · vitest(327 tests) · build 전체 통과 (세션 중 8회 녹색)
-세션 종합 정리     → docs/reviews/2026-06-07-persona-live-test/SESSION-SUMMARY-2026-06-08.md (테스트내용·결과·반영사항·권고)
-테스트             → #2 로판 23화 완결 + #3 헌터 다캐릭터 + 만화·에세이·오디오·학술 스모크 = 5매체 전수
-코드 수정 3        → e4a2ea2(P6/P5/relations 인물·관계) · aa98137(검토 전제진척 프롬프트) · 3eae1da(매체/포맷 크래시 폴백). 모두 TDD+라이브
-핵심 발견          → 차별점 5매체 일반화 · continuity≠payoff(근본=쇼러너 연재편향) · 매체특화 게이트(8/11/7)·검토 매체무관(갭) · 크래시 버그(수정됨)
+init.sh            → tsc · vitest(342 tests) · build 전체 통과
+아크 페이오프 게이트 1단계 — 7 태스크 TDD 완료 (브랜치 feat/arc-payoff-gate)
+  Task1 b81e90f — payoffLedger 측정 코어 (computePayoffLedger · STALL_THRESHOLD=3)
+  Task2 2932b4b — DraftChapterPayload 그릇 + chapterFromDraftPayload 매핑
+  Task3 71e8b94 — draftClient 서버 응답 정규화
+  Task4 9b0f3c7 — storyx CLI 정규화 미러
+  Task5 ba74b6f — 생성 프롬프트 rewardArc/stakesLedger 산출 요청
+  Task6 2e76f9d — 검토 프롬프트 정체 evidence + stakes_progression_audit 배선
+  Task7 (이번)   — 지표 패널 전제 진척 카드 노출 (FloatingEditor + DataPanel 양쪽)
+라이브 스모크 — 지표 패널 "전제 진척 — —"(measured=false, 데이터 없음) 렌더 확인. 콘솔 0.
 ```
 
 ## 완료 마일스톤

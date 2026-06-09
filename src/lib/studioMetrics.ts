@@ -5,6 +5,8 @@ import type { MediaProjection as DomainMediaProjection } from './mediaProjection
 import type { QualityGatesReport, StoryMode } from './qualityGates';
 import type { StoryHarnessReport } from './storyHarness';
 import type { StoryOntology } from './storyOntology';
+import type { Chapter } from './storyEngine';
+import { computePayoffLedger, type PayoffLedgerReport } from './payoffLedger';
 
 export type MetricTone = 'good' | 'warn' | 'neutral';
 
@@ -65,6 +67,8 @@ export interface StudioMetrics {
   quality: QualityMetric;
   media: MediaMetric;
   ontology: OntologyMetric;
+  /** 아크 페이오프 1단계 — 약속↔회수 정체 측정. chapters 미제공 시 measured=false. */
+  payoff?: PayoffLedgerReport;
 }
 
 export interface ToStudioMetricsInput {
@@ -74,6 +78,8 @@ export interface ToStudioMetricsInput {
   storyOntology: StoryOntology;
   storyMode: StoryMode;
   currentMedium?: string;
+  /** 아크 페이오프 1단계 — 회차 누적. payoff 측정에 쓴다. */
+  chapters?: Chapter[];
 }
 
 const HARNESS_READY_SCORE = 70;
@@ -92,7 +98,8 @@ export function toStudioMetrics(input: ToStudioMetricsInput): StudioMetrics {
     harness: toHarnessMetric(input.harnessReport),
     quality: toQualityMetric(input.qualityGatesReport),
     media: toMediaMetric(input.mediaProjections, input.storyMode, input.currentMedium),
-    ontology: toOntologyMetric(input.storyOntology)
+    ontology: toOntologyMetric(input.storyOntology),
+    payoff: computePayoffLedger(input.chapters ?? [])
   };
 }
 

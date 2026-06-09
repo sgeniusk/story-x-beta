@@ -10,6 +10,7 @@ import type { MediaProjection as DomainMediaProjection } from './mediaProjection
 import type { QualityGatesReport, StoryMode } from './qualityGates';
 import type { HarnessStageResult, StoryHarnessReport } from './storyHarness';
 import type { StoryOntology } from './storyOntology';
+import type { Chapter } from './storyEngine';
 
 const stage = (
   id: HarnessStageResult['id'],
@@ -225,5 +226,26 @@ describe('studioMetrics adapters', () => {
     expect(metrics.quality.lead).toBe('2/3 통과');
     expect(metrics.media.lead).toBe('에세이');
     expect(metrics.ontology.lead).toBe('7');
+  });
+
+  it('chapters 의 deferred 누적으로 payoff.isStalled 를 측정한다', () => {
+    const stalled = [1, 2, 3].map((episode) => ({
+      episode,
+      stakesLedger: [{ stake: 's', atRisk: 'x', resolution: 'deferred' as const }]
+    })) as unknown as Chapter[];
+    const metrics = toStudioMetrics({
+      harnessReport, qualityGatesReport: qualityReport, mediaProjections,
+      storyOntology: ontology, storyMode, currentMedium: 'novel', chapters: stalled
+    });
+    expect(metrics.payoff?.isStalled).toBe(true);
+    expect(metrics.payoff?.deferredStreak).toBe(3);
+  });
+
+  it('chapters 미제공 시 payoff.measured 는 false', () => {
+    const metrics = toStudioMetrics({
+      harnessReport, qualityGatesReport: qualityReport, mediaProjections,
+      storyOntology: ontology, storyMode
+    });
+    expect(metrics.payoff?.measured).toBe(false);
   });
 });

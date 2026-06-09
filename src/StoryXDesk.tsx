@@ -868,9 +868,10 @@ export function StoryXDesk({
         mediaProjections,
         storyOntology,
         storyMode,
-        currentMedium: blueprint.medium
+        currentMedium: blueprint.medium,
+        chapters: project.chapters
       }),
-    [blueprint.medium, harnessReport, mediaProjections, qualityGatesReport, storyMode, storyOntology]
+    [blueprint.medium, harnessReport, mediaProjections, project.chapters, qualityGatesReport, storyMode, storyOntology]
   );
   const updateStoryModeAxis = useCallback((axis: number) => {
     const literaryWeight = Math.max(0, Math.min(1, axis));
