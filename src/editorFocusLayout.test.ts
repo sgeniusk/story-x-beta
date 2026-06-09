@@ -441,6 +441,12 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-data-review-rail');
     expect(css).toContain('.sx-desk .ex-bible-rules');
   });
+
+  it('Phase 2c — DataView 에 board(정제 보드) 종류를 추가한다', () => {
+    expect(canonDataView).toContain("kind: 'board'");
+    // board 는 category/section 없는 단독 종류
+    expect(canonDataView).toMatch(/\|\s*\{\s*kind:\s*'board'\s*\}/);
+  });
 });
 
 describe('회차 생성 동작 회귀 — 의도 메모 오염·잠금 동기화 (P2·P3)', () => {

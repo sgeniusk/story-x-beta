@@ -2502,7 +2502,7 @@ export function StoryXDesk({
               onUpdateCharacter={updateCharacterMemory}
               onOpenBibleSection={openBibleSection}
             />
-          ) : (
+          ) : dataView.kind === 'bible' ? (
             <MemoryBankStudio
               project={project}
               bank={memoryBank}
@@ -2522,7 +2522,7 @@ export function StoryXDesk({
               canonRefactorPlan={canonRefactorPlan}
               onClearCanonChanges={() => setCanonChanges([])}
             />
-          )}
+          ) : null}
         </section>
 
         <aside className="sx-codex-rail sx-focused-assist-rail" aria-label={isBibleMode ? '조수진과 바이블 검토' : '열린 질문'}>
@@ -2536,13 +2536,13 @@ export function StoryXDesk({
                 onRequestReview={() => runDataReview(dataView.category)}
                 onOpenApprovalQueue={() => openBibleSection('approval')}
               />
-            ) : (
+            ) : dataView.kind === 'bible' ? (
               <BibleAssistantSidebar
                 runs={bibleAssistantRuns}
                 activeSection={dataView.section}
                 onSelectAgent={(run, persona) => setSelectedAgent({ run, persona })}
               />
-            )
+            ) : null
           ) : (
             <OpenThreadsCard threads={project.openThreads} />
           )}

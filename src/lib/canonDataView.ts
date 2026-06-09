@@ -6,8 +6,9 @@ export type BibleSection = 'overview' | 'characters' | 'world' | 'canon' | 'voic
 
 // 데이터 모드 캐논 분야 — 좌레일 캐논 nav가 고르는 5종. 가운데 캔버스가 이 단위로 바뀐다.
 export type CanonCategory = 'characters' | 'places' | 'objects' | 'events' | 'timeline';
-// 데이터 모드 가운데 캔버스에 무엇을 띄울지 — 캐논 분야 5종 또는 바이블 작업장(MemoryBankStudio) 진입점.
+// 데이터 모드 가운데 캔버스에 무엇을 띄울지 — 정제 보드 / 캐논 분야 5종 / 바이블 작업장.
 export type DataView =
+  | { kind: 'board' }
   | { kind: 'canon'; category: CanonCategory }
   | { kind: 'bible'; section: BibleSection };
 
