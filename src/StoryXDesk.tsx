@@ -847,7 +847,8 @@ export function StoryXDesk({
         audience: project.audiencePromise || '',
         constraints: blueprint.formatLabel || '',
         canonFacts: project.canonFacts,
-        qualityGatesReport
+        qualityGatesReport,
+        chapters: project.chapters
       }),
     [
       blueprint.medium,
@@ -857,7 +858,8 @@ export function StoryXDesk({
       project.audiencePromise,
       project.characters,
       project.canonFacts,
-      qualityGatesReport
+      qualityGatesReport,
+      project.chapters
     ]
   );
   const studioMetrics = useMemo(
