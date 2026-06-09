@@ -25,6 +25,8 @@ export interface DraftPromptInput {
   freewrite: string;
   title?: string;
   context?: string;
+  /** 아크 페이오프 — 정체 시 생성 프롬프트에 회수 의무를 주입한다. */
+  payoffStatus?: { isStalled: boolean; deferredStreak: number; openPromises: number };
 }
 
 export interface ReviewPromptInput {
@@ -182,7 +184,7 @@ export function buildInterviewPrompt(input: InterviewPromptInput): string {
 
 // 회차/단편/에세이 초안 본문을 통째로 생성. beats(긴장 곡선) 포함.
 export function buildDraftPrompt(input: DraftPromptInput): string {
-  const { medium, format, freewrite, title, context } = input;
+  const { medium, format, freewrite, title, context, payoffStatus } = input;
   const isEssay = medium === 'essay';
   const isSerial = isSerialFormat(format);
 
@@ -216,6 +218,14 @@ export function buildDraftPrompt(input: DraftPromptInput): string {
           '- prose는 1500~3000자 분량의 실제 본문입니다.'
         ];
 
+  // 정체 측정값이 있으면 회수 의무를 생성 규칙으로 주입한다 (검토 evidence 와 동일 측정값 — 생성·검토 정합).
+  const stallRules =
+    isSerial && payoffStatus?.isStalled
+      ? [
+          `- [측정] 전제 진척 정체 — 회수 없이 ${payoffStatus.deferredStreak}회차 연속(열린 약속 ${payoffStatus.openPromises}개). 이번 회차는 새 약속을 만들지 말고, 열린 약속 중 최소 하나를 인물의 선택·대가·전환으로 실제 회수합니다. 그 회수를 rewardArc 의 payoff 에 기록합니다.`
+        ]
+      : [];
+
   return [
     isEssay
       ? 'Story X 에세이 초안 생성 요청.'
@@ -236,6 +246,7 @@ export function buildDraftPrompt(input: DraftPromptInput): string {
     '',
     '## 규칙',
     ...rules,
+    ...stallRules,
     '',
     isSerial ? '## 회차 구성(beats)' : '## 원고 구성(beats)',
     isEssay
