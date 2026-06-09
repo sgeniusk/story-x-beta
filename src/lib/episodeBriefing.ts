@@ -42,7 +42,8 @@ export function buildEpisodeForks(project: StoryProject, ledger: PayoffLedgerRep
       id: 'fork-stalled-payoff',
       source: 'stalled-premise',
       question: `회수 없이 ${ledger.deferredStreak}회차째입니다. 이번 화에서 어느 약속을 실제로 회수할까요?`,
-      options: unpaid.slice(-MAX_OPTIONS).map((promise) => ({
+      // 정체 갈림길: 가장 오래된 약속부터 — 오래 미룬 것이 회수 우선순위가 높다.
+      options: unpaid.slice(0, MAX_OPTIONS).map((promise) => ({
         label: promise,
         intentSeed: `이번 화에서 "${promise}"를 인물의 선택과 대가로 실제 회수한다.`
       }))
@@ -52,6 +53,7 @@ export function buildEpisodeForks(project: StoryProject, ledger: PayoffLedgerRep
       id: 'fork-open-promise',
       source: 'open-promise',
       question: '열린 약속 중 이번 화에서 진척시킬 것은 무엇인가요?',
+      // 진척 갈림길: 가장 최근 약속부터 — 독자 기억에 따뜻하게 남아 있는 것이 진척 후보다.
       options: unpaid.slice(-MAX_OPTIONS).map((promise) => ({
         label: promise,
         intentSeed: `이번 화에서 "${promise}"에 인물의 행동으로 한 발 다가간다.`

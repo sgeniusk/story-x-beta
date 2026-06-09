@@ -45,6 +45,33 @@ describe('buildEpisodeForks', () => {
     expect(forks[0].options.map((o) => o.label)).toEqual(['탑의 비밀']);
   });
 
+  it('[stall] 미회수 약속이 4개면 가장 오래된 3개(P1·P2·P3)를 제시한다 — slice(0, MAX_OPTIONS)', () => {
+    // P1..P4 를 ch1~4에 도입, ch3~5 는 deferred-only 로 정체(deferredStreak ≥ 3) 유발
+    const project = projectWith([
+      ch(1, { rewardArc: [{ promise: 'P1', payoff: '' }] }),
+      ch(2, { rewardArc: [{ promise: 'P2', payoff: '' }] }),
+      ch(3, { rewardArc: [{ promise: 'P3', payoff: '' }], stakesLedger: [{ stake: 's', atRisk: 'x', resolution: 'deferred' }] }),
+      ch(4, { rewardArc: [{ promise: 'P4', payoff: '' }], stakesLedger: [{ stake: 's', atRisk: 'x', resolution: 'deferred' }] }),
+      ch(5, { stakesLedger: [{ stake: 's', atRisk: 'x', resolution: 'deferred' }] })
+    ]);
+    const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
+    expect(forks[0].source).toBe('stalled-premise');
+    expect(forks[0].options.map((o) => o.label)).toEqual(['P1', 'P2', 'P3']);
+  });
+
+  it('[open-promise] 미회수 약속이 4개면 가장 최근 3개(P2·P3·P4)를 제시한다 — slice(-MAX_OPTIONS)', () => {
+    // 정체 없음: ch4에 paid promise 포함해 deferredStreak < 3
+    const project = projectWith([
+      ch(1, { rewardArc: [{ promise: 'P1', payoff: '' }] }),
+      ch(2, { rewardArc: [{ promise: 'P2', payoff: '' }] }),
+      ch(3, { rewardArc: [{ promise: 'P3', payoff: '' }] }),
+      ch(4, { rewardArc: [{ promise: 'P4', payoff: '' }, { promise: 'P_paid', payoff: '회수' }] })
+    ]);
+    const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
+    expect(forks[0].source).toBe('open-promise');
+    expect(forks[0].options.map((o) => o.label)).toEqual(['P2', 'P3', 'P4']);
+  });
+
   it('openThreads 가 있으면 떡밥 갈림길을 추가한다 (최대 3 옵션)', () => {
     const project = projectWith([], ['떡밥A', '떡밥B', '떡밥C', '떡밥D']);
     const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
