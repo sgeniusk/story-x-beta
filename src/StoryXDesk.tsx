@@ -66,6 +66,7 @@ import { PublishingIndexCard } from './components/PublishingIndexCard';
 import { Spotlight } from './components/Spotlight';
 import { WorkStateGrid } from './components/WorkStateGrid';
 import { FloatingEditor } from './components/FloatingEditor';
+import { FloatingDataWorkspace } from './components/FloatingDataWorkspace';
 import { CommandPalette, type DeskCommand } from './components/CommandPalette';
 import { ProjectHistoryDialog } from './components/ProjectHistoryDialog';
 import { VersionLogDialog } from './components/VersionLogDialog';
@@ -2009,6 +2010,9 @@ export function StoryXDesk({
       setActiveTrack(nextTrack);
       setIsPublishingMode(false);
       setIsMediaPanelOpen(false);
+      if (nextTrack === 'bible') {
+        setDataView({ kind: 'board' });
+      }
     });
   }
 
@@ -2033,6 +2037,62 @@ export function StoryXDesk({
 
   if (isDraftMode) {
     return <FloatingEditor {...floatingEditorProps} />;
+  }
+
+  if (isBibleMode) {
+    const centerSlot =
+      dataView.kind === 'canon' ? (
+        <CanonCanvas
+          category={dataView.category}
+          project={project}
+          onUpdateCharacter={updateCharacterMemory}
+          onOpenBibleSection={openBibleSection}
+        />
+      ) : dataView.kind === 'bible' ? (
+        <MemoryBankStudio
+          project={project}
+          bank={memoryBank}
+          activeSection={dataView.section}
+          onUpdateCharacter={updateCharacterMemory}
+          onUpdateWorldRule={updateWorldMemory}
+          onUpdateCanon={updateCanonMemory}
+          onUpdateProject={updateProject}
+          onUpdateCreativeWeight={updateCreativeWeight}
+          approvalQueue={approvalQueue}
+          approvalDecisions={approvalDecisions}
+          onSetApprovalDecision={setApprovalDecision}
+          onUpdateApprovalStatement={updateApprovalStatement}
+          onSyncApprovedMemory={syncApprovedMemory}
+          onRequestReview={requestBibleReview}
+          canonChanges={canonChanges}
+          canonRefactorPlan={canonRefactorPlan}
+          onClearCanonChanges={() => setCanonChanges([])}
+        />
+      ) : null;
+    return (
+      <FloatingDataWorkspace
+        title={project.title}
+        episodeLabel={`데이터 · 캐논 ${project.canonFacts.length}`}
+        onSwitchTrack={(track) => switchToTrack(track)}
+        onOpenPublish={openPublishingMode}
+        dataView={dataView}
+        onSelectCategory={(category) => setDataView({ kind: 'canon', category })}
+        onSelectBibleSection={openBibleSection}
+        onShowBoard={() => setDataView({ kind: 'board' })}
+        metrics={studioMetrics}
+        onMediaAxisChange={updateStoryModeAxis}
+        canonHealth={canonHealth}
+        dataReviewResults={dataReviewResults}
+        project={project}
+        latestChapter={latestChapter}
+        isSerial={isSerial}
+        approvalQueue={approvalQueue}
+        dataReviewingCategory={dataReviewingCategory}
+        onRequestReview={runDataReview}
+        onOpenApprovalQueue={() => openBibleSection('approval')}
+        centerSlot={centerSlot}
+      />
+    );
   }
 
   return (

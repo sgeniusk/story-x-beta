@@ -447,6 +447,13 @@ describe('Story X focused editor layout', () => {
     // board 는 category/section 없는 단독 종류
     expect(canonDataView).toMatch(/\|\s*\{\s*kind:\s*'board'\s*\}/);
   });
+
+  it('Phase 2c — isBibleMode 일 때 FloatingDataWorkspace 를 early-return 으로 렌더한다', () => {
+    expect(desk).toContain('<FloatingDataWorkspace');
+    expect(desk).toContain('if (isBibleMode)');
+    expect(desk).toContain("setDataView({ kind: 'board' })");
+    expect(desk).toContain('centerSlot=');
+  });
 });
 
 describe('회차 생성 동작 회귀 — 의도 메모 오염·잠금 동기화 (P2·P3)', () => {
