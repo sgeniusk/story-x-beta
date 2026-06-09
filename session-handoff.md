@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-06-09 (4) — floating Phase 2e 완료 (classic draft JSX 250줄 삭제)
+
+> draft 모드가 항상 FloatingEditor로 간다. ?editor=classic 폴백 완전 제거.
+
+### 이번 세션에서 한 것
+- `isClassicEditor` useMemo + `?editor=classic` 폴백 제거
+- `if (isDraftMode)` → FloatingEditor 항상 (early return 확정)
+- 좌레일 `activeTrack === 'draft'` 분기 ~78줄 제거
+- 워크벤치 `activeTrack === 'draft'` 분기 ~94줄 제거 (ex-toolstrip, CreativeStage classic path)
+- 우측 `isDraftMode ? <MarginColumn+CoreStrip> : <aside>` → `<aside>` 만
+- `editorFocusLayout.test.ts` + `agentValidationProcess.test.ts` + `floatingEditor.test.ts` assertions 갱신
+- StoryXDesk.tsx 3,368 → 3,116줄 (-252)
+- 348 tests · tsc 0 · build GREEN. 커밋 `3220bf5`.
+- feat/arc-payoff-gate → main ff-merge, feat/floating-phase2e 브랜치 작업 중
+
+### 손대지 말 것
+- FloatingEditor.tsx — 이미 완성된 Phase 2a/2b 구현
+- data/publish 모드의 classic path 잔여 — 아직 floating화 안 됨(2c/2d)
+
+### 잔여 dead code (harmless, 별도 2f 정리)
+- StoryXDesk.tsx topbar의 `isDraftMode &&` guards ~7곳 (crew, meter, pending, spotlight, toast 등)
+- 이것들은 classic main에서 always-false이나 테스트가 source presence 체크 → 현재 348 pass 유지
+
+### 다음 권고
+- **(main 머지)** — feat/floating-phase2e → main
+- **(2c) 데이터 모드 floating화** — FloatingEditor 내 데이터/캐논 탭 렌더
+- **(2f) topbar dead code 정리** — remaining isDraftMode guards 제거
+
+---
+
 ## 2026-06-09 (3) — 아크 페이오프 게이트 라이브 실증 완료 (엔드투엔드 fixture 3케이스)
 
 > spec §10 LLM 신뢰도 리스크 검증. payload→chapter→ledger→harness 전 파이프라인이 fixture 로 검증됨.

@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-09 · Branch: `feat/arc-payoff-gate` (**아크 페이오프 게이트 1단계 + 2단계 완료** · premise-progress 스테이지 storyHarness 7번째 · isStalled→readyForProduction 차단 연결)
+> Last Updated: 2026-06-09 · Branch: `feat/floating-phase2e` (**floating Phase 2e 완료** · isClassicEditor 제거 · classic draft JSX 250줄 삭제 · draft 모드 항상 FloatingEditor)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -76,22 +76,24 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 ## 다음 한 단계
 
-**아크 페이오프 게이트 1~2단계 + 실증 완료.** 다음 갈래 중 택1.
-- **(main 머지)** — `feat/arc-payoff-gate` 브랜치 → main 머지. 10커밋 모두 green.
-- **(A) 플로팅 Phase 2 스왑** — floating 을 편집 모드 기본으로(StoryXDesk 3컬럼 제거 또는 토글) + `editorFocusLayout.test.ts` 새 구조로 갱신.
-- **(B) rank5 Tier2 Pass E** — `StoryXDesk.tsx` 잔여 ~11개(Dialogs·Publishing·Status) 추출 후 Tier3 훅 분리.
+**floating Phase 2e 완료.** 다음 갈래 중 택1.
+- **(main 머지)** — `feat/floating-phase2e` → main.
+- **(2c) 데이터 모드 floating화** — FloatingEditor 내 데이터/캐논 탭 렌더.
+- **(2d) 출간 모드 floating화** — PublishingStudio → FloatingEditor 내.
+- **(2f) topbar isDraftMode dead code 제거** — 남은 always-false guard ~7곳 삭제 + 관련 test 갱신.
+- **(B) rank5 Pass E** — StoryXDesk 잔여 Dialogs·Publishing·Status 추출.
 
-## 최근 검증 (2026-06-09 · 아크 페이오프 게이트 라이브 실증 완료)
+## 최근 검증 (2026-06-09 · floating Phase 2e)
 
 ```
 init.sh            → tsc · vitest(348 tests) · build 전체 통과
-아크 페이오프 게이트 엔드투엔드 실증 (커밋 1271a60)
-  fixture 3 케이스 → payload→chapterFromDraftPayload→computePayoffLedger→runStoryHarness
-  케이스1: LLM payoff 채움 → measured=true, isStalled=false, premise-progress pass(10)
-  케이스2: 3회 연속 payoff 빔 → deferredStreak=3, isStalled=true, block(0), readyForProduction=false
-  케이스3: 중간 회수 후 재정체 → streak 리셋, STALL_THRESHOLD 미달, isStalled=false
-브랜치 feat/arc-payoff-gate 누적 커밋:
-  b81e90f~1271a60 (총 10커밋 = 1·2단계 + 실증)
+floating Phase 2e (커밋 3220bf5)
+  isClassicEditor / ?editor=classic 폴백 완전 제거
+  StoryXDesk.tsx 3,368 → 3,116줄 (-252)
+  좌레일 activeTrack='draft' 분기 ~78줄 제거
+  워크벤치 activeTrack='draft' 분기 ~94줄 제거 (ex-toolstrip, CreativeStage classic)
+  우측 isDraftMode ternary → aside만
+  editorFocusLayout.test.ts assertions 갱신
 ```
 
 ## 완료 마일스톤
