@@ -61,7 +61,11 @@ export function buildEpisodeForks(project: StoryProject, ledger: PayoffLedgerRep
     });
   }
 
-  const threads = project.openThreads.filter((thread) => thread.trim().length > 0);
+  // trim 후 동일 문자열은 중복 제거 — React key 충돌 및 옵션 중복 방지.
+  const seen = new Set<string>();
+  const threads = project.openThreads
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0 && !seen.has(t) && seen.add(t));
   if (threads.length > 0) {
     forks.push({
       id: 'fork-open-thread',

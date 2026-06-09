@@ -72,6 +72,14 @@ describe('buildEpisodeForks', () => {
     expect(forks[0].options.map((o) => o.label)).toEqual(['P2', 'P3', 'P4']);
   });
 
+  it('openThreads 중복(trim 후 동일 포함)은 제거해 옵션을 만든다', () => {
+    const project = projectWith([], ['떡밥A', '떡밥A', ' 떡밥A ', '떡밥B']);
+    const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
+    expect(forks).toHaveLength(1);
+    expect(forks[0].source).toBe('open-thread');
+    expect(forks[0].options.map((o) => o.label)).toEqual(['떡밥A', '떡밥B']);
+  });
+
   it('openThreads 가 있으면 떡밥 갈림길을 추가한다 (최대 3 옵션)', () => {
     const project = projectWith([], ['떡밥A', '떡밥B', '떡밥C', '떡밥D']);
     const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
