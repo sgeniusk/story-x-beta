@@ -123,6 +123,7 @@ import {
 import { requestLlmDraft } from './lib/draftClient';
 import { requestAgentReview } from './lib/reviewClient';
 import { computePayoffLedger } from './lib/payoffLedger';
+import { buildEpisodeForks } from './lib/episodeBriefing';
 import { requestDataReview } from './lib/dataReviewClient';
 import type { BibleSection, CanonCategory, DataReviewView, DataView } from './lib/canonDataView';
 import { describeKoreanStyleLevel, evaluateKoreanProse } from './lib/koreanStyle';
@@ -1265,6 +1266,7 @@ export function StoryXDesk({
       isGenerating,
       metrics: studioMetrics,
       onMediaAxisChange: updateStoryModeAxis,
+      episodeForks: buildEpisodeForks(project, computePayoffLedger(project.chapters)),
     }),
     [
       project,

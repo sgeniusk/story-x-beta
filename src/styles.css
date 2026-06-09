@@ -11036,3 +11036,15 @@ body {
 .fc-data-axis{margin-top:16px;padding:13px 14px;border-radius:10px;background:var(--bg-2)}
 .fc-data-axis .lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-dim);margin-bottom:7px}
 .fc-data-axis input{width:100%;accent-color:var(--accent)}
+/* 갈림길 카드 — 회차 생성 전 작가 결정(fc-forks). 의도 메모 위에 렌더. */
+.fc-forks { margin-bottom: 10px; display: grid; gap: 8px; }
+.fc-forks-title { font-size: 11px; letter-spacing: 0.04em; color: var(--ink-dim); }
+.fc-fork-q { font-size: 12px; margin-bottom: 4px; }
+.fc-fork-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.fc-fork-opt {
+  font-size: 11px; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--rule-soft); background: transparent;
+  color: inherit; cursor: pointer;
+}
+.fc-fork-opt:hover:not(:disabled) { border-color: var(--p-show); }
+.fc-fork-opt:disabled { opacity: 0.4; cursor: default; }

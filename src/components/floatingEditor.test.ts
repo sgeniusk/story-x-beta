@@ -223,6 +223,31 @@ describe('FloatingEditor 실데이터 배선', () => {
     unmount();
   });
 
+  it('episodeForks 가 있으면 갈림길 카드를 렌더하고, 클릭 시 onIntentChange 로 시드가 합쳐진다', async () => {
+    const seen: string[] = [];
+    const { host, click, unmount } = mount(baseProps({
+      intentMemo: '기존 의도',
+      onIntentChange: (text: string) => seen.push(text),
+      episodeForks: [{
+        id: 'fork-open-thread', source: 'open-thread',
+        question: '열린 떡밥 중 이번 화의 중심에 둘 것은 무엇인가요?',
+        options: [{ label: '떡밥A', intentSeed: '이번 화의 중심 사건은 "떡밥A"다.' }]
+      }]
+    }));
+    const button = host.querySelector('.fc-fork-opt') as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    expect(host.textContent).toContain('열린 떡밥');
+    await click(button);
+    expect(seen.at(-1)).toBe('기존 의도\n이번 화의 중심 사건은 "떡밥A"다.');
+    unmount();
+  });
+
+  it('episodeForks 가 없으면 갈림길 카드를 렌더하지 않는다', () => {
+    const { host, unmount } = mount(baseProps());
+    expect(host.querySelector('.fc-forks')).toBeNull();
+    unmount();
+  });
+
   it('매체 슬라이더가 onMediaAxisChange 를 호출한다', () => {
     const onMediaAxisChange = vi.fn();
     const { host, unmount } = mount(baseProps({ onMediaAxisChange }));

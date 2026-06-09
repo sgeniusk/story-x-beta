@@ -5,6 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import type { InlineDiff, MarginReview, Paragraph, PersonaCard, SummonHandler } from '../lib/marginReview';
 import { SEVERITY_LABEL } from '../lib/marginReview';
 import type { StudioMetrics } from '../lib/studioMetrics';
+import { composeIntentWithFork, type EpisodeFork } from '../lib/episodeBriefing';
 
 interface ChapterBeatLike {
   id: string;
@@ -45,6 +46,8 @@ export interface FloatingEditorProps {
   // Phase 2b — 지표 패널 (studioMetrics: 하니스·품질·매체·온톨로지)
   metrics: StudioMetrics;
   onMediaAxisChange?: (axis: number) => void;
+  /** 회차 생성 전 작가 결정 갈림길 — 없으면 카드 미렌더. */
+  episodeForks?: EpisodeFork[];
 }
 
 const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
@@ -80,6 +83,7 @@ export function FloatingEditor({
   isGenerating = false,
   metrics,
   onMediaAxisChange,
+  episodeForks,
 }: FloatingEditorProps) {
   const personaById = useCallback(
     (id: string): PersonaCard =>
@@ -124,6 +128,15 @@ export function FloatingEditor({
   // contentEditable 본문 — 한글 IME 조합 중 input 은 무시하고 compositionend 에서 1회만 커밋
   const composingRef = useRef(false);
   const msElRef = useRef<HTMLDivElement>(null);
+  // 갈림길 선택 — intent textarea 는 uncontrolled(defaultValue) 이므로 ref 로 값을 직접 갱신한다.
+  const intentRef = useRef<HTMLTextAreaElement | null>(null);
+  function pickFork(seed: string) {
+    if (!onIntentChange) return;
+    const current = intentRef.current ? intentRef.current.value : intentMemo;
+    const next = composeIntentWithFork(current, seed);
+    if (intentRef.current) intentRef.current.value = next;
+    onIntentChange(next);
+  }
 
   const emitBody = useCallback(() => {
     if (composingRef.current) return;
@@ -595,6 +608,24 @@ export function FloatingEditor({
               <div className="k">캐릭터</div>
             </div>
           </div>
+          {episodeForks && episodeForks.length > 0 && (
+            <div className="fc-forks">
+              <div className="fc-forks-title">이번 화 갈림길 — 작가의 결정</div>
+              {episodeForks.map((fork) => (
+                <div key={fork.id} className="fc-fork">
+                  <div className="fc-fork-q">{fork.question}</div>
+                  <div className="fc-fork-opts">
+                    {fork.options.map((opt) => (
+                      <button key={opt.label} type="button" className="fc-fork-opt"
+                        disabled={!onIntentChange} onClick={() => pickFork(opt.intentSeed)}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="memo">
             <div className="mh">
               <span
@@ -615,6 +646,7 @@ export function FloatingEditor({
               쇼러너가 잡은 이번 회차 프레이밍
             </div>
             <textarea
+              ref={intentRef}
               rows={3}
               defaultValue={intentMemo}
               readOnly={!onIntentChange}
