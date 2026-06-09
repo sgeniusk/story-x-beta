@@ -1,6 +1,6 @@
 // 검토 프롬프트가 전제(중심 질문) 진척을 점검하도록 지시하는지 — continuity≠payoff 보정.
 import { describe, expect, it } from 'vitest';
-import { buildAgentReviewPrompt } from './promptBuilders';
+import { buildAgentReviewPrompt, buildDraftPrompt } from './promptBuilders';
 
 describe('buildAgentReviewPrompt — 전제 진척 점검 지시 (continuity≠payoff 보정)', () => {
   it('연재 장편에서 중심 질문(전제)의 진척을 함께 보도록 지시한다', () => {
@@ -15,5 +15,14 @@ describe('buildAgentReviewPrompt — 전제 진척 점검 지시 (continuity≠p
     });
     expect(prompt).toContain('중심 질문');
     expect(prompt).toContain('진척');
+  });
+});
+
+describe('buildDraftPrompt — 약속↔회수 산출 요청 (아크 페이오프 1단계)', () => {
+  it('연재 회차에 rewardArc/stakesLedger 산출을 요청한다', () => {
+    const p = buildDraftPrompt({ medium: 'novel', format: 'long-novel', freewrite: 'x', title: 't', context: '' });
+    expect(p).toContain('rewardArc');
+    expect(p).toContain('stakesLedger');
+    expect(p).toContain('deferred');
   });
 });

@@ -724,6 +724,7 @@ function buildDraftPrompt({ medium, format, freewrite, title, context }) {
           '- 한국어로 작성하고, 작가 자유 서술의 어휘와 의도를 존중합니다.',
           '- 기존 작품 맥락이 있으면 그 캐논·인물·세계 규칙을 절대 어기지 말고, 이번 회차는 그 다음 회차로 자연스럽게 이어집니다.',
           '- 한 회차는 하나의 질문에 답하고 더 날카로운 질문을 엽니다.',
+          '- 이 회차가 건 약속과 실제로 회수한 것을 rewardArc 로, 핵심 위험의 결말(lost/kept/deferred)을 stakesLedger 로 함께 적습니다. 회수를 미뤘으면 솔직히 deferred 로 표시합니다.',
           '- prose는 1500~3000자 분량의 실제 본문입니다.'
         ]
       : [
@@ -777,10 +778,16 @@ function buildDraftPrompt({ medium, format, freewrite, title, context }) {
     '  "beats": [{ "label": "구성 단위 이름", "summary": "이 단위에서 일어나는 일 한 문장", "tension": 0 }],',
     '  "prose": "본문",',
     isEssay
-      ? '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 글에서 확정된 사실 — 작가가 말한 경험만" }]'
+      ? '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 글에서 확정된 사실 — 작가가 말한 경험만" }],'
       : isSerial
-        ? '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 회차에서 확정된 새 사실" }]'
-        : '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 원고에서 확정된 새 사실" }]',
+        ? '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 회차에서 확정된 새 사실" }],'
+        : '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 원고에서 확정된 새 사실" }],',
+    isSerial
+      ? '  "rewardArc": [{ "promise": "이 회차가 건 약속/질문", "payoff": "이 회차가 실제로 회수한 것 — 없으면 빈 문자열", "intensity": 0 }],'
+      : '  "rewardArc": [{ "promise": "이 글이 건 약속", "payoff": "회수한 것", "intensity": 0 }],',
+    isSerial
+      ? '  "stakesLedger": [{ "stake": "위험에 놓인 것", "atRisk": "누가/무엇이", "resolution": "lost|kept|deferred — 다음 회차로 미뤘으면 deferred" }]'
+      : '  "stakesLedger": [{ "stake": "위험에 놓인 것", "atRisk": "누가/무엇이", "resolution": "lost|kept" }]',
     '}'
   ].join('\n');
 }
