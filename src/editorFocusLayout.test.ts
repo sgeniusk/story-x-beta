@@ -151,10 +151,6 @@ describe('Story X focused editor layout', () => {
     // 저장 상태 칩과 출간 버튼은 유지되지만 working bar 존으로 재배치됐다
     expect(desk).toContain('sx-save-chip ex-workbar-save');
     expect(desk).toContain('sx-publish-button');
-    // 우측 존: 편집 모드에서만 작가진 진행 스트립·분량 미터·승인 대기를 노출한다
-    expect(desk).toContain('className="ex-workbar-crew"');
-    expect(desk).toContain('className="ex-workbar-meter"');
-    expect(desk).toContain('className="ex-workbar-pending"');
     // 홈 버튼/아바타/매체 칩/⌘K 버튼은 상단에서 제거했다
     expect(desk).not.toContain('className="sx-command-k"');
     expect(desk).not.toContain('className="sx-user-avatar"');
@@ -372,11 +368,8 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('const marginReview = useMarginReview');
     // MarginColumn 과 CoreStrip 은 FloatingEditor 로 이동했다.
     expect(desk).toContain('<MentionBar');
-    expect(desk).toContain('<Spotlight');
     expect(desk).toContain('toMarginReview');
     expect(desk).toContain('data-pid={paragraph.id}');
-    expect(desk).toContain('className="sx-margin-toggle"');
-    expect(desk).toContain('className="sx-binder-toggle"');
     expect(desk).not.toContain('function AgentReviewRow');
     expect(desk).not.toContain('ex-review-row ex-review-row--');
     expect(css).toContain('.sx-margin-col');

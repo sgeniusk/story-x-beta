@@ -63,7 +63,6 @@ import { OpenThreadsCard } from './components/OpenThreadsCard';
 import { PixelAvatar } from './components/PixelAvatar';
 import { ProjectStateCard } from './components/ProjectStateCard';
 import { PublishingIndexCard } from './components/PublishingIndexCard';
-import { Spotlight } from './components/Spotlight';
 import { WorkStateGrid } from './components/WorkStateGrid';
 import { FloatingEditor } from './components/FloatingEditor';
 import { FloatingDataWorkspace } from './components/FloatingDataWorkspace';
@@ -2205,14 +2204,6 @@ export function StoryXDesk({
                 <em>{chapterCrumb}</em>
               ))}
           </nav>
-          {isDraftMode && latestChapter && (
-            <span className="ex-workbar-scene" title="현재 작업 지점">
-              <span className="ex-workbar-scene-dot" aria-hidden="true" />
-              <span className="ex-workbar-scene-now">지금</span>
-              <strong>{chapterLabel(latestChapter)}</strong>
-              <span className="ex-workbar-scene-detail">· {latestChapter.title}</span>
-            </span>
-          )}
           <span className="sx-save-chip ex-workbar-save" data-state={editedSinceReview ? 'dirty' : 'synced'} aria-live="polite">
             <Save size={13} />
             {saveLabel}
@@ -2242,72 +2233,6 @@ export function StoryXDesk({
         </nav>
         <div className="sx-topbar-actions ex-workbar-right">
           <AiStatusBadge />
-          {isDraftMode && (
-            <button
-              type="button"
-              className="ex-workbar-crew"
-              title="작가진 진행 상황 — 클릭하면 작가진 검토 레일로 이동합니다"
-              onClick={() => setIsFocusMode(false)}
-            >
-              <span className="ex-workbar-crew-label">작가진</span>
-              <span className="ex-workbar-crew-stack">
-                {crewProgress.map((member) => (
-                  <span key={member.agentId} className="ex-workbar-crew-portrait">
-                    <span
-                      className={`pixel-agent ex-crew-pixel ${member.persona.pixelClass}`}
-                      aria-hidden="true"
-                    >
-                      <span className="pixel-agent-hair" />
-                      <span className="pixel-agent-head">
-                        <i />
-                        <b />
-                      </span>
-                      <span className="pixel-agent-neck" />
-                      <span className="pixel-agent-body" />
-                    </span>
-                    <span className={`ex-workbar-crew-stage ex-stage-${member.stage}`} aria-hidden="true" />
-                  </span>
-                ))}
-              </span>
-              <span className="ex-workbar-crew-count">
-                {crewDoneCount}
-                <em>/{crewProgress.length}</em>
-              </span>
-            </button>
-          )}
-          {isDraftMode && (
-            <span
-              className="ex-workbar-meter"
-              title={`${isSerial ? '이번 회차 분량' : '원고 분량'} — ${chapterCharCount.toLocaleString()}자 / 목표 ${CHAPTER_CHAR_TARGET.toLocaleString()}자`}
-            >
-              <span className="ex-workbar-meter-num">
-                {chapterCharCount.toLocaleString()}
-                <em>/{CHAPTER_CHAR_TARGET.toLocaleString()}</em>
-              </span>
-              <span className="ex-workbar-meter-track">
-                <i
-                  className={chapterCharPct < 40 ? 'is-low' : ''}
-                  style={{ width: `${chapterCharPct}%` }}
-                />
-              </span>
-            </span>
-          )}
-          {isDraftMode && (
-            <button
-              type="button"
-              className="ex-workbar-pending"
-              onClick={() => {
-                setActiveTrack('bible');
-                setIsPublishingMode(false);
-                setIsMediaPanelOpen(false);
-                openBibleSection('approval');
-              }}
-            >
-              <ClipboardCheck size={13} />
-              승인 대기
-              <span className="ex-workbar-pending-count">{pendingApprovalCount}</span>
-            </button>
-          )}
           {/* 편집기 설정 — 옵션 버튼 클릭 시 팝오버. 트윅(강조색)·캔버스(원고 배경) 외에도 곧 다른 옵션이 모인다 */}
           <div className="sx-studio-settings-wrap" ref={studioSettingsWrapRef}>
             <button
@@ -2611,49 +2536,6 @@ export function StoryXDesk({
           )}
         </aside>
       </section>
-      {isDraftMode && (
-        <>
-          <button
-            type="button"
-            className="sx-margin-toggle"
-            aria-label="마진 의견 열기"
-            onClick={() => setIsMarginDrawerOpen(true)}
-          >
-            <MessageCircle size={15} />
-            의견 보기
-            <span className="cnt">{displayedMarginReviews.length}</span>
-          </button>
-          <button
-            type="button"
-            className="sx-binder-toggle"
-            aria-label="좌측 작업 바인더 열기"
-            onClick={() => setIsBinderDrawerOpen(true)}
-          >
-            <ListChecks size={15} />
-            바인더
-          </button>
-        </>
-      )}
-      {isDraftMode && isSpotlightOpen && (
-        <Spotlight
-          onClose={() => setIsSpotlightOpen(false)}
-          onSummon={(id) => {
-            setIsSpotlightOpen(false);
-            marginReview.onSummon(id, { anchor: marginDefaultAnchor });
-          }}
-        />
-      )}
-      {isDraftMode && marginReview.toast && (() => {
-        const persona = findPersona(marginReview.toast.personaId);
-        return (
-          <div className="sx-toast" role="status">
-            <PixelAvatar tint={persona.tint} className="sx-toast__avatar" />
-            <span>
-              <span className="sx-toast__name">{persona.name}</span> — 잠시만요, 읽고 있어요.
-            </span>
-          </div>
-        );
-      })()}
       <StoryXStatusBar
         alphaReport={alphaReport}
         project={project}
