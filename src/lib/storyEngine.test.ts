@@ -16,8 +16,12 @@ import {
   produceNextChapter,
   serializeCanonCategory,
   unlockChapter,
-  validateContinuity
+  validateContinuity,
+  type DraftChapterPayload,
+  type SeriesProject
 } from './storyEngine';
+import { computePayoffLedger } from './payoffLedger';
+import { runStoryHarness } from './storyHarness';
 
 describe('storyEngine', () => {
   it('uses a neutral sample project name instead of a fake production title', () => {
@@ -795,5 +799,98 @@ describe('commitChapter 인물 캐논화 (P4)', () => {
     const lucian = updated.characters.find((character) => character.name === '루시안 벨로트');
     expect(lucian).toBeDefined();
     expect(riana?.relations.some((relation) => relation.targetId === lucian?.id && relation.label === '둘째 오빠')).toBe(true);
+  });
+});
+
+// ─── 라이브 실증 — payload→chapter→payoffLedger→storyHarness 전 파이프라인 ──────────────
+// 목적: 실제 LLM 이 반환하는 형태의 fixture 를 통과시켜 premise-progress 차단이 엔드투엔드로 작동하는지 검증.
+// spec §10 LLM 신뢰도 리스크 — LLM 자기보고 불신, 파이프라인 입장에서 정직하게 측정.
+describe('Arc Payoff Gate 엔드투엔드 실증', () => {
+  const baseProject = createEmptyProject({ title: '실증 작품' });
+  const baseHarnessInput = {
+    medium: 'novel', formatLabel: '장편',
+    material: '기억을 고치는 필사관이 사라진 오빠를 찾는다',
+    storySeed: '탑에 들어갈수록 자신의 이름이 사라진다',
+    characterSeed: '서윤: 죄책감',
+    audience: '감정 미스터리',
+    constraints: '장기 연재'
+  };
+
+  // LLM 이 payoff 채워서 반환 → measured=true, isStalled=false → premise-progress pass.
+  it('LLM 이 rewardArc payoff 를 채우면 premise-progress 가 통과한다', () => {
+    const payload: DraftChapterPayload = {
+      title: '1화', hook: '', outline: [], beats: [], prose: '본문',
+      newCanonFacts: [],
+      rewardArc: [{ promise: '오빠 탐색', payoff: '오빠 단서 발견' }],
+      stakesLedger: [{ stake: '필사관 자격', atRisk: '서윤', resolution: 'kept' }]
+    };
+    const req = { intent: '탐색', pressure: '낮음' };
+    const { chapter } = chapterFromDraftPayload(baseProject, payload, req);
+
+    const ledger = computePayoffLedger([chapter]);
+    expect(ledger.measured).toBe(true);
+    expect(ledger.isStalled).toBe(false);
+    expect(ledger.paidPromises).toBeGreaterThan(0);
+
+    const report = runStoryHarness({ ...baseHarnessInput, chapters: [chapter] });
+    const stage = report.stages.find((s) => s.id === 'premise-progress');
+    expect(stage?.status).toBe('pass');
+    expect(stage?.score).toBe(10);
+  });
+
+  // LLM 이 3회차 모두 payoff 비어서 반환 (회수 미룸) → isStalled=true → premise-progress block → readyForProduction=false.
+  it('LLM 이 3회차 연속 payoff 를 비우면 premise-progress 가 차단하고 readyForProduction=false 가 된다', () => {
+    const makePayload = (ep: number): DraftChapterPayload => ({
+      title: `${ep}화`, hook: '', outline: [], beats: [], prose: '본문',
+      newCanonFacts: [],
+      rewardArc: [{ promise: `회차 ${ep} 약속`, payoff: '' }],  // payoff 비어있음 = 회수 미룸
+      stakesLedger: [{ stake: '필사관 자격', atRisk: '서윤', resolution: 'deferred' }]
+    });
+    const req = { intent: '연재', pressure: '보통' };
+    // 프로젝트에 회차를 순차 누적.
+    let project: SeriesProject = baseProject;
+    const chapters = [];
+    for (let ep = 1; ep <= 3; ep += 1) {
+      const { chapter, updatedProject } = chapterFromDraftPayload(project, makePayload(ep), req);
+      chapters.push(chapter);
+      project = updatedProject;
+    }
+
+    const ledger = computePayoffLedger(chapters);
+    expect(ledger.measured).toBe(true);
+    expect(ledger.deferredStreak).toBe(3);
+    expect(ledger.isStalled).toBe(true);
+
+    const report = runStoryHarness({ ...baseHarnessInput, chapters });
+    const stage = report.stages.find((s) => s.id === 'premise-progress');
+    expect(stage?.status).toBe('block');
+    expect(stage?.score).toBe(0);
+    expect(report.readyForProduction).toBe(false);
+    expect(stage?.requiredRepairs.length).toBeGreaterThan(0);
+  });
+
+  // LLM 이 회차 중간에 회수하면 deferredStreak 가 리셋되어 차단하지 않는다.
+  it('payoff 회수 후 새 회차가 다시 미루면 streak 리셋 — 3회 이전이면 차단하지 않는다', () => {
+    const withPayoff: DraftChapterPayload = {
+      title: '1화', hook: '', outline: [], beats: [], prose: '',
+      newCanonFacts: [],
+      rewardArc: [{ promise: '약속', payoff: '회수함' }],
+      stakesLedger: []
+    };
+    const noPayoff: DraftChapterPayload = {
+      title: '2화', hook: '', outline: [], beats: [], prose: '',
+      newCanonFacts: [],
+      rewardArc: [{ promise: '새 약속', payoff: '' }],
+      stakesLedger: [{ stake: '무언가', atRisk: '주인공', resolution: 'deferred' }]
+    };
+    const req = { intent: '진행', pressure: '보통' };
+    const { chapter: ch1, updatedProject: p1 } = chapterFromDraftPayload(baseProject, withPayoff, req);
+    const { chapter: ch2 } = chapterFromDraftPayload(p1, noPayoff, req);
+
+    const ledger = computePayoffLedger([ch1, ch2]);
+    expect(ledger.measured).toBe(true);
+    expect(ledger.lastPayoffEpisode).toBe(1);
+    expect(ledger.deferredStreak).toBe(1);   // 1화 회수 후 2화 1회만 미룸 → streak=1
+    expect(ledger.isStalled).toBe(false);    // STALL_THRESHOLD=3 미달
   });
 });
