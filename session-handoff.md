@@ -4,6 +4,34 @@
 
 ---
 
+## 2026-06-09 (5) — floating Phase 2c 데이터 모드 floating화 완료 (FloatingDataWorkspace 신설)
+
+> 데이터 모드(`activeTrack==='bible'`)가 옛 3컬럼 대신 "떠 있는 작업실"로. 진입 첫인상 = 정제 보드(지표·검토 요약), raw 세부는 파고들기. 브랜치 `feat/floating-phase2c-data`.
+
+### 이번 세션에서 한 것
+- **brainstorming→spec→plan** — 스펙 `docs/superpowers/specs/2026-06-09-floating-data-workspace-design.md`, 계획 `docs/superpowers/plans/2026-06-09-floating-data-workspace.md`.
+- **서브에이전트 task별 구현 + Claude 독립 검증** (Task 1~5, TDD):
+  - `DataView` 에 `{ kind: 'board' }` 추가 (`ba0373b`)
+  - `FloatingDataWorkspace.tsx` 신설 — `.fc-*` 셸 공유, 정제 보드 + 독 6버튼 + 패널 5, centerSlot 주입 (`2f4ab1b`)
+  - `StoryXDesk` `isBibleMode` early-return 배선 + 데이터 진입 시 `setDataView({kind:'board'})` 리셋 (`d249b38`)
+  - `.fc-data-*` 스타일 (`712cc7c`)
+- **★ 라이브 발견·수정 (`839136c`)** — board/독 지표에 `DataPanel`(`.sx-desk` 스코프 전용)을 박았더니 `.fc-app` 안에서 `.sx-gate-sw` 토글이 **거대 타원으로 깨지고** raw 게이트 키가 노출됨(사용자 "엉망이네 이상한 원" 지적). → **`MetricSummary`(floating-네이티브 간결 요약: 이름·부제·점수·상태점)로 교체.** FloatingEditor 가 DataPanel 대신 `.fc-metric` 을 따로 만든 이유와 동일.
+- 라이브(Playwright) — board 정제·캐논 파고들기→복귀·모바일 360 가로스크롤 0·콘솔 0. 359 tests·tsc·build GREEN.
+
+### 손대지 말 것
+- `FloatingDataWorkspace.tsx` 의 `MetricSummary`(floating-네이티브 지표) · `.fc-data-detail.sx-desk` 스코프 차용(파고들기 스타일 핵심).
+- `FloatingEditor.tsx`(편집 모드, 무수정) · `DataPanel`(`.sx-desk` 전용 — floating 에 쓰지 말 것).
+- 옛 3컬럼 데이터 JSX(StoryXDesk ~2431~2550)는 early-return 으로 도달 불가지만 소스 보존(P3 source-string 단언 유지). 삭제는 2f.
+
+### 정체불명 working-tree 변경 처리 (보고)
+- 세션 중 내가 안 만든 변경 2개 발견 — (a) `DataPanel` 에 `startCollapsed` 접기 옵션 (b) `.fc-data-detail.sx-desk`. 멀티 CLI(Codex 등) 또는 직접 수정 가능성. **(b)는 파고들기 스타일에 실제 필요해 유지, (a)는 `MetricSummary` 로 대체돼 dead 라 되돌림.** 직접 작업한 것이면 알릴 것.
+
+### 다음 (이번 세션 범위 "+ 코드성 개선 묶음")
+- 상단바 압축 · 매체별 검토 배선 · P1 빈응답 폴백 가드 · 2f topbar dead code 정리. (보고서 미해결 UI/UX)
+- (2d) 출간 floating화 · main 머지.
+
+---
+
 ## 2026-06-09 (4) — floating Phase 2e 완료 (classic draft JSX 250줄 삭제)
 
 > draft 모드가 항상 FloatingEditor로 간다. ?editor=classic 폴백 완전 제거.

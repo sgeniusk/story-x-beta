@@ -26,7 +26,7 @@
 - **실데이터 배선 완료 (2026-06-05)** — `SAMPLE_*` 제거 → 순수 표현 컴포넌트. StoryXDesk 가 `?editor=floating` 일 때 실 `editorText·MarginReview·CORE_PERSONAS·beats·검토 콜백(onSummon/onRunAll/onAcceptDiff/onRejectReview)`을 props 주입(접근 A). `floatingEditor.test.ts`(react-dom+jsdom 렌더) 추가. 라이브 검증 — 실 페르소나 5명·전체검토 5건 도착·콘솔 0. 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-05-floating-editor-data-wiring*`.
 - **Phase 2a 스왑 완료·머지 (2026-06-06, main `389a997` ff-merge + 정렬 `488b5e8`)** — floating 이 편집 기본(`isDraftMode && !isClassicEditor`, `?editor=classic` 한시 폴백). 본문 contentEditable 라이브 타이핑(IME compositionstart/end 가드 + bodyVersion-메모로 커서 클로버 차단) + 의도메모 쓰기-백 + 초안생성/편집·데이터/출간 네비 배선. emitBody 는 블록을 `\n\n`(splitIntoParagraphs 라운드트립)로 join. **사용자가 실제 한글 타이핑 정상 확인** → 머지. 추가 — 빈 마진 `display:none` 으로 종이 시트 가운데 정렬. 라이브 — 기본=floating·편집→글자수 0→24자·본문 단락 보존·시트 정중앙·콘솔 0·classic=옛 3컬럼. 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2a-swap*`. 캡처 `docs/handoff/screenshots/floating-phase2a/`.
 - **Phase 2b 완료·머지 (2026-06-06, main `8bc9d4a`)** — floating 독에 "지표" 버튼 1개 + `fc-p-metrics` 패널 4 접이식 섹션(하니스·품질게이트·매체투사+commercial↔literary 슬라이더·온톨로지), floating-네이티브 `.fc-*`. 이미 계산된 `studioMetrics`(+`updateStoryModeAxis`) 주입(순수 표현). 라이브 — 실데이터(하니스 7/8·95/100·8스테이지, 품질 2/7) 렌더·360 모바일 독 6버튼·패널 뷰포트 내(가로스크롤 0)·콘솔 0. 회차/곡선 리치판은 별도(미정). 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2b-metrics-dock*`. 캡처 `docs/handoff/screenshots/floating-phase2b/`.
-- **남은 단계 — 2c~2e** — 2c 데이터(캐논/바이블) floating 화 · 2d 출간 floating 화 · 2e 옛 3컬럼 제거 + `editorFocusLayout.test.ts` 새 구조 이관 + `?editor=classic` 제거. (선택) 회차/곡선 리치판(ChapterStructureTree/TensionShareChart) 이식. 계획 `docs/storyx-floating-editor-plan.md`.
+- **남은 단계 — 2c ✅ · 2d · 2f** — **2c 데이터(캐논/바이블) floating화 완료**(`FloatingDataWorkspace` 신설, 정제 보드 + 독, 브랜치 `feat/floating-phase2c-data`). 2e(옛 3컬럼 제거 + classic 제거)는 직전 완료. 잔여 — 2d 출간 floating화 · 2f topbar dead code 정리. (선택) 회차/곡선 리치판(ChapterStructureTree/TensionShareChart) 이식.
 
 ## 현재 활성 — M11 검토 기반 정비 (`in_progress`)
 
@@ -76,24 +76,24 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 ## 다음 한 단계
 
-**floating Phase 2e 완료.** 다음 갈래 중 택1.
-- **(main 머지)** — `feat/floating-phase2e` → main.
-- **(2c) 데이터 모드 floating화** — FloatingEditor 내 데이터/캐논 탭 렌더.
-- **(2d) 출간 모드 floating화** — PublishingStudio → FloatingEditor 내.
-- **(2f) topbar isDraftMode dead code 제거** — 남은 always-false guard ~7곳 삭제 + 관련 test 갱신.
-- **(B) rank5 Pass E** — StoryXDesk 잔여 Dialogs·Publishing·Status 추출.
+**floating Phase 2c(데이터 모드 floating화) 완료.** 다음 갈래.
+- **(코드성 개선 묶음 — 이번 세션 범위)** — 상단바 압축 · 매체별 검토 배선 · P1 빈응답 폴백 가드 · 2f topbar dead code 정리.
+- **(2d) 출간 모드 floating화** — PublishingStudio → FloatingDataWorkspace 패턴으로.
+- **(main 머지)** — `feat/floating-phase2c-data` → main.
 
-## 최근 검증 (2026-06-09 · floating Phase 2e)
+## 최근 검증 (2026-06-09 · floating Phase 2c 데이터 floating화)
 
 ```
-init.sh            → tsc · vitest(348 tests) · build 전체 통과
-floating Phase 2e (커밋 3220bf5)
-  isClassicEditor / ?editor=classic 폴백 완전 제거
-  StoryXDesk.tsx 3,368 → 3,116줄 (-252)
-  좌레일 activeTrack='draft' 분기 ~78줄 제거
-  워크벤치 activeTrack='draft' 분기 ~94줄 제거 (ex-toolstrip, CreativeStage classic)
-  우측 isDraftMode ternary → aside만
-  editorFocusLayout.test.ts assertions 갱신
+init.sh            → tsc · vitest(359 tests) · build 전체 통과
+floating Phase 2c — 데이터 모드 "떠 있는 작업실" (브랜치 feat/floating-phase2c-data)
+  DataView 에 board(정제 보드) 종류 추가 (ba0373b)
+  FloatingDataWorkspace 신설 — 정제 보드 + 독 6버튼(지표·검토·캐논·바이블·상태·집중) + 패널 5 (2f4ab1b)
+  StoryXDesk isBibleMode → FloatingDataWorkspace early-return 배선 + board 리셋 (d249b38)
+  .fc-data-* 스타일 (712cc7c)
+  board/독 지표: DataPanel(.sx-* 가 .fc-app 에서 깨짐) → MetricSummary floating-네이티브 (839136c)
+  파고들기 세부 .fc-data-detail.sx-desk 스코프로 CanonCanvas/MemoryBankStudio 스타일 차용
+  라이브 — board 정제(이상한 원 제거)·캐논 파고들기→복귀·모바일 360(가로스크롤 0)·콘솔 0
+  캡처 docs/handoff/screenshots/floating-phase2c/{01-board,02-canon-detail,03-board-mobile-360}
 ```
 
 ## 완료 마일스톤
