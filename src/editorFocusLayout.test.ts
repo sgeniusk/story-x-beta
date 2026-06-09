@@ -70,8 +70,7 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('const [editedSinceReview, setEditedSinceReview]');
     expect(desk).toContain('function reviewDraft');
     expect(desk).toContain('바이블 열기');
-    // P2-B — '이번 회차 의도'는 좌측 레일의 AgentIntentCard(ex-intent-card)에 에이전트 발언으로 들어간다
-    expect(desk).toContain('<AgentIntentCard');
+    // P2-B — '이번 회차 의도'는 FloatingEditor 로 이동했다. AgentIntentCard 정의는 컴포넌트 파일에 있다.
     expect(componentSrc('AgentIntentCard')).toContain('ex-intent-card');
     expect(componentSrc('AgentIntentCard')).toContain('function AgentIntentCard');
     expect(componentSrc('AgentIntentCard')).toContain('className="ex-intent-textarea"');
@@ -118,10 +117,7 @@ describe('Story X focused editor layout', () => {
     // 편집 트랙: 툴스트립 1행 + 원고가 나머지 공간을 채우는 1행
     expect(css).toContain('grid-template-rows: auto minmax(0, 1fr)');
     expect(css).toContain('.sx-workbench.is-draft .sx-creative-stage');
-    // 얇은 툴스트립(~52px): 매체 라벨 + 검토 규모 토글 + 집중 모드 버튼
-    expect(desk).toContain('className="ex-toolstrip"');
-    expect(desk).toContain('className="ex-scale-toggle"');
-    expect(desk).toContain('className="ex-focus-btn"');
+    // 얇은 툴스트립은 FloatingEditor 로 이동했다. CSS 정의는 styles.css 에 유지된다.
     expect(css).toContain('.sx-desk .ex-toolstrip');
     expect(css).toContain('min-height: 52px;');
     expect(css).toContain('.sx-desk .ex-scale-toggle');
@@ -351,8 +347,7 @@ describe('Story X focused editor layout', () => {
   });
 
   it('P2-B — rebuilds the edit-mode left rail with work state, agent intent, structure tree and tension chart', () => {
-    // 작품 상태 4셀 그리드 (마감 없음)
-    expect(desk).toContain('<WorkStateGrid');
+    // 작품 상태 4셀 그리드 (마감 없음) — WorkStateGrid 는 DataLeftRail 에서 사용된다
     expect(componentSrc('WorkStateGrid')).toContain('function WorkStateGrid');
     expect(componentSrc('WorkStateGrid')).toContain('총 분량');
     expect(componentSrc('WorkStateGrid')).toContain('이번 회차 분량');
@@ -375,8 +370,7 @@ describe('Story X focused editor layout', () => {
 
   it('P2-C — replaces the right review rail with margin annotations and a core strip', () => {
     expect(desk).toContain('const marginReview = useMarginReview');
-    expect(desk).toContain('<MarginColumn');
-    expect(desk).toContain('<CoreStrip');
+    // MarginColumn 과 CoreStrip 은 FloatingEditor 로 이동했다.
     expect(desk).toContain('<MentionBar');
     expect(desk).toContain('<Spotlight');
     expect(desk).toContain('toMarginReview');
@@ -398,7 +392,7 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('const verticalSlice = useMemo');
     expect(desk).toContain('...verticalSlice.memoryCandidates');
     expect(desk).toContain('VerticalSliceProofPanel');
-    expect(desk).toContain('verticalSlice={verticalSlice}');
+    // verticalSlice 는 floatingEditorProps 로 전달된다 — 직접 prop 전달은 FloatingEditor 경로에 있다
     expect(desk).toContain('onOpenApprovalQueue');
     expect(desk).toContain('승인 대기함 열기');
     expect(desk).toContain('웹소설 1화');

@@ -1203,13 +1203,7 @@ export function StoryXDesk({
     [latestChapter?.prose, marginReview]
   );
 
-  // Phase 2a — floating 이 편집 기본. ?editor=classic 일 때만 옛 3컬럼 셸(한시적 폴백, 2e 에서 제거).
-  const isClassicEditor = useMemo(
-    () =>
-      typeof window !== 'undefined' &&
-      new URLSearchParams(window.location.search).get('editor') === 'classic',
-    []
-  );
+  // Phase 2e — isClassicEditor / ?editor=classic 폴백 제거. 드래프트 모드는 항상 FloatingEditor.
   const openMarginReviewChat = useCallback(
     (review: MarginReview) => {
       const run =
@@ -2037,7 +2031,7 @@ export function StoryXDesk({
     });
   }
 
-  if (isDraftMode && !isClassicEditor) {
+  if (isDraftMode) {
     return <FloatingEditor {...floatingEditorProps} />;
   }
 
@@ -2046,7 +2040,7 @@ export function StoryXDesk({
       className={[
         'sx-desk',
         `sx-genre-${request.genre}`,
-        isDraftMode ? 'is-draft-mode' : '',
+        '',
         isFocusMode ? 'is-focus-mode is-focus' : '',
         isMarginDrawerOpen ? 'drawer-open' : '',
         isBinderDrawerOpen ? 'binder-open' : ''
@@ -2452,84 +2446,6 @@ export function StoryXDesk({
               <DataPanel metrics={studioMetrics} onMediaAxisChange={updateStoryModeAxis} />
               <PublishingIndexCard plan={publishingPlan} />
             </>
-          ) : activeTrack === 'draft' ? (
-            <>
-              <div className="sx-rail-seg" role="tablist" aria-label="편집 좌레일 보기">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={studioRailTab === 'structure'}
-                  className={studioRailTab === 'structure' ? 'is-active' : ''}
-                  onClick={() => setStudioRailTab('structure')}
-                >
-                  구조
-                  <span className="ct">{latestChapter?.beats.length ?? 0}</span>
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={studioRailTab === 'metrics'}
-                  className={studioRailTab === 'metrics' ? 'is-active' : ''}
-                  onClick={() => setStudioRailTab('metrics')}
-                >
-                  지표
-                  <span className={`ct ${studioMetrics.quality.tone === 'warn' ? 'warn' : ''}`}>
-                    {studioMetrics.quality.lead}
-                  </span>
-                </button>
-              </div>
-              {studioRailTab === 'metrics' ? (
-                <DataPanel metrics={studioMetrics} onMediaAxisChange={updateStoryModeAxis} />
-              ) : (
-                <>
-                  <ChapterStructureTree
-                    chapter={latestChapter}
-                    medium={blueprint.medium}
-                    isSerial={isSerial}
-                    activeBeatId={activeBeatId}
-                    onSelectBeat={selectBeat}
-                  />
-                  <TensionShareChart
-                    chapter={latestChapter}
-                    activeBeatId={activeBeatId}
-                    onSelectBeat={selectBeat}
-                  />
-                </>
-              )}
-              <AgentIntentCard
-                latestChapter={latestChapter}
-                isSerial={isSerial}
-                draftPrompt={draftPrompt}
-                isOpen={isIntentOpen}
-                onToggleOpen={() => setIsIntentOpen((current) => !current)}
-                onChangeDraftPrompt={updateDraftPrompt}
-                draftPromptPlaceholder={draftPromptPlaceholder}
-                isLatestLocked={isLatestLocked}
-                generationNote={generationNote}
-                styleChip={
-                  (editorText || latestChapter) ? (
-                    <p className={`sx-style-chip is-${styleReport.level}`} role="status">
-                      문체 {describeKoreanStyleLevel(styleReport.level)} · {styleReport.score}점
-                      {styleReport.issues.length > 0 &&
-                        ` · ${styleReport.issues[0].label} ${styleReport.issues[0].count}`}
-                    </p>
-                  ) : null
-                }
-              />
-              <section className="sx-panel ex-workstate-card" aria-label="작품 상태">
-                <div className="ex-rail-section-head">
-                  <span className="ex-rail-label">작품 상태</span>
-                </div>
-                <WorkStateGrid project={project} latestChapter={latestChapter} isSerial={isSerial} />
-                <div className="ex-canon-health" title="캐논 건강도 — 회차 대비 확정 사실·규칙·인물의 밀도">
-                  <span className="ex-canon-health-label">캐논</span>
-                  <span className="ex-canon-health-track">
-                    <i className="ex-canon-health-fill" style={{ width: `${canonHealth}%` }} />
-                  </span>
-                  <span className="ex-canon-health-pct">{canonHealth}%</span>
-                </div>
-              </section>
-            </>
           ) : (
             /* P3 — 데이터 모드 좌레일: 작품 상태 4셀 + 캐논 nav 5종 + 바이블 규칙 아코디언 + 작품 데이터 진입점 */
             <DataLeftRail
@@ -2578,100 +2494,6 @@ export function StoryXDesk({
                 );
               }}
             />
-          ) : activeTrack === 'draft' ? (
-            <>
-              {/* P1 — 얇은 툴스트립: 매체 라벨 + 검토 규모 + 집중 모드. 회차 이동은 상단바 회차 선택기로 일원화했다 */}
-              <div className="ex-toolstrip" role="toolbar" aria-label="원고 작업 도구">
-                <span className="ex-toolstrip-spacer" />
-                <span className="ex-toolstrip-medium" aria-hidden="true">
-                  {blueprint.mediumLabel} / {blueprint.formatLabel}
-                </span>
-                <span className="ex-toolstrip-sep" aria-hidden="true" />
-                <div className="ex-scale-toggle" role="group" aria-label="검토 규모">
-                  {([
-                    ['small', 'Quick'],
-                    ['standard', 'Standard'],
-                    ['deep', 'Deep']
-                  ] as const).map(([scaleId, scaleLabel]) => (
-                    <button
-                      key={scaleId}
-                      type="button"
-                      className={reviewScale === scaleId ? 'is-active' : ''}
-                      aria-pressed={reviewScale === scaleId}
-                      title={`검토 규모 — ${scaleLabel}`}
-                      disabled={isGenerating || isReviewing}
-                      onClick={() => setReviewScale(scaleId)}
-                    >
-                      {scaleLabel}
-                    </button>
-                  ))}
-                </div>
-                <span className="ex-toolstrip-sep" aria-hidden="true" />
-                <button
-                  type="button"
-                  className="ex-focus-btn"
-                  aria-pressed={isFocusMode}
-                  aria-label={isFocusMode ? '집중 모드 해제 (⌘.)' : '집중 모드 (⌘.)'}
-                  title={isFocusMode ? '집중 모드 해제 (⌘.)' : '집중 모드 (⌘.)'}
-                  onClick={() => setIsFocusMode((current) => !current)}
-                >
-                  {isFocusMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-                </button>
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateRows: draftFallbackNotice ? 'auto minmax(0, 1fr)' : 'minmax(0, 1fr)',
-                  gap: 'var(--sx-space-3)',
-                  minHeight: 0
-                }}
-              >
-                {draftFallbackNotice ? (
-                  <div
-                    role="status"
-                    style={{
-                      border: '1px solid var(--sx-line)',
-                      borderRadius: 'var(--sx-radius-sm)',
-                      background: 'var(--sx-surface)',
-                      color: 'var(--sx-ink)',
-                      padding: '9px 12px',
-                      fontSize: '0.84rem',
-                      fontWeight: 'var(--sx-weight-semibold)',
-                      lineHeight: 1.4
-                    }}
-                  >
-                    AI 생성이 실패해 입력 기반 임시 초안을 넣었습니다
-                  </div>
-                ) : null}
-
-                <CreativeStage
-                  blueprint={blueprint}
-                  chapter={latestChapter}
-                  project={project}
-                  verticalSlice={verticalSlice}
-                  editableText={editorText}
-                  editedSinceReview={editedSinceReview}
-                  isFocusMode={isFocusMode}
-                  manuscriptRef={manuscriptRef}
-                  marginParagraphs={marginParagraphs}
-                  marginReviews={displayedMarginReviews}
-                  marginOpenId={marginReview.openId}
-                  filterPersona={marginReview.filterPersona}
-                  appliedDiffs={marginReview.applied}
-                  onSummonAgent={marginReview.onSummon}
-                  onEditableTextChange={updateEditorText}
-                  onReviewDraft={reviewDraft}
-                  onOpenApprovalQueue={() => {
-                    setActiveTrack('bible');
-                    setIsPublishingMode(false);
-                    setIsMediaPanelOpen(false);
-                    openBibleSection('approval');
-                  }}
-                  onToggleFocusMode={() => setIsFocusMode((current) => !current)}
-                />
-              </div>
-            </>
           ) : dataView.kind === 'canon' ? (
             /* P3 — 데이터 모드 가운데 캔버스: 분야별로 관계도/카드/타임라인이 바뀐다 */
             <CanonCanvas
@@ -2703,54 +2525,28 @@ export function StoryXDesk({
           )}
         </section>
 
-        {isDraftMode ? (
-          <>
-            <MarginColumn
-              paragraphs={marginParagraphs}
-              reviews={displayedMarginReviews}
-              openId={marginReview.openId}
-              setOpenId={marginReview.setOpenId}
-              filterPersona={marginReview.filterPersona}
-              setFilterPersona={marginReview.setFilterPersona}
-              canonDeltas={marginCanonDeltas}
-              onRunAll={marginReview.onRunAll}
-              onAcceptDiff={acceptMarginDiff}
-              onRejectReview={marginReview.onRejectReview}
-              onOpenChat={openMarginReviewChat}
-              onResolveCanon={() => marginReview.onSummon('canon-librarian', { anchor: marginDefaultAnchor })}
-            />
-            <CoreStrip
-              reviews={displayedMarginReviews}
-              summonedExtended={marginReview.summonedExtended}
-              filterPersona={marginReview.filterPersona}
-              setFilterPersona={marginReview.setFilterPersona}
-              openSpotlight={() => setIsSpotlightOpen(true)}
-            />
-          </>
-        ) : (
-          <aside className="sx-codex-rail sx-focused-assist-rail" aria-label={isBibleMode ? '조수진과 바이블 검토' : '열린 질문'}>
-            {isBibleMode ? (
-              dataView.kind === 'canon' ? (
-                /* P4 — 데이터 모드: 분야별 데이터 검토 레일. 실제 엔티티 검토 결과를 정합/제안으로 보여준다 */
-                <DataReviewRail
-                  category={dataView.category}
-                  review={dataReviewResults[dataView.category] ?? null}
-                  isReviewing={dataReviewingCategory === dataView.category}
-                  onRequestReview={() => runDataReview(dataView.category)}
-                  onOpenApprovalQueue={() => openBibleSection('approval')}
-                />
-              ) : (
-                <BibleAssistantSidebar
-                  runs={bibleAssistantRuns}
-                  activeSection={dataView.section}
-                  onSelectAgent={(run, persona) => setSelectedAgent({ run, persona })}
-                />
-              )
+        <aside className="sx-codex-rail sx-focused-assist-rail" aria-label={isBibleMode ? '조수진과 바이블 검토' : '열린 질문'}>
+          {isBibleMode ? (
+            dataView.kind === 'canon' ? (
+              /* P4 — 데이터 모드: 분야별 데이터 검토 레일. 실제 엔티티 검토 결과를 정합/제안으로 보여준다 */
+              <DataReviewRail
+                category={dataView.category}
+                review={dataReviewResults[dataView.category] ?? null}
+                isReviewing={dataReviewingCategory === dataView.category}
+                onRequestReview={() => runDataReview(dataView.category)}
+                onOpenApprovalQueue={() => openBibleSection('approval')}
+              />
             ) : (
-              <OpenThreadsCard threads={project.openThreads} />
-            )}
-          </aside>
-        )}
+              <BibleAssistantSidebar
+                runs={bibleAssistantRuns}
+                activeSection={dataView.section}
+                onSelectAgent={(run, persona) => setSelectedAgent({ run, persona })}
+              />
+            )
+          ) : (
+            <OpenThreadsCard threads={project.openThreads} />
+          )}
+        </aside>
       </section>
       {isDraftMode && (
         <>

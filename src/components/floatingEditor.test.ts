@@ -195,11 +195,11 @@ describe('FloatingEditor 실데이터 배선', () => {
     unmount();
   });
 
-  it('StoryXDesk 가 floating 을 편집 기본으로 + ?editor=classic 폴백 분기를 가진다', () => {
+  it('StoryXDesk 가 isDraftMode 이면 FloatingEditor 를 early-return 으로 렌더한다', () => {
     const desk = readFileSync(resolve(__dirname, '../StoryXDesk.tsx'), 'utf8');
-    expect(desk).toContain("get('editor') === 'classic'");
-    expect(desk).toContain('isDraftMode && !isClassicEditor');
+    // Phase 2e — isClassicEditor/?editor=classic 폴백 제거. 편집은 항상 FloatingEditor.
     expect(desk).toContain('<FloatingEditor {...floatingEditorProps} />');
+    expect(desk).toContain('if (isDraftMode)');
   });
 
   it('지표 버튼을 누르면 지표 패널이 열린다', () => {
