@@ -98,7 +98,7 @@ async function _runAgentReview(input: AgentReviewInput): Promise<AgentReviewResu
       agentId,
       label: getAgentLabel(input.agentId),
       status: toReviewStatus(data.verdict),
-      note: typeof data.note === 'string' && data.note.trim().length > 0 ? data.note : '검토 의견이 비어 있습니다.',
+      note: typeof data.note === 'string' && data.note.trim().length > 0 ? data.note : '에이전트가 빈 응답을 보냈습니다 — 다시 검토를 실행해 주세요.',
       evidence: toStringList(data.evidence),
       strengths: toStringList(data.strengths),
       issues: toStringList(data.issues)

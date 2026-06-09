@@ -922,6 +922,10 @@ function runProvider(commandParts) {
   const [binary, ...providerArgs] = commandParts;
   return spawnSync(binary, providerArgs, {
     encoding: 'utf8',
+    // P1 — stdin 을 즉시 EOF 로 닫는다. codex exec 는 stdin 을 비워두면 추가 입력을 기다리다
+    // 'Reading additional input from stdin' 을 raw 출력에 누수하고, 그게 JSON 파싱 실패 → 빈 note 로
+    // 합류해 검토가 "검토 의견이 비어 있습니다"로 뜬다. input:'' 로 대기를 없앤다.
+    input: '',
     timeout: 300000,
     maxBuffer: 1024 * 1024 * 8
   });

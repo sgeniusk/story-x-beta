@@ -38,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const result = await runLlmJson(prompt);
 
   if (result.status === 'mock') {
-    res.status(200).json({ provider: 'mock', mode: 'review-agent', status: 'complete', verdict: 'pass', note: '', evidence: [], strengths: [], issues: [], memoryCandidates: [], warning: result.warning });
+    res.status(200).json({ provider: 'mock', mode: 'review-agent', status: 'complete', verdict: 'pass', note: '(모의 검토) 실제 LLM 연결이 없어 통과로 처리했습니다. 배포본에서는 에이전트별 상세 의견이 표시됩니다.', evidence: [], strengths: [], issues: [], memoryCandidates: [], warning: result.warning });
     return;
   }
 
