@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-06-09 (2) — 아크 페이오프 게이트 2단계 완료 (premise-progress 차단 스테이지)
+
+> 1단계(드러냄)에서 2단계(차단)로. `isStalled=true` 시 `readyForProduction=false` 연결 완료.
+
+### 이번 세션에서 한 것
+- `storyHarness.ts`: 7번째 스테이지 `premise-progress` 추가
+  - `HarnessStageId`에 `'premise-progress'` 추가
+  - `RunStoryHarnessInput`에 `chapters?: Chapter[]` 추가
+  - `runPremiseProgressStage`: measured=false→pass(5) · not stalled→pass(10) · stalled→**block(0)**
+  - isStalled=true → anyBlocked=true → readyForProduction=false (차단 완성)
+- `storyHarness.test.ts`: 기존 스테이지 배열 6→7, premise-progress TDD 케이스 3개 추가
+- `creativeDevelopment.test.ts`: 하드코딩 `6` → `7` 갱신
+- `StoryXDesk.tsx`: `harnessReport` useMemo 에 `chapters: project.chapters` + 의존성 추가
+- 345 tests · tsc 0 · vite build GREEN. 커밋 `2d82586` + `1076232`.
+
+### 손대지 말 것
+- `payoffLedger.ts` — 1단계 핵심, 변경 시 TDD 선행
+- `computePayoffLedger` 반환 타입 — `studioMetrics.ts`·`DataPanel.tsx`·`FloatingEditor.tsx` 3곳이 의존
+
+### 다음 권고
+- **(D) 라이브 실증** — codex 로 회차 생성, `rewardArc`/`stakesLedger` 실제 산출 확인 후 premise-progress 가 stall 을 실제로 잡는지 엔드투엔드 검증. main 머지 전에 권장.
+- **(main 머지)** — `feat/arc-payoff-gate` → main. 1·2단계 전부 green.
+- **(A) 플로팅 Phase 2 스왑** or **(B) rank5 Pass E** — 이후 우선순위.
+
+---
+
 ## 2026-06-09 — 아크 페이오프 게이트 1단계 완료 (7 태스크 TDD)
 
 > continuity≠payoff 처방 1단계. dead 였던 `rewardArc`/`stakesLedger`를 완전히 살렸다.

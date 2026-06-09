@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-08 · Branch: `main` (**#2 23화 완결 + 종합 리포트 + 개선 2건(P6/P5/relations `e4a2ea2` · 검토 전제진척 프롬프트 `aa98137`) 모두 라이브 검증** · ★발견 continuity≠payoff(근본=쇼러너 연재편향·criteriaKeys 라이브 dead) · 다음 = #3 헌터물 / 아크 페이오프 게이트 정량화)
+> Last Updated: 2026-06-09 · Branch: `feat/arc-payoff-gate` (**아크 페이오프 게이트 1단계 + 2단계 완료** · premise-progress 스테이지 storyHarness 7번째 · isStalled→readyForProduction 차단 연결)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -76,24 +76,32 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 ## 다음 한 단계
 
-**아크 페이오프 게이트 1단계 완료.** 다음 갈래 중 택1.
-- **(C-2) 페이오프 게이트 2단계** — `storyHarness` 에 `premise-progress` 결정론 스테이지 추가(점수·차단), criteriaKeys 전면 정식화, `isStalled` 를 `readyForProduction` 에 연결.
-- **(A) 플로팅 Phase 2 스왑** — floating 을 편집 모드 기본으로(StoryXDesk 3컬럼 제거 또는 토글) + `editorFocusLayout.test.ts` 새 구조로 갱신. 위험 — 기존 편집기 테스트 다수 갱신.
-- **(B) rank5 Tier2 Pass E** — `StoryXDesk.tsx` 잔여 ~11개(Dialogs·Publishing·Status) 추출 후 Tier3 훅 분리. Codex 위임 + Claude 검증.
+**아크 페이오프 게이트 1~2단계 완료.** 다음 갈래 중 택1.
+- **(D) 라이브 실증** — codex 로 회차 생성 후 rewardArc/stakesLedger 실제 산출률 확인. premise-progress 가 실제로 stall 을 잡는지 엔드투엔드 검증. 브랜치 main 머지 전에 권장.
+- **(A) 플로팅 Phase 2 스왑** — floating 을 편집 모드 기본으로(StoryXDesk 3컬럼 제거 또는 토글) + `editorFocusLayout.test.ts` 새 구조로 갱신.
+- **(B) rank5 Tier2 Pass E** — `StoryXDesk.tsx` 잔여 ~11개(Dialogs·Publishing·Status) 추출 후 Tier3 훅 분리.
+- **(main 머지)** — `feat/arc-payoff-gate` 브랜치 → main 머지.
 
-## 최근 검증 (2026-06-09 · 아크 페이오프 게이트 1단계 완료)
+## 최근 검증 (2026-06-09 · 아크 페이오프 게이트 2단계 완료)
 
 ```
-init.sh            → tsc · vitest(342 tests) · build 전체 통과
-아크 페이오프 게이트 1단계 — 7 태스크 TDD 완료 (브랜치 feat/arc-payoff-gate)
-  Task1 b81e90f — payoffLedger 측정 코어 (computePayoffLedger · STALL_THRESHOLD=3)
-  Task2 2932b4b — DraftChapterPayload 그릇 + chapterFromDraftPayload 매핑
-  Task3 71e8b94 — draftClient 서버 응답 정규화
-  Task4 9b0f3c7 — storyx CLI 정규화 미러
-  Task5 ba74b6f — 생성 프롬프트 rewardArc/stakesLedger 산출 요청
-  Task6 2e76f9d — 검토 프롬프트 정체 evidence + stakes_progression_audit 배선
-  Task7 (이번)   — 지표 패널 전제 진척 카드 노출 (FloatingEditor + DataPanel 양쪽)
-라이브 스모크 — 지표 패널 "전제 진척 — —"(measured=false, 데이터 없음) 렌더 확인. 콘솔 0.
+init.sh            → tsc · vitest(345 tests) · build 전체 통과
+아크 페이오프 게이트 2단계 — TDD 완료 (브랜치 feat/arc-payoff-gate)
+  커밋 2d82586 — storyHarness premise-progress 7번째 스테이지
+                  HarnessStageId 확장, RunStoryHarnessInput chapters? 추가
+                  measured=false→pass(5), not stalled→pass(10), stalled→block(0)
+                  creativeDevelopment.test.ts 6→7 갱신, 9+1 TDD 케이스 GREEN
+  커밋 1076232 — StoryXDesk harnessReport에 project.chapters 배선
+1~2단계 전체 커밋 로그:
+  b81e90f Task1 payoffLedger 코어
+  2932b4b Task2 DraftChapterPayload 매핑
+  71e8b94 Task3 draftClient 정규화
+  9b0f3c7 Task4 storyx CLI 미러
+  ba74b6f Task5 생성 프롬프트 rewardArc/stakesLedger
+  2e76f9d Task6 검토 프롬프트 정체 evidence
+  f20d2f3 Task7 지표 패널 전제 진척 카드
+  2d82586 2단계 premise-progress 스테이지
+  1076232 StoryXDesk chapters 배선
 ```
 
 ## 완료 마일스톤
