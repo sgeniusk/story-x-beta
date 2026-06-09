@@ -76,25 +76,26 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 ## 다음 한 단계
 
-**floating Phase 2c + 코드성 개선(P1·매체별 검토) 완료.** 다음 갈래.
+**floating Phase 2c + 코드성 개선(P1·매체검토·2f·polish) 완료 + main 머지(ff-only).** 다음 갈래.
 - **(2d) 출간 모드 floating화** — PublishingStudio → FloatingDataWorkspace 패턴으로.
-- **(2f·polish — 보류)** — 항목 1 dead code 정리(editorFocusLayout 단언 재구성 동반)·항목 4 상단바 polish. 사용자 보류 선택.
 - **(매체검토 라이브)** — comics 작품에서 specialist 7인 검토 실사용 확인.
-- **(main 머지)** — `feat/floating-phase2c-data` → main.
+- **(push)** — origin/main 으로 (사용자 요청 시).
 
-## 최근 검증 (2026-06-09 · 코드성 개선 P1·매체별 검토)
+## 최근 검증 (2026-06-09 · floating 2c + 코드성 개선 전체 + main 머지)
 
 ```
-init.sh            → tsc · vitest(364 tests) · build 전체 통과
-floating Phase 2c (앞 단계) — 데이터 모드 floating화 완료 (board 정제·파고들기·MetricSummary, ~839136c)
+init.sh            → tsc · vitest(364 tests) · build 전체 통과 · main 안착(ff-only)
+floating Phase 2c — 데이터 모드 floating화 (board 정제·파고들기·MetricSummary, ~839136c)
   DataView board · FloatingDataWorkspace · isBibleMode early-return · .fc-data-* · MetricSummary
-  라이브 — board 정제(이상한 원 제거)·캐논 파고들기→복귀·모바일 360 가로스크롤 0
-  캡처 docs/handoff/screenshots/floating-phase2c/{01-board,02-canon-detail,03-board-mobile-360}
-코드성 개선:
-  P1 — codex stdin 누수 제거(spawnSync input:'') + 빈응답 폴백 메시지 (fe13581)
-  매체별 검토 작가진 배선 — getMediumReviewAgentIds(CORE + 매체 specialist) (0011749)
+  라이브 — board 정제(이상한 원 제거)·캐논 파고들기→복귀·모바일 360 가로스크롤 0 · 캡처 floating-phase2c/
+코드성 개선 (사용자 "a하고 c"):
+  P1 — codex stdin 누수 제거(spawnSync input:'') + 빈응답 폴백 (fe13581)
+  매체별 검토 — getMediumReviewAgentIds(CORE + 매체 specialist) (0011749)
     comics→스토리보드·말풍선 / audiobook→낭독 / essay→큐레이터 / novel·academic→CORE
-  라이브 — 편집 작가실 CORE 5 렌더·콘솔 0
+  2f — 출간 모드 return 의 isDraftMode dead 가드 7곳 제거 + 단언 정합 (c3b4cbf, -126줄)
+  polish — FloatingEditor topbar '· 새 초안' 중복 제거 (6d79085)
+  라이브 — 편집 작가실 CORE 5·콘솔 0
+main 머지 — 전 작업 ff-only 안착. origin push 미실행(사용자 요청 시).
 ```
 
 ## 완료 마일스톤

@@ -16,12 +16,15 @@
 ### 손대지 말 것
 - `getMediumReviewAgentIds`·`MEDIUM_REVIEW_SPECIALISTS`(agentSeedData) · storyx.mjs `input:''` · reviewClient 폴백 메시지.
 
-### 보류 (사용자 선택)
-- **항목 1 (2f dead code)** — StoryXDesk early-return 후 `isDraftMode &&` 가드 8곳(출간 모드 dead). 제거하면 `editorFocusLayout` 의 classic 편집 구조 source-string 단언 재구성 동반(Explore '수정 불필요'는 부정확). harmless 라 보류.
-- **항목 4 (상단바 polish)** — floating 전환으로 과밀 해소. 잔여 minor(FloatingEditor '· 새 초안' 중복 라벨).
+### 이어서 — 항목 1·4 완료 (사용자 "a하고 c")
+- **항목 1 (2f dead code) — 완료 (`c3b4cbf`, -126줄)** — 출간 모드 return 의 `isDraftMode &&` dead 가드 7곳(scene·crew·meter·pending·margin/binder·Spotlight·toast) 제거. `editorFocusLayout` 의 dead 블록 의존 단언 6개(crew/meter/pending·`<Spotlight`·margin/binder) 정합 제거 — **보존 단언 4개(useMarginReview·MentionBar·toMarginReview·data-pid, dead 블록 밖)는 유지**. Spotlight import 도 미사용돼 제거. 동작 불변(출간 모드에서 원래 미렌더). 서브에이전트 구현 + Claude diff 독립 검증.
+- **항목 4 (polish) — 완료 (`6d79085`)** — FloatingEditor topbar '· 새 초안' 중복 라벨 제거.
+
+### main 머지
+- 전 세션 작업(2c·P1·매체검토·2f·polish) **ff-only main 안착**. origin push 미실행(사용자 요청 시).
 
 ### 다음
-- (2d) 출간 floating화 · main 머지(`feat/floating-phase2c-data`).
+- (2d) 출간 floating화 — PublishingStudio → FloatingDataWorkspace 패턴.
 - 항목 3 comics 작품 specialist 7인 라이브 검증(사용자 실사용).
 
 ---
