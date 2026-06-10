@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-10(2차) · Branch: `main` (**멀티에이전트 분업 세션** — #3 A/B 실증 + deferred-stake fork + 2d 출간 floating화 + 폴백 가드 + M6.3 CLI + 1.0 결정 2건)
+> Last Updated: 2026-06-10(3차) · Branch: `main` (**진도 체크 + 페이스 결함 수정 + 매체 영속** — paceInterview 신설 · P7/시드강도/드리프트 · medium/format 프로젝트 영속 · comics 7인 라이브)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -78,13 +78,28 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 ## 다음 한 단계
 
-**멀티에이전트 분업 세션(2026-06-10 2차) 완료 — 2d·폴백 가드·M6.3·rank6·rank7·A/B 실증 main 안착.** 다음 갈래.
-- **회차 진도 인터뷰** — A/B 과회수 신호로 승격(1순위). fork 시드 강도 2단화·P7 시드 잔류 정리와 한 묶음 후보.
-- **(매체검토 라이브)** — comics 작품에서 specialist 7인 검토 실사용 확인. academic 라이브 검토 배선(1.0 실험 플래그 조건).
+**3차 세션 완료 — 진도 체크 카드(MVP)·페이스 결함 3건·매체 영속·comics 7인 라이브 전부 main 안착.** 다음 갈래.
+- **진도 인터뷰 2단계(서술형 LLM)** — MVP(결정론 카드)가 실사용에서 페이스 신호를 내는지 #3 류 연속 생성으로 관찰 후 착수. 갈림길 LLM 정제와 같은 묶음.
+- **academic 라이브 검토 배선** — 1.0 실험 플래그 포함의 전제 조건(결정 문서). 미완이면 1.1 이연 자동 전환.
 - **M7 외부 실증 준비** — 결정 문서의 경량 검증 방법 A/B/C(로그 공개·클로즈드 베타 3~5인·데모 영상) 중 사용자 선택.
-- **(push)** — origin/main 으로 (사용자 요청 시).
+- **결정 부채 보드** — 별도 스펙. (push) — origin/main 으로 (사용자 요청 시).
 
-## 최근 검증 (2026-06-10 2차 · 멀티에이전트 분업 세션 · main)
+## 최근 검증 (2026-06-10 3차 · 진도 체크 + 페이스 결함 + 매체 영속 · main)
+
+```
+init.sh            → tsc 0 · vitest(420 tests) · vite build 전체 통과
+스펙 — docs/superpowers/specs/2026-06-10-pace-check-design.md (분업: sonnet 2 worktree + Claude 직접 1 + 라이브)
+  paceInterview    — buildPaceCheck(질문 3·결정론·트리거: 연재+2화+정체/deferred2)·replacePaceSeed (be93014, 2d68457)
+  페이스 결함 3건   — 시드 강도 isStalled 연동(c765c18)·P7 stripConsumedSeeds(a4ccc97)·stake 드리프트 Jaccard 매칭(c5f6704)
+                     + 진도 시드 3종도 소비 처리(에이전트 간 갭 봉합)
+  매체 영속        — SeriesProject.medium/format + createEmptyProject 시드 + 로드 복원 (e266894)
+                     ★리로드 후 만화 작품이 소설 5인으로 검토되던 매체 연속성 버그 (#4 라이브 발견)
+  라이브 — #4 만화: 리로드 후 7인 유지·7/7 검토 도착(스토리보드=컷 흐름·말풍선=캡션 압박, 캡션 과다 수렴 포착)
+          #3 A암: 진도 카드 렌더·append·같은질문 교체·비정체 연성 시드·콘솔 0
+  캡처 — docs/handoff/screenshots/pace-check/
+```
+
+## 직전 검증 (2026-06-10 2차 · 멀티에이전트 분업 세션 · main)
 
 ```
 init.sh 등가 게이트 → tsc 0 · vitest(388 tests) · vite build 전체 통과 (S4 머지 후 재실행)

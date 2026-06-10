@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-06-10 (3차) — 진도 체크 카드 + 페이스 결함 3건 + 매체 영속 (main, 420 tests)
+
+> 2차 세션 핸드오프의 1순위(회차 진도 인터뷰 승격) 이행. 스펙 `docs/superpowers/specs/2026-06-10-pace-check-design.md` — MVP 는 결정론 카드(LLM 0회), 서술형 LLM 인터뷰는 2단계로 분리. sonnet worktree 2 + Claude 직접 1 분업.
+
+### 한 것
+- **회차 진도 체크 카드 (MVP)** — `paceInterview.ts` 신설(질문 3: 전제 능선·페이스·다음 회수, 트리거: 연재+2화 이상+(정체 or deferred 2)). FloatingEditor `.fc-pace` 카드 — 같은 질문 재클릭 시 시드 교체(`replacePaceSeed`). **핵심 설계 — 프롬프트 배선 0**: 의도 메모가 freewrite 로 직행하므로 미러/브리지 불필요.
+- **페이스 결함 3건** — (1) deferred-stake 시드 강도 isStalled 연동(비정체="한 발 다가가되 결판 서두르지 않는다") (2) P7 `stripConsumedSeeds` — 생성 성공 시 소비된 시드 줄만 제거, 자필 보존(진도 시드 3종 포함) (3) stake 문구 드리프트 Jaccard(≥2/3)+부분집합 매칭, 거짓병합 가드 핀 테스트.
+- **★ 매체 영속 (신규 버그 발견·수정 `e266894`)** — comics 7인 검증 중 발견: medium/format 이 React state 에만 있어 **리로드 후 만화 작품이 소설 작가진(5인)으로 검토됨**. SeriesProject.medium/format 영속 + 생성 시 시드 + 로드 복원 + selectMedium 저장.
+- **comics specialist 7인 라이브 (P10)** — #4 만화 "자정 손님의 계산법" 1화 + 7/7 검토 도착. 스토리보드 감독(컷 흐름 분해)·말풍선 감독(캡션의 모바일 압박)이 매체 특화 관점으로 같은 문제를 수렴 포착.
+
+### 손대지 말 것
+- `stripConsumedSeeds` 의 시드 패턴 5종 — paceInterview 시드 문구를 바꾸면 episodeBriefing 의 미러 패턴도 같이(주석에 명시). 자필 보존 원칙.
+- `paceInterview` 트리거(연재+2화+정체/deferred2)·같은질문 교체 로직 — 핀 테스트 있음.
+- `SeriesProject.medium/format` 은 optional — 구버전 저장본 폴백(prop) 경로 유지.
+- stake 드리프트 매칭의 거짓병합 가드 테스트.
+
+### 다음 세션이 해야 할 한 가지
+- **진도 체크 실효 관찰** — #3 류 연속 생성(3~5화)에서 진도 시드가 과회수를 실제로 막는지, 페이스 검토 의견이 줄어드는지 A/B 한 번 더. 효과 확인되면 2단계(쇼러너 서술형 인터뷰) 스펙 착수.
+- 보조: academic 라이브 검토 배선(1.0 플래그 전제) · M7 경량 검증 A/B/C 사용자 선택 · 결정 부채 보드 스펙.
+
+---
+
 ## 2026-06-10 (2차) — 멀티에이전트 분업 세션 (main, 388 tests)
 
 > 사용자 "울트라 플랜 분업으로 모든 걸 완성" → 오케스트레이션 플랜 `docs/superpowers/plans/2026-06-10-service-completion-orchestration.md`. Claude(오케스트레이션+라이브) / Codex(2d) / sonnet 서브에이전트(가드·CLI·결정문서) 병렬 + 6단계 독립 검증.
