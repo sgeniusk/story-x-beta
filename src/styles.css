@@ -11100,3 +11100,18 @@ body {
 }
 .fc-fork-opt:hover:not(:disabled) { border-color: var(--p-show); }
 .fc-fork-opt:disabled { opacity: 0.4; cursor: default; }
+
+/* 진도 체크 카드 — 갈림길 카드 아래 렌더(fc-pace). 보더 톤만 살짝 다르게. */
+.fc-pace { margin-bottom: 10px; display: grid; gap: 8px; border-top: 1px solid var(--ink-faint); padding-top: 8px; }
+.fc-pace-title { font-size: 11px; letter-spacing: 0.04em; color: var(--ink-dim); }
+.fc-pace-q-block { display: grid; gap: 4px; }
+.fc-pace-q { font-size: 12px; }
+.fc-pace-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.fc-pace-opt {
+  font-size: 11px; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--ink-faint); background: transparent;
+  color: inherit; cursor: pointer;
+}
+.fc-pace-opt:hover:not(:disabled) { border-color: var(--p-show); }
+.fc-pace-opt.is-active { border-color: var(--p-show); color: var(--p-show); }
+.fc-pace-opt:disabled { opacity: 0.4; cursor: default; }

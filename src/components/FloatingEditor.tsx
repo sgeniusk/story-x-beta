@@ -6,6 +6,7 @@ import type { InlineDiff, MarginReview, Paragraph, PersonaCard, SummonHandler } 
 import { SEVERITY_LABEL } from '../lib/marginReview';
 import type { StudioMetrics } from '../lib/studioMetrics';
 import { composeIntentWithFork, type EpisodeFork } from '../lib/episodeBriefing';
+import { replacePaceSeed, type PaceQuestion } from '../lib/paceInterview';
 
 interface ChapterBeatLike {
   id: string;
@@ -48,6 +49,8 @@ export interface FloatingEditorProps {
   onMediaAxisChange?: (axis: number) => void;
   /** 회차 생성 전 작가 결정 갈림길 — 없으면 카드 미렌더. */
   episodeForks?: EpisodeFork[];
+  /** 회차 진도 체크 질문 — 없거나 빈 배열이면 카드 미렌더. */
+  paceQuestions?: PaceQuestion[];
 }
 
 const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
@@ -84,6 +87,7 @@ export function FloatingEditor({
   metrics,
   onMediaAxisChange,
   episodeForks,
+  paceQuestions,
 }: FloatingEditorProps) {
   const personaById = useCallback(
     (id: string): PersonaCard =>
@@ -134,6 +138,16 @@ export function FloatingEditor({
     if (!onIntentChange) return;
     const current = intentRef.current ? intentRef.current.value : intentMemo;
     const next = composeIntentWithFork(current, seed);
+    if (intentRef.current) intentRef.current.value = next;
+    onIntentChange(next);
+  }
+
+  // 진도 체크 옵션 선택 — 같은 질문의 이전 시드를 교체(replacePaceSeed), 없으면 append.
+  // fork 핸들러와 동일하게 uncontrolled textarea ref 를 직접 갱신한다.
+  function pickPace(questionSeeds: string[], seed: string) {
+    if (!onIntentChange) return;
+    const current = intentRef.current ? intentRef.current.value : intentMemo;
+    const next = replacePaceSeed(current, questionSeeds, seed);
     if (intentRef.current) intentRef.current.value = next;
     onIntentChange(next);
   }
@@ -624,6 +638,36 @@ export function FloatingEditor({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+          {paceQuestions && paceQuestions.length > 0 && (
+            <div className="fc-pace">
+              <div className="fc-pace-title">회차 진도 체크</div>
+              {paceQuestions.map((q) => {
+                const qSeeds = q.options.map((o) => o.intentSeed);
+                const currentMemo = intentRef.current ? intentRef.current.value : intentMemo;
+                return (
+                  <div key={q.id} className="fc-pace-q-block">
+                    <div className="fc-pace-q">{q.question}</div>
+                    <div className="fc-pace-opts">
+                      {q.options.map((opt) => {
+                        const isActive = currentMemo.includes(opt.intentSeed);
+                        return (
+                          <button
+                            key={opt.label}
+                            type="button"
+                            className={`fc-pace-opt${isActive ? ' is-active' : ''}`}
+                            disabled={!onIntentChange}
+                            onClick={() => pickPace(qSeeds, opt.intentSeed)}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
           <div className="memo">

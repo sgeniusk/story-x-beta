@@ -125,6 +125,7 @@ import { requestLlmDraft } from './lib/draftClient';
 import { requestAgentReview } from './lib/reviewClient';
 import { computePayoffLedger } from './lib/payoffLedger';
 import { buildEpisodeForks, stripConsumedSeeds } from './lib/episodeBriefing';
+import { buildPaceCheck } from './lib/paceInterview';
 import { requestDataReview } from './lib/dataReviewClient';
 import type { BibleSection, CanonCategory, DataReviewView, DataView } from './lib/canonDataView';
 import { describeKoreanStyleLevel, evaluateKoreanProse } from './lib/koreanStyle';
@@ -1270,6 +1271,7 @@ export function StoryXDesk({
       metrics: studioMetrics,
       onMediaAxisChange: updateStoryModeAxis,
       episodeForks: buildEpisodeForks(project, computePayoffLedger(project.chapters)),
+      paceQuestions: buildPaceCheck(project, computePayoffLedger(project.chapters), isSerial),
     }),
     [
       project,
@@ -1288,6 +1290,7 @@ export function StoryXDesk({
       studioMetrics,
       updateStoryModeAxis,
       mediumReviewAgentIds,
+      isSerial,
     ]
   );
   const draftPromptPlaceholder = isLatestLocked
