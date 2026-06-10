@@ -472,9 +472,11 @@ describe('회차 생성 동작 회귀 — 의도 메모 오염·잠금 동기화
   // mainActionRun 이 여전히 reviewDraft 였다(새로고침해야 produceEpisode 로 전환).
   // onConfirmChapterLock 이 setLatestChapter 도 동기화해야 같은 세션에서 다음 회차 생성이 된다.
   it('회차 잠금(onConfirmChapterLock) 시 latestChapter 를 동기화한다 (P2)', () => {
-    const start = desk.indexOf('onConfirmChapterLock');
+    const start = desk.indexOf('function confirmChapterLock');
     expect(start).toBeGreaterThan(-1);
     const block = desk.slice(start, start + 700);
+    expect(block).toContain('lockChapter');
     expect(block).toContain('setLatestChapter');
+    expect(desk).toContain('onConfirmChapterLock={confirmChapterLock}');
   });
 });

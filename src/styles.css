@@ -11036,6 +11036,58 @@ body {
 .fc-data-axis{margin-top:16px;padding:13px 14px;border-radius:10px;background:var(--bg-2)}
 .fc-data-axis .lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-dim);margin-bottom:7px}
 .fc-data-axis input{width:100%;accent-color:var(--accent)}
+/* Phase 2d — floating 출간 작업실. .fc-app 셸과 토큰을 공유하고 출간 카드만 .fc-publish-* 로 격리. */
+.fc-publish .canvas{padding:84px 24px 112px}
+.fc-publish-board{width:min(980px,100%);margin:0 auto;display:flex;flex-direction:column;gap:24px}
+.fc-publish-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,320px);gap:18px;align-items:stretch}
+.fc-publish-hero-main,.fc-publish-status,.fc-publish-card{background:var(--bg-3);border:1px solid var(--rule-soft);border-radius:14px;box-shadow:0 22px 64px rgba(0,0,0,.34)}
+.fc-publish-hero-main{padding:clamp(24px,4vw,42px)}
+.fc-publish-eyebrow,.fc-publish-card>span,.fc-publish-status>span{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:650}
+.fc-publish-hero h1{margin-top:8px;font-family:var(--fc-font-serif);font-size:clamp(30px,5vw,54px);line-height:1.06;color:var(--paper);font-weight:720}
+.fc-publish-hero p,.fc-publish-card p,.fc-publish-card li,.fc-publish-card small{color:var(--ink-dim);line-height:1.65;word-break:keep-all}
+.fc-publish-hero p{max-width:720px;margin-top:14px;font-size:14px}
+.fc-publish-status{display:flex;flex-direction:column;gap:10px;padding:18px}
+.fc-publish-status strong{color:var(--paper);font-size:15px;line-height:1.35}
+.fc-publish-status small{color:var(--ink-dim)}
+.fc-publish-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.fc-publish-card{display:flex;flex-direction:column;gap:12px;min-width:0;padding:18px}
+.fc-publish-card.is-wide{grid-column:1/-1}
+.fc-publish-card h2{font-size:18px;color:var(--paper);line-height:1.25;font-weight:680}
+.fc-publish-proof blockquote,.fc-publish-panel-copy blockquote{margin:0;padding:14px;border-left:3px solid var(--p-world);border-radius:10px;background:var(--bg-2);color:var(--paper);line-height:1.7;word-break:keep-all}
+.fc-publish-checklist-list{display:flex;flex-direction:column;gap:8px}
+.fc-publish-gate{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:7px 9px;align-items:start;padding:11px;border:1px solid var(--rule-soft);border-radius:10px;background:var(--bg-2)}
+.fc-publish-gate svg{color:var(--ok);margin-top:2px}
+.fc-publish-gate.is-review svg{color:var(--accent)}
+.fc-publish-gate strong{color:var(--paper);font-size:13px}
+.fc-publish-gate em{font-style:normal;font-size:10px;color:var(--ink);background:color-mix(in oklch,var(--ok) 16%,transparent);border-radius:999px;padding:4px 7px}
+.fc-publish-gate.is-review em{background:color-mix(in oklch,var(--accent) 16%,transparent)}
+.fc-publish-gate small{grid-column:2/4;font-size:11.5px}
+.fc-publish-card ul{display:grid;gap:7px;padding-left:18px}
+.fc-publish-package>div,.fc-publish-package-mini{display:flex;flex-wrap:wrap;gap:8px}
+.fc-publish-package em,.fc-publish-package-mini em,.fc-publish-release-lock em{font-style:normal;font-size:12px;color:var(--paper);background:var(--bg-2);border:1px solid var(--rule-soft);border-radius:999px;padding:7px 10px}
+.fc-publish-lock-btn,.fc-publish-back-btn,.fc-publish-bible-btn,.fc-publish-review-btn,.fc-publish-release-lock button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:8px 12px;border-radius:9px;border:1px solid var(--rule-soft);font-size:12px;font-weight:650;transition:background .15s,border-color .15s,opacity .15s}
+.fc-publish-lock-btn,.fc-publish-review-btn{background:var(--accent);color:oklch(0.2 0.04 74);border-color:transparent}
+.fc-publish-back-btn,.fc-publish-bible-btn,.fc-publish-release-lock button{color:var(--ink);background:var(--bg-2)}
+.fc-publish-lock-btn:hover:not(:disabled),.fc-publish-review-btn:hover,.fc-publish-back-btn:hover,.fc-publish-bible-btn:hover{filter:brightness(1.06);border-color:var(--rule)}
+.fc-publish-lock-btn:disabled,.fc-publish-release-lock button:disabled{opacity:.46;cursor:not-allowed}
+.fc-publish-release-lock{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+.fc-publish-release-lock>span,.fc-publish-release-lock h2,.fc-publish-release-lock p,.fc-publish-release-lock>div{grid-column:1}
+.fc-publish-release-lock>div{display:flex;flex-wrap:wrap;gap:8px}
+.fc-publish-release-lock button{grid-column:2;grid-row:1/span 4;justify-self:end}
+.fc-publish-release-lock.is-ready{border-color:color-mix(in oklch,var(--ok) 35%,var(--rule-soft))}
+.fc-publish-panel-copy{display:flex;flex-direction:column;gap:10px}
+.fc-publish-panel-copy strong{color:var(--paper);font-size:13px}
+.fc-publish-panel-list{display:flex;flex-direction:column;gap:8px}
+.fc-publish-panel-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 8px;padding:10px;border:1px solid var(--rule-soft);border-radius:10px;background:var(--bg-2)}
+.fc-publish-panel-row strong{color:var(--paper);font-size:12px}
+.fc-publish-panel-row span{font-size:10px;color:var(--ink-faint)}
+.fc-publish-panel-row small{grid-column:1/3;color:var(--ink-dim);line-height:1.5}
+@media (max-width: 760px){
+  .fc-publish .canvas{padding:74px 12px 180px}
+  .fc-publish-hero,.fc-publish-grid,.fc-publish-release-lock{grid-template-columns:1fr}
+  .fc-publish-release-lock button{grid-column:1;grid-row:auto;justify-self:stretch}
+  .fc-publish-card.is-wide{grid-column:auto}
+}
 /* 갈림길 카드 — 회차 생성 전 작가 결정(fc-forks). 의도 메모 위에 렌더. */
 .fc-forks { margin-bottom: 10px; display: grid; gap: 8px; }
 .fc-forks-title { font-size: 11px; letter-spacing: 0.04em; color: var(--ink-dim); }

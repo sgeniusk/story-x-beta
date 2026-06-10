@@ -66,6 +66,7 @@ import { PublishingIndexCard } from './components/PublishingIndexCard';
 import { WorkStateGrid } from './components/WorkStateGrid';
 import { FloatingEditor } from './components/FloatingEditor';
 import { FloatingDataWorkspace } from './components/FloatingDataWorkspace';
+import { FloatingPublishWorkspace } from './components/FloatingPublishWorkspace';
 import { CommandPalette, type DeskCommand } from './components/CommandPalette';
 import { ProjectHistoryDialog } from './components/ProjectHistoryDialog';
 import { VersionLogDialog } from './components/VersionLogDialog';
@@ -2040,6 +2041,41 @@ export function StoryXDesk({
     });
   }
 
+  function openPublishingBible() {
+    openBibleSection('approval');
+    runWithWorkbenchFade(() => {
+      setIsPublishingMode(false);
+      setActiveTrack('bible');
+    });
+  }
+
+  function confirmChapterLock(chapterId: string) {
+    setProject((current) => {
+      const locked = lockChapter(current, chapterId);
+      saveProject(locked);
+      return locked;
+    });
+    // P2 — 잠금 직후 편집으로 돌아가면 latestChapter 가 stale 해 mainActionRun 이 여전히
+    // reviewDraft 다(새로고침해야 produceEpisode). latestChapter 도 동기화해 같은 세션에서 다음 회차를 만든다.
+    setLatestChapter((current) =>
+      current && current.id === chapterId ? { ...current, locked: true } : current
+    );
+  }
+
+  if (isPublishingMode) {
+    return (
+      <FloatingPublishWorkspace
+        project={project}
+        blueprint={blueprint}
+        plan={publishingPlan}
+        onBackToEditor={closePublishingMode}
+        onOpenBible={openPublishingBible}
+        onReviewDraft={reviewDraft}
+        onConfirmChapterLock={confirmChapterLock}
+      />
+    );
+  }
+
   if (isDraftMode) {
     return <FloatingEditor {...floatingEditorProps} />;
   }
@@ -2464,26 +2500,9 @@ export function StoryXDesk({
               blueprint={blueprint}
               plan={publishingPlan}
               onBackToEditor={closePublishingMode}
-              onOpenBible={() => {
-                openBibleSection('approval');
-                runWithWorkbenchFade(() => {
-                  setIsPublishingMode(false);
-                  setActiveTrack('bible');
-                });
-              }}
+              onOpenBible={openPublishingBible}
               onReviewDraft={reviewDraft}
-              onConfirmChapterLock={(chapterId) => {
-                setProject((current) => {
-                  const locked = lockChapter(current, chapterId);
-                  saveProject(locked);
-                  return locked;
-                });
-                // P2 — 잠금 직후 편집으로 돌아가면 latestChapter 가 stale 해 mainActionRun 이 여전히
-                // reviewDraft 다(새로고침해야 produceEpisode). latestChapter 도 동기화해 같은 세션에서 다음 회차를 만든다.
-                setLatestChapter((current) =>
-                  current && current.id === chapterId ? { ...current, locked: true } : current
-                );
-              }}
+              onConfirmChapterLock={confirmChapterLock}
             />
           ) : dataView.kind === 'canon' ? (
             /* P3 — 데이터 모드 가운데 캔버스: 분야별로 관계도/카드/타임라인이 바뀐다 */
