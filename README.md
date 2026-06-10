@@ -47,6 +47,56 @@ Vercel에 GitHub 저장소를 연결하면 `main` 브랜치에 push될 때마다
 - `docs/codex-agent-manifest.md`: Codex에서 같은 에이전트 역할을 적용하기 위한 매니페스트
 - `docs/agent-workflow-plan.md`: 에이전트 구성 계획과 매체별 워크플로우
 
+## storyx CLI
+
+`tools/storyx.mjs`는 브라우저 없이 쓸 수 있는 CLI 하네스다. `npm run storyx -- <command>` 형식으로 실행한다.
+
+### init — 새 프로젝트 scaffold
+
+```bash
+# 기본 실행 — storyx/export/v1 스키마 JSON 생성
+npm run storyx -- init --title "내 소설" --medium novel --format long-novel --out ./my-project.json
+
+# 옵션
+# --title    작품 제목 (기본: 새 작품)
+# --medium   novel | essay | comics | audiobook | academic (기본: novel)
+# --format   long-novel | medium-novel | … (기본: long-novel)
+# --out      출력 경로 (기본: ./storyx-project.json)
+# --dry-run  파일 쓰지 않고 JSON 미리보기만 출력
+
+npm run storyx -- init --title "테스트" --dry-run
+```
+
+생성된 JSON은 브라우저에서 "가져오기"로 바로 import 할 수 있다(`storyx/export/v1` 스키마).
+
+### serve — 개발 서버 실행
+
+```bash
+# 기본 포트 5173
+npm run storyx -- serve
+
+# 포트 지정
+npm run storyx -- serve --port 4000
+
+# 실행할 명령만 확인 (서버 시작 안 함)
+npm run storyx -- serve --dry-run
+```
+
+### memory sync — export JSON → 로컬 디렉터리 동기화
+
+export JSON을 읽어 프로젝트 메타, 캐논 사실, 인물, 열린 실타래, evolutionHistory를 사람이 읽을 수 있는 md/json 파일로 풀어 저장한다. 역방향(디렉터리→export)은 미지원.
+
+```bash
+# 기본 실행
+npm run storyx -- memory sync --from ./storyx-project.json --to ./storyx-memory
+
+# --from   export JSON 파일 경로 (필수)
+# --to     출력 디렉터리 (기본: ./storyx-memory)
+# --dry-run 파일 쓰지 않고 생성할 파일 목록만 출력
+
+npm run storyx -- memory sync --from ./storyx-project.json --dry-run
+```
+
 ## Claude Code 사용
 
 Claude Code의 프로젝트 서브에이전트는 `.claude/agents/`에 둔 Markdown 파일로 공유할 수 있습니다. 이 프로젝트는 장기 연재 제작용 핵심 서사 에이전트, 에세이 인터뷰/문체 에이전트, 오디오/교육영상 에이전트, 만화 제작용 시각 에이전트를 함께 포함합니다.

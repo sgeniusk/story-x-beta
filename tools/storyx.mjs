@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 const [, , command = 'help', ...args] = process.argv;
 const providerCommandHints = ['claude --print', 'codex exec'];
@@ -432,9 +432,232 @@ if (command === 'normalize-provider-output') {
   process.exit(0);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// init — 새 프로젝트 scaffold
+// 산출: storyx/export/v1 스키마의 빈 프로젝트 JSON 파일.
+// importAllData(storage.ts)가 받아들이는 형태를 그대로 따른다.
+// SeriesProject 최소 필드는 src/lib/storyEngine.ts 의 createEmptyProject 미러.
+// ─────────────────────────────────────────────────────────────────────────────
+if (command === 'init') {
+  const title = readFlag(args, '--title', '새 작품');
+  const medium = readFlag(args, '--medium', 'novel');
+  const format = readFlag(args, '--format', 'long-novel');
+  const out = readFlag(args, '--out', './storyx-project.json');
+  const dryRun = args.includes('--dry-run');
+
+  // storyx/export/v1 페이로드 — importAllData 가 검증하는 최소 필드를 포함한다.
+  // project 구조는 createEmptyProject(storyEngine.ts) 미러. mjs 에서 ts import 불가.
+  const projectId = `project-${Date.now().toString(36)}`;
+  const now = new Date().toISOString();
+  const payload = {
+    schema: 'storyx/export/v1',
+    exportedAt: now,
+    project: {
+      id: projectId,
+      title: title.trim() || '새 작품',
+      logline: '',
+      localization: { language: 'ko', region: 'KR', dateFormat: 'YYYY년 MM월 DD일', currencySymbol: '₩', measurementSystem: 'metric' },
+      genre: 'urban-fantasy',
+      tone: '',
+      audiencePromise: '',
+      deepQuestion: '',
+      creativeWeight: 'balanced',
+      formIntent: '',
+      medium,
+      format,
+      currentEpisode: 0,
+      characters: [],
+      worldRules: [],
+      canonFacts: [],
+      openThreads: [],
+      chapters: [],
+      places: [],
+      objects: [],
+      events: [],
+      timeline: [],
+      bibleOutline: []
+    },
+    snapshots: [],
+    preferences: {
+      landingTheme: null,
+      studioAccent: null,
+      studioCanvas: null
+    }
+  };
+
+  if (dryRun) {
+    printJson({ dryRun: true, out: resolve(out), preview: payload });
+    process.exit(0);
+  }
+
+  const outPath = resolve(out);
+  writeFileSync(outPath, JSON.stringify(payload, null, 2), 'utf8');
+  printJson({ ok: true, schema: payload.schema, title: payload.project.title, out: outPath });
+  process.exit(0);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// serve — vite dev 서버 래핑
+// ─────────────────────────────────────────────────────────────────────────────
+if (command === 'serve') {
+  const port = readFlag(args, '--port', '5173');
+  const dryRun = args.includes('--dry-run');
+  const commandParts = ['npx', 'vite', '--port', port];
+
+  if (dryRun) {
+    printJson({ dryRun: true, command: commandParts.join(' ') });
+    process.exit(0);
+  }
+
+  const child = spawn('npx', ['vite', '--port', port], { stdio: 'inherit' });
+  child.on('exit', (code) => process.exit(code ?? 0));
+  // 포그라운드 프로세스 유지 — 이 이후는 실행되지 않는다.
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// memory sync — export JSON → 로컬 md/json 디렉터리 풀기
+// 역방향(디렉터리→export)은 미지원.
+// ─────────────────────────────────────────────────────────────────────────────
+if (command === 'memory') {
+  const subcommand = args[0];
+  const restArgs = args.slice(1);
+
+  if (subcommand !== 'sync') {
+    printJson({
+      error: `알 수 없는 memory 서브커맨드: '${subcommand}'`,
+      usage: 'npm run storyx -- memory sync --from <export.json> --to <dir>'
+    });
+    process.exit(1);
+  }
+
+  const fromFile = readFlag(restArgs, '--from', '');
+  const toDir = readFlag(restArgs, '--to', './storyx-memory');
+  const dryRun = restArgs.includes('--dry-run');
+
+  if (!fromFile) {
+    printJson({
+      error: 'Missing --from',
+      usage: 'npm run storyx -- memory sync --from <export.json> --to <dir>'
+    });
+    process.exit(1);
+  }
+
+  let exportPayload;
+  try {
+    exportPayload = JSON.parse(readFileSync(resolve(fromFile), 'utf8'));
+  } catch (e) {
+    printJson({ error: `export JSON 읽기 실패: ${e.message}`, from: resolve(fromFile) });
+    process.exit(1);
+  }
+
+  if (!exportPayload || exportPayload.schema !== 'storyx/export/v1') {
+    printJson({ error: `storyx/export/v1 스키마가 아닙니다. schema='${String(exportPayload?.schema)}'` });
+    process.exit(1);
+  }
+
+  const project = exportPayload.project ?? {};
+  const evolutionHistory = exportPayload.evolutionHistory ?? null;
+  const outDir = resolve(toDir);
+
+  if (dryRun) {
+    const files = buildMemorySyncFiles(project, evolutionHistory, outDir);
+    printJson({
+      dryRun: true,
+      from: resolve(fromFile),
+      to: outDir,
+      schema: exportPayload.schema,
+      willWrite: files.map((f) => f.path)
+    });
+    process.exit(0);
+  }
+
+  if (!existsSync(outDir)) {
+    mkdirSync(outDir, { recursive: true });
+  }
+
+  const files = buildMemorySyncFiles(project, evolutionHistory, outDir);
+  for (const file of files) {
+    const dir = join(file.path, '..');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(file.path, file.content, 'utf8');
+  }
+
+  printJson({
+    ok: true,
+    from: resolve(fromFile),
+    to: outDir,
+    schema: exportPayload.schema,
+    written: files.map((f) => f.path)
+  });
+  process.exit(0);
+}
+
+// memory sync 에서 쓰는 파일 목록을 빌드한다 (실제 쓰기 없음 — dry-run 겸용).
+function buildMemorySyncFiles(project, evolutionHistory, outDir) {
+  const files = [];
+
+  // 1. 프로젝트 메타 마크다운
+  const metaLines = [
+    `# ${project.title || '작품 메타'}`,
+    '',
+    `- **id**: ${project.id || ''}`,
+    `- **장르**: ${project.genre || ''}`,
+    `- **매체**: ${project.medium || ''}`,
+    `- **포맷**: ${project.format || ''}`,
+    `- **무게중심**: ${project.creativeWeight || ''}`,
+    `- **현재 회차**: ${project.currentEpisode ?? 0}`,
+    '',
+    `## 독자 약속\n${project.audiencePromise || '(없음)'}`,
+    '',
+    `## 심층 질문\n${project.deepQuestion || '(없음)'}`,
+    '',
+    `## 로그라인\n${project.logline || '(없음)'}`
+  ];
+  files.push({ path: join(outDir, 'project-meta.md'), content: metaLines.join('\n') + '\n' });
+
+  // 2. 캐논 사실 JSON
+  if (Array.isArray(project.canonFacts) && project.canonFacts.length > 0) {
+    files.push({
+      path: join(outDir, 'canon-facts.json'),
+      content: JSON.stringify(project.canonFacts, null, 2)
+    });
+  }
+
+  // 3. 인물 JSON
+  if (Array.isArray(project.characters) && project.characters.length > 0) {
+    files.push({
+      path: join(outDir, 'characters.json'),
+      content: JSON.stringify(project.characters, null, 2)
+    });
+  }
+
+  // 4. 열린 실타래 마크다운
+  if (Array.isArray(project.openThreads) && project.openThreads.length > 0) {
+    const threadLines = [`# 열린 실타래 (Open Threads)`, ''];
+    project.openThreads.forEach((t, i) => threadLines.push(`${i + 1}. ${t}`));
+    files.push({ path: join(outDir, 'open-threads.md'), content: threadLines.join('\n') + '\n' });
+  }
+
+  // 5. evolutionHistory JSON (있을 때만)
+  if (evolutionHistory && Array.isArray(evolutionHistory.events) && evolutionHistory.events.length > 0) {
+    files.push({
+      path: join(outDir, 'evolution-history.json'),
+      content: JSON.stringify(evolutionHistory, null, 2)
+    });
+  }
+
+  return files;
+}
+
 printJson({
   usage: [
     'npm run storyx -- doctor',
+    'npm run storyx -- init --title "새 작품" --medium novel --format long-novel --out ./storyx-project.json',
+    'npm run storyx -- init --title "테스트" --dry-run',
+    'npm run storyx -- serve --port 5173',
+    'npm run storyx -- serve --dry-run',
+    'npm run storyx -- memory sync --from ./storyx-project.json --to ./storyx-memory',
+    'npm run storyx -- memory sync --from ./storyx-project.json --dry-run',
     'npm run storyx -- draft --provider mock --medium novel --format long-novel --dry-run',
     'npm run storyx -- draft --provider claude --medium novel --format long-novel --freewrite "쓰고 싶은 이야기" --dry-run',
     'npm run storyx -- review --provider mock --scale small --dry-run',
