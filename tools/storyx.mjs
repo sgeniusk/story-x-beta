@@ -1000,21 +1000,25 @@ function runProvider(commandParts) {
  *
  * 판정 조건 (하나라도 해당하면 true):
  *   1. spawnResult.status 가 0 이 아님 (비정상 종료)
- *   2. spawnResult.stderr 가 비어 있지 않음
- *   3. raw 가 비어 있음 (provider 가 아무것도 출력하지 않은 경우)
- *   4. raw 가 JSON 파싱 가능한 오브젝트가 아닌데, 영문 에러 패턴을 포함
+ *   2. raw 가 비어 있음 (provider 가 아무것도 출력하지 않은 경우)
+ *   3. raw 가 JSON 파싱 가능한 오브젝트가 아닌데, 영문 에러 패턴을 포함
  *      — "Reading additional input from stdin", "error:", "ERROR",
  *        "Traceback", "command not found", "ENOENT", "ETIMEDOUT",
  *        "Error:", "exception", "fatal:"
  *
+ * stderr 는 판정에 쓰지 않는다 — codex exec 는 **정상 성공 호출에서도**
+ * stderr 에 세션 배너("Reading additional input from stdin...", workdir/model
+ * 정보, 무해한 MCP transport ERROR 로그)를 출력한다(2026-06-10 라이브 실측,
+ * exit 0 + stdout 정상 JSON + stderr 614바이트). stderr 비어있지-않음을 에러로
+ * 보면 모든 정상 호출이 재시도+폴백으로 오판된다.
+ *
  * JSON 파싱 가능한 응답(정상 provider 출력)은 raw 가 에러 키워드를 포함해도
  * false 를 반환한다 — JSON 이 성공하면 정상으로 간주.
  *
- * 이 함수는 순수 함수다. spawnResult 는 status/stderr 필드만 읽는다.
+ * 이 함수는 순수 함수다. spawnResult 는 status 필드만 읽는다.
  */
 function looksLikeProviderError(raw, spawnResult) {
   if (spawnResult.status !== 0) return true;
-  if (spawnResult.stderr && spawnResult.stderr.trim().length > 0) return true;
   if (!raw || raw.trim().length === 0) return true;
 
   // JSON 파싱이 성공하면 정상 응답 — 에러 키워드 검사를 생략한다.
