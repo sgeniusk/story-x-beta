@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-10(4차) · Branch: `main` (**진도 체크 실효 관찰 완료** — 과회수 4건→0~1건 실증 · intentVersion 재시드 · P12 신규 발견)
+> Last Updated: 2026-06-11 · Branch: `main` (**P12 수정 완료** — 갈림길 캐논 모순 의심 배지 + 재발급 금지 프롬프트 규칙, 임계 라이브 캘리브레이션)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -78,12 +78,24 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 ## 다음 한 단계
 
-**4차 — 진도 체크 실효 관찰 완료(#3 ch4~5).** 과회수류 지적 4건(기준선 A암 ch2)→0건(ch4)·1건(ch5). 절제→회수 사이클이 시드 지시대로 작동, 2단계 착수 가치 확인. 리포트 `docs/reviews/2026-06-07-persona-live-test/06-hunter-pace-check.md`.
-- **P12 (신규, 우선)** — 갈림길이 캐논과 모순된 약속을 걸러내지 못함: ch4 LLM 이 기확정 캐논(고백)을 새 promise 로 재발급 → fork 노출 → ch5 캐논 충돌(검토 2인 독립 적발·출고 불가 — 차별점 작동 실증). fork 도출 시 canonFacts 보수 매칭으로 제외/배지. 별도 스펙.
-- **진도 인터뷰 2단계(서술형 LLM)** — P12 수정 후 한 사이클 관찰 거쳐 착수. 갈림길 LLM 정제와 같은 묶음.
+**P12 수정 완료(2026-06-11).** 갈림길 옵션이 기확정 캐논과 겹치면 "캐논 확인" 배지(`overlapsCanonFact`, 임계 0.65 라이브 캘리브레이션 — 진양성 0.667/경계 거짓양성 0.6 분리) + 생성 프롬프트에 재발급 금지 규칙 1줄(promptBuilders↔storyx.mjs byte-identical 미러 + 동기화 테스트). 라이브 — ch4 fixture 에서 사고 옵션에만 배지·정당 옵션 3개 깨끗·콘솔 0. 캡처 `pace-check/p12-canon-suspect-badge.png`.
+- **한 사이클 재관찰** — P12 배지 상태에서 ch5 재생성(작가가 배지 옵션 회피 또는 retcon 의도 명시) → 캐논 충돌 재발 여부 확인. 통과하면 **진도 인터뷰 2단계(서술형 LLM) 스펙 착수**.
 - **academic 라이브 검토 배선**(1.0 플래그 전제) · **M7 경량 검증 A/B/C 사용자 선택** · 결정 부채 보드 · (push) 사용자 요청 시.
+- 관찰 메모 — 폴백 ch3 잔재 캐논 2건(#9 intent 누수·#10 "동료은")이 fixture 에 남아 있음: 폴백 초안의 newCanonFacts 커밋 차단 또는 정리 도구 후보.
 
-## 최근 검증 (2026-06-10 4차 · 진도 체크 실효 관찰 · main)
+## 최근 검증 (2026-06-11 · P12 캐논 모순 의심 배지 · main)
+
+```
+init.sh            → tsc 0 · vitest(427 tests) · build 전체 통과
+P12 수정 (9b9627a, 8534503):
+  overlapsCanonFact — 옵션 토큰 65%+ 가 한 캐논 문장에서 prefix 발견 시 canonSuspect (ch5 fixture 실데이터 핀 3종)
+  fc-fork-opt is-canon-suspect — "캐논 확인" 배지·dashed 보더 (제외 아님, 최종 판단은 작가)
+  프롬프트 규칙   — "이미 일어난 일은 새 약속이 될 수 없습니다" promptBuilders+storyx.mjs byte-identical + 미러 동기화 테스트
+  임계 캘리브레이션 — 라이브에서 0.6 경계 거짓양성(관측 모델 이탈 stake) 발견 → 0.65 + 경계 핀 테스트
+  라이브 — ch4 fixture: 사고 옵션("숨긴 미래의 진실")에만 배지·정당 3개 깨끗·콘솔 0
+```
+
+## 직전 검증 (2026-06-10 4차 · 진도 체크 실효 관찰 · main)
 
 ```
 init.sh            → tsc 0 · vitest(421 tests) · build 전체 통과
