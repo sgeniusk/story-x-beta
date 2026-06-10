@@ -182,6 +182,24 @@ export default defineConfig({
       String(input.medium ?? 'novel'),
       '--context',
       String(input.context ?? '')
+    ]),
+    storyxBridge('/api/pace-interview', (input) => [
+      'tools/storyx.mjs',
+      'pace-interview',
+      '--provider',
+      'codex',
+      '--medium',
+      String(input.medium ?? 'novel'),
+      '--format',
+      String(input.format ?? 'long-novel'),
+      '--payoff-json',
+      input.payoffStatus != null ? JSON.stringify(input.payoffStatus) : '',
+      '--promises-json',
+      JSON.stringify(Array.isArray(input.unpaidPromises) ? input.unpaidPromises : []),
+      '--stakes-json',
+      JSON.stringify(Array.isArray(input.deferredStakes) ? input.deferredStakes : []),
+      '--context',
+      String(input.context ?? '')
     ])
   ]
 });

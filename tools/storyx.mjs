@@ -667,6 +667,106 @@ function buildMemorySyncFiles(project, evolutionHistory, outDir) {
   return files;
 }
 
+if (command === 'pace-interview') {
+  const provider = readFlag(args, '--provider', 'codex');
+  const medium = readFlag(args, '--medium', 'novel');
+  const format = readFlag(args, '--format', 'long-novel');
+  const payoffJsonStr = readFlag(args, '--payoff-json', '');
+  const promisesJsonStr = readFlag(args, '--promises-json', '[]');
+  const stakesJsonStr = readFlag(args, '--stakes-json', '[]');
+  const context = readFlag(args, '--context', '');
+  const dryRun = args.includes('--dry-run');
+
+  // 단독 완결형이면 provider 호출 없이 빈 questions 반환
+  if (!isSerialFormat(format)) {
+    printJson({ provider, medium, mode: 'pace-interview', status: 'complete', questions: [] });
+    process.exit(0);
+  }
+
+  // payoff-json 누락이면 provider 호출 없이 빈 questions 반환
+  if (!payoffJsonStr) {
+    printJson({ provider, medium, mode: 'pace-interview', status: 'complete', questions: [], warning: '--payoff-json 누락 — pace 데이터 없이 질문을 생성할 수 없습니다.' });
+    process.exit(0);
+  }
+
+  let payoffStatus = { isStalled: false, deferredStreak: 0, openPromises: 0 };
+  try {
+    const parsed = JSON.parse(payoffJsonStr);
+    if (typeof parsed === 'object' && parsed !== null) {
+      payoffStatus = {
+        isStalled: Boolean(parsed.isStalled),
+        deferredStreak: typeof parsed.deferredStreak === 'number' ? parsed.deferredStreak : 0,
+        openPromises: typeof parsed.openPromises === 'number' ? parsed.openPromises : 0
+      };
+    }
+  } catch {
+    // 오형식 payoff-json — 기본값 사용
+  }
+
+  let unpaidPromises = [];
+  try {
+    const parsed = JSON.parse(promisesJsonStr);
+    if (Array.isArray(parsed)) unpaidPromises = parsed.filter((v) => typeof v === 'string');
+  } catch {
+    // 오형식 promises-json — 무시(빈 배열)
+  }
+
+  let deferredStakes = [];
+  try {
+    const parsed = JSON.parse(stakesJsonStr);
+    if (Array.isArray(parsed)) deferredStakes = parsed.filter((v) => typeof v === 'string');
+  } catch {
+    // 오형식 stakes-json — 무시(빈 배열)
+  }
+
+  const prompt = buildPaceInterviewPrompt({ medium, format, payoffStatus, unpaidPromises, deferredStakes, context });
+
+  if (dryRun) {
+    printJson({
+      provider,
+      medium,
+      format,
+      mode: 'pace-interview',
+      dryRun: true,
+      payoffStatus,
+      unpaidPromises,
+      deferredStakes,
+      prompt,
+      warning: 'dry-run 모드 — provider 호출 없이 프롬프트만 출력합니다.'
+    });
+    process.exit(0);
+  }
+
+  if (provider === 'mock') {
+    printJson({ provider, medium, mode: 'pace-interview', status: 'complete', questions: [] });
+    process.exit(0);
+  }
+
+  const commandPreview =
+    provider === 'claude'
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', prompt]
+      : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
+
+  // Q2 가드 사용 — transient 실패 시 1회 재시도, 에러 raw 는 질문으로 승격하지 않는다.
+  const { result: providerResult, raw: rawOutput, retried } = runProviderWithRetry(commandPreview);
+  const isError = looksLikeProviderError(rawOutput, providerResult);
+  const parsed = isError ? null : parseProviderJson(rawOutput);
+  const questions = normalizePaceQuestions(parsed?.questions);
+
+  printJson({
+    provider,
+    medium,
+    mode: 'pace-interview',
+    status: isError ? 'failed' : 'complete',
+    exitCode: providerResult.status,
+    questions,
+    warning: isError
+      ? (retried ? 'provider 호출이 재시도 후에도 실패했습니다.' : 'provider 호출이 실패했습니다.')
+      : undefined
+  });
+  process.exit(isError ? 1 : 0);
+}
+
 printJson({
   usage: [
     'npm run storyx -- doctor',
@@ -681,7 +781,8 @@ printJson({
     'npm run storyx -- review --provider mock --scale small --dry-run',
     'npm run storyx -- review --provider claude --scale small --dry-run',
     'npm run storyx -- review-data --provider mock --category 인물 --target "<직렬화된 엔티티>"',
-    'npm run storyx -- normalize-provider-output --provider claude --scale small --raw-file ./provider-output.txt'
+    'npm run storyx -- normalize-provider-output --provider claude --scale small --raw-file ./provider-output.txt',
+    'npm run storyx -- pace-interview --provider codex --medium novel --format long-novel --payoff-json \'{"isStalled":true,"deferredStreak":3,"openPromises":4}\' --dry-run'
   ]
 });
 
@@ -1503,4 +1604,74 @@ function timestamp() {
 
 function printJson(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+}
+
+
+function buildPaceInterviewPrompt({ medium, format, payoffStatus, unpaidPromises, deferredStakes, context }) {
+  if (!isSerialFormat(format)) return '';
+
+  const { isStalled, deferredStreak, openPromises } = payoffStatus;
+
+  const stallLine = isStalled
+    ? `- 정체 신호 — 회수 없이 ${deferredStreak}회차 연속, 열린 약속 ${openPromises}개.`
+    : `- 현재 deferredStreak=${deferredStreak}, 열린 약속 ${openPromises}개.`;
+
+  const promisesSection = unpaidPromises.length > 0
+    ? ['', '## 미회수 약속 목록', ...unpaidPromises.map((p) => `- ${p}`)]
+    : ['', '## 미회수 약속 목록', '(없음)'];
+
+  const stakesSection = deferredStakes.length > 0
+    ? ['', '## 정체 중인 위험(deferred stakes)', ...deferredStakes.map((s) => `- ${s}`)]
+    : ['', '## 정체 중인 위험(deferred stakes)', '(없음)'];
+
+  return [
+    'Story X 쇼러너 페이스 인터뷰 생성 요청.',
+    `매체: ${medium} / 포맷: ${format}`,
+    '',
+    '## 진도 현황',
+    stallLine,
+    ...promisesSection,
+    ...stakesSection,
+    '',
+    '## 작품 컨텍스트',
+    context || '(컨텍스트 없음)',
+    '',
+    '## 역할',
+    '당신은 Story X의 쇼러너입니다. 연재 페이스를 책임지는 화자로서, 작가에게 이번 화의 방향을 정하는 질문을 합니다.',
+    '',
+    '## 지시',
+    '- 질문 1~3개를 만듭니다. 각 질문은 위 미회수 약속·정체 위험의 구체 이름을 박아서 묻습니다. 일반론 금지.',
+    '- 전제 능선·이번 화 페이스·다음 회수 시점 중 어울리는 테마로 묻습니다.',
+    '- 각 질문에 옵션 2~3개를 만듭니다. 각 옵션의 intentSeed 는 이번 화 생성에 줄 한 줄 지시로, 작품 맞춤 문장으로 씁니다.',
+    '- 이미 일어난 일은 새 약속이 될 수 없습니다 — 기확정 캐논을 새 질문·옵션·시드로 재발급하지 않습니다.',
+    '- 한국어로 씁니다.',
+    '',
+    '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
+    '{',
+    '  "questions": [{ "question": "작품 구체 약속·위험 이름이 박힌 질문", "options": [{ "label": "선택지", "intentSeed": "이번 화 생성 한 줄 지시" }] }]',
+    '}'
+  ].join('\n');
+}
+
+// pace-interview provider 응답의 questions 배열을 정규화한다.
+// 오형식 항목 무시·최대 3질문·질문당 옵션 최대 3·label/intentSeed 비문자열 제거.
+function normalizePaceQuestions(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(isRecord)
+    .slice(0, 3)
+    .map((q) => {
+      const question = readString(q.question);
+      const rawOptions = Array.isArray(q.options) ? q.options : [];
+      const options = rawOptions
+        .filter(isRecord)
+        .slice(0, 3)
+        .map((o) => ({
+          label: readString(o.label),
+          intentSeed: readString(o.intentSeed)
+        }))
+        .filter((o) => o.label && o.intentSeed);
+      return { question, options };
+    })
+    .filter((q) => q.question && q.options.length > 0);
 }
