@@ -1130,20 +1130,10 @@ export function produceNextChapter(project: SeriesProject, request: ProductionRe
   const intent = request.intent.trim() || '오늘 일어난 가장 작은 결정';
   const pressure = request.pressure.trim() || '낮은 감정선에서 조용히 밀고 들어오는 압력';
 
-  const newCanonFacts: CanonFact[] = [
-    {
-      id: `canon-${episode.toString().padStart(3, '0')}-a`,
-      episode,
-      owner: 'plot',
-      statement: `${episode}화에서 ${primaryName}은 "${intent}"의 한복판에 선다.`
-    },
-    {
-      id: `canon-${episode.toString().padStart(3, '0')}-b`,
-      episode,
-      owner: 'character',
-      statement: `${partnerName}은 ${primaryName}에게 아직 한 가지 사실을 숨기고 있다.`
-    }
-  ];
+  // P13(2026-06-11) — 폴백은 캐논을 발명하지 않는다. 이전 템플릿 2건은
+  // (a) intent 문구를 plot 캐논으로 박제(의도 메모 누수)하고 (b) "숨기고 있다" 비밀을 발명해
+  // 실작품 레저를 오염시켰다(#3 fixture 캐논 #9·#10). 캐논은 LLM 본문 생성 경로에서만 만든다.
+  const newCanonFacts: CanonFact[] = [];
   const outline = [
     `${episode}화는 "${intent}"을 중심 사건으로 시작한다.`,
     `${primaryName}의 장기 동기인 "${primaryDesire}"를 대사보다 행동으로 확인시킨다.`,

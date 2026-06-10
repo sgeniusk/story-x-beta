@@ -258,8 +258,23 @@ describe('storyEngine', () => {
       'genre-stylist',
       'continuity-editor'
     ]);
-    expect(result.updatedProject.canonFacts).toHaveLength(project.canonFacts.length + 2);
+    // P13(2026-06-11) — 결정적 폴백은 캐논을 발명하지 않는다. 이전엔 템플릿 2건("…한복판에 선다"
+    // intent 누수 · "…숨기고 있다" 비밀 발명)을 주조해 실작품 레저를 오염시켰다(#3 fixture 캐논 #9·#10).
+    expect(result.updatedProject.canonFacts).toHaveLength(project.canonFacts.length);
     expect(result.continuityIssues.filter((issue) => issue.severity === 'error')).toHaveLength(0);
+  });
+
+  it('produceNextChapter(결정적 폴백)는 캐논 사실을 발명하지 않는다 — P13 오염 캐논 차단', () => {
+    const project = createSeedProject();
+    const result = produceNextChapter(project, {
+      genre: 'urban-fantasy',
+      intent: '이번 화에서 "백도현 뒤에 있는 더 큰 설계자의 정체"를 결판낸다.',
+      pressure: '압박'
+    });
+    expect(result.chapter.newCanonFacts).toEqual([]);
+    expect(result.updatedProject.canonFacts).toEqual(project.canonFacts);
+    // intent 문구가 캐논 어디에도 새지 않는다
+    expect(result.updatedProject.canonFacts.some((f) => f.statement.includes('설계자의 정체'))).toBe(false);
   });
 
   it('locks a single chapter without touching the others, and unlock reverses it', () => {

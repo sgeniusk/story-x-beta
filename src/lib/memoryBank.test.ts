@@ -1,6 +1,23 @@
 import { describe, expect, it } from 'vitest';
 
 import { createSeedProject, produceNextChapter } from './storyEngine';
+import type { ProductionResult, SeriesProject } from './storyEngine';
+
+// P13 이후 폴백은 캐논을 발명하지 않으므로, LLM 경로가 캐논을 채운 회차를 명시적으로 시뮬레이션한다.
+// id 'canon-001-a' 는 승인 큐 decisions 매핑 테스트가 참조한다.
+function withChapterCanon(result: ProductionResult): SeriesProject {
+  const facts = [
+    { id: 'canon-001-a', episode: 1, owner: 'plot' as const, statement: '서윤은 탑의 하층 기록실에서 새 표식을 발견했다.' },
+    { id: 'canon-001-b', episode: 1, owner: 'character' as const, statement: '이안이 숨긴 대가가 관계를 흔들기 시작했다.' }
+  ];
+  return {
+    ...result.updatedProject,
+    canonFacts: [...result.updatedProject.canonFacts, ...facts],
+    chapters: result.updatedProject.chapters.map((chapter, index, all) =>
+      index === all.length - 1 ? { ...chapter, newCanonFacts: facts } : chapter
+    )
+  };
+}
 import {
   buildMemoryApprovalQueue,
   buildMemoryBankWorkbench,
@@ -80,11 +97,13 @@ describe('Story X memory bank', () => {
   });
 
   it('builds an editable memory workbench with records and role packets', () => {
-    const project = produceNextChapter(createSeedProject(), {
-      genre: 'romance-fantasy',
-      intent: '서윤이 탑의 하층 기록실에서 새 표식을 발견한다',
-      pressure: '이안이 숨긴 대가가 관계를 흔들기 시작한다'
-    }).updatedProject;
+    const project = withChapterCanon(
+      produceNextChapter(createSeedProject(), {
+        genre: 'romance-fantasy',
+        intent: '서윤이 탑의 하층 기록실에서 새 표식을 발견한다',
+        pressure: '이안이 숨긴 대가가 관계를 흔들기 시작한다'
+      })
+    );
 
     const workbench = buildMemoryBankWorkbench(project);
 
@@ -99,11 +118,13 @@ describe('Story X memory bank', () => {
   });
 
   it('merges chapter canon candidates and AI review memory candidates into an approval queue', () => {
-    const project = produceNextChapter(createSeedProject(), {
-      genre: 'romance-fantasy',
-      intent: '서윤이 탑의 하층 기록실에서 새 표식을 발견한다',
-      pressure: '이안이 숨긴 대가가 관계를 흔들기 시작한다'
-    }).updatedProject;
+    const project = withChapterCanon(
+      produceNextChapter(createSeedProject(), {
+        genre: 'romance-fantasy',
+        intent: '서윤이 탑의 하층 기록실에서 새 표식을 발견한다',
+        pressure: '이안이 숨긴 대가가 관계를 흔들기 시작한다'
+      })
+    );
 
     const queue = buildMemoryApprovalQueue({
       project,
