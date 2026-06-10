@@ -604,6 +604,8 @@ export function StoryXDesk({
   // Phase 2a — floating 본문 외부 변경(초안 생성·diff 반영·회차 전환) 시드 카운터.
   // 사용자 타이핑(onBodyChange)에서는 절대 올리지 않는다 — 타이핑 중 본문 재시드를 막아 커서 보존.
   const [bodyVersion, setBodyVersion] = useState(0);
+  // P7 후속 — 생성 후 시드 strip 결과를 uncontrolled 메모 textarea 에 재시드하는 버전 키.
+  const [intentVersion, setIntentVersion] = useState(0);
   // 데이터 모드 분야별 검토 — 결과는 분야 id로 캐싱하고, 검토 중인 분야는 따로 표시한다.
   const [dataReviewResults, setDataReviewResults] = useState<Partial<Record<CanonCategory, DataReviewView>>>({});
   const [dataReviewingCategory, setDataReviewingCategory] = useState<CanonCategory | null>(null);
@@ -1259,6 +1261,7 @@ export function StoryXDesk({
         characters: project.characters.length,
       },
       intentMemo: draftPrompt,
+      intentVersion,
       personas: mediumReviewAgentIds.map((id) => findPersona(id)),
       editable: true,
       bodyVersion,
@@ -1774,6 +1777,7 @@ export function StoryXDesk({
         const result = chapterFromDraftPayload(project, llm.payload, effectiveRequest);
         applyProductionResult(result);
         setDraftPrompt((current) => stripConsumedSeeds(current));
+        setIntentVersion((v) => v + 1); // strip 결과를 메모 textarea 에 재시드
         setProjectSnapshots(pushProjectSnapshot(result.updatedProject, `${chapterLabel(result.chapter)} 생성`));
         setGenerationNote('Claude 구독으로 생성한 초안입니다.');
         return;
@@ -1782,6 +1786,7 @@ export function StoryXDesk({
       const fallback = produceNextChapter(project, effectiveRequest);
       applyProductionResult(fallback);
       setDraftPrompt((current) => stripConsumedSeeds(current));
+      setIntentVersion((v) => v + 1); // strip 결과를 메모 textarea 에 재시드
       setProjectSnapshots(pushProjectSnapshot(fallback.updatedProject, `${chapterLabel(fallback.chapter)} 생성`));
       setGenerationNote(
         llm.reason

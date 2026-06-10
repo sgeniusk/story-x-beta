@@ -35,6 +35,8 @@ export interface FloatingEditorProps {
   onSelectBeat: (id: string) => void;
   stats: { chars: number; chapters: number; canon: number; characters: number };
   intentMemo: string;
+  /** P7 후속 — strip 등 부모發 메모 변경을 uncontrolled textarea 에 반영하는 재시드 버전 키 (bodyVersion 패턴). */
+  intentVersion?: number;
   // Phase 2a — 편집·네비 콜백 (StoryXDesk 단일 원천에서 주입)
   editable?: boolean;
   bodyVersion?: number;
@@ -76,6 +78,7 @@ export function FloatingEditor({
   onSelectBeat,
   stats,
   intentMemo,
+  intentVersion = 0,
   editable = true,
   bodyVersion = 0,
   onBodyChange,
@@ -690,6 +693,7 @@ export function FloatingEditor({
               쇼러너가 잡은 이번 회차 프레이밍
             </div>
             <textarea
+              key={`intent-${intentVersion}`}
               ref={intentRef}
               rows={3}
               defaultValue={intentMemo}

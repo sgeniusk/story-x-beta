@@ -70,6 +70,7 @@ function mount(props: FloatingEditorProps) {
   act(() => { root.render(createElement(FloatingEditor, props)); });
   return {
     host,
+    rerender: (next: FloatingEditorProps) => act(() => { root.render(createElement(FloatingEditor, next)); }),
     unmount: () => { act(() => root.unmount()); host.remove(); },
     click: (el: Element | null) => act(() => {
       el?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -306,6 +307,23 @@ describe('FloatingEditor 실데이터 배선', () => {
     const buttons = host.querySelectorAll('.fc-pace-opt');
     await click(buttons[0]);
     expect(seen.at(-1)).toBe(`기존 의도\n${seed1}`);
+    unmount();
+  });
+
+  // P7 후속(2026-06-10 3차 라이브) — strip 이 state 에만 반영되고 uncontrolled textarea DOM 에는
+  // 남아, 다음 클릭이 stale 메모에서 재합성되던 갭. bodyVersion 과 같은 버전 키로 재시드한다.
+  it('intentVersion 이 증가하면 의도 메모 textarea 가 새 intentMemo 로 재시드된다', () => {
+    const memoTextarea = (host: HTMLElement) => host.querySelector('textarea') as HTMLTextAreaElement;
+    const { host, rerender, unmount } = mount(
+      baseProps({ intentMemo: '시드 줄\n자필 줄', intentVersion: 0 })
+    );
+    expect(memoTextarea(host).value).toBe('시드 줄\n자필 줄');
+    // 버전 동일 — uncontrolled 라 prop 변경만으로는 미반영 (기존 동작 보존)
+    rerender(baseProps({ intentMemo: '자필 줄', intentVersion: 0 }));
+    expect(memoTextarea(host).value).toBe('시드 줄\n자필 줄');
+    // 버전 증가 — strip 결과로 재시드
+    rerender(baseProps({ intentMemo: '자필 줄', intentVersion: 1 }));
+    expect(memoTextarea(host).value).toBe('자필 줄');
     unmount();
   });
 });
