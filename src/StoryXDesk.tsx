@@ -123,7 +123,7 @@ import {
 import { requestLlmDraft } from './lib/draftClient';
 import { requestAgentReview } from './lib/reviewClient';
 import { computePayoffLedger } from './lib/payoffLedger';
-import { buildEpisodeForks } from './lib/episodeBriefing';
+import { buildEpisodeForks, stripConsumedSeeds } from './lib/episodeBriefing';
 import { requestDataReview } from './lib/dataReviewClient';
 import type { BibleSection, CanonCategory, DataReviewView, DataView } from './lib/canonDataView';
 import { describeKoreanStyleLevel, evaluateKoreanProse } from './lib/koreanStyle';
@@ -1757,6 +1757,7 @@ export function StoryXDesk({
       if (llm.ok && llm.payload) {
         const result = chapterFromDraftPayload(project, llm.payload, effectiveRequest);
         applyProductionResult(result);
+        setDraftPrompt((current) => stripConsumedSeeds(current));
         setProjectSnapshots(pushProjectSnapshot(result.updatedProject, `${chapterLabel(result.chapter)} 생성`));
         setGenerationNote('Claude 구독으로 생성한 초안입니다.');
         return;
@@ -1764,6 +1765,7 @@ export function StoryXDesk({
 
       const fallback = produceNextChapter(project, effectiveRequest);
       applyProductionResult(fallback);
+      setDraftPrompt((current) => stripConsumedSeeds(current));
       setProjectSnapshots(pushProjectSnapshot(fallback.updatedProject, `${chapterLabel(fallback.chapter)} 생성`));
       setGenerationNote(
         llm.reason

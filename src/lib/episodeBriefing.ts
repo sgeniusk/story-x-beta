@@ -115,3 +115,24 @@ export function composeIntentWithFork(currentIntent: string, seed: string): stri
   if (base.includes(seed)) return base;
   return base.length > 0 ? `${base}\n${seed}` : seed;
 }
+
+// 생성에 소비된 갈림길 시드 줄을 의도 메모에서 제거한다 — P7 (이미 회수된 약속 재지시 차단).
+// 시드 템플릿 줄만 제거: buildEpisodeForks 가 만드는 두 패턴에 anchored 매칭.
+//   - `이번 화에서 "..."`로 시작하는 줄 (deferred-stake, open-promise, stalled-premise 시드)
+//   - `이번 화의 중심 사건은 "..."다.` 패턴 (open-thread 시드)
+// 패턴과 정확히 매칭되지 않는 줄(작가 자필)은 보존한다.
+const SEED_PATTERN_EPISODE = /^이번 화에서 "/u;
+const SEED_PATTERN_THREAD = /^이번 화의 중심 사건은 ".*"다\.$/u;
+
+export function stripConsumedSeeds(intent: string): string {
+  if (!intent) return '';
+  const lines = intent.split('\n');
+  const kept = lines.filter((line) => {
+    const trimmed = line.trim();
+    if (trimmed.length === 0) return false; // 빈 줄 정리
+    if (SEED_PATTERN_EPISODE.test(trimmed)) return false;
+    if (SEED_PATTERN_THREAD.test(trimmed)) return false;
+    return true;
+  });
+  return kept.join('\n').trim();
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildEpisodeForks, composeIntentWithFork } from './episodeBriefing';
+import { buildEpisodeForks, composeIntentWithFork, stripConsumedSeeds } from './episodeBriefing';
 import { computePayoffLedger } from './payoffLedger';
 import type { Chapter, StoryProject } from './storyEngine';
 import { createEmptyProject } from './storyEngine';
@@ -165,5 +165,33 @@ describe('composeIntentWithFork', () => {
 
   it('이미 포함된 시드는 중복 추가하지 않는다', () => {
     expect(composeIntentWithFork('기존\n새 시드', '새 시드')).toBe('기존\n새 시드');
+  });
+});
+
+describe('stripConsumedSeeds', () => {
+  it('시드 2줄과 작가 자필 1줄이 있을 때 자필만 남긴다', () => {
+    const intent = [
+      '이번 화에서 "서가을의 정신적 안전"에 인물의 행동으로 한 발 다가가되, 결판을 서두르지 않는다.',
+      '이번 화의 중심 사건은 "백도현 정체"다.',
+      '강태준이 한지욱에게 진실을 털어놓는 장면 원함.'
+    ].join('\n');
+    expect(stripConsumedSeeds(intent)).toBe('강태준이 한지욱에게 진실을 털어놓는 장면 원함.');
+  });
+
+  it('시드 없는 자필 메모는 그대로 반환한다', () => {
+    const intent = '강태준의 회귀 능력을 더 강조해 주세요.';
+    expect(stripConsumedSeeds(intent)).toBe('강태준의 회귀 능력을 더 강조해 주세요.');
+  });
+
+  it('빈 문자열은 빈 문자열을 반환한다', () => {
+    expect(stripConsumedSeeds('')).toBe('');
+  });
+
+  it('"이번 화에서 ..."로 시작하는 결판 문구도 제거한다', () => {
+    const intent = [
+      '이번 화에서 "붕괴 위험"를 더 미루지 않고 인물의 선택과 대가로 결판낸다.',
+      '내가 원하는 것.'
+    ].join('\n');
+    expect(stripConsumedSeeds(intent)).toBe('내가 원하는 것.');
   });
 });
