@@ -11,7 +11,7 @@ export interface EpisodeForkOption {
 
 export interface EpisodeFork {
   id: string;
-  source: 'stalled-premise' | 'open-promise' | 'open-thread';
+  source: 'stalled-premise' | 'open-promise' | 'open-thread' | 'deferred-stake';
   question: string;
   options: EpisodeForkOption[];
 }
@@ -57,6 +57,34 @@ export function buildEpisodeForks(project: StoryProject, ledger: PayoffLedgerRep
       options: unpaid.slice(-MAX_OPTIONS).map((promise) => ({
         label: promise,
         intentSeed: `이번 화에서 "${promise}"에 인물의 행동으로 한 발 다가간다.`
+      }))
+    });
+  }
+
+  // 라이브 발견(2026-06-10 #3 헌터물) — 생성 LLM 이 rewardArc payoff 를 회차 안에서 즉시 채우고
+  // openThreads 는 생성 경로가 채우지 않아, 실제 미뤄진 위험은 stakesLedger deferred 에만 남는다.
+  // stake 별 "마지막 회차의 결말"이 deferred 인 것만 옵션으로 — 뒤에서 kept/lost 로 결판난 위험은 제외.
+  const stakeResolution = new Map<string, string>();
+  for (const chapter of project.chapters) {
+    for (const entry of chapter.stakesLedger ?? []) {
+      const stake = entry.stake.trim();
+      if (stake.length > 0) stakeResolution.set(stake, entry.resolution ?? 'deferred');
+    }
+  }
+  const deferredStakes = [...stakeResolution.entries()]
+    .filter(([, resolution]) => resolution === 'deferred')
+    .map(([stake]) => stake);
+  if (deferredStakes.length > 0) {
+    forks.push({
+      id: 'fork-deferred-stake',
+      source: 'deferred-stake',
+      question: '결과가 미뤄진 위험 중 이번 화에서 결판낼 것은 무엇인가요?',
+      // 시드 강도 2단(2026-06-10 A/B 발견): 정체면 결판 문구, 비정체면 진척 문구 — 비정체 과회수 방지.
+      options: deferredStakes.slice(0, MAX_OPTIONS).map((stake) => ({
+        label: stake,
+        intentSeed: ledger.isStalled
+          ? `이번 화에서 "${stake}"를 더 미루지 않고 인물의 선택과 대가로 결판낸다.`
+          : `이번 화에서 "${stake}"에 인물의 행동으로 한 발 다가가되, 결판을 서두르지 않는다.`
       }))
     });
   }

@@ -87,6 +87,71 @@ describe('buildEpisodeForks', () => {
     expect(forks[0].source).toBe('open-thread');
     expect(forks[0].options).toHaveLength(3);
   });
+
+  // 라이브 발견(2026-06-10 #3 헌터물) — 생성 LLM 이 rewardArc payoff 를 회차 안에서 즉시 채우고
+  // openThreads 는 생성 경로가 채우지 않아, 실제 미뤄진 위험은 stakesLedger deferred 에만 남는다.
+  // deferred 를 fork 소스로 쓰지 않으면 실생성 작품에서 갈림길이 영원히 안 뜬다.
+  // [시드 강도 2단] 비정체 상황 — "한 발 다가가되, 결판을 서두르지 않는다" 문구
+  it('미회수 promise·openThreads 가 없어도 stakesLedger deferred 가 있으면 위험 갈림길을 만든다 (비정체)', () => {
+    const project = projectWith([
+      ch(1, {
+        rewardArc: [{ promise: '첫 변수', payoff: '즉시 회수됨' }],
+        stakesLedger: [
+          { stake: '서가을의 정신적 안전', atRisk: '서가을', resolution: 'deferred' },
+          { stake: '백도현의 정체와 게이트 조작의 진실', atRisk: '태준의 계획', resolution: 'deferred' }
+        ]
+      })
+    ]);
+    const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
+    expect(forks).toHaveLength(1);
+    expect(forks[0].source).toBe('deferred-stake');
+    expect(forks[0].options.map((o) => o.label)).toEqual([
+      '서가을의 정신적 안전',
+      '백도현의 정체와 게이트 조작의 진실'
+    ]);
+    // 비정체 문구: 한 발 다가가되 결판 서두르지 않음
+    expect(forks[0].options[0].intentSeed).toBe(
+      '이번 화에서 "서가을의 정신적 안전"에 인물의 행동으로 한 발 다가가되, 결판을 서두르지 않는다.'
+    );
+  });
+
+  // [시드 강도 2단] 비정체 상황 — kept/lost 후 deferred 잔존 확인 (비정체)
+  it('같은 stake 가 뒤 회차에서 kept/lost 로 결판나면 deferred 갈림길 옵션에서 빠진다 (비정체)', () => {
+    const project = projectWith([
+      ch(1, {
+        stakesLedger: [
+          { stake: '민간인 피해', atRisk: '시민', resolution: 'deferred' },
+          { stake: '붕괴 위험', atRisk: '시간선', resolution: 'deferred' }
+        ]
+      }),
+      ch(2, { stakesLedger: [{ stake: '민간인 피해', atRisk: '시민', resolution: 'kept' }] })
+    ]);
+    const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
+    expect(forks).toHaveLength(1);
+    expect(forks[0].source).toBe('deferred-stake');
+    expect(forks[0].options.map((o) => o.label)).toEqual(['붕괴 위험']);
+    // 비정체 문구 확인
+    expect(forks[0].options[0].intentSeed).toBe(
+      '이번 화에서 "붕괴 위험"에 인물의 행동으로 한 발 다가가되, 결판을 서두르지 않는다.'
+    );
+  });
+
+  // [시드 강도 2단] 정체 상황 — "더 미루지 않고 인물의 선택과 대가로 결판낸다" 문구
+  it('정체(isStalled=true) 상황에서 deferred-stake 시드는 결판 문구를 사용한다', () => {
+    // deferredStreak >= 3 을 유발: ch1~3 이 모두 deferred-only
+    const project = projectWith([
+      ch(1, { stakesLedger: [{ stake: '서가을의 정신적 안전', atRisk: '서가을', resolution: 'deferred' }] }),
+      ch(2, { stakesLedger: [{ stake: '서가을의 정신적 안전', atRisk: '서가을', resolution: 'deferred' }] }),
+      ch(3, { stakesLedger: [{ stake: '서가을의 정신적 안전', atRisk: '서가을', resolution: 'deferred' }] })
+    ]);
+    const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
+    const deferredFork = forks.find((f) => f.source === 'deferred-stake');
+    expect(deferredFork).toBeDefined();
+    // 정체 문구: 결판낸다
+    expect(deferredFork!.options[0].intentSeed).toBe(
+      '이번 화에서 "서가을의 정신적 안전"를 더 미루지 않고 인물의 선택과 대가로 결판낸다.'
+    );
+  });
 });
 
 describe('composeIntentWithFork', () => {
