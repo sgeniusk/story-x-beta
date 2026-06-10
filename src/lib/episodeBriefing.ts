@@ -80,15 +80,17 @@ function collectDeferredStakes(chapters: Chapter[]): string[] {
 
 // P12(2026-06-10 #3 ch5 라이브) — 생성 LLM 이 기확정 캐논을 새 promise 로 재발급하면 fork 가
 // 모순 약속을 노출해 캐논 충돌 회차가 생성된다. 옵션 텍스트가 한 캐논 문장과 크게 겹치면 의심 표시.
-// 보수 판정: 옵션 토큰(조사 제거·2자+)의 60% 이상이 한 캐논 문장에서 prefix 단위로 발견될 때.
-// 토큰 4개 미만의 짧은 옵션은 판정하지 않는다(거짓 양성 가드). 제외가 아니라 배지 — 최종 판단은 작가.
+// 보수 판정: 옵션 토큰(조사 제거·2자+)의 65% 이상이 한 캐논 문장에서 prefix 단위로 발견될 때.
+//   임계 0.65 라이브 캘리브레이션 — 진양성(고백 promise) 0.667 / 경계 거짓양성(관측 모델 이탈 stake,
+//   캐논은 모델의 존재만 확정·이탈은 미결) 0.6 사이. 토큰 4개 미만은 판정하지 않는다.
+// 제외가 아니라 배지 — 최종 판단은 작가.
 function overlapsCanonFact(text: string, canonStatements: string[]): boolean {
   const tokens = [...normalizeStakeTokens(text)];
   if (tokens.length < 4) return false;
   for (const statement of canonStatements) {
     const factTokens = [...normalizeStakeTokens(statement)];
     const covered = tokens.filter((t) => factTokens.some((f) => f.startsWith(t) || t.startsWith(f))).length;
-    if (covered / tokens.length >= 0.6) return true;
+    if (covered / tokens.length >= 0.65) return true;
   }
   return false;
 }

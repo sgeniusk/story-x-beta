@@ -287,6 +287,31 @@ describe('stake 드리프트 매칭 — buildEpisodeForks deferred-stake', () =>
     expect(deferredFork).toBeDefined();
     expect(deferredFork!.options.every((o) => o.canonSuspect !== true)).toBe(true);
   });
+
+  // 임계 캘리브레이션 핀 — 캐논이 "관측 모델의 존재"만 확정하고 "이탈"은 미결인 stake 는
+  // 토큰이 일부 겹쳐도(커버리지 0.6) 의심 표시하지 않는다. 임계 0.65 의 근거 케이스(라이브).
+  it('[P12] 캐논이 존재만 확정한 대상의 미결 위험 stake 는 canonSuspect 가 아니다 (임계 경계 핀)', () => {
+    const project = projectWith([
+      ch(1, {
+        stakesLedger: [
+          { stake: '윤서문의 관측 모델을 벗어날 가능성', atRisk: '태준과 서가을', resolution: 'deferred' }
+        ]
+      })
+    ]);
+    project.canonFacts = [
+      {
+        id: 'canon-12',
+        episode: 3,
+        owner: 'plot',
+        statement:
+          '백도현은 최종 명령자가 아니라 윤서문의 관측 모델을 현장에서 실행하고 보고하는 인물이며, 그 자신도 완전히 신뢰받는 주체가 아니다.'
+      }
+    ];
+    const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
+    const deferredFork = forks.find((f) => f.source === 'deferred-stake');
+    expect(deferredFork).toBeDefined();
+    expect(deferredFork!.options[0].canonSuspect).not.toBe(true);
+  });
 });
 
 describe('stripConsumedSeeds', () => {
