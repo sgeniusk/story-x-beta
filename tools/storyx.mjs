@@ -754,6 +754,7 @@ function buildDraftPrompt({ medium, format, freewrite, title, context, payoffSta
         ];
 
   // 정체 측정값이 있으면 회수 의무를 생성 규칙으로 주입한다 (검토 evidence 와 동일 측정값 — 생성·검토 정합).
+  // 불변식 — payoffStatus 는 computePayoffLedger 산출만 받는다(measured=false 면 isStalled=false 보장). 직접 합성 금지.
   const stallRules =
     isSerial && payoffStatus && payoffStatus.isStalled
       ? [
