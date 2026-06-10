@@ -356,4 +356,14 @@ describe('stripConsumedSeeds', () => {
     const intent = '이번 화는 분위기를 바꿔 보고 싶다.';
     expect(stripConsumedSeeds(intent)).toBe('이번 화는 분위기를 바꿔 보고 싶다.');
   });
+
+  // LLM 진도 인터뷰(paceInterviewClient) 시드 — 접두 [페이스] 를 단서로 소거.
+  it('[페이스] 접두가 붙은 LLM 시드 줄을 제거하고 자필은 보존한다', () => {
+    const intent = [
+      '[페이스] 윤서문 추적이 중턱에 왔다 — 이번 화에서 한 발 조인다.',
+      '[페이스] 이번 화는 숨 고르기다 — 한지욱과 갈등을 쌓는다.',
+      '자필 메모: 강태준의 표정을 클로즈업.'
+    ].join('\n');
+    expect(stripConsumedSeeds(intent)).toBe('자필 메모: 강태준의 표정을 클로즈업.');
+  });
 });

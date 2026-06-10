@@ -333,6 +333,61 @@ describe('FloatingEditor 실데이터 배선', () => {
     unmount();
   });
 
+  // 쇼러너에게 묻기 버튼 — paceQuestions + onAskShowrunnerPace 가 있을 때만 렌더.
+  it('onAskShowrunnerPace 가 있으면 fc-pace-ask 버튼을 렌더하고 클릭 시 콜백을 호출한다', async () => {
+    const onAskShowrunnerPace = vi.fn();
+    const { host, click, unmount } = mount(baseProps({
+      onAskShowrunnerPace,
+      paceQuestions: [
+        { id: 'q1', question: '전제는?', options: [{ label: '중턱', intentSeed: '전제는 중턱' }] },
+      ],
+    }));
+    const btn = host.querySelector('.fc-pace-ask') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(btn.textContent).toBe('쇼러너에게 묻기');
+    await click(btn);
+    expect(onAskShowrunnerPace).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('onAskShowrunnerPace 가 없으면 fc-pace-ask 버튼을 렌더하지 않는다', () => {
+    const { host, unmount } = mount(baseProps({
+      paceQuestions: [
+        { id: 'q1', question: '전제는?', options: [{ label: '중턱', intentSeed: '전제는 중턱' }] },
+      ],
+    }));
+    expect(host.querySelector('.fc-pace-ask')).toBeNull();
+    unmount();
+  });
+
+  it('isPaceInterviewLoading 이면 fc-pace-ask 버튼이 disabled 이고 라벨이 바뀐다', () => {
+    const { host, unmount } = mount(baseProps({
+      onAskShowrunnerPace: vi.fn(),
+      isPaceInterviewLoading: true,
+      paceQuestions: [
+        { id: 'q1', question: '전제는?', options: [{ label: '중턱', intentSeed: '전제는 중턱' }] },
+      ],
+    }));
+    const btn = host.querySelector('.fc-pace-ask') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(btn.disabled).toBe(true);
+    expect(btn.textContent).toContain('쇼러너가 진도를 읽는 중');
+    unmount();
+  });
+
+  it('paceInterviewNote 가 있으면 fc-pace-note 를 렌더한다', () => {
+    const { host, unmount } = mount(baseProps({
+      paceInterviewNote: '페이스 인터뷰에 실패했습니다.',
+      paceQuestions: [
+        { id: 'q1', question: '전제는?', options: [{ label: '중턱', intentSeed: '전제는 중턱' }] },
+      ],
+    }));
+    const note = host.querySelector('.fc-pace-note');
+    expect(note).not.toBeNull();
+    expect(note?.textContent).toBe('페이스 인터뷰에 실패했습니다.');
+    unmount();
+  });
+
   // P7 후속(2026-06-10 3차 라이브) — strip 이 state 에만 반영되고 uncontrolled textarea DOM 에는
   // 남아, 다음 클릭이 stale 메모에서 재합성되던 갭. bodyVersion 과 같은 버전 키로 재시드한다.
   it('intentVersion 이 증가하면 의도 메모 textarea 가 새 intentMemo 로 재시드된다', () => {

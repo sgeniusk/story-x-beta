@@ -11106,7 +11106,15 @@ body {
 
 /* 진도 체크 카드 — 갈림길 카드 아래 렌더(fc-pace). 보더 톤만 살짝 다르게. */
 .fc-pace { margin-bottom: 10px; display: grid; gap: 8px; border-top: 1px solid var(--ink-faint); padding-top: 8px; }
-.fc-pace-title { font-size: 11px; letter-spacing: 0.04em; color: var(--ink-dim); }
+.fc-pace-title { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.04em; color: var(--ink-dim); }
+.fc-pace-ask {
+  font-size: 10px; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid var(--ink-faint); background: transparent;
+  color: var(--ink-dim); cursor: pointer; margin-left: auto;
+}
+.fc-pace-ask:hover:not(:disabled) { border-color: var(--p-show); color: var(--p-show); }
+.fc-pace-ask:disabled { opacity: 0.5; cursor: default; }
+.fc-pace-note { font-size: 11px; color: var(--ink-dim); opacity: 0.8; }
 .fc-pace-q-block { display: grid; gap: 4px; }
 .fc-pace-q { font-size: 12px; }
 .fc-pace-opts { display: flex; flex-wrap: wrap; gap: 6px; }

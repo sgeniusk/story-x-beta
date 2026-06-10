@@ -53,6 +53,12 @@ export interface FloatingEditorProps {
   episodeForks?: EpisodeFork[];
   /** 회차 진도 체크 질문 — 없거나 빈 배열이면 카드 미렌더. */
   paceQuestions?: PaceQuestion[];
+  /** fc-pace 카드 헤더의 "쇼러너에게 묻기" 버튼 콜백 — 없으면 버튼 미렌더. */
+  onAskShowrunnerPace?: () => void;
+  /** "쇼러너에게 묻기" 로딩 중 — true 이면 버튼 disabled + 라벨 변경. */
+  isPaceInterviewLoading?: boolean;
+  /** 페이스 인터뷰 실패 안내 한 줄 — 있으면 fc-pace 카드 안에 표시. */
+  paceInterviewNote?: string | null;
 }
 
 const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
@@ -91,6 +97,9 @@ export function FloatingEditor({
   onMediaAxisChange,
   episodeForks,
   paceQuestions,
+  onAskShowrunnerPace,
+  isPaceInterviewLoading = false,
+  paceInterviewNote,
 }: FloatingEditorProps) {
   const personaById = useCallback(
     (id: string): PersonaCard =>
@@ -648,7 +657,20 @@ export function FloatingEditor({
           )}
           {paceQuestions && paceQuestions.length > 0 && (
             <div className="fc-pace">
-              <div className="fc-pace-title">회차 진도 체크</div>
+              <div className="fc-pace-title">
+                <span>회차 진도 체크</span>
+                {onAskShowrunnerPace && (
+                  <button
+                    type="button"
+                    className="fc-pace-ask"
+                    disabled={isPaceInterviewLoading}
+                    onClick={onAskShowrunnerPace}
+                  >
+                    {isPaceInterviewLoading ? '쇼러너가 진도를 읽는 중…' : '쇼러너에게 묻기'}
+                  </button>
+                )}
+              </div>
+              {paceInterviewNote && <div className="fc-pace-note">{paceInterviewNote}</div>}
               {paceQuestions.map((q) => {
                 const qSeeds = q.options.map((o) => o.intentSeed);
                 const currentMemo = intentRef.current ? intentRef.current.value : intentMemo;
