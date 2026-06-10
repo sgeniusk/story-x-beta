@@ -7,6 +7,8 @@ export interface EpisodeForkOption {
   label: string;
   /** 선택 시 의도 메모에 합쳐질 한 줄 intent 문장. */
   intentSeed: string;
+  /** P12 — 기확정 캐논과 크게 겹치는 옵션(이미 일어난 일일 수 있음). 제외하지 않고 배지로만 경고한다. */
+  canonSuspect?: boolean;
 }
 
 export interface EpisodeFork {
@@ -76,6 +78,21 @@ function collectDeferredStakes(chapters: Chapter[]): string[] {
     .map((c) => c.label);
 }
 
+// P12(2026-06-10 #3 ch5 라이브) — 생성 LLM 이 기확정 캐논을 새 promise 로 재발급하면 fork 가
+// 모순 약속을 노출해 캐논 충돌 회차가 생성된다. 옵션 텍스트가 한 캐논 문장과 크게 겹치면 의심 표시.
+// 보수 판정: 옵션 토큰(조사 제거·2자+)의 60% 이상이 한 캐논 문장에서 prefix 단위로 발견될 때.
+// 토큰 4개 미만의 짧은 옵션은 판정하지 않는다(거짓 양성 가드). 제외가 아니라 배지 — 최종 판단은 작가.
+function overlapsCanonFact(text: string, canonStatements: string[]): boolean {
+  const tokens = [...normalizeStakeTokens(text)];
+  if (tokens.length < 4) return false;
+  for (const statement of canonStatements) {
+    const factTokens = [...normalizeStakeTokens(statement)];
+    const covered = tokens.filter((t) => factTokens.some((f) => f.startsWith(t) || t.startsWith(f))).length;
+    if (covered / tokens.length >= 0.6) return true;
+  }
+  return false;
+}
+
 // 전 회차에서 payoff 가 비어 있는 promise 를 등장 순서대로 모은다 (중복 제거).
 function collectUnpaidPromises(project: StoryProject): string[] {
   const unpaid: string[] = [];
@@ -93,6 +110,10 @@ function collectUnpaidPromises(project: StoryProject): string[] {
 export function buildEpisodeForks(project: StoryProject, ledger: PayoffLedgerReport): EpisodeFork[] {
   const forks: EpisodeFork[] = [];
   const unpaid = collectUnpaidPromises(project);
+  // P12 — 옵션이 기확정 캐논과 겹치면 의심 배지. true 일 때만 필드를 실어 옵션을 가볍게 유지한다.
+  const canonStatements = project.canonFacts.map((fact) => fact.statement);
+  const suspect = (label: string): boolean | undefined =>
+    overlapsCanonFact(label, canonStatements) ? true : undefined;
 
   if (ledger.measured && ledger.isStalled && unpaid.length > 0) {
     forks.push({
@@ -102,7 +123,8 @@ export function buildEpisodeForks(project: StoryProject, ledger: PayoffLedgerRep
       // 정체 갈림길: 가장 오래된 약속부터 — 오래 미룬 것이 회수 우선순위가 높다.
       options: unpaid.slice(0, MAX_OPTIONS).map((promise) => ({
         label: promise,
-        intentSeed: `이번 화에서 "${promise}"를 인물의 선택과 대가로 실제 회수한다.`
+        intentSeed: `이번 화에서 "${promise}"를 인물의 선택과 대가로 실제 회수한다.`,
+        canonSuspect: suspect(promise)
       }))
     });
   } else if (unpaid.length > 0) {
@@ -113,7 +135,8 @@ export function buildEpisodeForks(project: StoryProject, ledger: PayoffLedgerRep
       // 진척 갈림길: 가장 최근 약속부터 — 독자 기억에 따뜻하게 남아 있는 것이 진척 후보다.
       options: unpaid.slice(-MAX_OPTIONS).map((promise) => ({
         label: promise,
-        intentSeed: `이번 화에서 "${promise}"에 인물의 행동으로 한 발 다가간다.`
+        intentSeed: `이번 화에서 "${promise}"에 인물의 행동으로 한 발 다가간다.`,
+        canonSuspect: suspect(promise)
       }))
     });
   }
@@ -134,7 +157,8 @@ export function buildEpisodeForks(project: StoryProject, ledger: PayoffLedgerRep
         label: stake,
         intentSeed: ledger.isStalled
           ? `이번 화에서 "${stake}"를 더 미루지 않고 인물의 선택과 대가로 결판낸다.`
-          : `이번 화에서 "${stake}"에 인물의 행동으로 한 발 다가가되, 결판을 서두르지 않는다.`
+          : `이번 화에서 "${stake}"에 인물의 행동으로 한 발 다가가되, 결판을 서두르지 않는다.`,
+        canonSuspect: suspect(stake)
       }))
     });
   }
@@ -151,7 +175,8 @@ export function buildEpisodeForks(project: StoryProject, ledger: PayoffLedgerRep
       question: '열린 떡밥 중 이번 화의 중심에 둘 것은 무엇인가요?',
       options: threads.slice(0, MAX_OPTIONS).map((thread) => ({
         label: thread,
-        intentSeed: `이번 화의 중심 사건은 "${thread}"다.`
+        intentSeed: `이번 화의 중심 사건은 "${thread}"다.`,
+        canonSuspect: suspect(thread)
       }))
     });
   }

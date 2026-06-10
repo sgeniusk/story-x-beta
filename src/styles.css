@@ -11100,6 +11100,9 @@ body {
 }
 .fc-fork-opt:hover:not(:disabled) { border-color: var(--p-show); }
 .fc-fork-opt:disabled { opacity: 0.4; cursor: default; }
+/* P12 — 기확정 캐논과 겹칠 수 있는 옵션. 막지 않고 경고 톤만 입힌다. */
+.fc-fork-opt.is-canon-suspect { border-style: dashed; border-color: color-mix(in srgb, #e7a13d 55%, var(--rule-soft)); }
+.fc-fork-suspect { font-style: normal; font-size: 9px; margin-left: 6px; padding: 1px 5px; border-radius: 999px; background: color-mix(in srgb, #e7a13d 22%, transparent); color: #e7a13d; }
 
 /* 진도 체크 카드 — 갈림길 카드 아래 렌더(fc-pace). 보더 톤만 살짝 다르게. */
 .fc-pace { margin-bottom: 10px; display: grid; gap: 8px; border-top: 1px solid var(--ink-faint); padding-top: 8px; }

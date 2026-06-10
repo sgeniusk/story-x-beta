@@ -985,6 +985,8 @@ function buildDraftPrompt({ medium, format, freewrite, title, context, payoffSta
           '- 기존 작품 맥락이 있으면 그 캐논·인물·세계 규칙을 절대 어기지 말고, 이번 회차는 그 다음 회차로 자연스럽게 이어집니다.',
           '- 한 회차는 하나의 질문에 답하고 더 날카로운 질문을 엽니다.',
           '- 이 회차가 건 약속과 실제로 회수한 것을 rewardArc 로, 핵심 위험의 결말(lost/kept/deferred)을 stakesLedger 로 함께 적습니다. 회수를 미뤘으면 솔직히 deferred 로 표시합니다.',
+          // P12 — promptBuilders.ts 미러와 byte-identical 유지.
+          '- rewardArc 의 promise 는 작품 맥락에 이미 확정된 사실을 재발급하지 않습니다 — 이미 일어난 일은 새 약속이 될 수 없습니다.',
           '- prose는 1500~3000자 분량의 실제 본문입니다.'
         ]
       : [

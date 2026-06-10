@@ -310,6 +310,29 @@ describe('FloatingEditor 실데이터 배선', () => {
     unmount();
   });
 
+  // P12 — canonSuspect 옵션은 "캐논 확인" 배지를 보여 작가가 기확정 사실과의 모순을 인지하게 한다.
+  it('canonSuspect 갈림길 옵션에 캐논 확인 배지를 렌더한다', () => {
+    const { host, unmount } = mount(baseProps({
+      episodeForks: [
+        {
+          id: 'fork-open-promise', source: 'open-promise',
+          question: '열린 약속 중 이번 화에서 진척시킬 것은 무엇인가요?',
+          options: [
+            { label: '숨긴 진실을 말하는가?', intentSeed: '시드A', canonSuspect: true },
+            { label: '합류 시점', intentSeed: '시드B' },
+          ],
+        },
+      ],
+    }));
+    const opts = host.querySelectorAll('.fc-fork-opt');
+    expect(opts.length).toBe(2);
+    expect(opts[0].classList.contains('is-canon-suspect')).toBe(true);
+    expect(opts[0].textContent).toContain('캐논 확인');
+    expect(opts[1].classList.contains('is-canon-suspect')).toBe(false);
+    expect(opts[1].textContent).not.toContain('캐논 확인');
+    unmount();
+  });
+
   // P7 후속(2026-06-10 3차 라이브) — strip 이 state 에만 반영되고 uncontrolled textarea DOM 에는
   // 남아, 다음 클릭이 stale 메모에서 재합성되던 갭. bodyVersion 과 같은 버전 키로 재시드한다.
   it('intentVersion 이 증가하면 의도 메모 textarea 가 새 intentMemo 로 재시드된다', () => {

@@ -633,9 +633,12 @@ export function FloatingEditor({
                   <div className="fc-fork-q">{fork.question}</div>
                   <div className="fc-fork-opts">
                     {fork.options.map((opt) => (
-                      <button key={opt.label} type="button" className="fc-fork-opt"
+                      <button key={opt.label} type="button"
+                        className={`fc-fork-opt${opt.canonSuspect ? ' is-canon-suspect' : ''}`}
+                        title={opt.canonSuspect ? '기확정 캐논과 겹칠 수 있습니다 — 이미 일어난 일인지 확인하세요.' : undefined}
                         disabled={!onIntentChange} onClick={() => pickFork(opt.intentSeed)}>
                         {opt.label}
+                        {opt.canonSuspect && <em className="fc-fork-suspect">캐논 확인</em>}
                       </button>
                     ))}
                   </div>

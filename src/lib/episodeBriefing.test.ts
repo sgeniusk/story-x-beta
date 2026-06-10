@@ -234,6 +234,59 @@ describe('stake 드리프트 매칭 — buildEpisodeForks deferred-stake', () =>
     // kept 로 결판난 stake 는 옵션에서 빠져야 함
     expect(deferredFork).toBeUndefined();
   });
+
+  // P12(2026-06-10 4차 라이브) — 생성 LLM 이 기확정 캐논(태준의 고백 비밀)을 새 promise 로
+  // 재발급 → fork 가 노출 → 선택 → ch5 캐논 충돌(검토 2인 출고 불가). fork 옵션이 캐논과
+  // 겹치면 canonSuspect 로 표시한다(제외가 아니라 배지 — 거짓 양성 안전).
+  it('[P12] 기확정 캐논과 토큰이 크게 겹치는 promise 옵션은 canonSuspect 로 표시된다 (ch5 fixture 실데이터)', () => {
+    const project = projectWith([
+      ch(1, {
+        rewardArc: [{ promise: '태준이 서가을에게 숨긴 미래의 진실을 말하는가?', payoff: '' }]
+      })
+    ]);
+    project.canonFacts = [
+      {
+        id: 'canon-x',
+        episode: 1,
+        owner: 'character',
+        statement:
+          '태준이 서가을에게 숨긴 사실은 미래에서 서가을이 태준을 살리며 그의 붕괴 기억과 공포를 떠안고 무너졌다는 것이다.'
+      }
+    ];
+    const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
+    const promiseFork = forks.find((f) => f.source === 'open-promise');
+    expect(promiseFork).toBeDefined();
+    expect(promiseFork!.options[0].canonSuspect).toBe(true);
+  });
+
+  it('[P12] 캐논과 겹치지 않는 정당한 옵션은 canonSuspect 가 아니다 (거짓 양성 가드, ch5 fixture 실데이터)', () => {
+    const project = projectWith([
+      ch(1, {
+        stakesLedger: [
+          { stake: '한지욱과 마도협의 실제 합류', atRisk: '팀', resolution: 'deferred' },
+          { stake: '두 핵심 변수가 함께 움직일 때 발생하는 붕괴 전조', atRisk: '시간선', resolution: 'deferred' }
+        ]
+      })
+    ]);
+    project.canonFacts = [
+      {
+        id: 'canon-17',
+        episode: 4,
+        owner: 'plot',
+        statement: '윤서문의 예비 회수 지점에 마도협 계열의 외부 간섭 흔적과 한지욱에게 변수를 먼저 만나라는 메모가 남아 있었다.'
+      },
+      {
+        id: 'canon-21',
+        episode: 5,
+        owner: 'world',
+        statement: '관측장은 태준과 서가을이 함께 접촉 지점에 접근하면 붕괴 전조가 조기 발현될 수 있다는 조건을 제시했다.'
+      }
+    ];
+    const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
+    const deferredFork = forks.find((f) => f.source === 'deferred-stake');
+    expect(deferredFork).toBeDefined();
+    expect(deferredFork!.options.every((o) => o.canonSuspect !== true)).toBe(true);
+  });
 });
 
 describe('stripConsumedSeeds', () => {
