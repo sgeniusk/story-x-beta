@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-06-11 (3차) — 진도 인터뷰 2단계 완료 (main, 450 tests)
+
+> 스펙 `docs/superpowers/specs/2026-06-11-pace-interview-llm-design.md`. 병렬 2축(서버/CLI·클라이언트/UI) sonnet 위임 + Claude 머지 통합 + 라이브 검증.
+
+### 한 것
+- **쇼러너 서술형 LLM 페이스 인터뷰** — fc-pace 카드의 "쇼러너에게 묻기" 버튼 → `/api/pace-interview` 브리지 → storyx.mjs `pace-interview`(codex) → 작품 맞춤 질문 1~3개가 결정론 카드를 교체. 실패 시 결정론 카드 유지(강등 무비용). LLM 시드는 `[페이스] ` 접두로 합성(strip 가능), 같은 질문 재클릭 시 교체. 생성 성공 시 LLM 질문 초기화(다음 화는 결정론부터).
+- **라이브 실증** — #3 ch5 상태에서 질문 3개 전부 작품 구체("'태준이 서가을에게 숨긴 미래의 진실'을 어디까지 밀어붙일까 — 핵심 직전에서 멈춘다/부분 고백으로 금이 간다/행동으로 먼저 갚는다" · 보관실·관측 모델 등 ch5' 내용 반영). 시드 질감이 결정론 카드 대비 명확히 위("'나를 살렸다'는 핵심 문장은 끝내 삼킨다").
+- **머지 통합에서 Claude 가 잡은 것** — 서버 축 worktree 베이스가 Q2 이전이라 구식 `runProvider` 직접 호출로 작성됨 → `runProviderWithRetry`+`looksLikeProviderError` 로 교체. storyx.mjs 3중 충돌은 main 정본 + pace 조각 삽입으로 재구성.
+
+### 손대지 말 것
+- `[페이스] ` 접두 계약 — paceInterviewClient(부여)↔episodeBriefing SEED_PATTERN_PACE_LLM(소거) 쌍. 한쪽만 바꾸면 시드가 영구 잔류하거나 자필이 지워진다.
+- buildPaceInterviewPrompt 의 PACE_CANON_RULE·JSON 계약 문자열 — promptBuilders↔storyx.mjs 미러 동기화 테스트가 지킨다.
+- pace-interview 명령의 runProviderWithRetry 호출 — runProvider 직접 호출로 되돌리면 transient 시 에러 raw 가 질문 파싱에 들어간다.
+
+### 다음 세션이 해야 할 한 가지
+- **2단계 실사용 한 사이클** — LLM 페이스 시드로 회차 생성 → 시드가 생성에 반영되는지 + `[페이스] ` 줄 자동 소거 라이브 확인(접두 strip 은 단위 검증 완료). 이후 갈림길 LLM 정제(같은 패턴 재사용) 또는 academic 라이브 검토 배선.
+- 보조: M7 경량 검증 A/B/C 사용자 선택 · 결정 부채 보드.
+
+---
+
 ## 2026-06-11 (2차) — P12 재관찰 통과 + P13 폴백 캐논 차단 (main, 428 tests)
 
 > 직전 핸드오프의 1(재관찰)·2(폴백 오염 차단) 이행. 리포트 `06-hunter-pace-check.md` 의 "P12 재관찰" 절.

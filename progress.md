@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-11(2차) · Branch: `main` (**P12 재관찰 통과 + P13** — 캐논 충돌 미재발 실증 · 폴백 캐논 발명 제거 · 진도 인터뷰 2단계 착수 조건 충족)
+> Last Updated: 2026-06-11(3차) · Branch: `main` (**진도 인터뷰 2단계 완료** — 쇼러너 서술형 LLM 페이스 인터뷰, 작품 맞춤 질문 라이브 실증)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -78,11 +78,26 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 
 ## 다음 한 단계
 
-**P12 재관찰 통과 + P13 완료(2026-06-11 2차).** 배지 회피 + 프롬프트 규칙 하에 ch5 재생성 — 연속성 판정이 출고 불가→수정("큰 줄기는 캐논과 맞고")으로, 고백 재서술 미발생(LLM 이 부분 전진으로 reframe). P13 — `produceNextChapter` 캐논 발명 제거(폴백은 캐논을 만들지 않는다). 리포트 `06-hunter-pace-check.md` P12 재관찰 절.
-- **진도 인터뷰 2단계(쇼러너 서술형 LLM) 스펙 착수** — 착수 조건 충족. 갈림길 LLM 정제와 같은 묶음으로 brainstorm→spec.
-- **academic 라이브 검토 배선**(1.0 플래그 전제) · **M7 경량 검증 A/B/C 사용자 선택** · 결정 부채 보드 · (push) 사용자 요청 시.
+**진도 인터뷰 2단계 완료(2026-06-11 3차).** 스펙 `docs/superpowers/specs/2026-06-11-pace-interview-llm-design.md` — "쇼러너에게 묻기" 버튼이 결정론 카드를 작품 맞춤 LLM 질문으로 교체. 병렬 2축 위임(서버/CLI·클라이언트/UI) + Claude 머지 통합. 라이브 — 질문 3개 전부 작품 구체 약속/위험 이름 포함("'숨긴 진실'을 어디까지 밀어붙일까 — 핵심 직전에서 멈춘다/부분 고백으로 금이 간다"), `[페이스] ` 접두 합성·같은 질문 교체·콘솔 0. 캡처 `pace-check/pace-interview-llm-live.png`.
+- **2단계 실사용 관찰** — 다음 회차 생성에서 LLM 페이스 시드의 생성 반영·소거를 한 사이클 확인(접두 strip 은 단위 검증 완료).
+- **academic 라이브 검토 배선**(1.0 플래그 전제) · **M7 경량 검증 A/B/C 사용자 선택** · 갈림길 LLM 정제·결정 부채 보드 · (push) 사용자 요청 시.
 
-## 최근 검증 (2026-06-11 2차 · P12 재관찰 + P13 · main)
+## 최근 검증 (2026-06-11 3차 · 진도 인터뷰 2단계 · main)
+
+```
+init.sh            → tsc 0 · vitest(450 tests) · build 전체 통과
+구현 — 병렬 2축 위임 + Claude 머지 통합:
+  서버/CLI  — buildPaceInterviewPrompt 정본+storyx.mjs 미러(+동기화 테스트)·pace-interview 명령·
+              /api/pace-interview 브리지·prod 라우트. 머지 시 Claude 가 구식 runProvider 호출을
+              runProviderWithRetry+looksLikeProviderError 로 교체(베이스가 Q2 이전이던 갭).
+  클라이언트 — paceInterviewClient(normalize·[페이스] 접두 계약·reportAiCall)·fc-pace-ask 버튼·
+              로딩/note·StoryXDesk 질문 교체 배선·strip [페이스] 패턴
+라이브 — #3 ch5 상태: 버튼→로딩("쇼러너가 진도를 읽는 중…")→작품 맞춤 질문 3개 교체
+  ("'숨긴 진실' 어디까지 — 핵심 직전에서 멈춘다/부분 고백으로 금이 간다/행동으로 먼저 갚는다")
+  옵션 클릭→[페이스] 시드 합성·같은 질문 교체·콘솔 0 · 캡처 pace-check/pace-interview-llm-live.png
+```
+
+## 직전 검증 (2026-06-11 2차 · P12 재관찰 + P13 · main)
 
 ```
 init.sh            → tsc 0 · vitest(428 tests) · build 전체 통과
