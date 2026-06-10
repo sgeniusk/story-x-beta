@@ -19,6 +19,63 @@ export interface EpisodeFork {
 const MAX_FORKS = 3;
 const MAX_OPTIONS = 3;
 
+// stake 문자열을 토큰 집합으로 정규화한다 — 2자 이상 토큰, 한국어 조사 접미 단순 제거.
+const KR_JOSA = /[의와과은는이가을를에]$/u;
+function normalizeStakeTokens(stake: string): Set<string> {
+  return new Set(
+    stake
+      .split(/\s+/)
+      .map((t) => t.replace(KR_JOSA, ''))
+      .filter((t) => t.length >= 2)
+  );
+}
+
+// 두 정규화 토큰 집합이 "같은 stake" 기준을 충족하는지 판정.
+// Jaccard ≥ 2/3 또는 한쪽이 다른 쪽의 부분집합이면 동일 stake 로 취급.
+function isSameStake(a: Set<string>, b: Set<string>): boolean {
+  if (a.size === 0 || b.size === 0) return false;
+  const intersection = [...a].filter((t) => b.has(t)).length;
+  if ([...a].every((t) => b.has(t)) || [...b].every((t) => a.has(t))) return true;
+  const union = new Set([...a, ...b]).size;
+  return intersection / union >= 2 / 3;
+}
+
+// stakesLedger 를 순회해 드리프트 매칭으로 클러스터화하고, deferred 만 남긴다.
+// 최신 회차 결말 우선 — 뒤에서 kept/lost 로 결판난 클러스터는 제외.
+import type { Chapter } from './storyEngine';
+
+function collectDeferredStakes(chapters: Chapter[]): string[] {
+  // 클러스터: { canonical: 최신 label, resolution: 최신 결말 }
+  const clusters: Array<{ label: string; tokens: Set<string>; resolution: string }> = [];
+
+  for (const chapter of chapters) {
+    for (const entry of chapter.stakesLedger ?? []) {
+      const stake = entry.stake.trim();
+      if (!stake) continue;
+      const tokens = normalizeStakeTokens(stake);
+      const resolution = entry.resolution ?? 'deferred';
+
+      // 기존 클러스터 중 매칭되는 것을 찾는다
+      const match = clusters.find((c) => isSameStake(c.tokens, tokens));
+      if (match) {
+        // 최신 회차 결말로 갱신 — 단, 이미 kept/lost 로 결판난 클러스터는 덮어쓰지 않는다.
+        // (결판난 stake 가 이후 드리프트 버전으로 재등장해도 결판 상태가 유지되어야 함)
+        if (match.resolution !== 'kept' && match.resolution !== 'lost') {
+          match.label = stake;
+          match.tokens = tokens;
+          match.resolution = resolution;
+        }
+      } else {
+        clusters.push({ label: stake, tokens, resolution });
+      }
+    }
+  }
+
+  return clusters
+    .filter((c) => c.resolution === 'deferred')
+    .map((c) => c.label);
+}
+
 // 전 회차에서 payoff 가 비어 있는 promise 를 등장 순서대로 모은다 (중복 제거).
 function collectUnpaidPromises(project: StoryProject): string[] {
   const unpaid: string[] = [];
@@ -64,24 +121,20 @@ export function buildEpisodeForks(project: StoryProject, ledger: PayoffLedgerRep
   // 라이브 발견(2026-06-10 #3 헌터물) — 생성 LLM 이 rewardArc payoff 를 회차 안에서 즉시 채우고
   // openThreads 는 생성 경로가 채우지 않아, 실제 미뤄진 위험은 stakesLedger deferred 에만 남는다.
   // stake 별 "마지막 회차의 결말"이 deferred 인 것만 옵션으로 — 뒤에서 kept/lost 로 결판난 위험은 제외.
-  const stakeResolution = new Map<string, string>();
-  for (const chapter of project.chapters) {
-    for (const entry of chapter.stakesLedger ?? []) {
-      const stake = entry.stake.trim();
-      if (stake.length > 0) stakeResolution.set(stake, entry.resolution ?? 'deferred');
-    }
-  }
-  const deferredStakes = [...stakeResolution.entries()]
-    .filter(([, resolution]) => resolution === 'deferred')
-    .map(([stake]) => stake);
+  // 드리프트 매칭: 같은 stake 가 회차마다 다른 문구로 기록될 수 있으므로 토큰 정규화+Jaccard 로 병합.
+  //   최신 회차 결말 우선, kept/lost 로 결판난 클러스터는 제외.
+  const deferredStakes = collectDeferredStakes(project.chapters);
   if (deferredStakes.length > 0) {
     forks.push({
       id: 'fork-deferred-stake',
       source: 'deferred-stake',
       question: '결과가 미뤄진 위험 중 이번 화에서 결판낼 것은 무엇인가요?',
+      // 시드 강도 2단(2026-06-10 A/B 발견): 정체면 결판 문구, 비정체면 진척 문구 — 비정체 과회수 방지.
       options: deferredStakes.slice(0, MAX_OPTIONS).map((stake) => ({
         label: stake,
-        intentSeed: `이번 화에서 "${stake}"를 더 미루지 않고 인물의 선택과 대가로 결판낸다.`
+        intentSeed: ledger.isStalled
+          ? `이번 화에서 "${stake}"를 더 미루지 않고 인물의 선택과 대가로 결판낸다.`
+          : `이번 화에서 "${stake}"에 인물의 행동으로 한 발 다가가되, 결판을 서두르지 않는다.`
       }))
     });
   }
@@ -111,4 +164,25 @@ export function composeIntentWithFork(currentIntent: string, seed: string): stri
   const base = currentIntent.trim();
   if (base.includes(seed)) return base;
   return base.length > 0 ? `${base}\n${seed}` : seed;
+}
+
+// 생성에 소비된 갈림길 시드 줄을 의도 메모에서 제거한다 — P7 (이미 회수된 약속 재지시 차단).
+// 시드 템플릿 줄만 제거: buildEpisodeForks 가 만드는 두 패턴에 anchored 매칭.
+//   - `이번 화에서 "..."`로 시작하는 줄 (deferred-stake, open-promise, stalled-premise 시드)
+//   - `이번 화의 중심 사건은 "..."다.` 패턴 (open-thread 시드)
+// 패턴과 정확히 매칭되지 않는 줄(작가 자필)은 보존한다.
+const SEED_PATTERN_EPISODE = /^이번 화에서 "/u;
+const SEED_PATTERN_THREAD = /^이번 화의 중심 사건은 ".*"다\.$/u;
+
+export function stripConsumedSeeds(intent: string): string {
+  if (!intent) return '';
+  const lines = intent.split('\n');
+  const kept = lines.filter((line) => {
+    const trimmed = line.trim();
+    if (trimmed.length === 0) return false; // 빈 줄 정리
+    if (SEED_PATTERN_EPISODE.test(trimmed)) return false;
+    if (SEED_PATTERN_THREAD.test(trimmed)) return false;
+    return true;
+  });
+  return kept.join('\n').trim();
 }
