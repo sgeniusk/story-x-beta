@@ -258,4 +258,54 @@ describe('FloatingEditor 실데이터 배선', () => {
     expect(onMediaAxisChange).toHaveBeenCalledWith(0.8);
     unmount();
   });
+
+  it('paceQuestions 가 있으면 fc-pace 카드를 렌더한다', () => {
+    const { host, unmount } = mount(baseProps({
+      paceQuestions: [
+        {
+          id: 'premise-ridge',
+          question: '전제(중심 질문)가 어디까지 왔나요?',
+          options: [
+            { label: '초입', intentSeed: '전제는 아직 초입이다 — 이번 화는 토대를 쌓고 큰 reveal 은 아낀다.' },
+            { label: '중턱', intentSeed: '전제는 중턱이다 — 이번 화는 한 단계 전진하되 마지막 답은 남겨 둔다.' },
+            { label: '정상 직전', intentSeed: '전제가 정상 직전이다 — 이번 화는 결정적 전환을 향해 조여 간다.' },
+          ],
+        },
+      ],
+    }));
+    expect(host.querySelector('.fc-pace')).not.toBeNull();
+    expect(host.textContent).toContain('전제(중심 질문)가 어디까지 왔나요?');
+    expect(host.querySelectorAll('.fc-pace-opt').length).toBe(3);
+    unmount();
+  });
+
+  it('paceQuestions 가 없으면 fc-pace 카드를 렌더하지 않는다', () => {
+    const { host, unmount } = mount(baseProps());
+    expect(host.querySelector('.fc-pace')).toBeNull();
+    unmount();
+  });
+
+  it('fc-pace 옵션 클릭 시 onIntentChange 가 시드를 포함해 호출된다', async () => {
+    const seed1 = '전제는 아직 초입이다 — 이번 화는 토대를 쌓고 큰 reveal 은 아낀다.';
+    const seed2 = '전제는 중턱이다 — 이번 화는 한 단계 전진하되 마지막 답은 남겨 둔다.';
+    const seen: string[] = [];
+    const { host, click, unmount } = mount(baseProps({
+      intentMemo: '기존 의도',
+      onIntentChange: (text: string) => seen.push(text),
+      paceQuestions: [
+        {
+          id: 'premise-ridge',
+          question: '전제(중심 질문)가 어디까지 왔나요?',
+          options: [
+            { label: '초입', intentSeed: seed1 },
+            { label: '중턱', intentSeed: seed2 },
+          ],
+        },
+      ],
+    }));
+    const buttons = host.querySelectorAll('.fc-pace-opt');
+    await click(buttons[0]);
+    expect(seen.at(-1)).toBe(`기존 의도\n${seed1}`);
+    unmount();
+  });
 });
