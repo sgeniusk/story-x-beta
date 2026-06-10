@@ -125,7 +125,8 @@ import { requestLlmDraft } from './lib/draftClient';
 import { requestAgentReview } from './lib/reviewClient';
 import { computePayoffLedger } from './lib/payoffLedger';
 import { buildEpisodeForks, stripConsumedSeeds } from './lib/episodeBriefing';
-import { buildPaceCheck } from './lib/paceInterview';
+import { buildPaceCheck, type PaceQuestion } from './lib/paceInterview';
+import { requestPaceInterview } from './lib/paceInterviewClient';
 import { requestDataReview } from './lib/dataReviewClient';
 import type { BibleSection, CanonCategory, DataReviewView, DataView } from './lib/canonDataView';
 import { describeKoreanStyleLevel, evaluateKoreanProse } from './lib/koreanStyle';
@@ -606,6 +607,10 @@ export function StoryXDesk({
   const [bodyVersion, setBodyVersion] = useState(0);
   // P7 후속 — 생성 후 시드 strip 결과를 uncontrolled 메모 textarea 에 재시드하는 버전 키.
   const [intentVersion, setIntentVersion] = useState(0);
+  // 페이스 인터뷰 LLM — 성공 시 결정론 카드를 교체. 생성 성공 시 null 로 초기화.
+  const [llmPaceQuestions, setLlmPaceQuestions] = useState<PaceQuestion[] | null>(null);
+  const [isPaceInterviewLoading, setIsPaceInterviewLoading] = useState(false);
+  const [paceInterviewNote, setPaceInterviewNote] = useState<string | null>(null);
   // 데이터 모드 분야별 검토 — 결과는 분야 id로 캐싱하고, 검토 중인 분야는 따로 표시한다.
   const [dataReviewResults, setDataReviewResults] = useState<Partial<Record<CanonCategory, DataReviewView>>>({});
   const [dataReviewingCategory, setDataReviewingCategory] = useState<CanonCategory | null>(null);
@@ -1236,6 +1241,57 @@ export function StoryXDesk({
     setEditorText(text);
     setEditedSinceReview(true);
   }, []);
+
+  // 쇼러너 서술형 LLM 페이스 인터뷰 — fc-pace 카드 "쇼러너에게 묻기" 트리거.
+  const askShowrunnerPace = useCallback(async () => {
+    if (isPaceInterviewLoading) return;
+    setIsPaceInterviewLoading(true);
+    setPaceInterviewNote(null);
+    try {
+      const ledger = computePayoffLedger(project.chapters);
+      // 미회수 약속 — chapters 의 rewardArc 중 payoff 빈 promise 목록(인라인 도출, episodeBriefing 내부 함수 복사 금지)
+      const unpaidPromises: string[] = [];
+      for (const ch of project.chapters) {
+        for (const entry of ch.rewardArc ?? []) {
+          const promise = entry.promise.trim();
+          if (promise.length > 0 && entry.payoff.trim().length === 0 && !unpaidPromises.includes(promise)) {
+            unpaidPromises.push(promise);
+          }
+        }
+      }
+      // deferred stakes — stakesLedger 의 최신 resolution 이 deferred 인 stake 목록(인라인 도출)
+      const lastResolution = new Map<string, string>();
+      for (const ch of project.chapters) {
+        for (const entry of ch.stakesLedger ?? []) {
+          if (entry.resolution) lastResolution.set(entry.stake, entry.resolution);
+        }
+      }
+      const deferredStakes = [...lastResolution.entries()]
+        .filter(([, r]) => r === 'deferred')
+        .map(([stake]) => stake);
+
+      const result = await requestPaceInterview({
+        medium: blueprint.medium,
+        format: blueprint.format,
+        payoffStatus: {
+          isStalled: ledger.isStalled,
+          deferredStreak: ledger.deferredStreak,
+          openPromises: ledger.openPromises,
+        },
+        unpaidPromises,
+        deferredStakes,
+        context: buildProjectContextDigest(project),
+      });
+
+      if (result.ok && result.questions) {
+        setLlmPaceQuestions(result.questions);
+      } else {
+        setPaceInterviewNote(result.reason ?? '쇼러너 인터뷰에 실패했습니다.');
+      }
+    } finally {
+      setIsPaceInterviewLoading(false);
+    }
+  }, [blueprint.medium, blueprint.format, isPaceInterviewLoading, project]);
   // floating 이 편집 기본이므로 props 를 mainActionRun 정의 아래에서 구성한다(const 호이스팅 회피).
   const floatingEditorProps = useMemo(
     () => ({
@@ -1274,7 +1330,10 @@ export function StoryXDesk({
       metrics: studioMetrics,
       onMediaAxisChange: updateStoryModeAxis,
       episodeForks: buildEpisodeForks(project, computePayoffLedger(project.chapters)),
-      paceQuestions: buildPaceCheck(project, computePayoffLedger(project.chapters), isSerial),
+      paceQuestions: llmPaceQuestions ?? buildPaceCheck(project, computePayoffLedger(project.chapters), isSerial),
+      onAskShowrunnerPace: askShowrunnerPace,
+      isPaceInterviewLoading,
+      paceInterviewNote,
     }),
     [
       project,
@@ -1294,6 +1353,10 @@ export function StoryXDesk({
       updateStoryModeAxis,
       mediumReviewAgentIds,
       isSerial,
+      llmPaceQuestions,
+      askShowrunnerPace,
+      isPaceInterviewLoading,
+      paceInterviewNote,
     ]
   );
   const draftPromptPlaceholder = isLatestLocked
@@ -1778,6 +1841,8 @@ export function StoryXDesk({
         applyProductionResult(result);
         setDraftPrompt((current) => stripConsumedSeeds(current));
         setIntentVersion((v) => v + 1); // strip 결과를 메모 textarea 에 재시드
+        setLlmPaceQuestions(null); // 새 회차 — 결정론 카드부터 다시 시작
+        setPaceInterviewNote(null);
         setProjectSnapshots(pushProjectSnapshot(result.updatedProject, `${chapterLabel(result.chapter)} 생성`));
         setGenerationNote('Claude 구독으로 생성한 초안입니다.');
         return;
@@ -1787,6 +1852,8 @@ export function StoryXDesk({
       applyProductionResult(fallback);
       setDraftPrompt((current) => stripConsumedSeeds(current));
       setIntentVersion((v) => v + 1); // strip 결과를 메모 textarea 에 재시드
+      setLlmPaceQuestions(null); // 새 회차 — 결정론 카드부터 다시 시작
+      setPaceInterviewNote(null);
       setProjectSnapshots(pushProjectSnapshot(fallback.updatedProject, `${chapterLabel(fallback.chapter)} 생성`));
       setGenerationNote(
         llm.reason

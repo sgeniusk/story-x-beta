@@ -205,6 +205,9 @@ const SEED_PATTERN_THREAD = /^이번 화의 중심 사건은 ".*"다\.$/u;
 const SEED_PATTERN_PACE_RIDGE = /^전제(는|가) .+다 — /u;
 const SEED_PATTERN_PACE_EPISODE = /^이번 화는 (전진이|숨 고르기|회수)다 — /u;
 const SEED_PATTERN_PACE_NEXT = /^다음 큰 회수는 /u;
+// LLM 진도 인터뷰(paceInterviewClient) 시드 — paceInterviewClient 가 각 intentSeed 앞에 붙이는 접두.
+// 접두가 있는 줄을 소비 처리해 생성 후 자동 소거. 접두 계약 변경 시 paceInterviewClient 와 동기화.
+const SEED_PATTERN_PACE_LLM = /^\[페이스\] /u;
 
 export function stripConsumedSeeds(intent: string): string {
   if (!intent) return '';
@@ -217,6 +220,7 @@ export function stripConsumedSeeds(intent: string): string {
     if (SEED_PATTERN_PACE_RIDGE.test(trimmed)) return false;
     if (SEED_PATTERN_PACE_EPISODE.test(trimmed)) return false;
     if (SEED_PATTERN_PACE_NEXT.test(trimmed)) return false;
+    if (SEED_PATTERN_PACE_LLM.test(trimmed)) return false;
     return true;
   });
   return kept.join('\n').trim();
