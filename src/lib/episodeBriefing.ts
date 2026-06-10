@@ -173,6 +173,11 @@ export function composeIntentWithFork(currentIntent: string, seed: string): stri
 // 패턴과 정확히 매칭되지 않는 줄(작가 자필)은 보존한다.
 const SEED_PATTERN_EPISODE = /^이번 화에서 "/u;
 const SEED_PATTERN_THREAD = /^이번 화의 중심 사건은 ".*"다\.$/u;
+// 진도 체크(paceInterview) 시드 — 고정 템플릿이라 anchored 매칭. paceInterview 가
+// episodeBriefing 을 import 하므로(순환 방지) 패턴만 여기 미러한다. 문구 변경 시 양쪽 동기화.
+const SEED_PATTERN_PACE_RIDGE = /^전제(는|가) .+다 — /u;
+const SEED_PATTERN_PACE_EPISODE = /^이번 화는 (전진이|숨 고르기|회수)다 — /u;
+const SEED_PATTERN_PACE_NEXT = /^다음 큰 회수는 /u;
 
 export function stripConsumedSeeds(intent: string): string {
   if (!intent) return '';
@@ -182,6 +187,9 @@ export function stripConsumedSeeds(intent: string): string {
     if (trimmed.length === 0) return false; // 빈 줄 정리
     if (SEED_PATTERN_EPISODE.test(trimmed)) return false;
     if (SEED_PATTERN_THREAD.test(trimmed)) return false;
+    if (SEED_PATTERN_PACE_RIDGE.test(trimmed)) return false;
+    if (SEED_PATTERN_PACE_EPISODE.test(trimmed)) return false;
+    if (SEED_PATTERN_PACE_NEXT.test(trimmed)) return false;
     return true;
   });
   return kept.join('\n').trim();

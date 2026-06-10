@@ -262,4 +262,20 @@ describe('stripConsumedSeeds', () => {
     ].join('\n');
     expect(stripConsumedSeeds(intent)).toBe('내가 원하는 것.');
   });
+
+  // 진도 체크(paceInterview) 시드도 회차당 1회 소비되는 지시라 생성 후 제거한다 (스펙 B.2).
+  it('진도 체크 시드 3종(전제 능선·페이스·다음 회수)도 제거하고 자필은 보존한다', () => {
+    const intent = [
+      '전제는 중턱이다 — 이번 화는 한 단계 전진하되 마지막 답은 남겨 둔다.',
+      '이번 화는 숨 고르기다 — 인물과 관계의 결을 다지고 다음 폭발의 긴장을 쌓는다.',
+      '다음 큰 회수는 1~2화 안에 온다 — 이번 화는 그 직전 단계까지만 전진한다.',
+      '서가을의 후유증 장면을 꼭 넣을 것.'
+    ].join('\n');
+    expect(stripConsumedSeeds(intent)).toBe('서가을의 후유증 장면을 꼭 넣을 것.');
+  });
+
+  it('진도 체크 시드와 비슷하지만 자필인 줄("이번 화는" 으로 시작하는 자유문)은 패턴 불일치 시 보존한다', () => {
+    const intent = '이번 화는 분위기를 바꿔 보고 싶다.';
+    expect(stripConsumedSeeds(intent)).toBe('이번 화는 분위기를 바꿔 보고 싶다.');
+  });
 });
