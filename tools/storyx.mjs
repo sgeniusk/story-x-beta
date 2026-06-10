@@ -133,20 +133,24 @@ if (command === 'review') {
       : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
 
   if (!dryRun) {
-    const providerResult = runProvider(commandPreview);
-    const rawOutput = providerResult.stdout || providerResult.stderr;
-    const payload = normalizeProviderOutput(rawOutput, {
+    const { result: providerResult, raw: rawOutput, retried } = runProviderWithRetry(commandPreview);
+    const isError = looksLikeProviderError(rawOutput, providerResult);
+    const payload = normalizeProviderOutput(isError ? '' : rawOutput, {
       provider,
       scale,
       mode: 'review',
       projectTitle: 'Story X project'
     });
-    payload.status = providerResult.status === 0 ? 'complete' : 'failed';
+    payload.status = isError ? 'failed' : (providerResult.status === 0 ? 'complete' : 'failed');
     payload.exitCode = providerResult.status;
     payload.stdout = providerResult.stdout;
     payload.stderr = providerResult.stderr;
-    if (providerResult.status !== 0) {
-      payload.nextActions = ['provider stderr를 확인하고 doctor 또는 dry-run으로 명령을 점검하세요.', ...payload.nextActions];
+    if (isError) {
+      const retryNote = retried ? ' (재시도 포함)' : '';
+      payload.nextActions = [
+        `provider 호출이 실패${retryNote}했습니다. stderr를 확인하고 doctor 또는 dry-run으로 명령을 점검하세요.`,
+        ...payload.nextActions
+      ];
     }
     const pendingReviewPath = writePendingReviewFile(outDir, provider, scale, payload);
     const rawProviderOutputPath = writeRawProviderFile(outDir, provider, scale, rawOutput);
@@ -157,7 +161,7 @@ if (command === 'review') {
       rawProviderOutputPath,
       approvalRequiredBeforeSync: true
     });
-    process.exit(providerResult.status === 0 ? 0 : 1);
+    process.exit(isError ? 1 : 0);
   }
 
   printJson({
@@ -202,15 +206,15 @@ if (command === 'review-agent') {
       ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', '--model', 'sonnet', prompt]
       : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
 
-  const providerResult = runProvider(commandPreview);
-  const rawOutput = providerResult.stdout || providerResult.stderr;
-  const parsed = parseProviderJson(rawOutput);
+  const { result: providerResult, raw: rawOutput, retried } = runProviderWithRetry(commandPreview);
+  const isError = looksLikeProviderError(rawOutput, providerResult);
+  const parsed = isError ? null : parseProviderJson(rawOutput);
 
   printJson({
     provider,
     agentId,
     mode: 'review-agent',
-    status: providerResult.status === 0 ? 'complete' : 'failed',
+    status: isError ? 'failed' : (providerResult.status === 0 ? 'complete' : 'failed'),
     exitCode: providerResult.status,
     verdict: readString(parsed?.status),
     note: readString(parsed?.note),
@@ -218,9 +222,11 @@ if (command === 'review-agent') {
     issues: normalizeStringList(parsed?.issues),
     evidence: normalizeStringList(parsed?.evidence),
     memoryCandidates: Array.isArray(parsed?.memoryCandidates) ? parsed.memoryCandidates : [],
-    warning: providerResult.status === 0 ? undefined : 'provider 호출이 실패했습니다.'
+    warning: isError
+      ? (retried ? 'provider 호출이 재시도 후에도 실패했습니다.' : 'provider 호출이 실패했습니다.')
+      : undefined
   });
-  process.exit(providerResult.status === 0 ? 0 : 1);
+  process.exit(isError ? 1 : 0);
 }
 
 if (command === 'draft') {
@@ -277,18 +283,26 @@ if (command === 'draft') {
       : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
 
   if (!dryRun) {
-    const providerResult = runProvider(commandPreview);
-    const rawOutput = providerResult.stdout || providerResult.stderr;
-    const payload = normalizeDraftOutput(rawOutput, { provider, medium, format, title });
-    payload.status = providerResult.status === 0 ? 'complete' : 'failed';
+    const { result: providerResult, raw: rawOutput, retried } = runProviderWithRetry(commandPreview);
+    const isError = looksLikeProviderError(rawOutput, providerResult);
+    let payload;
+    if (isError) {
+      // 에러 raw 를 prose 로 승격하지 않는다 — 결정론 폴백 payload 를 생성한다.
+      payload = buildCliDraftFallback({ provider, medium, format, title, freewrite, retried });
+    } else {
+      payload = normalizeDraftOutput(rawOutput, { provider, medium, format, title });
+    }
+    payload.status = isError ? 'failed' : (providerResult.status === 0 ? 'complete' : 'failed');
     payload.exitCode = providerResult.status;
-    if (providerResult.status !== 0) {
-      payload.warning = 'provider 호출이 실패했습니다. doctor 또는 dry-run으로 명령을 점검하세요.';
+    if (isError) {
+      payload.warning = retried
+        ? 'provider 호출이 재시도 후에도 실패했습니다. doctor 또는 dry-run으로 명령을 점검하세요.'
+        : 'provider 호출이 실패했습니다. doctor 또는 dry-run으로 명령을 점검하세요.';
     }
     const draftPath = writeDraftFile(outDir, provider, payload);
     const rawProviderOutputPath = writeRawDraftFile(outDir, provider, rawOutput);
     printJson({ ...payload, draftPath, rawProviderOutputPath, approvalRequiredBeforeSync: true });
-    process.exit(providerResult.status === 0 ? 0 : 1);
+    process.exit(isError ? 1 : 0);
   }
 
   printJson({
@@ -340,21 +354,23 @@ if (command === 'review-data') {
       ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', '--model', 'sonnet', prompt]
       : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
 
-  const providerResult = runProvider(commandPreview);
-  const rawOutput = providerResult.stdout || providerResult.stderr;
-  const parsed = parseProviderJson(rawOutput);
+  const { result: providerResult, raw: rawOutput, retried } = runProviderWithRetry(commandPreview);
+  const isError = looksLikeProviderError(rawOutput, providerResult);
+  const parsed = isError ? null : parseProviderJson(rawOutput);
 
   printJson({
     provider,
     category,
     mode: 'review-data',
-    status: providerResult.status === 0 ? 'complete' : 'failed',
+    status: isError ? 'failed' : (providerResult.status === 0 ? 'complete' : 'failed'),
     exitCode: providerResult.status,
     summary: readString(parsed?.summary),
     notes: normalizeDataReviewNotes(parsed?.notes),
-    warning: providerResult.status === 0 ? undefined : 'provider 호출이 실패했습니다.'
+    warning: isError
+      ? (retried ? 'provider 호출이 재시도 후에도 실패했습니다.' : 'provider 호출이 실패했습니다.')
+      : undefined
   });
-  process.exit(providerResult.status === 0 ? 0 : 1);
+  process.exit(isError ? 1 : 0);
 }
 
 if (command === 'interview') {
@@ -382,21 +398,23 @@ if (command === 'interview') {
       ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', prompt]
       : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
 
-  const providerResult = runProvider(commandPreview);
-  const rawOutput = providerResult.stdout || providerResult.stderr;
-  const parsed = parseProviderJson(rawOutput);
+  const { result: providerResult, raw: rawOutput, retried } = runProviderWithRetry(commandPreview);
+  const isError = looksLikeProviderError(rawOutput, providerResult);
+  const parsed = isError ? null : parseProviderJson(rawOutput);
   const questions = Array.isArray(parsed?.questions) ? parsed.questions : [];
 
   printJson({
     provider,
     medium,
     mode: 'interview',
-    status: providerResult.status === 0 ? 'complete' : 'failed',
+    status: isError ? 'failed' : (providerResult.status === 0 ? 'complete' : 'failed'),
     exitCode: providerResult.status,
     questions,
-    warning: providerResult.status === 0 ? undefined : 'provider 호출이 실패했습니다.'
+    warning: isError
+      ? (retried ? 'provider 호출이 재시도 후에도 실패했습니다.' : 'provider 호출이 실패했습니다.')
+      : undefined
   });
-  process.exit(providerResult.status === 0 ? 0 : 1);
+  process.exit(isError ? 1 : 0);
 }
 
 if (command === 'normalize-provider-output') {
@@ -821,6 +839,30 @@ function buildDraftPrompt({ medium, format, freewrite, title, context, payoffSta
   ].join('\n');
 }
 
+/**
+ * provider 에러 시 prose 에 에러 raw 텍스트가 누수되지 않도록 결정론 폴백 payload 를 만든다.
+ * storyEngine.ts 의 buildFallbackDraft 와 같은 역할을 CLI 레이어에서 수행한다.
+ * prose 에는 실패 배너만 남기고, 작가가 직접 편집할 수 있는 자리표시를 넣는다.
+ */
+function buildCliDraftFallback({ provider, medium, format, title, freewrite, retried }) {
+  const chapterTitle = title ? title : '1화 — 임시 초안';
+  const retryNote = retried ? ' (재시도 포함)' : '';
+  return {
+    provider,
+    medium,
+    format,
+    mode: 'draft',
+    generatedAt: new Date().toISOString(),
+    title: chapterTitle,
+    hook: '[provider 호출 실패 — 작가 직접 입력 필요]',
+    outline: ['provider 실패로 인해 개요가 생성되지 않았습니다. 직접 작성해 주세요.'],
+    beats: [{ label: '도입', summary: 'provider 실패 — 직접 작성 필요.' }],
+    prose: `[provider 호출이 실패${retryNote}하여 초안을 생성하지 못했습니다. 아래에 직접 작성하거나 재시도하세요.]\n\n${freewrite ? `작가 입력: ${freewrite}` : '(작가 입력 없음)'}`,
+    newCanonFacts: [],
+    approvalRequiredBeforeSync: true
+  };
+}
+
 function normalizeDraftOutput(rawOutput, options) {
   const parsed = parseProviderJson(rawOutput);
 
@@ -951,6 +993,73 @@ function runProvider(commandParts) {
     timeout: 300000,
     maxBuffer: 1024 * 1024 * 8
   });
+}
+
+/**
+ * provider raw 출력이 에러 신호인지 판정한다.
+ *
+ * 판정 조건 (하나라도 해당하면 true):
+ *   1. spawnResult.status 가 0 이 아님 (비정상 종료)
+ *   2. spawnResult.stderr 가 비어 있지 않음
+ *   3. raw 가 비어 있음 (provider 가 아무것도 출력하지 않은 경우)
+ *   4. raw 가 JSON 파싱 가능한 오브젝트가 아닌데, 영문 에러 패턴을 포함
+ *      — "Reading additional input from stdin", "error:", "ERROR",
+ *        "Traceback", "command not found", "ENOENT", "ETIMEDOUT",
+ *        "Error:", "exception", "fatal:"
+ *
+ * JSON 파싱 가능한 응답(정상 provider 출력)은 raw 가 에러 키워드를 포함해도
+ * false 를 반환한다 — JSON 이 성공하면 정상으로 간주.
+ *
+ * 이 함수는 순수 함수다. spawnResult 는 status/stderr 필드만 읽는다.
+ */
+function looksLikeProviderError(raw, spawnResult) {
+  if (spawnResult.status !== 0) return true;
+  if (spawnResult.stderr && spawnResult.stderr.trim().length > 0) return true;
+  if (!raw || raw.trim().length === 0) return true;
+
+  // JSON 파싱이 성공하면 정상 응답 — 에러 키워드 검사를 생략한다.
+  const trimmed = raw.trim();
+  const fencedJson = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim();
+  for (const candidate of [fencedJson, trimmed].filter(Boolean)) {
+    try {
+      const value = JSON.parse(candidate);
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) return false;
+    } catch {
+      // 다음 후보 시도
+    }
+  }
+
+  // JSON 파싱 실패 — 영문 에러 패턴 확인
+  const ERROR_PATTERNS = [
+    'Reading additional input from stdin',
+    'error:',
+    'ERROR',
+    'Traceback',
+    'command not found',
+    'ENOENT',
+    'ETIMEDOUT',
+    'Error:',
+    'exception',
+    'fatal:'
+  ];
+  return ERROR_PATTERNS.some((pat) => raw.includes(pat));
+}
+
+/**
+ * runProvider 를 호출하되, 에러 신호가 감지되면 정확히 1회 재시도한다.
+ * 재시도 후에도 에러 신호면 최종 결과를 그대로 반환한다 (caller 가 폴백 처리).
+ * retried 플래그로 재시도 여부를 caller 에게 알린다.
+ */
+function runProviderWithRetry(commandParts) {
+  const first = runProvider(commandParts);
+  const firstRaw = first.stdout || first.stderr;
+  if (!looksLikeProviderError(firstRaw, first)) {
+    return { result: first, raw: firstRaw, retried: false };
+  }
+  // 에러 신호 감지 — 1회 재시도
+  const second = runProvider(commandParts);
+  const secondRaw = second.stdout || second.stderr;
+  return { result: second, raw: secondRaw, retried: true, firstErrorRaw: firstRaw };
 }
 
 function writePendingReviewFile(outDir, provider, scale, payload) {
