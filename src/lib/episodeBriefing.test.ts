@@ -87,6 +87,45 @@ describe('buildEpisodeForks', () => {
     expect(forks[0].source).toBe('open-thread');
     expect(forks[0].options).toHaveLength(3);
   });
+
+  // 라이브 발견(2026-06-10 #3 헌터물) — 생성 LLM 이 rewardArc payoff 를 회차 안에서 즉시 채우고
+  // openThreads 는 생성 경로가 채우지 않아, 실제 미뤄진 위험은 stakesLedger deferred 에만 남는다.
+  // deferred 를 fork 소스로 쓰지 않으면 실생성 작품에서 갈림길이 영원히 안 뜬다.
+  it('미회수 promise·openThreads 가 없어도 stakesLedger deferred 가 있으면 위험 갈림길을 만든다', () => {
+    const project = projectWith([
+      ch(1, {
+        rewardArc: [{ promise: '첫 변수', payoff: '즉시 회수됨' }],
+        stakesLedger: [
+          { stake: '서가을의 정신적 안전', atRisk: '서가을', resolution: 'deferred' },
+          { stake: '백도현의 정체와 게이트 조작의 진실', atRisk: '태준의 계획', resolution: 'deferred' }
+        ]
+      })
+    ]);
+    const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
+    expect(forks).toHaveLength(1);
+    expect(forks[0].source).toBe('deferred-stake');
+    expect(forks[0].options.map((o) => o.label)).toEqual([
+      '서가을의 정신적 안전',
+      '백도현의 정체와 게이트 조작의 진실'
+    ]);
+    expect(forks[0].options[0].intentSeed).toContain('서가을의 정신적 안전');
+  });
+
+  it('같은 stake 가 뒤 회차에서 kept/lost 로 결판나면 deferred 갈림길 옵션에서 빠진다', () => {
+    const project = projectWith([
+      ch(1, {
+        stakesLedger: [
+          { stake: '민간인 피해', atRisk: '시민', resolution: 'deferred' },
+          { stake: '붕괴 위험', atRisk: '시간선', resolution: 'deferred' }
+        ]
+      }),
+      ch(2, { stakesLedger: [{ stake: '민간인 피해', atRisk: '시민', resolution: 'kept' }] })
+    ]);
+    const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
+    expect(forks).toHaveLength(1);
+    expect(forks[0].source).toBe('deferred-stake');
+    expect(forks[0].options.map((o) => o.label)).toEqual(['붕괴 위험']);
+  });
 });
 
 describe('composeIntentWithFork', () => {
