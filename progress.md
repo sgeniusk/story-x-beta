@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-09 · Branch: `feat/floating-phase2e` (**floating Phase 2e 완료** · isClassicEditor 제거 · classic draft JSX 250줄 삭제 · draft 모드 항상 FloatingEditor)
+> Last Updated: 2026-06-10 · Branch: `feat/author-decision-forks` (**작가 결정 갈림길 + 생성 측 회수 의무 완료** · episodeBriefing 신설 · payoffStatus 생성 경로 배선 · fc-forks UI)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -17,7 +17,8 @@
 - **#2 14~23화 테스트 + 완결 + 종합 리포트 (2026-06-08 이어서, 코드변경 0)** — ch14~21 무드리프트·검토 샘플링. **배신자 reveal(백작부인 ch19) → P5/P6 라이브 검증**(첫 character 캐논 "백작부인" 클린 승격). **★ 최대 발견 continuity ≠ payoff** — 21화 연속성 완벽하나 전제 페이오프 0, codex reveal 무한 연기. **근본 원인(피날레 확정)= 쇼러너 연재 편향**(완결에 역행). **권고 A 실증** — intent 유도 ch22·23 로 deferral 끊고 **23화 완결**(전제 이행·수미상관·연속성 무결점, L.B.=라비니아 벨로트). 연속성 감수자가 결말 캐논↔프로즈 불일치도 포착. **종합 리포트** `FINAL-REPORT-romancefantasy.md`(6축 연속성5·평균~3.8·권고1=아크 페이오프 게이트). P1 0/13·14.
 - **개선 (B) — 검토 전제진척 프롬프트 (TDD+라이브, 2026-06-08 이어서)** — continuity≠payoff 근본 원인 = `criteriaKeys`(showrunner `stakes_progression_audit`)가 라이브 검토 프롬프트에 미주입돼 dead. `buildAgentReviewPrompt`(promptBuilders.ts·storyx.mjs) "## 지시"에 "연재면 중심 질문(전제) 진척도 본다" 가산. promptBuilders.test +1, 326 tests. **라이브 검증** — 새 프롬프트로 쇼러너가 ch20류 연기를 revise("선택·대가·전술 변화 없어 추적 못 끝냄")로 전환(이전 통과→revise). 커밋 `aa98137`. #2 상태 백업 `docs/reviews/.../backups/02-work-backup-ch23.json`(로컬).
 - **일괄 수정 (A) — P6·P5·relations 완료 (TDD, 2026-06-08 이어서)** — 사용자 "일괄 수정 착수" 선택. **P6** `extractEntityName` 정규식에 명명 계사 "(이)라는" 추가("레오르 벨로트라"→"레오르 벨로트"). **P5** `extractCharacterNames`(주어 + 서술부 "이름은 X" 명명) 신설 → `promoteCharactersFromCanon` 가 서술부 인물도 승격(루시안 벨로트 등). **relations** `extractRelation`("A의 [관계] 이름은 B" 보수 파서) + `linkRelationsFromCanon` 신설 → commitChapter 가 관계 엣지 생성(리아나→루시안 "둘째 오빠"). storyOntology.test +1·storyEngine.test +2, **325 tests**·tsc·build 녹색. (#2 localStorage 의 "레오르 벨로트라"는 재현 보존 위해 안 건드림 — 수정은 향후 커밋부터 적용.)
-- **다음** — 남은 일괄 수정(P1 빈응답 가드·floating 2c·2d)은 잔여. #2 14화+ 완권·수정사이클·6축 → 종합 리포트 → 새 제작 계획.
+- **개선 (C) — 작가 결정 갈림길 + 생성 측 회수 의무 완료 (TDD+라이브, 2026-06-10, 브랜치 `feat/author-decision-forks`)** — FINAL-REPORT 권고 1·2의 다음 조각. 스펙 `docs/superpowers/specs/2026-06-10-author-decision-forks-design.md`, 계획 `docs/superpowers/plans/2026-06-10-author-decision-forks.md`. (1) **생성 측 회수 의무** — 검토만 알던 `payoffStatus`(정체 측정)를 초안 생성 프롬프트까지 배선: `buildDraftPrompt` stallRules 주입(`dcb3632`) + StoryXDesk→draftClient→api/draft→storyx.mjs 미러(`caecedf`) + **vite 브리지 `--payoff-status` 전달 갭을 검토 루프가 적발·수정**(`0f243b2`). (2) **회차 갈림길 카드** — `episodeBriefing.ts` 신설(미회수 promise·openThreads 에서 결정론 도출, LLM 0회, `ec840af`)·정체 시 가장 오래된 약속 우선(`128497c`)·FloatingEditor `.fc-forks` 카드 — 옵션 클릭이 의도 메모에 intent 한 줄 append(`608db57`)·openThreads dedup(`5e1f1e3`). 서브에이전트 구현 + 2단 검토(스펙/품질) 루프 — 검토가 slice 방향·브리지 갭·dedup 3건을 잡아 수정. **라이브** — #2 ch23 백업+레저 주입으로 정체 갈림길 2질문·옵션 4개 렌더, 클릭→메모 합성·중복 무시·다중 선택 정상, 기본 작품은 떡밥 갈림길만(규칙 일치), CLI dry-run 4케이스(정체만 주입·오형식 무시), 콘솔 에러 0. 캡처 `docs/handoff/screenshots/author-decision-forks/`.
+- **다음** — #3 헌터물 페르소나 테스트에서 갈림길 사용/미사용 6축 A/B 실증. 남은 일괄 수정(floating 2d). Follow-up — 갈림길 LLM 정제(2단계)·결정 부채 보드(별도 스펙).
 
 ## 병행 트랙 — 편집기 재설계: 방향 C "떠 있는 작업실" (실데이터 배선 완료)
 
@@ -81,7 +82,19 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 - **(매체검토 라이브)** — comics 작품에서 specialist 7인 검토 실사용 확인.
 - **(push)** — origin/main 으로 (사용자 요청 시).
 
-## 최근 검증 (2026-06-09 · floating 2c + 코드성 개선 전체 + main 머지)
+## 최근 검증 (2026-06-10 · 작가 결정 갈림길 + 생성 측 회수 의무 · 브랜치 `feat/author-decision-forks`)
+
+```
+init.sh            → tsc · vitest(380 tests) · build 전체 통과
+작가 결정 갈림길 트랙 (b75b53f~5e1f1e3, 8커밋):
+  episodeBriefing  — buildEpisodeForks(결정론 갈림길)·composeIntentWithFork (ec840af, 128497c)
+  생성 회수 의무    — buildDraftPrompt stallRules (dcb3632) + 배선/미러 (caecedf) + vite 브리지 (0f243b2)
+  fc-forks UI      — FloatingEditor 갈림길 카드→의도 메모 append (608db57, 5e1f1e3)
+  라이브 — 정체 갈림길 2질문·클릭 합성·중복 무시·CLI dry-run 4케이스·콘솔 0
+  캡처 — docs/handoff/screenshots/author-decision-forks/
+```
+
+## 직전 검증 (2026-06-09 · floating 2c + 코드성 개선 전체 + main 머지)
 
 ```
 init.sh            → tsc · vitest(364 tests) · build 전체 통과 · main 안착(ff-only)

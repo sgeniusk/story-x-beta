@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-06-10 — 작가 결정 갈림길 + 생성 측 회수 의무 (브랜치 `feat/author-decision-forks`)
+
+> 사용자 "이야기 품질·작가 아이디어 유도에 다시 집중" → 분석 결과 아크 페이오프 게이트 1·2단계는 기구현 확인, 남은 갭 2개를 새 트랙으로. 스펙 `docs/superpowers/specs/2026-06-10-author-decision-forks-design.md` · 계획 `docs/superpowers/plans/2026-06-10-author-decision-forks.md`. 서브에이전트 구현 + 2단 검토(스펙/품질) 루프.
+
+### 한 것 (8커밋, b75b53f~5e1f1e3)
+- **episodeBriefing.ts 신설** (`ec840af`·`128497c`) — 미회수 rewardArc promise·openThreads 에서 갈림길 질문 결정론 도출(LLM 0회). 정체 시 'stalled-premise' fork 가 **가장 오래된** 약속 우선(slice 방향 핀 테스트), 비정체는 최근 약속, 떡밥 fork 는 trim+dedup. `composeIntentWithFork` append·중복 무시. `StoryProject = SeriesProject` 별칭 추가(storyEngine).
+- **생성 측 회수 의무** (`dcb3632`·`caecedf`·`0f243b2`) — `DraftPromptInput.payoffStatus` + isSerial·isStalled 시 stallRules 1줄("새 약속 금지·최소 하나 회수·rewardArc payoff 기록"). 배선 StoryXDesk produceEpisode→draftClient→api/draft→프롬프트, storyx.mjs 미러(`--payoff-status` JSON 플래그, 문구 byte-identical). **vite 브리지가 플래그를 안 넘기던 갭을 품질 검토가 적발** → `0f243b2`.
+- **fc-forks UI** (`608db57`·`5e1f1e3`) — FloatingEditor `episodeForks` prop(순수 표현 유지), 상태 패널(fc-p-state) memo 위 갈림길 카드, 옵션 클릭→uncontrolled textarea ref 갱신+`onIntentChange`. StoryXDesk 가 `buildEpisodeForks(project, computePayoffLedger(chapters))` 주입. 토큰 `--ink-dim`/`--rule-soft`/`--p-show`.
+- **라이브 검증** — #2 ch23 백업+레저 주입(정체 시나리오): 갈림길 2질문·4옵션 렌더, 클릭→메모 합성·중복 클릭 무시·다중 fork 누적, 기본 샘플 작품은 떡밥 fork 만(규칙 일치), CLI dry-run 4케이스(정체만 주입·비정체/누락/오형식 무시), 콘솔 에러 0. 캡처 `docs/handoff/screenshots/author-decision-forks/`.
+
+### 손대지 말 것
+- `episodeBriefing.ts` slice 방향(정체=oldest·진척=newest — 핀 테스트 있음) · stallRules 문구(promptBuilders↔storyx.mjs byte-identical 미러) · vite 브리지 `--payoff-status` 전달부 · `.fc-forks` 카드의 ref 기반 append(uncontrolled textarea 라 setState 만으론 화면 미반영).
+
+### 다음 세션이 해야 할 한 가지
+- **#3 헌터물 페르소나 테스트에 갈림길 사용/미사용 A/B 를 끼워 6축 비교** — 갈림길 효과 실증. (Follow-up 대기 — 갈림길 LLM 정제 2단계 · 결정 부채 보드 별도 스펙. main 머지는 최종 검토 후.)
+
+---
+
 ## 2026-06-09 (6) — 코드성 개선 (P1 빈응답 + 매체별 검토 배선)
 
 > 사용자 "코드성 개선 쭉 이어가". 보고서 4항목 중 항목 2(P1)·3(매체검토) 완료. 항목 1(2f)·4(polish)는 사용자가 보류 선택.
