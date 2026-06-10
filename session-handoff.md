@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-06-10 (4차) — 진도 체크 실효 관찰 + intentVersion + P12 발견 (main, 421 tests)
+
+> 3차 핸드오프 1번 이행 — #3 ch4~5 연속 생성으로 진도 체크 MVP 실효 관찰. 리포트 `docs/reviews/2026-06-07-persona-live-test/06-hunter-pace-check.md`.
+
+### 한 것
+- **실효 확인** — 과회수류 검토 지적 기준선 4건(A암 ch2) → ch4 **0건**·ch5 **1건**. ch4(절제 시드)는 payoff 를 단서 수준으로 아끼고 새 약속을 미회수로 남겼으며, ch5(회수 시드)는 그 약속을 1화 뒤 고백으로 이행("1~2화 안" 약속 준수). **2단계(쇼러너 서술형 인터뷰) 착수 가치 확인.**
+- **intentVersion (`066ea9f`)** — ch4 라이브에서 P7 strip 이 state 만 갱신하고 uncontrolled textarea DOM 에 시드가 잔류(다음 클릭이 stale 메모에서 재합성)하는 갭 발견 → bodyVersion 패턴의 재시드 버전 키. ch5 에서 시드 4줄→생성→0줄 자동 소거 확인.
+- **★P12 신규 발견** — ch4 생성 LLM 이 기확정 캐논(태준의 고백, ch2)을 "숨긴 진실을 말하는가?" 새 promise 로 재발급 → fork 가 캐논 정합성 검증 없이 옵션 노출 → 선택 → ch5 가 첫 고백처럼 재작성 → **연속성 감수자·캐릭터 큐레이터 2인 독립 적발(출고 불가·retcon note 요구)**. 검토 망의 차별점 실증인 동시에 fork 상류 갭.
+
+### 손대지 말 것
+- `intentVersion` 재시드 키(FloatingEditor textarea key) — 제거하면 strip 이 DOM 에 안 보임. 버전 동일 시 미반영이 의도된 동작(타이핑 클로버 방지)·핀 테스트 있음.
+- ch5 캐논 충돌 상태의 백업(`backups/03-hunter-pacecheck-ch5.json`) — P12 수정 검증 fixture 로 재사용 가치 있음, 덮어쓰지 말 것.
+
+### 다음 세션이 해야 할 한 가지
+- **P12 스펙→수정** — buildEpisodeForks 의 promise/stake 옵션을 canonFacts 와 보수 매칭(stake 드리프트 매처 `isSameStake` 재사용)해 기확정 사실과 겹치면 제외 또는 "캐논 확인 필요" 표시. 수정 후 ch5 fixture 로 fork 옵션에서 "숨긴 진실"이 빠지는지 검증 + 한 사이클 재관찰 → 그 다음 진도 인터뷰 2단계 스펙.
+- 보조: academic 라이브 검토 배선 · M7 경량 검증 A/B/C 사용자 선택 · 결정 부채 보드.
+
+---
+
 ## 2026-06-10 (3차) — 진도 체크 카드 + 페이스 결함 3건 + 매체 영속 (main, 420 tests)
 
 > 2차 세션 핸드오프의 1순위(회차 진도 인터뷰 승격) 이행. 스펙 `docs/superpowers/specs/2026-06-10-pace-check-design.md` — MVP 는 결정론 카드(LLM 0회), 서술형 LLM 인터뷰는 2단계로 분리. sonnet worktree 2 + Claude 직접 1 분업.
