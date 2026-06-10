@@ -558,9 +558,11 @@ export function StoryXDesk({
   // 기본 회차 의도는 빈 값 — 의도 메모를 비워두면 produceEpisode 가 캐논 digest 만으로 다음 회차를 만든다.
   // 데모 장르 문구를 박으면 사용자가 안 건드릴 때 다음 회차 intent(freewrite)로 새어 오염된다 (P3, #2 로판 2화 "용사와 외계인" 사고).
   const defaultEpisodeIntent = '';
-  const [medium, setMedium] = useState<CreativeMedium>(initialMedium);
-  const [format, setFormat] = useState<CreativeFormat>(initialFormat);
   const [project, setProject] = useState<SeriesProject>(() => loadProject());
+  // 매체 영속 — 저장된 프로젝트가 매체를 기억하면 그것이 진실원천. 리로드 후 만화 작품이
+  // 소설 작가진으로 검토되던 버그(2026-06-10 #4 라이브)의 수정. 구버전 저장본은 prop 폴백.
+  const [medium, setMedium] = useState<CreativeMedium>(project.medium ?? initialMedium);
+  const [format, setFormat] = useState<CreativeFormat>(project.format ?? initialFormat);
   const [request, setRequest] = useState<ProductionRequest>({
     genre: project.genre,
     intent: defaultEpisodeIntent,
@@ -1496,7 +1498,10 @@ export function StoryXDesk({
       title: initialDraftPayload.title,
       logline: initialDraftPayload.seed?.logline,
       audiencePromise: initialDraftPayload.seed?.audiencePromise,
-      deepQuestion: initialDraftPayload.seed?.deepQuestion
+      deepQuestion: initialDraftPayload.seed?.deepQuestion,
+      // 매체 영속 — 온보딩에서 고른 매체가 프로젝트에 박혀야 리로드 후에도 작가진이 매체를 따른다.
+      medium: blueprint.medium,
+      format: blueprint.format
     });
     const bootRequest: ProductionRequest = {
       genre: seed.genre,
@@ -1516,7 +1521,14 @@ export function StoryXDesk({
 
   function selectMedium(nextMedium: CreativeMedium) {
     setMedium(nextMedium);
-    setFormat(getFormatOptions(nextMedium)[0].id);
+    const nextFormat = getFormatOptions(nextMedium)[0].id;
+    setFormat(nextFormat);
+    // 매체 영속 — 스튜디오에서 매체를 바꾸면 프로젝트에도 박아 리로드를 살아남게 한다.
+    setProject((current) => {
+      const next = { ...current, medium: nextMedium, format: nextFormat };
+      saveProject(next);
+      return next;
+    });
   }
 
   function updateDraftPrompt(value: string) {

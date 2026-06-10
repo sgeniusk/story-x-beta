@@ -1,4 +1,6 @@
 import { createDefaultLocalizationPolicy, type LocalizationPolicy } from './localization';
+// 매체 영속 — 타입 전용 import 라 런타임 순환 없음.
+import type { CreativeFormat, CreativeMedium } from './projectBlueprint';
 import { planAgentRuns } from './agentRunEngine';
 // P4 — 회차 캐논(owner=character)에서 인물 이름을 보수적으로 추출(공백 이름·조사·조직 가드)해 characters 로 승격.
 import { extractCharacterNames, extractRelation } from './storyOntology';
@@ -271,6 +273,9 @@ export interface SeriesProject {
   localization: LocalizationPolicy;
   genre: GenreId;
   tone: string;
+  /** 매체 영속 — React state 가 아니라 프로젝트가 매체를 기억해야 리로드 후에도 작가진·게이트가 매체를 따른다. 구버전 저장본에는 없을 수 있다. */
+  medium?: CreativeMedium;
+  format?: CreativeFormat;
   /** 표면 약속 — 독자에게 거는, 플롯·사건 차원의 약속 */
   audiencePromise: string;
   /** 심층 질문 — 표면 사건 아래에서 작품이 진짜 묻는 것 */
@@ -939,7 +944,14 @@ export function deriveOnboardingSeed(input: OnboardingSeedInput): OnboardingSeed
 }
 
 export function createEmptyProject(
-  input: { title?: string; logline?: string; audiencePromise?: string; deepQuestion?: string } = {}
+  input: {
+    title?: string;
+    logline?: string;
+    audiencePromise?: string;
+    deepQuestion?: string;
+    medium?: CreativeMedium;
+    format?: CreativeFormat;
+  } = {}
 ): SeriesProject {
   return {
     id: `project-${Date.now().toString(36)}`,
@@ -948,6 +960,8 @@ export function createEmptyProject(
     localization: createDefaultLocalizationPolicy(),
     genre: 'urban-fantasy',
     tone: '',
+    medium: input.medium,
+    format: input.format,
     audiencePromise: input.audiencePromise?.trim() || '',
     deepQuestion: input.deepQuestion?.trim() || '',
     creativeWeight: 'balanced',

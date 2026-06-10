@@ -733,6 +733,24 @@ describe('onboarding seed (갭 A — 온보딩 메타 배선)', () => {
     expect(project.audiencePromise).toBe('매 화 사이다와 다음 화 훅');
     expect(project.deepQuestion).toBe('약함은 끝인가');
   });
+
+  // 라이브 발견(2026-06-10 #4 만화) — medium 이 React state 에만 있어 리로드 후 만화 작품이
+  // 소설 작가진(5인)으로 검토되는 매체 연속성 버그. 프로젝트에 medium/format 을 영속한다.
+  it('createEmptyProject 가 medium/format 을 시드해 리로드 후에도 매체가 보존된다', () => {
+    const project = createEmptyProject({
+      title: '매체 영속 시험작',
+      medium: 'comics',
+      format: 'serial-webtoon'
+    });
+    expect(project.medium).toBe('comics');
+    expect(project.format).toBe('serial-webtoon');
+  });
+
+  it('createEmptyProject 에 medium 이 없으면 필드를 비워 두고(undefined) 기존 동작을 유지한다', () => {
+    const project = createEmptyProject({ title: '구버전 호환' });
+    expect(project.medium).toBeUndefined();
+    expect(project.format).toBeUndefined();
+  });
 });
 
 describe('commitChapter 인물 캐논화 (P4)', () => {
