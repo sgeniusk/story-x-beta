@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-06-10 (2차) — 멀티에이전트 분업 세션 (main, 388 tests)
+
+> 사용자 "울트라 플랜 분업으로 모든 걸 완성" → 오케스트레이션 플랜 `docs/superpowers/plans/2026-06-10-service-completion-orchestration.md`. Claude(오케스트레이션+라이브) / Codex(2d) / sonnet 서브에이전트(가드·CLI·결정문서) 병렬 + 6단계 독립 검증.
+
+### 한 것 (main 직행·머지 7건)
+- **Q1 — #3 헌터물 갈림길 A/B 6축 실증** — 리포트 `docs/reviews/2026-06-07-persona-live-test/05-hunter-ab-forks.md`. ★갈림길은 연속성(동률 5)이 아니라 **페이오프·상업성**을 움직임(설계 의도 실증). ★실생성에서 fork 가 안 뜨는 구조 갭 발견 → `deferred-stake` fork 추가(`a425042`). ★A암 과회수 신호 → **회차 진도 인터뷰 승격**.
+- **Q2 — codex transient 폴백 가드+1회 재시도** (`7865e2b`+`deb0474`) — ★서브에이전트 구현의 치명결함(정상 호출도 stderr 배너 → 전 호출 실패 오판)을 Claude 라이브 실측(`codex exec` exit0+stderr 614B)으로 적발·수정. 라이브에서 폴백 prose 에러 누수 0 확인.
+- **S1 — (2d) 출간 floating화** (`29eec7b`) — FloatingPublishWorkspace 신설. **Codex 1차 위임이 "백그라운드 시작" no-op(메모리 패턴 D 재현) → 동기 실행 강제 조항으로 재위임 성공.** 라이브 검증 완료.
+- **S4 — M6.3 storyx CLI** (`cdee90e`) — init/serve/memory sync + README. M6 전체 done.
+- **rank6·rank7 결정** — `docs/decisions/2026-06-10-market-proof-1.0.md`(M7 done_criteria 를 2단계 시장증명으로 교체, feature_list 반영) · `2026-06-10-academic-scope-1.0.md`(실험 플래그 조건부, 미충족 시 1.1 이연).
+- **vite watch 가드** (`65fdc1e`) — 에이전트 worktree·캡처 churn 이 dev 풀 리로드를 유발하던 것 차단(라이브 테스트 중 온보딩 날아감 재발 방지).
+
+### 손대지 말 것
+- `looksLikeProviderError` 의 **stderr 미사용 원칙** — codex 는 정상 성공에도 stderr 에 배너를 쓴다(주석에 실측 기록). stderr 조건을 되살리면 전 호출이 폴백으로 오판된다.
+- `buildEpisodeForks` 의 deferred-stake 규칙(stake 별 최종 결말 deferred 만, kept/lost 제외 — 핀 테스트 있음) · 기존 slice 방향.
+- vite.config.ts `server.watch.ignored` — 제거하면 worktree 에이전트 작업 중 dev 풀 리로드 재발.
+
+### 다음 세션이 해야 할 한 가지
+- **회차 진도 인터뷰 스펙→구현** (A/B 과회수 신호로 승격 확정) — fork 시드 강도 2단화(결판/진척) + P7(잠금 후 소비된 fork 시드가 의도 메모에 잔류 → 회수된 약속 재지시) 정리와 한 묶음 권장.
+- 보조: stake 문자열 드리프트(fork 옵션 중복 노출) 정규화 · 폴백 초안 품질(조사 오류·장르 무관 템플릿) · comics specialist 라이브 검증 · M7 경량 검증 방법 A/B/C 사용자 선택.
+- origin push 미실행(사용자 요청 시).
+
+---
+
 ## 2026-06-10 — 작가 결정 갈림길 + 생성 측 회수 의무 (브랜치 `feat/author-decision-forks`)
 
 > 사용자 "이야기 품질·작가 아이디어 유도에 다시 집중" → 분석 결과 아크 페이오프 게이트 1·2단계는 기구현 확인, 남은 갭 2개를 새 트랙으로. 스펙 `docs/superpowers/specs/2026-06-10-author-decision-forks-design.md` · 계획 `docs/superpowers/plans/2026-06-10-author-decision-forks.md`. 서브에이전트 구현 + 2단 검토(스펙/품질) 루프.

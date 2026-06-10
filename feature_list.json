@@ -243,16 +243,16 @@
       "id": "M6.3-storyx-cli",
       "name": "storyx CLI 확장 (init/serve/memory sync)",
       "description": "npm run storyx -- init/serve/memory sync 명령 추가. 새 프로젝트 scaffold, dev 서버 띄우기, 파일/클라우드 동기화.",
-      "status": "todo",
+      "status": "done",
       "dependencies": ["M6.1-project-export-import"],
       "done_criteria": "init/serve/memory sync 3 명령 동작, README 안내",
-      "evidence": null
+      "evidence": "commit cdee90e (merge) · tools/storyx.mjs init/serve/memory + buildMemorySyncFiles · README '## storyx CLI' · dry-run 3종 + 실파일 init 스모크(storyx/export/v1) · 388 tests"
     },
     {
       "id": "M6-persistence-memory-sync",
       "name": "영속성·메모리 싱크 (전체 묶음)",
       "description": "M6.1/M6.2/M6.3 의 상위 묶음. localStorage 한계를 넘어 파일·클라우드 영속까지.",
-      "status": "in_progress",
+      "status": "done",
       "dependencies": ["M5-vercel-functions"],
       "done_criteria": "M6.1·M6.2·M6.3 모두 done",
       "evidence": null
@@ -260,10 +260,10 @@
     {
       "id": "M7-alpha-1.0",
       "name": "v1.0.0-alpha 완성 루프",
-      "description": "소설·에세이 완성 루프가 끝까지 이어진다. 30화 회귀 통과. 모드 가중치(commercialWeight / literaryWeight) 게이트 실 동작. 2026-06-01 멀티에이전트 검토 결과 done_criteria는 기술 회귀만이 아니라 시장 증명(외부 작가 N명 완성)을 포함하도록 재정의 필요 — M11 rank 6 참조.",
+      "description": "소설·에세이 완성 루프가 끝까지 이어진다. done_criteria 는 2026-06-10 결정(docs/decisions/2026-06-10-market-proof-1.0.md)으로 2단계 시장증명 게이트로 재정의됨. academic 매체는 실험 플래그 포함 — 라이브 검토 배선이 1.0 전 완료되지 않으면 1.1 이연(docs/decisions/2026-06-10-academic-scope-1.0.md).",
       "status": "todo",
       "dependencies": ["M4-story-harness-implementation", "M5-vercel-functions", "M6-persistence-memory-sync"],
-      "done_criteria": "30화 시리즈 회귀 통과, 완성 루프 데모 가능",
+      "done_criteria": "기술 게이트(30화 시리즈 회귀 통과·완성 루프 전 매체 E2E 검증) + 외부 실증 게이트(제작자 비개입 외부 작가 3명이 각 10화 이상 완성, 그 중 소설/에세이 1편 이상 포함) + 시장 신호(3명 중 1명 이상 유료 지속 의향 표명 또는 실과금). 내부 페르소나 실증 완권(23화 #2 로판)은 단계 1 달성으로 인정한다.",
       "evidence": null
     },
     {
