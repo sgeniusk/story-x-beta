@@ -168,6 +168,74 @@ describe('composeIntentWithFork', () => {
   });
 });
 
+describe('stake 드리프트 매칭 — buildEpisodeForks deferred-stake', () => {
+  // 실제 발생 사례: ch1 "백도현의 정체와 게이트 조작의 진실" deferred
+  //                ch2 "백도현과 게이트 조작의 핵심 진실"   deferred
+  // → 같은 stake로 취급, deferred 갈림길 옵션 1개로 병합 (최신 회차 우선)
+  it('같은 stake 의 문구 드리프트는 같은 키로 취급해 하나의 deferred 옵션으로 병합한다', () => {
+    const project = projectWith([
+      ch(1, {
+        stakesLedger: [
+          { stake: '백도현의 정체와 게이트 조작의 진실', atRisk: '태준', resolution: 'deferred' }
+        ]
+      }),
+      ch(2, {
+        stakesLedger: [
+          { stake: '백도현과 게이트 조작의 핵심 진실', atRisk: '태준', resolution: 'deferred' }
+        ]
+      })
+    ]);
+    const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
+    const deferredFork = forks.find((f) => f.source === 'deferred-stake');
+    expect(deferredFork).toBeDefined();
+    // 병합되어 옵션 1개 (드리프트 케이스)
+    expect(deferredFork!.options).toHaveLength(1);
+    // 최신 회차(ch2) 문구 우선
+    expect(deferredFork!.options[0].label).toBe('백도현과 게이트 조작의 핵심 진실');
+  });
+
+  // 거짓 병합 가드: 일부 토큰만 겹치는 쌍은 병합되지 않아야 한다
+  it('토큰이 일부만 겹치는 stake 는 병합하지 않는다 (거짓 병합 가드)', () => {
+    const project = projectWith([
+      ch(1, {
+        stakesLedger: [
+          { stake: '서가을의 정신적 안전', atRisk: '서가을', resolution: 'deferred' },
+          { stake: '태준과 서가을 사이의 신뢰', atRisk: '팀', resolution: 'deferred' }
+        ]
+      })
+    ]);
+    const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
+    const deferredFork = forks.find((f) => f.source === 'deferred-stake');
+    expect(deferredFork).toBeDefined();
+    // 병합되지 않고 2개 유지
+    expect(deferredFork!.options).toHaveLength(2);
+    const labels = deferredFork!.options.map((o) => o.label);
+    expect(labels).toContain('서가을의 정신적 안전');
+    expect(labels).toContain('태준과 서가을 사이의 신뢰');
+  });
+
+  // kept/lost 로 결판난 stake 가 이후 드리프트 버전으로 deferred 가 오면 제거돼야 함
+  it('드리프트 쌍에서 이전 버전이 kept 로 결판났으면 deferred 갈림길에서 제외한다', () => {
+    const project = projectWith([
+      ch(1, {
+        stakesLedger: [
+          { stake: '백도현의 정체와 게이트 조작의 진실', atRisk: '태준', resolution: 'kept' }
+        ]
+      }),
+      ch(2, {
+        stakesLedger: [
+          // 드리프트 버전 — 같은 stake 로 인식돼야 함 → 이미 kept 로 결판남
+          { stake: '백도현과 게이트 조작의 핵심 진실', atRisk: '태준', resolution: 'deferred' }
+        ]
+      })
+    ]);
+    const forks = buildEpisodeForks(project, computePayoffLedger(project.chapters));
+    const deferredFork = forks.find((f) => f.source === 'deferred-stake');
+    // kept 로 결판난 stake 는 옵션에서 빠져야 함
+    expect(deferredFork).toBeUndefined();
+  });
+});
+
 describe('stripConsumedSeeds', () => {
   it('시드 2줄과 작가 자필 1줄이 있을 때 자필만 남긴다', () => {
     const intent = [
