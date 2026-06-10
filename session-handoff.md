@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-06-11 (2차) — P12 재관찰 통과 + P13 폴백 캐논 차단 (main, 428 tests)
+
+> 직전 핸드오프의 1(재관찰)·2(폴백 오염 차단) 이행. 리포트 `06-hunter-pace-check.md` 의 "P12 재관찰" 절.
+
+### 한 것
+- **P12 재관찰 통과 (라이브)** — ch4 fixture 에서 배지 옵션 회피 + 정당 옵션(합류)·페이스(전진·1~2화 안)로 ch5 "예비 회수선" 재생성. **연속성 판정 출고 불가→수정("큰 줄기는 기존 캐논과 맞고")·캐릭터 결정→관찰·고백 재서술 미발생.** LLM 이 숨긴 진실 promise 를 "한 발 다가간다" 부분 전진으로 reframe(재발급 금지 프롬프트 규칙 효과 추정). **진도 인터뷰 2단계 착수 조건 충족.** 백업 `backups/03-hunter-p12-recheck-ch5.json`.
+- **P13 (`c6dd3bd`)** — `produceNextChapter`(결정적 폴백)의 캐논 발명 제거. 템플릿 2건(intent 누수 plot·"숨기고 있다" 비밀 발명)이 실작품 레저를 오염시키던 근원 차단. 폴백 캐논을 픽스처로 쓰던 longformContinuity(2)·memoryBank(2) 테스트는 명시적 캐논 픽스처로 전환 — 검증 대상(digest 한도·워크벤치·승인 큐) 보존.
+
+### 손대지 말 것
+- `produceNextChapter` 의 `newCanonFacts: []` — 폴백은 캐논을 만들지 않는다(P13 핀 테스트). 캐논은 LLM 본문 생성 경로에서만.
+- longformContinuity·memoryBank 테스트의 명시적 캐논 픽스처(`chapterCanon`/`withChapterCanon`) — 'canon-001-a' id 는 승인 큐 decisions 매핑이 참조.
+
+### 다음 세션이 해야 할 한 가지
+- **진도 인터뷰 2단계(쇼러너 서술형 LLM) brainstorm→spec** — 착수 조건 충족(MVP 실효 + P12 통과). 갈림길 LLM 정제와 같은 묶음. 입력: `06-hunter-pace-check.md`(페이스 사이클 실증) + handoff 2026-06-10 원안(전제 능선·전진/숨고르기·다음 회수까지 몇 화 — 서술형) + interviewClient 패턴.
+- 보조: academic 라이브 검토 배선 · M7 경량 검증 A/B/C 사용자 선택 · 결정 부채 보드.
+
+---
+
 ## 2026-06-11 — P12 수정: 갈림길 캐논 모순 의심 배지 (main, 427 tests)
 
 > 4차 핸드오프 1번 이행. ch5 캐논 충돌 사고(기확정 고백을 fork 가 재노출)의 상류 수정 2겹.
