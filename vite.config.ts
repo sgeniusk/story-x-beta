@@ -100,6 +100,12 @@ function extractJsonObject(raw: string): string | null {
 }
 
 export default defineConfig({
+  server: {
+    watch: {
+      // 에이전트 워크트리·브라우저 캡처 churn 이 dev 풀 리로드를 유발하지 않게 제외한다.
+      ignored: ['**/.claude/**', '**/.playwright-mcp/**', '**/docs/**', '**/out/**']
+    }
+  },
   plugins: [
     react(),
     storyxBridge('/api/draft', (input) => [
