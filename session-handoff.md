@@ -18,7 +18,8 @@
 - `episodeBriefing.ts` slice 방향(정체=oldest·진척=newest — 핀 테스트 있음) · stallRules 문구(promptBuilders↔storyx.mjs byte-identical 미러) · vite 브리지 `--payoff-status` 전달부 · `.fc-forks` 카드의 ref 기반 append(uncontrolled textarea 라 setState 만으론 화면 미반영).
 
 ### 다음 세션이 해야 할 한 가지
-- **#3 헌터물 페르소나 테스트에 갈림길 사용/미사용 A/B 를 끼워 6축 비교** — 갈림길 효과 실증. (Follow-up 대기 — 갈림길 LLM 정제 2단계 · 결정 부채 보드 별도 스펙. main 머지는 최종 검토 후.)
+- **#3 헌터물 페르소나 테스트에 갈림길 사용/미사용 A/B 를 끼워 6축 비교** — 갈림길 효과 실증. main 머지·origin push 완료(`a76d7a2`).
+- Follow-up 대기 — (a) **회차 진도 인터뷰** (사용자 아이디어, 2026-06-10): 중·장편이 회차를 넘어갈 때 쇼러너가 진도·페이스를 서술형으로 인터뷰(전제 몇 부 능선·전진 vs 숨 고르기·다음 회수까지 몇 화). 갈림길 카드(객관식·결정론)의 대화형 2단계 — `interviewClient` 패턴 + `payoffLedger` 시드 재활용, 트리거는 정체 신호·아크 경계·중장편 한정으로 좁힌다. A/B 에서 "선택은 하는데 페이스 감각이 안 들어간다"가 관찰되면 1번으로 승격. (b) 갈림길 LLM 정제 (c) 결정 부채 보드 — 각각 별도 스펙.
 
 ---
 
