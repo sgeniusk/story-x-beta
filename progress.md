@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-11(3차) · Branch: `main` (**진도 인터뷰 2단계 완료** — 쇼러너 서술형 LLM 페이스 인터뷰, 작품 맞춤 질문 라이브 실증)
+> Last Updated: 2026-06-11(4차) · Branch: `main` (**M7 경량 검증 A·C 제작 완료** — 공개 패키지 docs/public/ + 데모 영상 키트·캡처 8종 라이브 검증)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -83,14 +83,27 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 잔여 백로그 — 1.0 게이트(`docs/decisions/2026-06-10-market-proof-1.0.md`) 기준 재정렬.
 | 순위 | 작업 | 성격 | 비고 |
 |---|---|---|---|
-| 1 | **M7 외부 실증 경량 검증** — C 데모 영상 + A 로그 공개 패키지 제작, B 베타 3~5인 모집 | 1.0 critical path | C·A 는 세션 단독 제작 가능, B 는 사용자 모집 활동 필요 |
+| 1 | **M7 외부 실증 경량 검증** — ~~C 데모 키트 + A 로그 공개 패키지~~ **A·C 제작 완료(2026-06-11 4차)** → 잔여 = 사용자 액션(A 공개 채널·연락처 기입, C Loom 녹화, B 베타 3~5인 모집) | 1.0 critical path | A `docs/public/` · C `docs/handoff/2026-06-11-demo-video-kit.md`+캡처 8종 |
 | 2 | **M7 기술 게이트 — 30화 시리즈 회귀** | 1.0 게이트 | storyx CLI+fixture 기반 자동 회귀 러너 세션 후보 |
 | 3 | **갈림길 LLM 정제** — fork 옵션/시드 작품 맞춤화 | 이야기 완성도 | pace-interview 패턴 그대로 재사용 |
 | 4 | **rank5 잔여 정리** — PublishingStudio 옛 JSX 제거(floating 전환 완료로 안전)·Status 죽은 코드 3개 처분·Tier3 훅 | 기술부채 | |
 | 5 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
 
-## 최근 검증 (2026-06-11 3차 · 진도 인터뷰 2단계 · main)
+## 최근 검증 (2026-06-11 4차 · M7 경량 검증 A·C 제작 · main)
+
+```
+init.sh            → tsc 0 · vitest(450 tests) · build 전체 통과 (세션 시작 시 — 이번 세션 코드 변경 0, 문서·캡처만)
+A 공개 패키지       — docs/public/README.md(소개·정직성 명시·베타 모집 CTA) +
+                     docs/public/storyx-live-test-showcase.md(23화 완권 4축 실증 + 한계 공개, 내부 코드명 제거)
+C 데모 영상 키트    — docs/handoff/2026-06-11-demo-video-kit.md(5분 콘티 7장면·나레이션·백업 주입 절차)
+라이브 검증 — 백업 2형식 주입 절차 실증(02-ch23 dump형 · 03-hunter 키맵형, /@fs/ fetch 스니펫):
+  ch23 완권 재현(23화·캐논 91·온톨로지 113·인물 그래프·출간 체크리스트) ·
+  헌터 ch6 재현(갈림길 카드+캐논 확인 배지·진도 체크+쇼러너에게 묻기·작가실 5인) · 콘솔 에러 0
+캡처 8종 — docs/handoff/screenshots/demo-video-kit/ (S1·S3·S4×2·S5×3·S6)
+```
+
+## 직전 검증 (2026-06-11 3차 · 진도 인터뷰 2단계 · main)
 
 ```
 init.sh            → tsc 0 · vitest(450 tests) · build 전체 통과
