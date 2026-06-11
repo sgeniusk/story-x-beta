@@ -480,3 +480,33 @@ describe('회차 생성 동작 회귀 — 의도 메모 오염·잠금 동기화
     expect(desk).toContain('onConfirmChapterLock={confirmChapterLock}');
   });
 });
+
+describe('검증 데스크 회귀 — 생성 피드백·검토 fallback (2026-06-11 F-002·F-006)', () => {
+  // F-002 — produceEpisode 는 정상이나(실측 ~90초 후 2화 도착) floating 편집기에
+  // 생성 중 표시가 disabled 뿐이라 페르소나 데스크가 12초 만에 "차단"으로 오판했다.
+  // 버튼이 생성 중 라벨과 상태별 메인 액션 라벨(첫 회차/다음 회차/검토)을 보여야 한다.
+  it('floating 초안 생성 버튼이 생성 중·상태별 라벨을 표시한다 (F-002)', () => {
+    const floating = componentSrc('FloatingEditor');
+    expect(floating).toContain('mainActionLabel');
+    expect(floating).toContain('생성 중…');
+    const propsStart = desk.indexOf('const floatingEditorProps');
+    expect(propsStart).toBeGreaterThan(-1);
+    expect(desk.slice(propsStart, propsStart + 1600)).toContain('mainActionLabel');
+  });
+
+  // F-006 — 작가실 패널 자체는 정상(라이브 재현 불가)이나 검토 진입점이 dock 버튼
+  // 하나뿐이라 클릭 유실 시 검토 루프 전체가 막힌다. floating(draft) 모드에서도
+  // ⌘K 명령 팔레트가 실제로 열리고, 전체 검토 명령이 fallback 으로 존재해야 한다.
+  it('draft 모드에서 ⌘K 팔레트가 열리고 전체 검토 fallback 명령이 있다 (F-006)', () => {
+    // 죽은 spotlight 분기 금지 — draft 모드 ⌘K 는 CommandPalette 를 연다.
+    expect(desk).not.toContain('isSpotlightOpen');
+    const draftReturn = desk.indexOf('if (isDraftMode) {');
+    expect(draftReturn).toBeGreaterThan(-1);
+    expect(desk.slice(draftReturn, draftReturn + 900)).toContain('CommandPalette');
+    const cmdStart = desk.indexOf("id: 'run-all-review'");
+    expect(cmdStart).toBeGreaterThan(-1);
+    const block = desk.slice(cmdStart, cmdStart + 400);
+    expect(block).toContain('전체 검토');
+    expect(block).toContain('marginReview.onRunAll');
+  });
+});

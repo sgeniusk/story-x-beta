@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-06-11 (6차) — Codex 검증 데스크 합류: P1 판정 + 수정 3건 (main)
+
+> 사용자가 별도 Codex 데스크로 9셀 외부 검증을 완주 → 이 세션이 합류 절차(무결성 게이트→표본 재현→TDD 수정→백로그 반영) 수행. 전 기록 `docs/reviews/2026-06-11-codex-validation-desk/` (판정·근거는 `MERGE-NOTE.md`).
+
+### 한 것
+- **P1 3건 라이브 재현 판정** — F-007 진성(≤900px `.hx-aside` 통째 숨김→온보딩 차단) · F-002 재분류(기능 정상, 실결함=생성 90초 피드백 0 — 데스크 12초 대기 오판) · F-006 미재현(작가실 정상, 자동화 클릭 유실 추정).
+- **수정 3건 (TDD, editorFocusLayout +2 · appExperience +1)** — ① FloatingEditor CTA `mainActionLabel` + "생성 중…" ② draft 모드 ⌘K→CommandPalette(죽은 spotlight 제거)+`작가진 전체 검토` fallback ③ ≤900px aside 카드만 접기. init.sh 녹색·라이브 검증 완료.
+- P2/P3 6건 백로그 등재(progress.md 표 순위 5) · 성장 메모리 후보 처리(MERGE-NOTE §5).
+
+### 손대지 말 것
+- 데스크 폴더는 검증 기록 원본 — 수정 금지. F-009 결번은 데스크 측 누락(의도 아님).
+- **P14(`useMarginReview` 더블 트리거)는 쇼케이스 세션 소유** — 이 세션은 같은 파일(StoryXDesk·marginReview) 충돌을 피해 의도적으로 미수정. 단 이번에 commandItems 에 `run-all-review`(marginReview.onRunAll 호출)가 추가됐으니 P14 수정 시 이 경로도 같은 가드를 타는지 확인할 것.
+
+### 다음 세션이 해야 할 한 가지
+- 쇼케이스 S2 가 우선(5차 노트). 검증 데스크 후속은 백로그 순위 5(P2/P3 6건) — 착수 시 F-005(만화 컷 수 hard constraint)부터가 효율적(시각 바이블 규칙과 게이트 한 묶음). **다음 데스크 재실행 시 ORCHESTRATOR-PROMPT 에 "생성 대기 최소 120초" 조항을 추가할 것.**
+
+---
+
 ## 2026-06-11 (5차) — 쇼케이스 30화 착수: "철거 전야의 이름" S1 (main, 코드 변경 0)
 
 > 사용자 결정 — "현대 퇴마록 느낌 30화 장편을 쇼케이스에" + 풀 라이브 루프 + 데모 영상은 자막+BGM 풀 자동 생성. 스펙·체크리스트·로그 신설(아래 경로). M7 기술 게이트(30화 회귀)를 실작품 완주로 치환한 트랙.

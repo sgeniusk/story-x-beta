@@ -43,6 +43,8 @@ export interface FloatingEditorProps {
   onBodyChange?: (text: string) => void;
   onIntentChange?: (text: string) => void;
   onGenerateDraft?: () => void;
+  /** 메인 액션 라벨 — 상태별(첫 회차/다음 회차/검토). 없으면 '초안 생성'. (F-002·F-004) */
+  mainActionLabel?: string;
   onSwitchTrack?: (track: 'draft' | 'bible') => void;
   onOpenPublish?: () => void;
   isGenerating?: boolean;
@@ -90,6 +92,7 @@ export function FloatingEditor({
   onBodyChange,
   onIntentChange,
   onGenerateDraft,
+  mainActionLabel = '초안 생성',
   onSwitchTrack,
   onOpenPublish,
   isGenerating = false,
@@ -408,14 +411,15 @@ export function FloatingEditor({
           <span>출간</span>
         </button>
         <button
-          className="btn-primary"
+          className={`btn-primary${isGenerating ? ' is-generating' : ''}`}
           onClick={() => (onGenerateDraft ? onGenerateDraft() : toast('초안 생성 — 데모에서는 본문이 채워져 있습니다'))}
           disabled={isGenerating}
+          aria-busy={isGenerating}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
             <path d="M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5z" />
           </svg>
-          <span>초안 생성</span>
+          <span>{isGenerating ? '생성 중…' : mainActionLabel}</span>
         </button>
       </header>
       <button className="exitfocus" onClick={() => setIsFocus(false)}>

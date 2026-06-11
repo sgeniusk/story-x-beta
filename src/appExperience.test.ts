@@ -79,6 +79,14 @@ describe('Story X page experience', () => {
     expect(block).not.toContain('rgba(255, 255, 255');
   });
 
+  it('900px 이하에서 온보딩 진행 CTA가 aside 와 함께 사라지지 않는다 (F-007)', () => {
+    // 검증 데스크 F-007 — 진행 버튼(자유 서술로 계속·인터뷰로 계속·이전)이 전부
+    // .hx-aside 안에 있어, aside 를 통째로 숨기면 좁은 화면에서 온보딩이 진행 불가다.
+    // 좁은 폭에서는 안내 카드만 접고 버튼은 유지한다.
+    expect(css).not.toContain('.hx-aside { display: none; }');
+    expect(css).toContain('.hx-aside-card { display: none; }');
+  });
+
   it('removes the agent-architecture noise from the new-project flow (P3)', () => {
     expect(app).not.toContain('<FlowAgentLayerCard');
     expect(app).not.toContain('scope-focus-strip');

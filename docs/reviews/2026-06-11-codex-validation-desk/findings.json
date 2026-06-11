@@ -1,0 +1,295 @@
+{
+  "desk": "2026-06-11-codex-validation-desk",
+  "completedAt": "2026-06-11T19:31",
+  "cells": [
+    {
+      "id": "C1",
+      "status": "partial",
+      "log": "cells/C1-onboarding-rofan.md",
+      "verdicts": {
+        "축④": "통과",
+        "축⑤": "차단"
+      }
+    },
+    {
+      "id": "C2",
+      "status": "done",
+      "log": "cells/C2-essay-first-user.md",
+      "verdicts": {
+        "축③": "통과",
+        "축⑤": "수정"
+      }
+    },
+    {
+      "id": "C3",
+      "status": "done",
+      "log": "cells/C3-comics-first-episode.md",
+      "verdicts": {
+        "축④": "수정",
+        "축⑤": "수정"
+      }
+    },
+    {
+      "id": "C4",
+      "status": "partial",
+      "log": "cells/C4-hunter-longform.md",
+      "verdicts": {
+        "축①": "partial",
+        "축②": "partial",
+        "축⑥": "차단"
+      }
+    },
+    {
+      "id": "C5",
+      "status": "partial",
+      "log": "cells/C5-thriller-finale.md",
+      "verdicts": {
+        "축①": "partial",
+        "축②": "통과",
+        "축③": "통과"
+      }
+    },
+    {
+      "id": "C6",
+      "status": "done",
+      "log": "cells/C6-sf-short.md",
+      "verdicts": {
+        "축②": "통과",
+        "축④": "통과"
+      }
+    },
+    {
+      "id": "C7",
+      "status": "partial",
+      "log": "cells/C7-literary-mode.md",
+      "verdicts": {
+        "축③": "통과",
+        "축④": "수정"
+      }
+    },
+    {
+      "id": "C8",
+      "status": "partial",
+      "log": "cells/C8-meta-canon-conflict.md",
+      "verdicts": {
+        "축⑥": "partial"
+      }
+    },
+    {
+      "id": "C9",
+      "status": "partial",
+      "log": "cells/C9-audio-academic-smoke.md",
+      "verdicts": {
+        "축④": "통과",
+        "축⑥": "partial"
+      }
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "P2",
+      "type": "ux",
+      "area": "interview",
+      "cell": "C1",
+      "title": "인터뷰 대기 시간이 안내 문구보다 크게 길고 진행 피드백이 부족함",
+      "detail": "C1 로판 온보딩에서 화면은 '보통 10~30초'라고 안내했지만 실제 브라우저 대기는 약 90초였고, CLI 보조 재현도 약 56초가 걸렸다. 초보 사용자는 멈춘 화면으로 오해하기 쉽다.",
+      "repro": [
+        "소설 장편 온보딩에서 freewrite를 입력한다.",
+        "`인터뷰로 계속`을 누른다.",
+        "10~30초 안내를 넘겨도 같은 대기 문구만 유지되는지 확인한다."
+      ],
+      "evidence": [
+        "cells/C1-onboarding-rofan.md",
+        "screenshots/c1-04-interview-answered.png"
+      ],
+      "proposal": "실제 평균 대기 시간에 맞게 안내를 조정하고, provider 호출 단계/재시도/남은 예상 시간을 노출한다."
+    },
+    {
+      "id": "F-002",
+      "severity": "P1",
+      "type": "bug",
+      "area": "draft",
+      "cell": "C1",
+      "title": "1화 출간 확정 뒤 상단 `초안 생성`이 다음 회차를 생성하지 않음",
+      "detail": "C1과 C4 모두 1화 출간 확정 후 편집으로 돌아와 `초안 생성`을 눌렀지만 생성 중 피드백도, 2화 전환도 없었다. 장편/중편 연속 생성 루프가 여기서 차단된다.",
+      "repro": [
+        "소설 장편 또는 중편 새 작품을 생성한다.",
+        "1화/첫 회차를 출간 확정한다.",
+        "편집으로 돌아와 상단 `초안 생성`을 클릭한다.",
+        "다음 회차 생성 상태로 전환되는지 확인한다."
+      ],
+      "evidence": [
+        "cells/C1-onboarding-rofan.md",
+        "cells/C4-hunter-longform.md",
+        "screenshots/c1-08-generate-ch2.png",
+        "screenshots/c4-10-after-next-attempt.png"
+      ],
+      "proposal": "locked 최신 회차를 감지해 `produceEpisode` 경로로 보내고, 비활성 조건이면 버튼을 disabled+사유로 표시한다."
+    },
+    {
+      "id": "F-003",
+      "severity": "P2",
+      "type": "ux",
+      "area": "onboarding",
+      "cell": "C2",
+      "title": "매체 카드 텍스트가 중복되어 선택 대상이 모호함",
+      "detail": "C2에서 `에세이` 텍스트가 카드 제목뿐 아니라 여러 설명 문장에도 등장해 자동화 locator가 모호해졌다. 사람 사용자도 훑어보기에서 카드 제목과 설명을 구분하기 어렵다.",
+      "repro": [
+        "온보딩 매체 선택 화면을 연다.",
+        "`에세이` 텍스트 매칭 또는 스크린리더 탐색을 시도한다.",
+        "카드 제목과 설명 내 같은 단어가 중복 노출되는지 확인한다."
+      ],
+      "evidence": [
+        "cells/C2-essay-first-user.md",
+        "screenshots/c2-02-essay-selected.png"
+      ],
+      "proposal": "카드 버튼에 명확한 aria-label을 부여하고, 자동화/접근성 기준으로 제목 role을 분리한다."
+    },
+    {
+      "id": "F-004",
+      "severity": "P2",
+      "type": "ux",
+      "area": "editor",
+      "cell": "C2",
+      "title": "에디터 상단 CTA가 상태와 매체에 상관없이 `초안 생성`으로 남아 다음 행동이 불명확함",
+      "detail": "에세이 단독 원고와 만화 첫 에피소드, 출간 잠금 뒤 화면 모두에서 CTA가 `초안 생성`으로 보인다. 단일 원고에서는 검토/출간/수정 행동인지, 연재형에서는 다음 회차 생성인지 구분되지 않는다.",
+      "repro": [
+        "에세이 또는 만화 첫 원고를 생성한다.",
+        "에디터 상단 CTA 라벨을 확인한다.",
+        "출간 잠금 뒤 편집 화면으로 돌아와 같은 CTA가 어떤 상태를 의미하는지 확인한다."
+      ],
+      "evidence": [
+        "cells/C2-essay-first-user.md",
+        "cells/C3-comics-first-episode.md",
+        "screenshots/c2-07-editor-essay.png",
+        "screenshots/c3-07-editor-comics.png"
+      ],
+      "proposal": "매체와 회차 상태에 따라 `첫 원고 생성`, `다음 회차 생성`, `검토 요청`, `잠금 후 새 회차 만들기`처럼 라벨과 handler를 분리한다."
+    },
+    {
+      "id": "F-005",
+      "severity": "P2",
+      "type": "quality",
+      "area": "draft",
+      "cell": "C3",
+      "title": "만화/인스타툰 생성이 입력한 네 컷 약속을 6컷으로 늘림",
+      "detail": "C3 freewrite는 영수증 장면이 네 컷으로 찍힌다고 명시했고 기본 포맷도 인스타툰이었다. 출력은 `[1컷]`부터 `[6컷]`까지 생성되어 컷 수 약속이 흔들렸다.",
+      "repro": [
+        "만화 매체, 인스타툰 기본 포맷으로 새 작품을 시작한다.",
+        "freewrite에 `네 컷`을 명시한다.",
+        "첫 에피소드가 실제 몇 컷으로 생성되는지 확인한다."
+      ],
+      "evidence": [
+        "cells/C3-comics-first-episode.md",
+        "screenshots/c3-07-editor-comics.png"
+      ],
+      "proposal": "visual/storyboard prompt에 선택 포맷과 사용자가 명시한 컷 수를 hard constraint로 넣고, 불일치 시 품질 게이트에서 경고한다."
+    },
+    {
+      "id": "F-006",
+      "severity": "P1",
+      "type": "bug",
+      "area": "review",
+      "cell": "C4",
+      "title": "floating editor에서 작가실 버튼은 눌리지만 5인 전체 검토 실행 버튼이 나타나지 않음",
+      "detail": "C4에서 `작가실 0`을 눌러도 버튼 active 상태만 바뀌고 패널/`5명에게 전체 검토 맡기기`가 DOM에 나타나지 않았다. C8도 이 upstream blocker 때문에 UI에서 의도적 충돌 검토를 실행하지 못했다.",
+      "repro": [
+        "새 소설 회차를 생성해 floating editor에 진입한다.",
+        "하단 dock의 `작가실 0`을 클릭한다.",
+        "5인 전체 검토 실행 버튼이 보이는지 확인한다."
+      ],
+      "evidence": [
+        "cells/C4-hunter-longform.md",
+        "cells/C8-meta-canon-conflict.md",
+        "screenshots/c4-07-writer-room-before-review.png",
+        "screenshots/c8-01-c4-writer-room-block.png"
+      ],
+      "proposal": "dock panel open state와 panel z-index/visibility 조건을 점검하고, review action을 keyboard/command palette에서도 접근 가능하게 둔다."
+    },
+    {
+      "id": "F-007",
+      "severity": "P1",
+      "type": "bug",
+      "area": "onboarding",
+      "cell": "C5",
+      "title": "좁은 뷰포트에서 온보딩 진행 CTA가 숨겨져 다음 단계로 갈 수 없음",
+      "detail": "C5에서 520px대 뷰포트에서는 `자유 서술로 계속` 버튼이 존재하지만 부모 `.hx-aside`가 `display:none`이라 버튼 rect가 `0x0`이었다. viewport를 1280x900으로 넓히자 CTA가 복구됐다.",
+      "repro": [
+        "브라우저 viewport를 약 520px 폭으로 둔다.",
+        "온보딩 매체/형식 선택 화면에서 소설 중편을 선택한다.",
+        "`자유 서술로 계속` 버튼이 화면 또는 접근성 트리에서 클릭 가능한지 확인한다."
+      ],
+      "evidence": [
+        "cells/C5-thriller-finale.md",
+        "screenshots/c5-02-browser-api-test.png",
+        "screenshots/c5-06-format-fullpage.png"
+      ],
+      "proposal": "모바일/좁은 breakpoint에서 CTA를 `.hx-main` 하단 또는 sticky footer로 복제하고, `.hx-aside` 숨김과 핵심 액션이 묶이지 않게 한다."
+    },
+    {
+      "id": "F-008",
+      "severity": "P2",
+      "type": "ux",
+      "area": "editor",
+      "cell": "C7",
+      "title": "commercial↔literary 슬라이더가 창작 시작 맥락이 아니라 접힌 지표 패널에 묻혀 있음",
+      "detail": "C7에서 슬라이더는 floating editor의 `지표` 패널 안 `매체 투사` 카드를 펼쳐야 보였다. 새 작품 온보딩에서 문학 모드로 시작하는 명확한 선택 경로는 확인되지 않았고, 값 변경은 origin localStorage에 저장되어 기존 작품 상태를 건드릴 수 있다.",
+      "repro": [
+        "새 작품 온보딩에서 문학 쪽 모드를 찾는다.",
+        "floating editor에 진입해 `지표` 패널을 열고 `매체 투사`를 펼친다.",
+        "slider가 project/session 단위로 안전하게 변경되는지 확인한다."
+      ],
+      "evidence": [
+        "cells/C7-literary-mode.md",
+        "screenshots/c7-04-metrics-slider.png",
+        "screenshots/c7-05-media-axis-expanded.png"
+      ],
+      "proposal": "온보딩 단계에서 작품 무게중심을 명시적으로 선택하게 하고, editor slider는 현재 project에만 귀속되도록 표시/저장 범위를 분명히 한다."
+    },
+    {
+      "id": "F-010",
+      "severity": "P3",
+      "type": "suggestion",
+      "area": "review",
+      "cell": "C9",
+      "title": "오디오/학술 스모크에서 매체별 후속 검토까지 한 번에 실행하는 짧은 경로가 필요함",
+      "detail": "C9 draft는 오디오와 학술 매체 형식을 잘 반영했지만, UI review blocker 때문에 오디오 연출가/학술 비평가의 후속 지적까지 같은 화면에서 확인하지 못했다.",
+      "repro": [
+        "오디오북 또는 사회과학/학술 매체를 선택한다.",
+        "첫 draft 이후 매체별 작가진 검토를 실행할 수 있는 짧은 경로가 있는지 확인한다.",
+        "오디오 연출/학술 반론/인용 무결성 지적이 실제 본문에 붙는지 확인한다."
+      ],
+      "evidence": [
+        "cells/C9-audio-academic-smoke.md",
+        "screenshots/c9-02-audiobook-selected.png",
+        "screenshots/c9-03-academic-selected.png",
+        "runs/c9/audio/drafts/2026-06-11T10-28-04-747Z-codex-draft.json",
+        "runs/c9/academic/drafts/2026-06-11T10-29-12-753Z-codex-draft.json"
+      ],
+      "proposal": "매체별 draft 완료 화면에서 `오디오 연출 검토`, `학술 무결성 검토` 같은 one-click smoke review를 제공한다."
+    }
+  ],
+  "memoryCandidates": {
+    "canon": [
+      "산장 스릴러: 산장 유리문 안쪽의 작은 손자국은 민호의 마지막 흔적이며 윤재의 거짓 증언을 무너뜨린 핵심 증거다.",
+      "SF 단편: 미래 답장을 읽을수록 현재에서 가능한 선택지가 물리적·상황적으로 줄어드는 비용이 발생한다.",
+      "오디오 드라마: 713번 막차의 안내 방송에는 다음 날 교체되기 전까지 아이 아빠의 생전 목소리가 남아 있다."
+    ],
+    "style": [
+      "에세이/문학 단편은 사물의 반복 이미지가 감정 설명을 대신할 때 강해진다. 예: 보호자 침대, 싱크대, 컵 바닥의 물때.",
+      "완결 지시는 rewardArc와 stakesLedger에 실제 payoff/lost/kept를 기록하게 하면 회수 품질 확인이 쉬워진다.",
+      "학술 칼럼은 실제 수치가 없을 때 `[근거 필요]`를 남기고 수치를 발명하지 않는 규칙을 유지한다."
+    ],
+    "visualAudio": [
+      "오디오 드라마는 SFX/MUSIC/침묵/후렴 변주를 본문 표기 레벨에서 유지한다.",
+      "만화/인스타툰은 선택 포맷과 사용자가 명시한 컷 수를 hard constraint로 저장해야 한다."
+    ],
+    "failureLog": [
+      "P1: 출간 잠금 뒤 `초안 생성`이 다음 회차 생성으로 이어지지 않아 장편 루프가 차단된다.",
+      "P1: floating editor 작가실 패널에서 5인 전체 검토 CTA가 나타나지 않아 review 루프가 차단된다.",
+      "P1: 좁은 뷰포트에서 온보딩 CTA가 `.hx-aside display:none`에 갇혀 진행할 수 없다.",
+      "Known issue recurrence: C8 review JSON의 `stderr`에 Codex 배너/경고/스킬 본문이 함께 저장됐다."
+    ]
+  }
+}

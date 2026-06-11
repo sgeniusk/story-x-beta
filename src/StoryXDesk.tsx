@@ -593,7 +593,6 @@ export function StoryXDesk({
   const [isPublishingMode, setIsPublishingMode] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
   const [isMarginDrawerOpen, setIsMarginDrawerOpen] = useState(false);
   const [isBinderDrawerOpen, setIsBinderDrawerOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
@@ -1324,6 +1323,7 @@ export function StoryXDesk({
       onBodyChange: handleFloatingBodyChange,
       onIntentChange: (text: string) => setDraftPrompt(text),
       onGenerateDraft: mainActionRun,
+      mainActionLabel, // F-002 — 상태별 라벨(첫 회차/다음 회차/검토)을 floating CTA 에 반영
       onSwitchTrack: (track: 'draft' | 'bible') => switchToTrack(track),
       onOpenPublish: openPublishingMode,
       isGenerating,
@@ -1348,6 +1348,7 @@ export function StoryXDesk({
       bodyVersion,
       handleFloatingBodyChange,
       mainActionRun,
+      mainActionLabel,
       isGenerating,
       studioMetrics,
       updateStoryModeAxis,
@@ -1377,6 +1378,15 @@ export function StoryXDesk({
             : '입력한 주요 내용으로 첫 회차 초안을 만듭니다.',
         shortcut: isLatestLocked ? 'NextEp' : latestChapter ? 'Review' : 'Draft',
         run: mainActionRun
+      },
+      {
+        // F-006 fallback — 작가실 dock 버튼이 막혀도 검토 루프를 시작할 수 있는 제2 진입점.
+        id: 'run-all-review',
+        label: '작가진 전체 검토',
+        section: '원고',
+        description: '현재 회차 본문을 작가진 전원에게 한 번에 검토받습니다.',
+        shortcut: 'ReviewAll',
+        run: () => marginReview.onRunAll()
       },
       {
         id: 'open-draft',
@@ -1488,6 +1498,7 @@ export function StoryXDesk({
       editorText,
       isFocusMode,
       latestChapter,
+      marginReview,
       publishingPlan.releaseLock.canLock,
       publishingPlan.releaseLock.notice,
       project,
@@ -1515,12 +1526,9 @@ export function StoryXDesk({
     function handleGlobalShortcut(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        if (isDraftMode) {
-          setIsSpotlightOpen((current) => !current);
-        } else {
-          setCommandQuery('');
-          setIsCommandPaletteOpen((current) => !current);
-        }
+        // F-006 — draft(floating) 모드도 같은 명령 팔레트를 연다(이전 spotlight 분기는 미렌더 죽은 코드였다).
+        setCommandQuery('');
+        setIsCommandPaletteOpen((current) => !current);
         return;
       }
 
@@ -1531,7 +1539,6 @@ export function StoryXDesk({
       }
 
       if (event.key === 'Escape') {
-        setIsSpotlightOpen(false);
         setIsMarginDrawerOpen(false);
         setIsBinderDrawerOpen(false);
         setIsCommandPaletteOpen(false);
@@ -2166,7 +2173,25 @@ export function StoryXDesk({
   }
 
   if (isDraftMode) {
-    return <FloatingEditor {...floatingEditorProps} />;
+    return (
+      <>
+        <FloatingEditor {...floatingEditorProps} />
+        {/* F-006 — floating 모드에서도 ⌘K 명령 팔레트로 전체 검토·다음 회차 생성에 접근한다. */}
+        {isCommandPaletteOpen && (
+          <CommandPalette
+            query={commandQuery}
+            commands={filteredCommandItems}
+            onQueryChange={setCommandQuery}
+            onClose={() => setIsCommandPaletteOpen(false)}
+            onRunCommand={(command) => {
+              command.run();
+              setIsCommandPaletteOpen(false);
+              setCommandQuery('');
+            }}
+          />
+        )}
+      </>
+    );
   }
 
   if (isBibleMode) {

@@ -9535,7 +9535,10 @@ body {
 
 @media (max-width: 900px) {
   .home-page .hx-panel { grid-template-columns: 1fr; }
-  .home-page .hx-aside { display: none; }
+  /* F-007 — 진행 CTA(자유 서술로 계속·인터뷰로 계속·이전)가 aside 에 있어
+     통째로 숨기면 좁은 화면에서 온보딩이 멈춘다. 안내 카드만 접고 버튼은 유지한다. */
+  .home-page .hx-aside { border-left: none; border-top: 1px solid var(--nx-hairline); padding: 16px 24px; }
+  .home-page .hx-aside-card { display: none; }
   .home-page .hx-main { padding: 32px 24px; }
   .home-page .hx-medium-grid { grid-template-columns: 1fr; }
 }
