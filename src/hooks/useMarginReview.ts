@@ -23,6 +23,12 @@ interface Options {
    * - summonOne(personaId, ctx): 한 명만 호출. 단일 MarginReview resolve.
    */
   runAll: (onPartial: (review: MarginReview) => void) => Promise<void>;
+  /**
+   * P14 가드 — 검토/생성이 이미 진행 중이면 false 를 돌려준다.
+   * false 면 onRunAll 이 pending 시드·seq 증가 없이 즉시 no-op 한다.
+   * (없으면 진행 중 런의 응답이 seq 가드로 폐기되고 새 pending 이 영구 잔류한다.)
+   */
+  canRunAll?: () => boolean;
   summonOne: (
     personaId: string,
     ctx: { selectedText?: string; anchor?: string }
@@ -37,7 +43,7 @@ interface Options {
  * 도메인 로직(storyEngine 등)은 건드리지 않는다 — runAll / summonOne 두
  * 콜백을 통해서만 결과를 받는다.
  */
-export function useMarginReview({ paragraphs, corePersonaIds, runAll, summonOne }: Options) {
+export function useMarginReview({ paragraphs, corePersonaIds, runAll, canRunAll, summonOne }: Options) {
   const [reviews, setReviews] = useState<MarginReview[]>([]);
   const [applied, setApplied] = useState<InlineDiff[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -71,6 +77,9 @@ export function useMarginReview({ paragraphs, corePersonaIds, runAll, summonOne 
   }, []);
 
   const onRunAll = useCallback(() => {
+    if (canRunAll && !canRunAll()) {
+      return;
+    }
     const seq = runAllSeq.current + 1;
     runAllSeq.current = seq;
     setOpenId(null);
@@ -85,7 +94,7 @@ export function useMarginReview({ paragraphs, corePersonaIds, runAll, summonOne 
         setReviews((arr) => arr.filter((review) => !review.pending));
       }
     });
-  }, [corePersonaIds, paragraphs, runAll]);
+  }, [canRunAll, corePersonaIds, paragraphs, runAll]);
 
   const onSummon: SummonHandler = useCallback(
     (personaId, ctx = {}) => {

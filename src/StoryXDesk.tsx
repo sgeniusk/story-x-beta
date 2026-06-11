@@ -1178,6 +1178,7 @@ export function StoryXDesk({
     paragraphs: marginParagraphs,
     corePersonaIds: mediumReviewAgentIds,
     runAll: runMarginReviewAll,
+    canRunAll: () => !isReviewing && !isGenerating,
     summonOne: summonMarginReviewAgent
   });
   const academicClaimMarginReviews = useMemo(
