@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-06-11 (7차) — 30화 완주 ×2 + StoryScore A/B: 통제군 승 (main)
+
+> 사용자 결정 3건 이행 — (1) 이 세션에서 30화 완주 (2) 맨 Claude 통제군 비교 집필 (3) StoryScore 평가 시스템+스킬화. 셋 다 완료.
+
+### 한 것
+- **실험군 완주** — "철거 전야의 이름" 30화 풀 라이브(생성→5인 검토→잠금 ×30), 차단 0·캐논 122·66,695자. 백업 `docs/reviews/2026-06-11-showcase-30ch/backups/occult-ch30-complete.json`.
+- **통제군** — 격리 서브에이전트(맨 Claude)가 동일 기획으로 『잿우물』 30화(58,106자) 집필. `control-claude/`.
+- **StoryScore v0.1** — `tools/storyscore.mjs`(결정론)+`.claude/skills/story-score`(루브릭 심사) 머지(`8fdd8d5`). 첫 공식 채점 수행.
+- **★ A/B 결과 — 통제군 91.8 vs 실험군 76.5** (`storyscore-ab-report.md`). 점수차의 주범 = 사전 아크 설계 부재("0번 소품" 발견 축적)·폴백 episode 번호 드리프트·후크 패턴 반복. 교란 변수(codex vs Claude 모델 비대칭·단일 컨텍스트 이점·심사 비맹검) 명시 — "하네스 무가치"가 아니라 개선 방향 5건 도출.
+- P14 수정(`6d900ac`, TDD) — codex 휴지기에 처리. 제작 사건 — dev 서버 사망 3회·codex 한도 1회·폴백 2회(전부 로그 기록).
+
+### 손대지 말 것
+- `storyscore-ab-report.md` 의 점수·교란 변수 서술 — 정직성이 이 실험의 가치. 점수를 유리하게 재서술하지 말 것.
+- 실험군 백업의 episode 번호(19~32 표기) — 사고 재현 증거. 수정은 코드(폴백 번호 소모 버그)로.
+
+### 다음 세션이 해야 할 한 가지
+- **A/B 리포트의 개선 백로그 착수 순서 결정** — 1순위 후보 = 시즌 아크 플래너(spec) 또는 같은 모델 재실험(provider claude 배선). M7 30화 기술 게이트는 실험군 완주로 **단계 1 충족 증거 확보**(feature_list evidence 갱신 후보).
+- 보조 — 폴백 episode 번호 버그(TDD 소건) · StoryScore v0.2(2글자 이름 변형 가드) · dev 서버 사망 원인(검토 동시 spawn 부하) · 공개 쇼케이스 편집(`docs/public/showcase/` — A/B 리포트 포함 여부는 사용자 결정).
+
+---
+
 ## 2026-06-11 (6차) — Codex 검증 데스크 합류: P1 판정 + 수정 3건 (main)
 
 > 사용자가 별도 Codex 데스크로 9셀 외부 검증을 완주 → 이 세션이 합류 절차(무결성 게이트→표본 재현→TDD 수정→백로그 반영) 수행. 전 기록 `docs/reviews/2026-06-11-codex-validation-desk/` (판정·근거는 `MERGE-NOTE.md`).

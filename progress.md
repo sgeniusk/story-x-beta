@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-11(6차) · Branch: `main` (**Codex 검증 데스크 합류** — P1 재현 판정·수정 3건 TDD 반영 · 5차 쇼케이스 30화 S1·M7 A·C 제작 완료)
+> Last Updated: 2026-06-11(7차) · Branch: `main` (**쇼케이스 30화 완주 ×2 + StoryScore A/B — 통제군 91.8 vs 실험군 76.5, 개선 5건 도출**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -34,7 +34,9 @@
 
 사용자 결정 — "현대에 다시 쓰는 퇴마록 느낌의 30화 장편을 쇼케이스에" + 풀 라이브 루프. **M7 기술 게이트(30화 회귀)·공개 쇼케이스·페이스 체인 실전 운용을 한 작품으로 동시 달성**하는 트랙. 스펙 `docs/superpowers/specs/2026-06-11-showcase-30ch-occult-design.md`, 체크리스트 `docs/superpowers/plans/2026-06-11-showcase-30ch-occult-plan.md`, 로그 `docs/reviews/2026-06-11-showcase-30ch/production-log.md`.
 - **S1 (2026-06-11)** — 온보딩(LLM 인터뷰 8문항 전부 작품 맞춤·캐논 4건 정확 시드) + 1화 "철거 전야의 이름"(3,019자·약속 정확 이행) + 2화 "대림장 탈의실의 이름표"(앵커 캐논 계승·"회수 예정" 후크) 각 5인 검토+잠금. canonFacts 7. **★P14 신규 발견** — 전체 검토 더블 트리거 시 pending 영구 잔류 + 기존 런 응답 폐기(StoryXDesk:1013 isReviewing 가드 + useMarginReview seq 가드 합작). P1 빈응답 1/10. 백업 `backups/occult-ch2-locked.json`.
-- 다음 — S2 3화부터(진도 카드 확인 우선·본명 호출 주체 캐논 결판 후보). 데모 영상은 자막+BGM 풀 자동 생성으로 결정(별도 세션).
+- **완주 (같은 날 6~7차)** — 사용자 "이 세션 완주" 결정 → 3~30화 연속 풀 라이브(차단 0·캐논 122·66,695자). 사건 — dev 서버 사망 3회·codex 한도 1회·폴백 2회·P14 발견→수정(`6d900ac`). 로그 `production-log.md`.
+- **★ A/B 비교 + StoryScore v0.1** — 통제군(맨 Claude 동일 기획 30화 『잿우물』 58,106자, `control-claude/`) 집필 + 평가 시스템(`tools/storyscore.mjs`+`story-score` 스킬, `8fdd8d5`) 구축 → 첫 공식 채점 **통제군 91.8 vs 실험군 76.5** (`storyscore-ab-report.md`). 점수차 주범 = 사전 아크 설계 부재·폴백 번호 드리프트·후크 반복. 교란 변수(모델 비대칭·단일 컨텍스트) 명시. **개선 백로그 5건** — 시즌 아크 플래너(1순위)·provider 품질 실험·폴백 번호 버그·후크 다양성·StoryScore v0.2.
+- 데모 영상은 자막+BGM 풀 자동 생성으로 결정(별도 세션).
 
 ## 현재 활성 — M11 검토 기반 정비 (`in_progress`)
 
