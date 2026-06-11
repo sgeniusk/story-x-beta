@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-11(4차) · Branch: `main` (**M7 경량 검증 A·C 제작 완료** — 공개 패키지 docs/public/ + 데모 영상 키트·캡처 8종 라이브 검증)
+> Last Updated: 2026-06-11(5차) · Branch: `main` (**쇼케이스 30화 착수** — "철거 전야의 이름" 온보딩+1·2화 풀 라이브 완료 · M7 경량 검증 A·C 제작 완료)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -29,6 +29,12 @@
 - **Phase 2a 스왑 완료·머지 (2026-06-06, main `389a997` ff-merge + 정렬 `488b5e8`)** — floating 이 편집 기본(`isDraftMode && !isClassicEditor`, `?editor=classic` 한시 폴백). 본문 contentEditable 라이브 타이핑(IME compositionstart/end 가드 + bodyVersion-메모로 커서 클로버 차단) + 의도메모 쓰기-백 + 초안생성/편집·데이터/출간 네비 배선. emitBody 는 블록을 `\n\n`(splitIntoParagraphs 라운드트립)로 join. **사용자가 실제 한글 타이핑 정상 확인** → 머지. 추가 — 빈 마진 `display:none` 으로 종이 시트 가운데 정렬. 라이브 — 기본=floating·편집→글자수 0→24자·본문 단락 보존·시트 정중앙·콘솔 0·classic=옛 3컬럼. 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2a-swap*`. 캡처 `docs/handoff/screenshots/floating-phase2a/`.
 - **Phase 2b 완료·머지 (2026-06-06, main `8bc9d4a`)** — floating 독에 "지표" 버튼 1개 + `fc-p-metrics` 패널 4 접이식 섹션(하니스·품질게이트·매체투사+commercial↔literary 슬라이더·온톨로지), floating-네이티브 `.fc-*`. 이미 계산된 `studioMetrics`(+`updateStoryModeAxis`) 주입(순수 표현). 라이브 — 실데이터(하니스 7/8·95/100·8스테이지, 품질 2/7) 렌더·360 모바일 독 6버튼·패널 뷰포트 내(가로스크롤 0)·콘솔 0. 회차/곡선 리치판은 별도(미정). 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-06-floating-editor-phase2b-metrics-dock*`. 캡처 `docs/handoff/screenshots/floating-phase2b/`.
 - **남은 단계 — 2c ✅ · 2d · 2f** — **2c 데이터(캐논/바이블) floating화 완료**(`FloatingDataWorkspace` 신설, 정제 보드 + 독, 브랜치 `feat/floating-phase2c-data`). 2e(옛 3컬럼 제거 + classic 제거)는 직전 완료. 잔여 — 2d 출간 floating화 · 2f topbar dead code 정리. (선택) 회차/곡선 리치판(ChapterStructureTree/TensionShareChart) 이식.
+
+## 병행 트랙 — 쇼케이스 30화: "철거 전야의 이름" (`in_progress` · 2026-06-11 착수, S1/5)
+
+사용자 결정 — "현대에 다시 쓰는 퇴마록 느낌의 30화 장편을 쇼케이스에" + 풀 라이브 루프. **M7 기술 게이트(30화 회귀)·공개 쇼케이스·페이스 체인 실전 운용을 한 작품으로 동시 달성**하는 트랙. 스펙 `docs/superpowers/specs/2026-06-11-showcase-30ch-occult-design.md`, 체크리스트 `docs/superpowers/plans/2026-06-11-showcase-30ch-occult-plan.md`, 로그 `docs/reviews/2026-06-11-showcase-30ch/production-log.md`.
+- **S1 (2026-06-11)** — 온보딩(LLM 인터뷰 8문항 전부 작품 맞춤·캐논 4건 정확 시드) + 1화 "철거 전야의 이름"(3,019자·약속 정확 이행) + 2화 "대림장 탈의실의 이름표"(앵커 캐논 계승·"회수 예정" 후크) 각 5인 검토+잠금. canonFacts 7. **★P14 신규 발견** — 전체 검토 더블 트리거 시 pending 영구 잔류 + 기존 런 응답 폐기(StoryXDesk:1013 isReviewing 가드 + useMarginReview seq 가드 합작). P1 빈응답 1/10. 백업 `backups/occult-ch2-locked.json`.
+- 다음 — S2 3화부터(진도 카드 확인 우선·본명 호출 주체 캐논 결판 후보). 데모 영상은 자막+BGM 풀 자동 생성으로 결정(별도 세션).
 
 ## 현재 활성 — M11 검토 기반 정비 (`in_progress`)
 
@@ -84,13 +90,28 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 순위 | 작업 | 성격 | 비고 |
 |---|---|---|---|
 | 1 | **M7 외부 실증 경량 검증** — ~~C 데모 키트 + A 로그 공개 패키지~~ **A·C 제작 완료(2026-06-11 4차)** → 잔여 = 사용자 액션(A 공개 채널·연락처 기입, C Loom 녹화, B 베타 3~5인 모집) | 1.0 critical path | A `docs/public/` · C `docs/handoff/2026-06-11-demo-video-kit.md`+캡처 8종 |
-| 2 | **M7 기술 게이트 — 30화 시리즈 회귀** | 1.0 게이트 | storyx CLI+fixture 기반 자동 회귀 러너 세션 후보 |
+| 2 | **M7 기술 게이트 — 30화 시리즈 회귀** → **쇼케이스 30화 실작품 완주로 착수**(2026-06-11 5차, S1 1·2화 완료) | 1.0 게이트 | 풀 라이브 루프, 병행 트랙 절 참조 |
 | 3 | **갈림길 LLM 정제** — fork 옵션/시드 작품 맞춤화 | 이야기 완성도 | pace-interview 패턴 그대로 재사용 |
 | 4 | **rank5 잔여 정리** — PublishingStudio 옛 JSX 제거(floating 전환 완료로 안전)·Status 죽은 코드 3개 처분·Tier3 훅 | 기술부채 | |
 | 5 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
 
-## 최근 검증 (2026-06-11 4차 · M7 경량 검증 A·C 제작 · main)
+## 최근 검증 (2026-06-11 5차 · 쇼케이스 30화 S1 · main)
+
+```
+코드 변경 0 (문서·라이브 제작만) — 직전 게이트 450 tests 녹색 유지
+온보딩 — freewrite 121자 → LLM 인터뷰 8문항(전부 작품 맞춤, 범용 0) → 1화 빌드 72초
+  확정 캐논 4건이 인터뷰 답 그대로 시드(검토 context 에서 확인) — 갭A 신작 재실증
+ch1 "철거 전야의 이름" — 3,019자·누수 0·audiencePromise 정확 이행(원혼이 본명 "강이현" 호명)
+  검토 수정3·결정1·관찰1(세계키퍼 빈응답=P1) · 3인 독립 수렴(호출 주체 모호) · 하니스 7/8·95
+ch2 "대림장 탈의실의 이름표" — 76초·2,321자·memoryAnchors 가 1화 캐논 3건 명시 참조
+  검토 수정4·결정1·차단0 (P1 0/5) · canonFacts 4→7 · 4인이 표면 약속 이행 방식 일관 추적
+★P14 — 전체 검토 더블 트리거 시 pending 영구 잔류·기존 런 응답 폐기 (재현·원인 코드 특정,
+  수정은 다음 세션 TDD 건) · 초기 런 5건 중 2건 와이어 미발화(재현 조건 미상, 리로드 후 5/5 정상)
+백업 backups/occult-ch2-locked.json · 캡처 showcase-30ch/ch1-margin-reviews.png · 콘솔 에러 0
+```
+
+## 직전 검증 (2026-06-11 4차 · M7 경량 검증 A·C 제작 · main)
 
 ```
 init.sh            → tsc 0 · vitest(450 tests) · build 전체 통과 (세션 시작 시 — 이번 세션 코드 변경 0, 문서·캡처만)
