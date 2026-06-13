@@ -377,6 +377,51 @@ export function defaultPlannedEpisodes(lengthClass: ContractLengthClass): number
   return CONTRACT_EPISODE_RANGES[lengthClass].default;
 }
 
+// 4줄 척추를 화수 핀 4개로 펼친다(A-3) — 25% 욕망 / 50% 전진 / 75% 시련 / 100% 변화.
+// 화수는 강증가하도록 보정하고 마지막 핀은 항상 plannedEpisodes.
+export function deriveBeatSheet(spine: StorySpine, plannedEpisodes: number): ContractBeat[] {
+  const planned = Math.max(1, Math.floor(plannedEpisodes));
+  const raw = [
+    { mission: spine.desire, ep: Math.max(1, Math.round(planned * 0.25)) },
+    { mission: spine.advance, ep: Math.round(planned * 0.5) },
+    { mission: spine.obstacle, ep: Math.round(planned * 0.75) },
+    { mission: spine.resolution, ep: planned }
+  ];
+  // 강증가 보정 — 짧은 화수에서 반올림이 겹치면 직전+1 로 밀고, 상한은 planned.
+  let previous = 0;
+  return raw.map((entry, index) => {
+    const isLast = index === raw.length - 1;
+    const episode = isLast ? planned : Math.min(planned, Math.max(entry.ep, previous + 1));
+    previous = episode;
+    return { episode, mission: entry.mission };
+  });
+}
+
+// 온보딩 입력으로 작품 헌장을 조립한다(A-3). 비트는 척추에서 펼치고, 4줄이 모두 채워졌을 때만 잠근다.
+export function buildStoryContractFromOnboarding(input: {
+  lengthClass: ContractLengthClass;
+  plannedEpisodes?: number;
+  endingStatement: string;
+  protagonistCost: string;
+  finalImage?: string;
+  spine: StorySpine;
+}): StoryContract {
+  const plannedEpisodes = input.plannedEpisodes ?? defaultPlannedEpisodes(input.lengthClass);
+  const spineComplete = [input.spine.desire, input.spine.advance, input.spine.obstacle, input.spine.resolution]
+    .every((line) => line.trim().length > 0);
+  return {
+    lengthClass: input.lengthClass,
+    plannedEpisodes,
+    spine: input.spine,
+    endingStatement: input.endingStatement,
+    ...(input.finalImage ? { finalImage: input.finalImage } : {}),
+    protagonistCost: input.protagonistCost,
+    beatSheet: deriveBeatSheet(input.spine, plannedEpisodes),
+    spineLocked: spineComplete,
+    amendments: []
+  };
+}
+
 // 헌장 무결성 검사 — 문제 목록을 반환한다(빈 배열 = 유효). 온보딩·게이트가 잠금 전에 호출한다.
 export function validateContract(contract: StoryContract): string[] {
   const problems: string[] = [];

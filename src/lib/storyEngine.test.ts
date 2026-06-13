@@ -5,12 +5,14 @@ import {
   buildContinuityContractFromProject,
   buildFallbackDraft,
   buildProjectContextDigest,
+  buildStoryContractFromOnboarding,
   buildStoryEditorWorkspace,
   chapterFromDraftPayload,
   commitChapter,
   createEmptyProject,
   createSeedProject,
   defaultPlannedEpisodes,
+  deriveBeatSheet,
   deriveOnboardingSeed,
   validateContract,
   getCanonReviewCategoryLabel,
@@ -1070,5 +1072,70 @@ describe('buildProjectContextDigest — 작품 헌장 절 (Phase A-4)', () => {
   it('헌장이 없으면 헌장 절을 넣지 않는다(하위호환)', () => {
     const project = createEmptyProject({ title: '계약 없음' });
     expect(buildProjectContextDigest(project)).not.toContain('작품 헌장');
+  });
+});
+
+// 온보딩 헌장 빌더 — Phase A-3. 4줄 척추 → 화수 핀 비트, 온보딩 입력 → StoryContract.
+describe('buildStoryContractFromOnboarding / deriveBeatSheet (Phase A-3)', () => {
+  const spine = {
+    desire: '잃어버린 이름을 되찾고 싶다',
+    advance: '단서를 따라 대림장으로 들어간다',
+    obstacle: '이름을 부르는 자가 누구인지 알 수 없다',
+    resolution: '이름을 받아들이고 돌아선다'
+  };
+
+  it('deriveBeatSheet — 4줄을 25/50/75/100% 화수에 1:1 정렬한다', () => {
+    const beats = deriveBeatSheet(spine, 30);
+    expect(beats).toHaveLength(4);
+    expect(beats.map((b) => b.episode)).toEqual([8, 15, 23, 30]);
+    expect(beats[0].mission).toBe(spine.desire);
+    expect(beats[1].mission).toBe(spine.advance);
+    expect(beats[2].mission).toBe(spine.obstacle);
+    expect(beats[3].mission).toBe(spine.resolution);
+  });
+
+  it('deriveBeatSheet — 단편(짧은 화수)에서도 화수가 강증가하고 마지막 핀이 plannedEpisodes', () => {
+    const beats = deriveBeatSheet(spine, 4);
+    expect(beats.map((b) => b.episode)).toEqual([1, 2, 3, 4]);
+    const six = deriveBeatSheet(spine, 6).map((b) => b.episode);
+    expect(six[six.length - 1]).toBe(6);
+    // 강증가 보장
+    for (let i = 1; i < six.length; i += 1) {
+      expect(six[i]).toBeGreaterThan(six[i - 1]);
+    }
+  });
+
+  it('buildStoryContractFromOnboarding — 입력으로 유효한 헌장을 만들고 비트를 척추에서 펼친다', () => {
+    const contract = buildStoryContractFromOnboarding({
+      lengthClass: 'long',
+      plannedEpisodes: 30,
+      endingStatement: '주인공이 이름을 받아들인다.',
+      protagonistCost: '평범한 일상',
+      spine
+    });
+    expect(contract.lengthClass).toBe('long');
+    expect(contract.plannedEpisodes).toBe(30);
+    expect(contract.beatSheet.map((b) => b.episode)).toEqual([8, 15, 23, 30]);
+    expect(contract.spineLocked).toBe(true);
+    expect(contract.amendments).toEqual([]);
+    // 만든 헌장은 검증을 통과한다
+    expect(validateContract(contract)).toEqual([]);
+  });
+
+  it('buildStoryContractFromOnboarding — plannedEpisodes 누락 시 등급 기본값(장편 30·단편 6)', () => {
+    const long = buildStoryContractFromOnboarding({ lengthClass: 'long', endingStatement: '끝', protagonistCost: '대가', spine });
+    expect(long.plannedEpisodes).toBe(30);
+    const short = buildStoryContractFromOnboarding({ lengthClass: 'short', endingStatement: '끝', protagonistCost: '대가', spine });
+    expect(short.plannedEpisodes).toBe(6);
+  });
+
+  it('buildStoryContractFromOnboarding — 척추 4줄 중 하나라도 비면 spineLocked=false (잠금 불가)', () => {
+    const contract = buildStoryContractFromOnboarding({
+      lengthClass: 'long',
+      endingStatement: '끝',
+      protagonistCost: '대가',
+      spine: { ...spine, obstacle: '' }
+    });
+    expect(contract.spineLocked).toBe(false);
   });
 });
