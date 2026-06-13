@@ -1042,7 +1042,8 @@ export function StoryXDesk({
               target: currentReviewText,
               medium: blueprint.medium,
               context,
-              payoffStatus: computePayoffLedger(project.chapters)
+              payoffStatus: computePayoffLedger(project.chapters),
+              contractStatus: buildContractStatus(project) ?? undefined
             });
 
             if (res.ok && res.report) {
@@ -1148,7 +1149,8 @@ export function StoryXDesk({
         target,
         medium: blueprint.medium,
         context,
-        payoffStatus: computePayoffLedger(project.chapters)
+        payoffStatus: computePayoffLedger(project.chapters),
+        contractStatus: buildContractStatus(project) ?? undefined
       });
 
       if (res.ok && res.report) {
@@ -1919,7 +1921,8 @@ export function StoryXDesk({
           target: reviewTarget,
           medium: blueprint.medium,
           context,
-          payoffStatus: computePayoffLedger(project.chapters)
+          payoffStatus: computePayoffLedger(project.chapters),
+          contractStatus: buildContractStatus(project) ?? undefined
         });
 
         if (res.ok && res.report) {

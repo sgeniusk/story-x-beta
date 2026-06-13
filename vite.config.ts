@@ -170,7 +170,10 @@ export default defineConfig({
       '--medium',
       String(input.medium ?? 'novel'),
       '--context',
-      String(input.context ?? '')
+      String(input.context ?? ''),
+      ...(input.contractStatus != null
+        ? ['--contract-status', JSON.stringify(input.contractStatus)]
+        : [])
     ]),
     storyxBridge('/api/review-data', (input) => [
       'tools/storyx.mjs',

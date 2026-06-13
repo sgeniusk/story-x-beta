@@ -183,7 +183,21 @@ if (command === 'review-agent') {
   const medium = readFlag(args, '--medium', 'novel');
   const context = readFlag(args, '--context', '');
   const persona = loadAgentPersona(agentId);
-  const prompt = buildAgentReviewPrompt({ agentId, persona, target, medium, context });
+  // 작품 헌장 예산 — 있으면 길 잃음 점검·예산 초과 block 을 검토 프롬프트에 주입(A-5). 오형식은 무시.
+  const contractStatusRaw = readFlag(args, '--contract-status', '');
+  let contractStatus;
+  try {
+    const parsed = contractStatusRaw ? JSON.parse(contractStatusRaw) : null;
+    if (parsed && typeof parsed.remaining === 'number') {
+      contractStatus = {
+        remaining: parsed.remaining,
+        unpaidCount: typeof parsed.unpaidCount === 'number' ? parsed.unpaidCount : 0,
+        overBudget: Boolean(parsed.overBudget),
+        finalStretch: Boolean(parsed.finalStretch)
+      };
+    }
+  } catch { /* 오형식 플래그는 무시 */ }
+  const prompt = buildAgentReviewPrompt({ agentId, persona, target, medium, context, contractStatus });
 
   if (provider === 'mock') {
     printJson({
