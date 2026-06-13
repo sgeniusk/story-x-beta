@@ -3,12 +3,18 @@
 > Last Updated: 2026-06-12 · Branch: `main` (**품질·비용 로드맵 수립 — 작품 헌장 spec + Phase D~F, 코드 변경 0**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`planned` · 2026-06-12 수립)
+## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, 브랜치 `feat/phase-d-determinism`)
 
 30화 A/B(76.5 vs 91.8) + **사용자 실독 판정**(제목 반복·정체된 중후반·온건한 문체·의외성 부재·토큰 비용)으로 수립. 정본 — 로드맵 `docs/superpowers/plans/2026-06-12-quality-cost-roadmap.md` · 헌장 spec `docs/superpowers/specs/2026-06-12-story-contract-design.md`.
-- **사용자 결정 (2026-06-12)** — ① 분량 2등급: 단편 4~8화 · 장편 24~36화 시즌제, **중편 없음** ② 결말까지 구상된 상태에서 시작(결말 역산) ③ 별도 전개 에이전트 대신 **CLAUDE.md 식 공유 기준(작품 헌장)을 전 에이전트에 주입** ④ Story X 가 의외의 전개를 제안하는 동료로.
-- **순서** — Phase D(폴백 번호 버그·StoryScore v0.2·dev 서버 사망 조사) → A(헌장: 데이터모델→온보딩 결말 인터뷰→프롬프트 주입→화수 예산 게이트→R1~R3 기억 반영) → B(긴장 감수자+날것 규칙+제목·후크 다양성)·C(트위스트 제안 채널) → E(토큰 계측·검토 티어링) → F(같은 모델 재실험 — **10화 중간 게이트 후 30화 결정**).
-- 시즌 아크 플래너·R2 아크 다이제스트는 헌장 spec 에 흡수됨(별도 트랙 아님).
+- **사용자 결정 (2026-06-12)** — ① 분량 2등급: 단편 4~8화 · 장편 24~36화 시즌제, **중편 없음** ② 결말까지 구상된 상태에서 시작(결말 역산) ③ 별도 전개 에이전트 대신 **CLAUDE.md 식 공유 기준(작품 헌장)을 전 에이전트에 주입** ④ Story X 가 의외의 전개를 제안하는 동료로. 추가 — 단계적 집필 + 4줄 척추(《4줄이면 된다》).
+- **순서** — Phase D → A(헌장) → B·C → E → F(같은 모델 재실험, **10화 중간 게이트 후 30화 결정**). 시즌 아크 플래너·R2 아크 다이제스트는 헌장 spec 에 흡수.
+- **이번 세션 진행 (코딩, TDD·전부 녹색)** — 브랜치 `feat/phase-d-determinism` 5커밋.
+  - **Phase D-1** 폴백 episode 번호 드리프트 수정 — `nextEpisodeNumber`(chapters 마지막+1)로 도출, 폐기된 폴백 번호 회복(쇼케이스 16→19 결번 류 면역). (`cf8f1de`)
+  - **Phase D-2** StoryScore v0.2 — 2글자 이름 위양성 가드·제목 반복 신호(어간 공유, U1)·후크 확장(느낌표·반전어). 스킬 루브릭에 온건함(U3)·제목 반복(U1) 감점. V0_1→V0_2. (`b7f59f2`)
+  - **Phase A-1** 작품 헌장 데이터 모델 — `StoryContract`·`StorySpine`(4줄)·`validateContract`(4/8/24/36 경계·결말·비트)·`defaultPlannedEpisodes`(6/30)·createEmptyProject 시드. 전 필드 optional(하위호환). (`a15728b`)
+  - **Phase A-5 코어** `buildContractStatus` — 위치·잔여·`overBudget`(미회수>잔여)·`finalStretch`(잔여≤25%) 결정론. chapters 기준 도출(드리프트 면역). U2 직격. (`e92c13d`)
+- **다음 1순위 — A-4 프롬프트 주입** — buildProjectContextDigest 에 헌장 절(질문+4줄+위치+예산) + buildDraftPrompt 발급 금지 규칙 + 쇼러너 "길 잃음 점검"·없는 결말 block + storyx.mjs 미러 동기화. 생성 품질을 실제로 바꾸는 지점 — **프롬프트 문구는 사용자 리뷰 권장.** 이후 A-5 배선·A-2 단계 게이트(UI)·A-3 온보딩.
+- **Phase D-3(dev 서버 사망 조사)는 Phase E-1 계측으로 이관** — 재현 없이 추정 금지.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
 
@@ -117,7 +123,19 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
 
-## 최근 검증 (2026-06-11 6차 · Codex 검증 데스크 합류 · main)
+## 최근 검증 (2026-06-12 · 품질·비용 로드맵 Phase D+A 착수 · 브랜치 feat/phase-d-determinism)
+
+```
+init.sh            → tsc 0 · vitest 전체 녹색(테스트 18건 추가: 회귀1·StoryScore6·헌장6·예산5) · build 통과
+                     (변경 전 1회 465 녹색 · 각 커밋 후 재실행)
+Phase D-1 (cf8f1de) — nextEpisodeNumber(chapters 마지막+1). 드리프트 재현 테스트 RED(19)→GREEN(17)
+Phase D-2 (b7f59f2) — StoryScore v0.2: 이름 가드(length<3)·analyzeTitles 반복률·후크 느낌표/반전어
+Phase A-1 (a15728b) — StoryContract/StorySpine·validateContract 경계(short 4~8·long 24~36)·결말·비트
+Phase A-5코어(e92c13d) — buildContractStatus: 17/30→remaining13 · 28/30 unpaid3→overBudget · 23/30→finalStretch
+코드 변경 없음(문서/스킬만): roadmap·헌장 spec·story-score SKILL(V0_2 루브릭)
+```
+
+## 직전 검증 (2026-06-11 6차 · Codex 검증 데스크 합류 · main)
 
 ```
 init.sh            → tsc 0 · vitest 전체 녹색(테스트 3건 추가) · build 통과 (수정 전·후 각 1회)

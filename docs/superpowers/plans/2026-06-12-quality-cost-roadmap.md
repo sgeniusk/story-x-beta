@@ -26,19 +26,20 @@
 
 ## Phase D — 결정론 소건 (착수 1순위 · 반나절 · TDD)
 
-- [ ] **폴백 episode 번호 소모 버그** — 폴백 폐기 후에도 `currentEpisode` 가 증가해 표기 드리프트(쇼케이스 17·18 결번, 연속성 -1·형식 -1.3 직접 원인). 앵커 — `buildFallbackDraft`(storyEngine.ts:450)·`buildCliDraftFallback`(storyx.mjs:1173)·`commitChapter`(storyEngine.ts:1607). 폐기 경로에서 번호 미소모를 보장(승인 전 commit 금지 또는 롤백). 실험군 백업의 19~32 표기는 사고 증거라 보존(손대지 말 것 — 7차 핸드오프).
-- [ ] **StoryScore v0.2** — 2글자 이름 변형 위양성 가드(통제군 16건 전부 위양성) + U1 제목 반복 신호(말미 패턴 n-gram) + 후크 신호 사전 확장. `tools/storyscore.mjs` + `story-score` 스킬 루브릭에 "온건함/반복" 심사 항목 추가.
-- [ ] **dev 서버 사망 원인 조사** — 30화 제작 중 3회 사망, 검토 동시 spawn 부하 가설. Phase E 계측과 연결.
+- [x] **폴백 episode 번호 소모 버그** — `nextEpisodeNumber(project)`(chapters 마지막+1)로 도출해 폐기된 폴백 번호가 회복되게 수정. produceNextChapter·chapterFromDraftPayload 양 경로 적용. (`cf8f1de`, 회귀 테스트 1건)
+- [x] **StoryScore v0.2** — 2글자 이름 변형 위양성 가드(length<3 skip) + analyzeTitles 제목 반복 신호(어간 공유) + 후크 신호 확장(느낌표·반전어). 스킬 루브릭에 온건함(U3)·제목 반복(U1) 감점 추가. V0_1→V0_2. (`b7f59f2`, 6건)
+- [ ] **dev 서버 사망 원인 조사** — 30화 제작 중 3회 사망, 검토 동시 spawn 부하 가설. **Phase E-1 계측으로 이관**(재현 없이 추정 금지).
 
 ## Phase A — 작품 헌장 (핵심 · spec 완료)
 
 spec — `docs/superpowers/specs/2026-06-12-story-contract-design.md`.
 
-- [ ] A-1 데이터 모델 — `StoryContract`·`StorySpine`(4줄 척추) 타입·`createEmptyProject` 시드·validateContract (storyEngine.ts)
-- [ ] A-2 단계적 집필 게이트 — Stage 1 척추 잠금(`spineLocked`) 전 장편·학술 produceEpisode 차단 + 편집모드 탭 비활성. 단편은 2줄 경량 잠금
+- [x] A-1 데이터 모델 — `StoryContract`·`StorySpine`(4줄 척추) 타입·`createEmptyProject` 시드·`validateContract`·`defaultPlannedEpisodes` (storyEngine.ts). (`a15728b`, 6건)
+- [x] A-5(코어) 화수 예산 결정론 — `buildContractStatus`(episodeBriefing.ts): 위치·잔여·`overBudget`·`finalStretch`. chapters 기준 도출(드리프트 면역). (`e92c13d`, 5건)
+- [ ] A-4 프롬프트 주입 — digest 헌장 절(질문+4줄+위치+예산) + draft/review/pace 빌더(+쇼러너 "길 잃음 점검"·없는 결말 block) + storyx.mjs 미러 동기화 테스트. **← 다음 1순위(생성 품질 직격, 프롬프트 문구는 사용자 리뷰 권장)**
+- [ ] A-5(배선) 예산 게이트 — buildContractStatus.overBudget→buildDraftPrompt 발급 금지 규칙·finalStretch 종반 금지·쇼러너 검토 주입·UI 헌장 카드
+- [ ] A-2 단계적 집필 게이트 — Stage 1 척추 잠금(`spineLocked`) 전 장편·학술 produceEpisode 차단 + 편집모드 탭 비활성. 단편은 2줄 경량 잠금 (UI 작업 큼)
 - [ ] A-3 온보딩 — 분량 등급 선택 + 결말 인터뷰 2문항(욕망 해소형) + 4줄 척추 제안·승인(Stage 1) + 비트 펼침(Stage 2) — pace-interview 패턴 재사용
-- [ ] A-4 프롬프트 주입 — digest 헌장 절(질문+4줄+위치) + draft/review/pace 빌더(+쇼러너 "길 잃음 점검"·없는 결말 block) + storyx.mjs 미러 동기화 테스트
-- [ ] A-5 화수 예산 게이트 — `buildContractStatus`(episodeBriefing.ts)·overBudget 발급 금지 규칙·종반(잔여 25%) 신규 발급 금지·UI 헌장/단계 카드
 - [ ] A-6 R1~R3 기억 반영 — 아크 다이제스트(R2, 비트 구간 단위)·관련 캐논 top-K(R1)·중요도 가중 절단(R3) — 같은 digest 빌더 묶음
 - [ ] A-라이브 — 새 장편 온보딩→Stage 1 잠금 전 편집 차단 확인→4줄 승인→위치 주입 확인→종반 백업 주입으로 발급 차단 동작 확인
 

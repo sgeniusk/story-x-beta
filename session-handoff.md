@@ -4,7 +4,28 @@
 
 ---
 
-## 2026-06-12 — 품질·비용 로드맵 수립 + 작품 헌장 spec (main, 코드 변경 0)
+## 2026-06-12 (2차) — Phase D + 헌장 코어 착수 (브랜치 `feat/phase-d-determinism`, TDD 5커밋)
+
+> "이대로 코딩 진행해" 이행. 로드맵 순서대로 Phase D(결정론 소건) → Phase A 코어(데이터모델·예산)까지 TDD 로 구현. 전부 녹색. **main 미머지 — 브랜치에 있음.**
+
+### 한 것 (브랜치 `feat/phase-d-determinism`)
+- **D-1 폴백 번호 드리프트** (`cf8f1de`) — `nextEpisodeNumber(project)`=chapters 마지막+1 로 도출. 폐기된 폴백 회차가 카운터만 올리고 사라져 번호가 결번되던 사고(쇼케이스 16→19)를 chapters 진실원천으로 치유. produceNextChapter·chapterFromDraftPayload 적용.
+- **D-2 StoryScore v0.2** (`b7f59f2`) — 변형 의심 최소 길이 3(통제군 16건 위양성 차단)·analyzeTitles 어간 공유 제목 반복률(U1)·후크 신호 느낌표/반전어. 스킬 루브릭에 온건함(U3)·제목 반복(U1) 감점. V0_1→V0_2.
+- **A-1 헌장 데이터 모델** (`a15728b`) — `StoryContract`(plannedEpisodes·spine·endingStatement·protagonistCost·beatSheet·spineLocked·amendments)·`StorySpine`(4줄)·`validateContract`(4/8/24/36·결말·비트)·`defaultPlannedEpisodes`(6/30)·createEmptyProject 시드. 전 필드 optional.
+- **A-5 코어 예산** (`e92c13d`) — `buildContractStatus(project)`: position(chapters 마지막)·remaining·`overBudget`(미회수>잔여)·`finalStretch`(잔여≤25%). U2 직격의 결정론 심장.
+
+### 손대지 말 것
+- 헌장 필드는 전부 optional — 구버전 저장본·기존 30화 백업과 하위호환. 필수화하지 말 것.
+- `nextEpisodeNumber`·`buildContractStatus` 의 "chapters 기준 도출" 원칙 — currentEpisode 카운터로 되돌리면 드리프트 버그가 재발한다.
+- finalStretch 임계는 raw 25%(planned×0.25, ceil 아님) — 22/30=잔여8 은 종반 아님, 23/30=잔여7 은 종반.
+
+### 다음 세션이 해야 할 한 가지
+- **A-4 프롬프트 주입** — `buildProjectContextDigest`(storyEngine.ts:1310 부근)에 헌장 절(질문=deepQuestion+4줄 spine+위치 N/M+예산 상태) 추가 → `buildDraftPrompt`(promptBuilders.ts:195)에 overBudget/finalStretch 발급 금지 규칙 → 쇼러너 검토에 "길 잃음 점검"·없는 결말 block → `storyx.mjs` 미러 + 동기화 테스트. **생성 품질을 실제로 바꾸는 지점이라 프롬프트 문구는 사용자에게 보여주고 진행 권장.** 그 뒤 A-5 배선(게이트 실효)→A-2 단계 게이트(UI)→A-3 온보딩.
+- 브랜치 머지 시점 — A 코어가 라이브 배선(A-4/A-5)까지 닿아 동작 확인 후가 적절. 지금은 순수 로직이라 main 영향 0이지만 미배선.
+
+---
+
+## 2026-06-12 (1차) — 품질·비용 로드맵 수립 + 작품 헌장 spec (main, 코드 변경 0)
 
 > 사용자 실독 판정 인테이크 + 7차 핸드오프의 "착수 순서 결정" 이행. 문서만 작성한 계획 세션 — 코드·테스트 변경 0.
 
