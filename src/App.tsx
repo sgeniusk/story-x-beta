@@ -53,6 +53,7 @@ import {
   buildFallbackDraft,
   buildStoryContractFromOnboarding,
   defaultPlannedEpisodes,
+  deriveBeatSheet,
   deriveOnboardingSeed,
   type ContractLengthClass,
   type DraftChapterPayload,
@@ -1435,6 +1436,23 @@ function StoryXHome({
                     onChange={(event) => setContractSpine((s) => ({ ...s, resolution: event.target.value }))} />
                 </label>
               </fieldset>
+
+              {/* A-3c — 잠근 4줄이 전체 화수의 어디에 박히는지 미리 보여준다(읽기 전용, 화수는 25/50/75/100% 자동 배분). */}
+              {contractLengthClass === 'long' && spineComplete && (
+                <div className="hx-charter-beats">
+                  <p className="hx-charter-help">
+                    이 4줄은 전체 {contractPlannedEpisodes}화에 이렇게 박힙니다 — 욕망·전진·시련·변화가 회차의 기둥이 됩니다.
+                  </p>
+                  <ol className="hx-beat-pins">
+                    {deriveBeatSheet(contractSpine, contractPlannedEpisodes).map((beat, index) => (
+                      <li key={index} className="hx-beat-pin">
+                        <span className="hx-beat-ep">{beat.episode}화</span>
+                        <span className="hx-beat-mission">{beat.mission}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
 
               <div className="hx-aside-actions">
                 <button type="button" className="hx-btn-ghost" onClick={() => setHomeFlowStep('intake')}>

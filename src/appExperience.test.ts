@@ -77,6 +77,13 @@ describe('Story X page experience', () => {
     expect(app).toContain('쇼러너에게 4줄 제안받기');
   });
 
+  it('A-3c — charter 에서 장편 4줄이 비트 화수 핀 미리보기로 펼쳐진다', () => {
+    // 잠근 4줄이 전체 화수의 어디에 박히는지(deriveBeatSheet) charter 에서 미리 보여준다.
+    expect(app).toContain('deriveBeatSheet');
+    expect(app).toContain('hx-charter-beats');
+    expect(app).toContain('화에 이렇게 박힙니다');
+  });
+
   it('overrides --nx-ink-deep inside the .home-page dark scope so card titles stay readable', () => {
     // 회귀 방지 — .home-page 다크 블록이 --nx-ink-deep 를 오버라이드하지 않으면
     // 매체/포맷 카드 제목(strong, color: var(--nx-ink-deep))이 다크 배경(#08090a)에 묻힌다.

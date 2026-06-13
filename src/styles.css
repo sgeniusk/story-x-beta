@@ -9383,6 +9383,49 @@ body {
   color: var(--nx-ink-dim, var(--nx-ink-soft));
   font-size: 0.76rem;
 }
+/* A-3b 쇼러너 4줄 제안 버튼·안내 */
+.home-page .hx-spine-suggest {
+  margin-top: 12px;
+  width: 100%;
+  justify-content: center;
+}
+.home-page .hx-spine-note {
+  color: var(--nx-primary, var(--nx-ink-soft));
+}
+/* A-3c 비트 화수 핀 미리보기 */
+.home-page .hx-charter-beats {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px dashed var(--nx-hairline-strong);
+  border-radius: var(--nx-r-md, 12px);
+  background: var(--nx-surface, rgba(255, 255, 255, 0.02));
+}
+.home-page .hx-beat-pins {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.home-page .hx-beat-pin {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+.home-page .hx-beat-ep {
+  flex: 0 0 auto;
+  min-width: 3.2em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--nx-primary, var(--nx-ink));
+}
+.home-page .hx-beat-mission {
+  flex: 1;
+  color: var(--nx-ink-soft, var(--nx-ink));
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
 .home-page .hx-charter-length {
   display: flex;
   gap: 8px;
