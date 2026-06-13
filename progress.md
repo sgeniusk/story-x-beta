@@ -3,12 +3,12 @@
 > Last Updated: 2026-06-12 · Branch: `main` (**품질·비용 로드맵 수립 — 작품 헌장 spec + Phase D~F, 코드 변경 0**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, 브랜치 `feat/phase-d-determinism`)
+## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
 
 30화 A/B(76.5 vs 91.8) + **사용자 실독 판정**(제목 반복·정체된 중후반·온건한 문체·의외성 부재·토큰 비용)으로 수립. 정본 — 로드맵 `docs/superpowers/plans/2026-06-12-quality-cost-roadmap.md` · 헌장 spec `docs/superpowers/specs/2026-06-12-story-contract-design.md`.
 - **사용자 결정 (2026-06-12)** — ① 분량 2등급: 단편 4~8화 · 장편 24~36화 시즌제, **중편 없음** ② 결말까지 구상된 상태에서 시작(결말 역산) ③ 별도 전개 에이전트 대신 **CLAUDE.md 식 공유 기준(작품 헌장)을 전 에이전트에 주입** ④ Story X 가 의외의 전개를 제안하는 동료로. 추가 — 단계적 집필 + 4줄 척추(《4줄이면 된다》).
 - **순서** — Phase D → A(헌장) → B·C → E → F(같은 모델 재실험, **10화 중간 게이트 후 30화 결정**). 시즌 아크 플래너·R2 아크 다이제스트는 헌장 spec 에 흡수.
-- **이번 세션 진행 (코딩, TDD·전부 녹색)** — 브랜치 `feat/phase-d-determinism` 5커밋.
+- **이번 세션 진행 (코딩, TDD·전부 녹색, main ff-merge 완료)** — 5커밋.
   - **Phase D-1** 폴백 episode 번호 드리프트 수정 — `nextEpisodeNumber`(chapters 마지막+1)로 도출, 폐기된 폴백 번호 회복(쇼케이스 16→19 결번 류 면역). (`cf8f1de`)
   - **Phase D-2** StoryScore v0.2 — 2글자 이름 위양성 가드·제목 반복 신호(어간 공유, U1)·후크 확장(느낌표·반전어). 스킬 루브릭에 온건함(U3)·제목 반복(U1) 감점. V0_1→V0_2. (`b7f59f2`)
   - **Phase A-1** 작품 헌장 데이터 모델 — `StoryContract`·`StorySpine`(4줄)·`validateContract`(4/8/24/36 경계·결말·비트)·`defaultPlannedEpisodes`(6/30)·createEmptyProject 시드. 전 필드 optional(하위호환). (`a15728b`)
