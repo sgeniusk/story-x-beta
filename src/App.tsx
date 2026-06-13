@@ -27,6 +27,7 @@ import {
   type ProjectIntakeQuestion
 } from './lib/projectIntake';
 import { requestLlmInterview } from './lib/interviewClient';
+import { requestSpineSuggestion } from './lib/spineSuggestClient';
 import { AiStatusBadge } from './components/AiStatusBadge';
 import { PublishScreen } from './components/PublishScreen';
 import { buildAcademicPublishSummary } from './lib/academicPublish';
@@ -707,6 +708,9 @@ function StoryXHome({
   const [contractEnding, setContractEnding] = useState('');
   const [contractCost, setContractCost] = useState('');
   const [contractSpine, setContractSpine] = useState<StorySpine>({ desire: '', advance: '', obstacle: '', resolution: '' });
+  // A-3b — 쇼러너 4줄 제안 상태
+  const [isSpineSuggesting, setIsSpineSuggesting] = useState(false);
+  const [spineSuggestNote, setSpineSuggestNote] = useState<string | null>(null);
   // 분량 등급을 바꾸면 화수 기본값을 등급 대표값으로 맞춘다(작가가 다시 조정 가능).
   function pickLengthClass(next: ContractLengthClass) {
     setContractLengthClass(next);
@@ -767,15 +771,9 @@ function StoryXHome({
       setIsInterviewLoading(false);
     }
   }
-  // 인터뷰 답변까지 모아 첫 초안(연재형=회차, 단독 완결형=원고)을 만들고, 끝나면 에디터로 넘긴다
-  async function goToBuilding() {
-    if (isBuilding) {
-      return;
-    }
-    setHomeFlowStep('building');
-    setIsBuilding(true);
-
-    const answerLines = effectiveIntakeQuestions
+  // 인터뷰 답을 freewrite 보강용 줄 목록으로 모은다(goToBuilding·suggestSpine 공용).
+  function collectAnswerLines(): string[] {
+    return effectiveIntakeQuestions
       .map((question) => {
         const selected = intakeAnswers[question.id];
         if (!selected) {
@@ -789,6 +787,57 @@ function StoryXHome({
         return option ? `- ${question.question} → ${option.label}` : null;
       })
       .filter((line): line is string => Boolean(line));
+  }
+
+  // A-3b — 쇼러너에게 4줄 척추를 제안받아 빈 칸만 채운다(작가가 이미 쓴 줄은 보존).
+  async function suggestSpine() {
+    if (isSpineSuggesting) {
+      return;
+    }
+    setIsSpineSuggesting(true);
+    setSpineSuggestNote(null);
+    try {
+      const answerLines = collectAnswerLines();
+      const enriched = [
+        freewriteText.trim(),
+        answerLines.length > 0 ? `[작가 인터뷰 답변]\n${answerLines.join('\n')}` : '',
+        interviewNote.trim() ? `[추가 메모]\n${interviewNote.trim()}` : ''
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+      const result = await requestSpineSuggestion({
+        medium: blueprint.medium,
+        format: blueprint.format,
+        freewrite: enriched,
+        endingStatement: contractEnding.trim(),
+        protagonistCost: contractCost.trim()
+      });
+      if (result.ok && result.spine) {
+        const suggested = result.spine;
+        setContractSpine((current) => ({
+          desire: current.desire.trim() || suggested.desire,
+          advance: current.advance.trim() || suggested.advance,
+          obstacle: current.obstacle.trim() || suggested.obstacle,
+          resolution: current.resolution.trim() || suggested.resolution
+        }));
+        setSpineSuggestNote('쇼러너가 4줄을 제안했습니다. 빈 칸만 채웠으니 마음껏 다듬어 주세요.');
+      } else {
+        setSpineSuggestNote(`제안을 가져오지 못했습니다 (${result.reason ?? '알 수 없는 사유'}). 직접 입력하거나 다시 시도해 주세요.`);
+      }
+    } finally {
+      setIsSpineSuggesting(false);
+    }
+  }
+
+  // 인터뷰 답변까지 모아 첫 초안(연재형=회차, 단독 완결형=원고)을 만들고, 끝나면 에디터로 넘긴다
+  async function goToBuilding() {
+    if (isBuilding) {
+      return;
+    }
+    setHomeFlowStep('building');
+    setIsBuilding(true);
+
+    const answerLines = collectAnswerLines();
 
     const enrichedFreewrite = [
       freewriteText.trim(),
@@ -1356,6 +1405,15 @@ function StoryXHome({
                 <p className="hx-charter-help">
                   외부 사건이 아니라 주인공이 욕망하고·전진하고·시련을 겪고·변하는 흐름입니다. 길을 잃으면 이 4줄로 돌아옵니다.
                 </p>
+                <button
+                  type="button"
+                  className="hx-btn-ghost hx-spine-suggest"
+                  onClick={suggestSpine}
+                  disabled={isSpineSuggesting || !freewriteText.trim()}
+                >
+                  {isSpineSuggesting ? '쇼러너가 4줄을 짜는 중…' : '✨ 쇼러너에게 4줄 제안받기'}
+                </button>
+                {spineSuggestNote && <p className="hx-charter-help hx-spine-note">{spineSuggestNote}</p>}
                 <label className="hx-charter-label">
                   1 · 욕망 — 결정적 상태 때문에 불가능에 가까운 무엇을 품는가
                   <textarea className="hx-other-input" rows={2} value={contractSpine.desire}

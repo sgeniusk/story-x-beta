@@ -28,6 +28,15 @@ export interface PaceInterviewPromptInput {
   context: string;
 }
 
+/** 4줄 척추 제안 입력 — Phase A-3b. charter 단계에 있는 자유 서술·결말·대가를 받는다. */
+export interface SpineSuggestionPromptInput {
+  medium: string;
+  format: CreativeFormat;
+  freewrite: string;
+  endingStatement?: string;
+  protagonistCost?: string;
+}
+
 /** 작품 헌장 화수 예산 상태 — episodeBriefing.buildContractStatus 산출과 1:1(순환 의존 회피 위해 형태만 복제). */
 export interface ContractStatusInput {
   remaining: number;
@@ -541,6 +550,43 @@ export function buildPaceInterviewPrompt(input: PaceInterviewPromptInput): strin
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',
     '  "questions": [{ "question": "작품 구체 약속·위험 이름이 박힌 질문", "options": [{ "label": "선택지", "intentSeed": "이번 화 생성 한 줄 지시" }] }]',
+    '}'
+  ].join('\n');
+}
+
+// 쇼러너 4줄 척추 제안 프롬프트 — Phase A-3b. charter 단계의 자유 서술·결말을 읽고 4줄을 제안한다.
+// storyx.mjs 의 buildSpineSuggestionPrompt 와 핵심 지시문 byte-identical 유지 — 변경 시 두 곳 동시 수정.
+export function buildSpineSuggestionPrompt(input: SpineSuggestionPromptInput): string {
+  const { medium, format, freewrite, endingStatement, protagonistCost } = input;
+  return [
+    'Story X 쇼러너 4줄 척추 제안 요청.',
+    `매체: ${medium} / 포맷: ${format}`,
+    '',
+    '## 작가의 자유 서술과 인터뷰 답',
+    freewrite || '(자유 서술 없음)',
+    '',
+    '## 확정된 결말 (있으면 4번 줄과 정렬)',
+    endingStatement?.trim() || '(아직 미정)',
+    '## 주인공이 잃는 것',
+    protagonistCost?.trim() || '(아직 미정)',
+    '',
+    '## 역할',
+    '당신은 Story X의 쇼러너입니다. 위 자유 서술을 읽고 이 이야기의 4줄 척추 — 주인공의 내적 변화 — 를 제안합니다.',
+    '',
+    '## 4줄 척추란 (외부 사건이 아니라 주인공의 내적 변화)',
+    '- 1 욕망 — 결정적 상태 때문에 불가능에 가까운 무엇을 품는가',
+    '- 2 전진 — 무엇을 결심하고 어떻게 나아가는가',
+    '- 3 시련 — 무엇이 가로막아 상황·마음이 급변하는가',
+    '- 4 변화 — 욕망·결심이 어떻게 해소되며 질문에 답하는가(표면 생사 아님)',
+    '',
+    '## 지시',
+    '- 각 줄은 한 문장으로, 자유 서술에 등장한 구체 인물·상황을 박아 씁니다. 일반론 금지.',
+    '- 결말이 확정돼 있으면 4번(변화)이 그 결말과 모순되지 않게 합니다.',
+    '- 한국어로 씁니다.',
+    '',
+    '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
+    '{',
+    '  "spine": { "desire": "...", "advance": "...", "obstacle": "...", "resolution": "..." }',
     '}'
   ].join('\n');
 }

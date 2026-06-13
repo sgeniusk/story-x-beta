@@ -795,6 +795,52 @@ if (command === 'pace-interview') {
   process.exit(isError ? 1 : 0);
 }
 
+if (command === 'spine-suggest') {
+  const provider = readFlag(args, '--provider', 'codex');
+  const medium = readFlag(args, '--medium', 'novel');
+  const format = readFlag(args, '--format', 'long-novel');
+  const freewrite = readFlag(args, '--freewrite', '');
+  const endingStatement = readFlag(args, '--ending', '');
+  const protagonistCost = readFlag(args, '--cost', '');
+  const dryRun = args.includes('--dry-run');
+
+  const prompt = buildSpineSuggestionPrompt({ medium, format, freewrite, endingStatement, protagonistCost });
+
+  if (dryRun) {
+    printJson({ provider, medium, format, mode: 'spine-suggest', dryRun: true, prompt, warning: 'dry-run 모드 — provider 호출 없이 프롬프트만 출력합니다.' });
+    process.exit(0);
+  }
+
+  if (provider === 'mock') {
+    printJson({ provider, medium, mode: 'spine-suggest', status: 'complete', spine: null });
+    process.exit(0);
+  }
+
+  const commandPreview =
+    provider === 'claude'
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', prompt]
+      : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
+
+  // Q2 가드 — transient 실패 시 1회 재시도, 에러 raw 는 척추 제안으로 승격하지 않는다.
+  const { result: providerResult, raw: rawOutput, retried } = runProviderWithRetry(commandPreview);
+  const isError = looksLikeProviderError(rawOutput, providerResult);
+  const parsed = isError ? null : parseProviderJson(rawOutput);
+  const spine = normalizeSpineSuggestion(parsed?.spine);
+
+  printJson({
+    provider,
+    medium,
+    mode: 'spine-suggest',
+    status: isError ? 'failed' : 'complete',
+    exitCode: providerResult.status,
+    spine,
+    warning: isError
+      ? (retried ? 'provider 호출이 재시도 후에도 실패했습니다.' : 'provider 호출이 실패했습니다.')
+      : undefined
+  });
+  process.exit(isError ? 1 : 0);
+}
+
 printJson({
   usage: [
     'npm run storyx -- doctor',
@@ -810,7 +856,8 @@ printJson({
     'npm run storyx -- review --provider claude --scale small --dry-run',
     'npm run storyx -- review-data --provider mock --category 인물 --target "<직렬화된 엔티티>"',
     'npm run storyx -- normalize-provider-output --provider claude --scale small --raw-file ./provider-output.txt',
-    'npm run storyx -- pace-interview --provider codex --medium novel --format long-novel --payoff-json \'{"isStalled":true,"deferredStreak":3,"openPromises":4}\' --dry-run'
+    'npm run storyx -- pace-interview --provider codex --medium novel --format long-novel --payoff-json \'{"isStalled":true,"deferredStreak":3,"openPromises":4}\' --dry-run',
+    'npm run storyx -- spine-suggest --provider codex --medium novel --format long-novel --freewrite "쓰고 싶은 이야기" --ending "결말 문장" --dry-run'
   ]
 });
 
@@ -1736,4 +1783,53 @@ function normalizePaceQuestions(value) {
       return { question, options };
     })
     .filter((q) => q.question && q.options.length > 0);
+}
+
+// 쇼러너 4줄 척추 제안 프롬프트 — Phase A-3b.
+// src/lib/server/promptBuilders.ts 의 buildSpineSuggestionPrompt 와 핵심 지시문 byte-identical 미러 — 변경 시 두 곳 동시 수정.
+function buildSpineSuggestionPrompt({ medium, format, freewrite, endingStatement, protagonistCost }) {
+  return [
+    'Story X 쇼러너 4줄 척추 제안 요청.',
+    `매체: ${medium} / 포맷: ${format}`,
+    '',
+    '## 작가의 자유 서술과 인터뷰 답',
+    freewrite || '(자유 서술 없음)',
+    '',
+    '## 확정된 결말 (있으면 4번 줄과 정렬)',
+    (endingStatement || '').trim() || '(아직 미정)',
+    '## 주인공이 잃는 것',
+    (protagonistCost || '').trim() || '(아직 미정)',
+    '',
+    '## 역할',
+    '당신은 Story X의 쇼러너입니다. 위 자유 서술을 읽고 이 이야기의 4줄 척추 — 주인공의 내적 변화 — 를 제안합니다.',
+    '',
+    '## 4줄 척추란 (외부 사건이 아니라 주인공의 내적 변화)',
+    '- 1 욕망 — 결정적 상태 때문에 불가능에 가까운 무엇을 품는가',
+    '- 2 전진 — 무엇을 결심하고 어떻게 나아가는가',
+    '- 3 시련 — 무엇이 가로막아 상황·마음이 급변하는가',
+    '- 4 변화 — 욕망·결심이 어떻게 해소되며 질문에 답하는가(표면 생사 아님)',
+    '',
+    '## 지시',
+    '- 각 줄은 한 문장으로, 자유 서술에 등장한 구체 인물·상황을 박아 씁니다. 일반론 금지.',
+    '- 결말이 확정돼 있으면 4번(변화)이 그 결말과 모순되지 않게 합니다.',
+    '- 한국어로 씁니다.',
+    '',
+    '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
+    '{',
+    '  "spine": { "desire": "...", "advance": "...", "obstacle": "...", "resolution": "..." }',
+    '}'
+  ].join('\n');
+}
+
+// spine-suggest provider 응답의 spine 객체를 정규화한다. 4줄 모두 비면 null.
+function normalizeSpineSuggestion(value) {
+  if (!isRecord(value)) return null;
+  const spine = {
+    desire: readString(value.desire),
+    advance: readString(value.advance),
+    obstacle: readString(value.obstacle),
+    resolution: readString(value.resolution)
+  };
+  if (!spine.desire && !spine.advance && !spine.obstacle && !spine.resolution) return null;
+  return spine;
 }

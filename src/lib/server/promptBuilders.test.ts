@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildAgentReviewPrompt, buildDraftPrompt, buildPaceInterviewPrompt } from './promptBuilders';
+import { buildAgentReviewPrompt, buildDraftPrompt, buildPaceInterviewPrompt, buildSpineSuggestionPrompt } from './promptBuilders';
 
 describe('buildAgentReviewPrompt — 전제 진척 점검 지시 (continuity≠payoff 보정)', () => {
   it('연재 장편에서 중심 질문(전제)의 진척을 함께 보도록 지시한다', () => {
@@ -191,6 +191,42 @@ describe('buildPaceInterviewPrompt — storyx.mjs 미러 동기화', () => {
   it('[pace-mirror] storyx.mjs 가 JSON 출력 계약 문자열을 포함한다', () => {
     const cli = readFileSync(resolve(__dirname, '../../../tools/storyx.mjs'), 'utf8');
     expect(cli).toContain(PACE_JSON_CONTRACT);
+  });
+});
+
+// 쇼러너 4줄 척추 제안 — Phase A-3b. charter 단계에서 자유 서술·결말을 읽고 4줄을 제안한다.
+// storyx.mjs 미러 byte-identical — 핵심 JSON 계약·4줄 정의 문구는 양쪽 동시 갱신.
+describe('buildSpineSuggestionPrompt — 4줄 척추 제안 (Phase A-3b)', () => {
+  const SPINE_JSON_CONTRACT = '  "spine": { "desire": "...", "advance": "...", "obstacle": "...", "resolution": "..." }';
+  const cli = readFileSync(resolve(__dirname, '../../../tools/storyx.mjs'), 'utf8');
+
+  it('자유 서술·결말·대가를 담고 4줄 정의와 JSON 계약을 출력한다', () => {
+    const p = buildSpineSuggestionPrompt({
+      medium: 'novel',
+      format: 'long-novel',
+      freewrite: '잃어버린 이름을 찾는 소녀가 달의 탑으로 들어가는 이야기',
+      endingStatement: '소녀가 잃어버린 이름을 끝내 받아들인다',
+      protagonistCost: '평범했던 일상'
+    });
+    expect(p).toContain('잃어버린 이름을 찾는 소녀');
+    expect(p).toContain('소녀가 잃어버린 이름을 끝내 받아들인다');
+    expect(p).toContain('평범했던 일상');
+    // 4줄 정의(욕망·전진·시련·변화)를 프롬프트에 박는다.
+    expect(p).toContain('욕망');
+    expect(p).toContain('전진');
+    expect(p).toContain('시련');
+    expect(p).toContain('변화');
+    expect(p).toContain(SPINE_JSON_CONTRACT);
+  });
+
+  it('결말·대가가 비어도 미정 표기로 프롬프트를 만든다', () => {
+    const p = buildSpineSuggestionPrompt({ medium: 'novel', format: 'long-novel', freewrite: '아무 이야기' });
+    expect(p).toContain('아무 이야기');
+    expect(p.length).toBeGreaterThan(0);
+  });
+
+  it('[spine-mirror] storyx.mjs 가 JSON 출력 계약을 byte-identical 로 미러한다', () => {
+    expect(cli).toContain(SPINE_JSON_CONTRACT);
   });
 });
 

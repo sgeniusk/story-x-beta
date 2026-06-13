@@ -70,6 +70,13 @@ describe('Story X page experience', () => {
     expect(app).toContain('contractSpine.desire.trim().length > 0 && contractSpine.resolution.trim().length > 0');
   });
 
+  it('A-3b — charter 4줄 척추에 쇼러너 제안 버튼이 있다', () => {
+    // 작가가 빈 4줄을 맨손으로 채우지 않도록, 쇼러너가 자유 서술·결말을 읽고 4줄을 제안한다.
+    expect(app).toContain('requestSpineSuggestion');
+    expect(app).toContain('suggestSpine');
+    expect(app).toContain('쇼러너에게 4줄 제안받기');
+  });
+
   it('overrides --nx-ink-deep inside the .home-page dark scope so card titles stay readable', () => {
     // 회귀 방지 — .home-page 다크 블록이 --nx-ink-deep 를 오버라이드하지 않으면
     // 매체/포맷 카드 제목(strong, color: var(--nx-ink-deep))이 다크 배경(#08090a)에 묻힌다.

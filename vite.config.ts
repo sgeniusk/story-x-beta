@@ -206,6 +206,22 @@ export default defineConfig({
       JSON.stringify(Array.isArray(input.deferredStakes) ? input.deferredStakes : []),
       '--context',
       String(input.context ?? '')
+    ]),
+    storyxBridge('/api/spine-suggest', (input) => [
+      'tools/storyx.mjs',
+      'spine-suggest',
+      '--provider',
+      'codex',
+      '--medium',
+      String(input.medium ?? 'novel'),
+      '--format',
+      String(input.format ?? 'long-novel'),
+      '--freewrite',
+      String(input.freewrite ?? ''),
+      '--ending',
+      String(input.endingStatement ?? ''),
+      '--cost',
+      String(input.protagonistCost ?? '')
     ])
   ]
 });
