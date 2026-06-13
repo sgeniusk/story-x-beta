@@ -49,8 +49,9 @@ describe('Story X page experience', () => {
     expect(css).toContain('.projects-page .pjx-new-card');
   });
 
-  it('keeps the three-step home flow with a light Notion theme and a stepped nav', () => {
-    expect(app).toContain("type HomeFlowStep = 'medium' | 'freewrite' | 'intake' | 'building'");
+  it('keeps the stepped home flow with a light Notion theme and a stepped nav', () => {
+    // A-3 — 연재 서사는 intake 와 building 사이에 'charter'(작품 헌장) 단계가 조건부로 들어간다.
+    expect(app).toContain("type HomeFlowStep = 'medium' | 'freewrite' | 'intake' | 'charter' | 'building'");
     expect(app).toContain('const [homeFlowStep, setHomeFlowStep]');
     expect(app).toContain('className="home-page"');
     expect(app).toContain('className="hx-track"');

@@ -1580,7 +1580,9 @@ export function StoryXDesk({
       deepQuestion: initialDraftPayload.seed?.deepQuestion,
       // 매체 영속 — 온보딩에서 고른 매체가 프로젝트에 박혀야 리로드 후에도 작가진이 매체를 따른다.
       medium: blueprint.medium,
-      format: blueprint.format
+      format: blueprint.format,
+      // 작품 헌장 — 온보딩 Stage 1 에서 만들어졌으면 프로젝트에 박아 A-4/A-5 가 발화하게 한다.
+      storyContract: initialDraftPayload.seed?.storyContract
     });
     const bootRequest: ProductionRequest = {
       genre: seed.genre,

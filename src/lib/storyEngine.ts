@@ -1040,6 +1040,8 @@ export interface OnboardingSeed {
   logline: string;
   audiencePromise: string;
   deepQuestion: string;
+  /** 작품 헌장 — 온보딩 Stage 1 에서 만들어졌으면 신규 프로젝트에 박힌다(A-3). */
+  storyContract?: StoryContract;
 }
 
 // 갭 A — 온보딩(freewrite + 인터뷰 답)에서 project 메타 시드를 끌어낸다.

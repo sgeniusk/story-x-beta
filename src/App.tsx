@@ -48,7 +48,17 @@ function mediumDisplayLabel(medium: CreativeMedium): string {
       return medium;
   }
 }
-import { buildFallbackDraft, deriveOnboardingSeed, type DraftChapterPayload, type SeriesProject } from './lib/storyEngine';
+import {
+  buildFallbackDraft,
+  buildStoryContractFromOnboarding,
+  defaultPlannedEpisodes,
+  deriveOnboardingSeed,
+  type ContractLengthClass,
+  type DraftChapterPayload,
+  type SeriesProject,
+  type StoryContract,
+  type StorySpine
+} from './lib/storyEngine';
 import { loadProject } from './lib/storage';
 import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
@@ -123,7 +133,7 @@ const mediaBridgeRoutes = [
 ];
 
 type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor' | 'publish';
-type HomeFlowStep = 'medium' | 'freewrite' | 'intake' | 'building';
+type HomeFlowStep = 'medium' | 'freewrite' | 'intake' | 'charter' | 'building';
 
 function App() {
   const initialStage = useMemo<AppStage>(() => {
@@ -690,6 +700,21 @@ function StoryXHome({
   const [freewriteText, setFreewriteText] = useState('');
   const [intakeQuestionIndex, setIntakeQuestionIndex] = useState(0);
   const [homeFlowStep, setHomeFlowStep] = useState<HomeFlowStep>('medium');
+  // 작품 헌장(Stage 1) — 연재 서사만. 결말 역산 + 4줄 척추를 잠근 뒤 본문으로 넘어간다(A-3).
+  const usesCharter = isSerial && blueprint.medium !== 'essay' && blueprint.medium !== 'academic';
+  const [contractLengthClass, setContractLengthClass] = useState<ContractLengthClass>('long');
+  const [contractPlannedEpisodes, setContractPlannedEpisodes] = useState<number>(defaultPlannedEpisodes('long'));
+  const [contractEnding, setContractEnding] = useState('');
+  const [contractCost, setContractCost] = useState('');
+  const [contractSpine, setContractSpine] = useState<StorySpine>({ desire: '', advance: '', obstacle: '', resolution: '' });
+  // 분량 등급을 바꾸면 화수 기본값을 등급 대표값으로 맞춘다(작가가 다시 조정 가능).
+  function pickLengthClass(next: ContractLengthClass) {
+    setContractLengthClass(next);
+    setContractPlannedEpisodes(defaultPlannedEpisodes(next));
+  }
+  const spineComplete = [contractSpine.desire, contractSpine.advance, contractSpine.obstacle, contractSpine.resolution]
+    .every((line) => line.trim().length > 0);
+  const charterReady = spineComplete && contractEnding.trim().length > 0 && contractCost.trim().length > 0;
   const [llmIntakeQuestions, setLlmIntakeQuestions] = useState<ProjectIntakeQuestion[] | null>(null);
   const [isInterviewLoading, setIsInterviewLoading] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
@@ -784,6 +809,21 @@ function StoryXHome({
       freewrite: freewriteText,
       interviewAnswers: [...answerLines, interviewNote.trim()].filter(Boolean)
     });
+    // 작품 헌장 — Stage 1 을 거친 연재 서사면 결말 역산 헌장을 시드에 실어 신규 프로젝트에 박는다(A-3).
+    if (usesCharter && charterReady) {
+      onboardingSeed.storyContract = buildStoryContractFromOnboarding({
+        lengthClass: contractLengthClass,
+        plannedEpisodes: contractPlannedEpisodes,
+        endingStatement: contractEnding.trim(),
+        protagonistCost: contractCost.trim(),
+        spine: {
+          desire: contractSpine.desire.trim(),
+          advance: contractSpine.advance.trim(),
+          obstacle: contractSpine.obstacle.trim(),
+          resolution: contractSpine.resolution.trim()
+        }
+      });
+    }
     if (llm.ok && llm.payload) {
       onOpenEditor({ ...llm.payload, seed: onboardingSeed });
       return;
@@ -802,10 +842,16 @@ function StoryXHome({
   const homeFlowSteps: Array<{ id: HomeFlowStep; label: string; caption: string }> = [
     { id: 'medium', label: '매체 선택', caption: '무엇을 만들지 정합니다.' },
     { id: 'freewrite', label: '자유 서술', caption: '쓰고 싶은 이야기를 흘려 적습니다.' },
-    { id: 'intake', label: '작가 인터뷰', caption: '에이전트가 맞춤 질문을 합니다.' }
+    { id: 'intake', label: '작가 인터뷰', caption: '에이전트가 맞춤 질문을 합니다.' },
+    // 작품 헌장 — 연재 서사만 거치는 단계(A-3). 단편 단독·에세이·학술은 건너뛴다.
+    ...(usesCharter
+      ? [{ id: 'charter' as HomeFlowStep, label: '작품 헌장', caption: '결말부터 4줄로 잡습니다.' }]
+      : [])
   ];
   const homeFlowIndex =
-    homeFlowStep === 'building' ? 3 : homeFlowSteps.findIndex((step) => step.id === homeFlowStep);
+    homeFlowStep === 'building'
+      ? homeFlowSteps.length
+      : homeFlowSteps.findIndex((step) => step.id === homeFlowStep);
 
   return (
     <main className="home-page">
@@ -1222,14 +1268,124 @@ function StoryXHome({
               <button type="button" className="hx-btn-ghost" onClick={() => setHomeFlowStep('freewrite')}>
                 이전
               </button>
-              <button type="button" className="hx-btn" onClick={goToBuilding}>
-                질문 완료 — {draftUnitLabel} 만들기
+              <button
+                type="button"
+                className="hx-btn"
+                onClick={() => (usesCharter ? setHomeFlowStep('charter') : goToBuilding())}
+              >
+                {usesCharter ? '질문 완료 — 작품 헌장 잡기' : `질문 완료 — ${draftUnitLabel} 만들기`}
               </button>
             </div>
           </aside>
             </>
           )}
         </section>
+
+        {homeFlowStep === 'charter' && (
+          <section className="hx-panel hx-panel-charter" aria-label="작품 헌장">
+            <div className="hx-charter">
+              <p className="hx-eyebrow">04 · 작품 헌장</p>
+              <h1 className="hx-h1">결말부터 정하고 시작합니다.</h1>
+              <p className="hx-lead">
+                연재가 중구난방으로 늘어지지 않도록, 분량과 결말과 4줄 척추를 먼저 잠급니다. 이 헌장은 모든
+                회차 생성·검토가 함께 보는 기준이 됩니다.
+              </p>
+
+              <div className="hx-charter-grid">
+                <fieldset className="hx-charter-field">
+                  <legend>분량</legend>
+                  <div className="hx-charter-length">
+                    <button
+                      type="button"
+                      className={`hx-chip${contractLengthClass === 'short' ? ' is-on' : ''}`}
+                      onClick={() => pickLengthClass('short')}
+                    >
+                      단편 (4~8화)
+                    </button>
+                    <button
+                      type="button"
+                      className={`hx-chip${contractLengthClass === 'long' ? ' is-on' : ''}`}
+                      onClick={() => pickLengthClass('long')}
+                    >
+                      장편 (24~36화·시즌제)
+                    </button>
+                  </div>
+                  <label className="hx-charter-eps">
+                    확정 회차 수
+                    <input
+                      type="number"
+                      min={contractLengthClass === 'short' ? 4 : 24}
+                      max={contractLengthClass === 'short' ? 8 : 36}
+                      value={contractPlannedEpisodes}
+                      onChange={(event) => setContractPlannedEpisodes(Number(event.target.value) || 0)}
+                    />
+                  </label>
+                </fieldset>
+
+                <fieldset className="hx-charter-field">
+                  <legend>결말 (역산의 기준)</legend>
+                  <label className="hx-charter-label">
+                    마지막은 주인공의 어떤 욕망·결심이 실현되는 순간입니까 (생사·표면이 아니라)
+                    <textarea
+                      className="hx-other-input"
+                      rows={2}
+                      value={contractEnding}
+                      onChange={(event) => setContractEnding(event.target.value)}
+                      placeholder="예: 주인공이 잃어버린 본명을 끝내 받아들이고 돌아선다."
+                    />
+                  </label>
+                  <label className="hx-charter-label">
+                    주인공은 그 결말까지 무엇을 잃습니까
+                    <textarea
+                      className="hx-other-input"
+                      rows={2}
+                      value={contractCost}
+                      onChange={(event) => setContractCost(event.target.value)}
+                      placeholder="예: 평범했던 일상과, 자신을 모른 채 살던 시절."
+                    />
+                  </label>
+                  <p className="hx-charter-help">열린 결말은 괜찮지만, 답을 회피한 ‘없는 결말’은 안 됩니다.</p>
+                </fieldset>
+              </div>
+
+              <fieldset className="hx-charter-field">
+                <legend>4줄 척추 — 주인공의 내적 변화</legend>
+                <p className="hx-charter-help">
+                  외부 사건이 아니라 주인공이 욕망하고·전진하고·시련을 겪고·변하는 흐름입니다. 길을 잃으면 이 4줄로 돌아옵니다.
+                </p>
+                <label className="hx-charter-label">
+                  1 · 욕망 — 결정적 상태 때문에 불가능에 가까운 무엇을 품는가
+                  <textarea className="hx-other-input" rows={2} value={contractSpine.desire}
+                    onChange={(event) => setContractSpine((s) => ({ ...s, desire: event.target.value }))} />
+                </label>
+                <label className="hx-charter-label">
+                  2 · 전진 — 무엇을 결심하고 어떻게 나아가는가
+                  <textarea className="hx-other-input" rows={2} value={contractSpine.advance}
+                    onChange={(event) => setContractSpine((s) => ({ ...s, advance: event.target.value }))} />
+                </label>
+                <label className="hx-charter-label">
+                  3 · 시련 — 무엇이 가로막아 상황·마음이 급변하는가
+                  <textarea className="hx-other-input" rows={2} value={contractSpine.obstacle}
+                    onChange={(event) => setContractSpine((s) => ({ ...s, obstacle: event.target.value }))} />
+                </label>
+                <label className="hx-charter-label">
+                  4 · 변화 — 욕망·결심이 어떻게 해소되며 질문에 답하는가
+                  <textarea className="hx-other-input" rows={2} value={contractSpine.resolution}
+                    onChange={(event) => setContractSpine((s) => ({ ...s, resolution: event.target.value }))} />
+                </label>
+              </fieldset>
+
+              <div className="hx-aside-actions">
+                <button type="button" className="hx-btn-ghost" onClick={() => setHomeFlowStep('intake')}>
+                  이전
+                </button>
+                <button type="button" className="hx-btn" onClick={goToBuilding} disabled={!charterReady}>
+                  {charterReady ? '헌장 확정 — 1화 만들기' : '4줄·결말을 모두 채워 주세요'}
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="hx-panel hx-panel-building" aria-label={`${draftUnitLabel} 구성 중`}>
           <div className="hx-building">

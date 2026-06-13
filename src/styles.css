@@ -9348,6 +9348,87 @@ body {
 .home-page .hx-other-input:focus {
   border-color: var(--nx-primary);
 }
+/* 작품 헌장(Stage 1) — 결말 역산·4줄 척추 입력 화면 (A-3) */
+.home-page .hx-charter {
+  max-width: 760px;
+}
+.home-page .hx-charter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+.home-page .hx-charter-field {
+  margin: 16px 0 0;
+  padding: 16px;
+  border: 1px solid var(--nx-hairline-strong);
+  border-radius: var(--nx-r-md, 12px);
+  background: var(--nx-surface, rgba(255, 255, 255, 0.02));
+}
+.home-page .hx-charter-field legend {
+  padding: 0 6px;
+  color: var(--nx-ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.home-page .hx-charter-label {
+  display: block;
+  margin-top: 12px;
+  color: var(--nx-ink-soft, var(--nx-ink));
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.home-page .hx-charter-help {
+  margin: 10px 0 0;
+  color: var(--nx-ink-dim, var(--nx-ink-soft));
+  font-size: 0.76rem;
+}
+.home-page .hx-charter-length {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.home-page .hx-chip {
+  padding: 8px 14px;
+  background: var(--nx-canvas);
+  border: 1px solid var(--nx-hairline-strong);
+  border-radius: 999px;
+  color: var(--nx-ink-soft, var(--nx-ink));
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.home-page .hx-chip.is-on {
+  border-color: var(--nx-primary);
+  color: var(--nx-ink);
+  background: var(--nx-primary-soft, rgba(99, 102, 241, 0.16));
+}
+.home-page .hx-charter-eps {
+  display: block;
+  margin-top: 14px;
+  color: var(--nx-ink-soft, var(--nx-ink));
+  font-size: 0.8rem;
+}
+.home-page .hx-charter-eps input {
+  display: block;
+  width: 100px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--nx-canvas);
+  border: 1px solid var(--nx-hairline-strong);
+  border-radius: var(--nx-r-sm);
+  color: var(--nx-ink);
+  font: inherit;
+  outline: none;
+}
+.home-page .hx-charter-eps input:focus {
+  border-color: var(--nx-primary);
+}
+@media (max-width: 720px) {
+  .home-page .hx-charter-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .home-page .hx-q-nav {
   display: flex;
   margin-top: 12px;
