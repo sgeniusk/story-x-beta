@@ -8,20 +8,23 @@
 
 > "이대로 코딩 진행해" 이행. 로드맵 순서대로 Phase D(결정론 소건) → Phase A 코어(데이터모델·예산)까지 TDD 로 구현. 전부 녹색. **main 머지 완료(ff-only), 브랜치 삭제. origin push 미실행.**
 
-### 한 것 (main `acb8c08` 까지)
+### 한 것 (main `40646ea` 까지)
 - **D-1 폴백 번호 드리프트** (`cf8f1de`) — `nextEpisodeNumber(project)`=chapters 마지막+1 로 도출. 폐기된 폴백 회차가 카운터만 올리고 사라져 번호가 결번되던 사고(쇼케이스 16→19)를 chapters 진실원천으로 치유. produceNextChapter·chapterFromDraftPayload 적용.
 - **D-2 StoryScore v0.2** (`b7f59f2`) — 변형 의심 최소 길이 3(통제군 16건 위양성 차단)·analyzeTitles 어간 공유 제목 반복률(U1)·후크 신호 느낌표/반전어. 스킬 루브릭에 온건함(U3)·제목 반복(U1) 감점. V0_1→V0_2.
-- **A-1 헌장 데이터 모델** (`a15728b`) — `StoryContract`(plannedEpisodes·spine·endingStatement·protagonistCost·beatSheet·spineLocked·amendments)·`StorySpine`(4줄)·`validateContract`(4/8/24/36·결말·비트)·`defaultPlannedEpisodes`(6/30)·createEmptyProject 시드. 전 필드 optional.
-- **A-5 코어 예산** (`e92c13d`) — `buildContractStatus(project)`: position(chapters 마지막)·remaining·`overBudget`(미회수>잔여)·`finalStretch`(잔여≤25%). U2 직격의 결정론 심장.
+- **A-1 헌장 데이터 모델** (`a15728b`) — `StoryContract`·`StorySpine`(4줄)·`validateContract`(4/8/24/36·결말·비트)·`defaultPlannedEpisodes`(6/30)·createEmptyProject 시드. 전 필드 optional.
+- **A-5 코어 예산** (`e92c13d`) — `buildContractStatus(project)`: position(chapters 마지막)·remaining·`overBudget`(미회수>잔여)·`finalStretch`(잔여≤25%).
+- **A-4 프롬프트 주입** (`40646ea`) — digest 헌장 절(4줄+결말+대가+위치) + buildDraftPrompt 예산 회수/종반(새 큰 떡밥만 금지)/척추 환기(정체·초과 시만) + buildAgentReviewPrompt 쇼러너 길 잃음 점검·예산 초과 revise/block + storyx.mjs 미러(byte-identical). 에세이·standalone·헌장없음 미주입. **프롬프트 문구 사용자 승인 후 배선.**
 
 ### 손대지 말 것
 - 헌장 필드는 전부 optional — 구버전 저장본·기존 30화 백업과 하위호환. 필수화하지 말 것.
-- `nextEpisodeNumber`·`buildContractStatus` 의 "chapters 기준 도출" 원칙 — currentEpisode 카운터로 되돌리면 드리프트 버그가 재발한다.
+- `nextEpisodeNumber`·`buildContractStatus`·digest 헌장 절 위치의 "chapters 기준 도출" 원칙 — currentEpisode 카운터로 되돌리면 드리프트 버그 재발.
 - finalStretch 임계는 raw 25%(planned×0.25, ceil 아님) — 22/30=잔여8 은 종반 아님, 23/30=잔여7 은 종반.
+- A-4 헌장 규칙 문구는 promptBuilders.ts↔storyx.mjs **byte-identical 미러** — 한쪽만 바꾸면 promptBuilders.test.ts 미러 테스트가 깨진다. 정적 핵심 문구(`[헌장] 약속 예산 초과`·`[헌장] 종반 구간`·`4줄 척추의 어느 줄`·`[헌장] 길 잃음 점검`)는 양쪽 동시 갱신.
+- A-4 적용 범위 = **연재(serial)·비에세이만**. 에세이·1편 standalone 은 의도적 제외(사용자 결정). 종반=새 큰 떡밥만 금지(작은 인물·소품 허용). 척추 환기=정체·초과 시만.
 
 ### 다음 세션이 해야 할 한 가지
-- **A-4 프롬프트 주입** — `buildProjectContextDigest`(storyEngine.ts:1310 부근)에 헌장 절(질문=deepQuestion+4줄 spine+위치 N/M+예산 상태) 추가 → `buildDraftPrompt`(promptBuilders.ts:195)에 overBudget/finalStretch 발급 금지 규칙 → 쇼러너 검토에 "길 잃음 점검"·없는 결말 block → `storyx.mjs` 미러 + 동기화 테스트. **생성 품질을 실제로 바꾸는 지점이라 프롬프트 문구는 사용자에게 보여주고 진행 권장.** 그 뒤 A-5 배선(게이트 실효)→A-2 단계 게이트(UI)→A-3 온보딩.
-- A-4 프롬프트 문구는 사용자 승인 후 배선(2차 세션 결정) — 초안을 먼저 제시할 것.
+- **A-5 배선(A-4 로직 실발화)** — 호출자가 `buildContractStatus(project)`(episodeBriefing.ts)를 계산해 `requestLlmDraft`/draftClient/api/draft → `buildDraftPrompt` 의 `contractStatus` 로 전달, 검토 경로(agentReview)에도 전달. storyx CLI 는 `--contract-status` 플래그 추가(이미 `--payoff-status` 패턴 있음, storyx.mjs:241). UI 는 FloatingEditor 에 헌장 위치 카드(`.fc-contract`). **단 헌장은 A-2/A-3 온보딩이 만들기 전엔 기존 작품에 없다 — A-5 배선 후 라이브 발화를 보려면 백업에 storyContract 를 주입하거나 A-2/A-3 를 먼저 한다.**
+- 참고 — A-4 까지는 순수 로직(프롬프트 빌더가 입력을 받으면 옳은 텍스트를 낸다)이라 main 영향 0. 실제 생성에 발화되려면 A-5 배선 필요.
 
 ---
 

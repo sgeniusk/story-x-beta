@@ -36,8 +36,8 @@ spec — `docs/superpowers/specs/2026-06-12-story-contract-design.md`.
 
 - [x] A-1 데이터 모델 — `StoryContract`·`StorySpine`(4줄 척추) 타입·`createEmptyProject` 시드·`validateContract`·`defaultPlannedEpisodes` (storyEngine.ts). (`a15728b`, 6건)
 - [x] A-5(코어) 화수 예산 결정론 — `buildContractStatus`(episodeBriefing.ts): 위치·잔여·`overBudget`·`finalStretch`. chapters 기준 도출(드리프트 면역). (`e92c13d`, 5건)
-- [ ] A-4 프롬프트 주입 — digest 헌장 절(질문+4줄+위치+예산) + draft/review/pace 빌더(+쇼러너 "길 잃음 점검"·없는 결말 block) + storyx.mjs 미러 동기화 테스트. **← 다음 1순위(생성 품질 직격, 프롬프트 문구는 사용자 리뷰 권장)**
-- [ ] A-5(배선) 예산 게이트 — buildContractStatus.overBudget→buildDraftPrompt 발급 금지 규칙·finalStretch 종반 금지·쇼러너 검토 주입·UI 헌장 카드
+- [x] A-4 프롬프트 주입 — digest 헌장 절(4줄+결말+위치) + buildDraftPrompt 예산/종반(새 큰 떡밥만)/척추(정체·초과 시만) + buildAgentReviewPrompt 길 잃음 점검·예산 초과 block + storyx.mjs 미러. 에세이·standalone 제외. 사용자 문구 승인. (`40646ea`, 12건)
+- [ ] A-5(배선) 예산 게이트 실효 — StoryXDesk/api/draftClient 가 `buildContractStatus(project)` 계산→requestLlmDraft·검토 경로에 contractStatus 전달 + storyx CLI `--contract-status` 플래그 + UI 헌장 카드. **← 다음 1순위(A-4 로직을 실제 생성에 발화)**
 - [ ] A-2 단계적 집필 게이트 — Stage 1 척추 잠금(`spineLocked`) 전 장편·학술 produceEpisode 차단 + 편집모드 탭 비활성. 단편은 2줄 경량 잠금 (UI 작업 큼)
 - [ ] A-3 온보딩 — 분량 등급 선택 + 결말 인터뷰 2문항(욕망 해소형) + 4줄 척추 제안·승인(Stage 1) + 비트 펼침(Stage 2) — pace-interview 패턴 재사용
 - [ ] A-6 R1~R3 기억 반영 — 아크 다이제스트(R2, 비트 구간 단위)·관련 캐논 top-K(R1)·중요도 가중 절단(R3) — 같은 digest 빌더 묶음

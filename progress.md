@@ -13,7 +13,8 @@
   - **Phase D-2** StoryScore v0.2 — 2글자 이름 위양성 가드·제목 반복 신호(어간 공유, U1)·후크 확장(느낌표·반전어). 스킬 루브릭에 온건함(U3)·제목 반복(U1) 감점. V0_1→V0_2. (`b7f59f2`)
   - **Phase A-1** 작품 헌장 데이터 모델 — `StoryContract`·`StorySpine`(4줄)·`validateContract`(4/8/24/36 경계·결말·비트)·`defaultPlannedEpisodes`(6/30)·createEmptyProject 시드. 전 필드 optional(하위호환). (`a15728b`)
   - **Phase A-5 코어** `buildContractStatus` — 위치·잔여·`overBudget`(미회수>잔여)·`finalStretch`(잔여≤25%) 결정론. chapters 기준 도출(드리프트 면역). U2 직격. (`e92c13d`)
-- **다음 1순위 — A-4 프롬프트 주입** — buildProjectContextDigest 에 헌장 절(질문+4줄+위치+예산) + buildDraftPrompt 발급 금지 규칙 + 쇼러너 "길 잃음 점검"·없는 결말 block + storyx.mjs 미러 동기화. 생성 품질을 실제로 바꾸는 지점 — **프롬프트 문구는 사용자 리뷰 권장.** 이후 A-5 배선·A-2 단계 게이트(UI)·A-3 온보딩.
+  - **Phase A-4 프롬프트 주입** (`40646ea`) — digest 헌장 절(4줄+결말+대가+위치 N/M) + buildDraftPrompt 예산 회수/종반(새 큰 떡밥만 금지)/척추 환기(정체·초과 시만) + buildAgentReviewPrompt 쇼러너 길 잃음 점검·예산 초과 revise/block + storyx.mjs 미러. **에세이·standalone 제외(A-4=연재 서사만), 프롬프트 문구 사용자 승인.**
+- **다음 1순위 — A-5 배선(실효)** — StoryXDesk/api/draftClient 가 `buildContractStatus` 계산→requestLlmDraft·검토에 contractStatus 전달 + storyx CLI `--contract-status` 플래그 + UI 헌장 카드. (A-4 로직을 실제 생성에 발화.) 이후 A-2 단계 게이트(UI)·A-3 온보딩(분량/결말/4줄 잠금). **헌장은 A-2/A-3 온보딩이 만들기 전엔 기존 작품에 없으므로 A-4/A-5 는 그때 라이브 발화.**
 - **Phase D-3(dev 서버 사망 조사)는 Phase E-1 계측으로 이관** — 재현 없이 추정 금지.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -123,16 +124,17 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
 
-## 최근 검증 (2026-06-12 · 품질·비용 로드맵 Phase D+A 착수 · 브랜치 feat/phase-d-determinism)
+## 최근 검증 (2026-06-12 · 품질·비용 로드맵 Phase D+A · main ff-merge)
 
 ```
-init.sh            → tsc 0 · vitest 전체 녹색(테스트 18건 추가: 회귀1·StoryScore6·헌장6·예산5) · build 통과
-                     (변경 전 1회 465 녹색 · 각 커밋 후 재실행)
+init.sh            → tsc 0 · vitest 전체 녹색(테스트 30건 추가: 회귀1·StoryScore6·헌장6·예산5·A-4 12) · build 통과
+                     (변경 전 465 녹색 · 각 커밋 후 재실행)
 Phase D-1 (cf8f1de) — nextEpisodeNumber(chapters 마지막+1). 드리프트 재현 테스트 RED(19)→GREEN(17)
 Phase D-2 (b7f59f2) — StoryScore v0.2: 이름 가드(length<3)·analyzeTitles 반복률·후크 느낌표/반전어
 Phase A-1 (a15728b) — StoryContract/StorySpine·validateContract 경계(short 4~8·long 24~36)·결말·비트
 Phase A-5코어(e92c13d) — buildContractStatus: 17/30→remaining13 · 28/30 unpaid3→overBudget · 23/30→finalStretch
-코드 변경 없음(문서/스킬만): roadmap·헌장 spec·story-score SKILL(V0_2 루브릭)
+Phase A-4 (40646ea) — digest 헌장 절·draft 예산/종반/척추 규칙·review 길 잃음 점검·storyx.mjs 미러 동기화
+                     (에세이·standalone·헌장없음 미주입 가드 테스트 포함)
 ```
 
 ## 직전 검증 (2026-06-11 6차 · Codex 검증 데스크 합류 · main)
