@@ -125,6 +125,9 @@ export default defineConfig({
       String(input.context ?? ''),
       ...(input.payoffStatus != null
         ? ['--payoff-status', JSON.stringify(input.payoffStatus)]
+        : []),
+      ...(input.contractStatus != null
+        ? ['--contract-status', JSON.stringify(input.contractStatus)]
         : [])
     ]),
     storyxBridge('/api/review', (input) => [

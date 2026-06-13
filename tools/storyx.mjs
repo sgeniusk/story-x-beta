@@ -250,7 +250,21 @@ if (command === 'draft') {
       };
     }
   } catch { /* 오형식 플래그는 무시 — 프롬프트 무변화 */ }
-  const prompt = buildDraftPrompt({ medium, format, freewrite, title, context, payoffStatus });
+  // 작품 헌장 예산 — episodeBriefing.buildContractStatus 산출을 그대로 받는다(A-5). 오형식은 무시.
+  const contractStatusRaw = readFlag(args, '--contract-status', '');
+  let contractStatus;
+  try {
+    const parsed = contractStatusRaw ? JSON.parse(contractStatusRaw) : null;
+    if (parsed && typeof parsed.remaining === 'number') {
+      contractStatus = {
+        remaining: parsed.remaining,
+        unpaidCount: typeof parsed.unpaidCount === 'number' ? parsed.unpaidCount : 0,
+        overBudget: Boolean(parsed.overBudget),
+        finalStretch: Boolean(parsed.finalStretch)
+      };
+    }
+  } catch { /* 오형식 플래그는 무시 — 프롬프트 무변화 */ }
+  const prompt = buildDraftPrompt({ medium, format, freewrite, title, context, payoffStatus, contractStatus });
 
   if (provider === 'mock') {
     const result = {

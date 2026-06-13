@@ -11,6 +11,8 @@ export interface DraftRequestInput {
   context?: string;
   /** 아크 페이오프 측정값 — 정체 시 생성 프롬프트가 회수를 강제한다. */
   payoffStatus?: { isStalled: boolean; deferredStreak: number; openPromises: number };
+  /** 작품 헌장 예산 — 연재 + 헌장 잠금 시 생성 프롬프트에 예산·종반·척추 규칙을 주입한다(A-5). */
+  contractStatus?: { remaining: number; unpaidCount: number; overBudget: boolean; finalStretch: boolean };
 }
 
 export interface LlmDraftResult {

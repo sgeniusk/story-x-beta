@@ -41,4 +41,17 @@ describe('requestLlmDraft — payoffStatus 전달', () => {
     });
     expect(captured.payoffStatus).toEqual({ isStalled: true, deferredStreak: 3, openPromises: 4 });
   });
+
+  it('contractStatus 를 /api/draft 요청 body 로 전달한다 (A-5 헌장 예산 배선)', async () => {
+    let captured: Record<string, unknown> = {};
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      captured = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ status: 'failed', warning: 'x' }), { status: 200 });
+    }));
+    await requestLlmDraft({
+      medium: 'novel', format: 'long-novel', freewrite: 'x',
+      contractStatus: { remaining: 2, unpaidCount: 5, overBudget: true, finalStretch: false }
+    });
+    expect(captured.contractStatus).toEqual({ remaining: 2, unpaidCount: 5, overBudget: true, finalStretch: false });
+  });
 });

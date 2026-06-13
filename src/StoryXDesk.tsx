@@ -124,7 +124,7 @@ import {
 import { requestLlmDraft } from './lib/draftClient';
 import { requestAgentReview } from './lib/reviewClient';
 import { computePayoffLedger } from './lib/payoffLedger';
-import { buildEpisodeForks, stripConsumedSeeds } from './lib/episodeBriefing';
+import { buildContractStatus, buildEpisodeForks, stripConsumedSeeds } from './lib/episodeBriefing';
 import { buildPaceCheck, type PaceQuestion } from './lib/paceInterview';
 import { requestPaceInterview } from './lib/paceInterviewClient';
 import { requestDataReview } from './lib/dataReviewClient';
@@ -1841,7 +1841,9 @@ export function StoryXDesk({
         freewrite: draftPrompt || request.intent,
         title: project.title,
         context: buildProjectContextDigest(project),
-        payoffStatus: computePayoffLedger(project.chapters)
+        payoffStatus: computePayoffLedger(project.chapters),
+        // 작품 헌장 예산 — 헌장이 있으면 생성 프롬프트에 예산·종반·척추 규칙을 발화시킨다(A-5). 없으면 undefined.
+        contractStatus: buildContractStatus(project) ?? undefined
       });
 
       if (llm.ok && llm.payload) {

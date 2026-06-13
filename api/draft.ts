@@ -17,6 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     title?: string;
     context?: string;
     payoffStatus?: { isStalled?: boolean; deferredStreak?: number; openPromises?: number };
+    contractStatus?: { remaining?: number; unpaidCount?: number; overBudget?: boolean; finalStretch?: boolean };
   };
 
   const medium = String(body.medium ?? 'novel');
@@ -34,7 +35,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       : undefined;
 
-  const prompt = buildDraftPrompt({ medium, format, freewrite, title, context, payoffStatus });
+  const contractStatus =
+    body.contractStatus && typeof body.contractStatus === 'object' && typeof body.contractStatus.remaining === 'number'
+      ? {
+          remaining: body.contractStatus.remaining,
+          unpaidCount: typeof body.contractStatus.unpaidCount === 'number' ? body.contractStatus.unpaidCount : 0,
+          overBudget: Boolean(body.contractStatus.overBudget),
+          finalStretch: Boolean(body.contractStatus.finalStretch)
+        }
+      : undefined;
+
+  const prompt = buildDraftPrompt({ medium, format, freewrite, title, context, payoffStatus, contractStatus });
   const result = await runLlmJson(prompt);
 
   if (result.status === 'mock') {
