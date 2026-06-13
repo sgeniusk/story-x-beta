@@ -4,6 +4,31 @@
 
 ---
 
+## 2026-06-13 (2차) — A-3b 쇼러너 4줄 제안: charter 단계 LLM 척추 제안 (main, TDD)
+
+> A-2 직후 다음 시퀀스(A-3b) 이행. charter 단계에서 작가가 빈 4줄을 맨손으로 채우는 대신, 쇼러너가 자유 서술·결말을 읽고 4줄을 제안한다. pace-interview 인프라를 6개 지점에 미러. TDD + codex 라이브 + main ff-merge. origin push 미실행.
+
+### 한 것 (코드 `7486e93`)
+- **프롬프트** — `buildSpineSuggestionPrompt`(promptBuilders.ts) + storyx.mjs 미러(byte-identical). 4줄 정의(욕망/전진/시련/변화 = 내적 변화) 주입, endingStatement 있으면 4번 줄 정렬, JSON 계약 `{ "spine": {...} }`.
+- **CLI/서버** — storyx.mjs `spine-suggest` 명령(codex, Q2 재시도 가드·`normalizeSpineSuggestion`) + `api/spine-suggest.ts`(prod) + vite 브리지(`/api/spine-suggest`).
+- **클라이언트** — `spineSuggestClient.ts`(requestSpineSuggestion·normalizeSpine). aiStatus `AiCallMode` 에 'spine-suggest' + 라벨('척추 제안').
+- **UI** — App.tsx charter 4줄 fieldset 에 "쇼러너에게 4줄 제안받기" 버튼 → `suggestSpine()` → **빈 칸만 채움**(`current.desire.trim() || suggested.desire`). freewrite 없으면 disabled. 로딩/실패 안내(`spineSuggestNote`). 인터뷰 답 수집은 `collectAnswerLines()` 헬퍼로 추출(goToBuilding 과 공용).
+- TDD — promptBuilders.test +3(빌더·미러)·spineSuggestClient.test +3(normalize)·appExperience +1(버튼). 512→519.
+- codex 라이브 — `/api/spine-suggest` 직접 fetch(달의 탑·이름 대가 freewrite + 결말): provider=codex·23.5초·4줄 작품 맞춤·resolution↔ending 정렬·콘솔 0.
+
+### 손대지 말 것
+- buildSpineSuggestionPrompt 의 JSON 계약·4줄 정의 문구 — promptBuilders↔storyx.mjs **byte-identical 미러**. promptBuilders.test 의 `[spine-mirror]` 가 지킨다. 한쪽만 바꾸면 깨짐.
+- suggestSpine 의 **빈 칸만 채움** 원칙(`current.desire.trim() || suggested.desire`) — 작가가 이미 쓴 줄을 덮지 않는다. 통째 덮기로 바꾸면 작가 입력 손실.
+- `collectAnswerLines()` 헬퍼 — goToBuilding 의 answerLines 와 동일 출력(순수 추출). goToBuilding 이 이걸 쓰므로 시그니처를 바꾸면 빌딩 경로가 깨진다.
+- spineSuggestClient 는 실패 시 ok:false 만 — 폴백(결정론)은 의도적으로 안 만들었다(4줄은 창작이라 결정론 빈약). charter UI 가 안내만 하고 작가 직접 입력으로 강등.
+
+### 다음 세션이 해야 할 한 가지
+- **charter UI 시각 확인(경량)** — 이번엔 codex 통합을 직접 fetch 로 검증하고 charter 진입(온보딩 intake LLM 연쇄)은 생략했다. 사용자 실사용 또는 라이브에서 온보딩→charter 진입 시 버튼 렌더·"빈 칸만 채움"·로딩 표시를 한 번 눈으로 확인하면 완전(버튼은 fieldset 내부 무조건 렌더라 안전).
+- **A-3c 비트 펼침 UI** — 4줄(spine)→beatSheet 화수 핀(`deriveBeatSheet`, storyEngine 에 이미 있음)을 charter 또는 편집 진입 시 보여주고 작가가 화수를 조정. 그 뒤 A-6(기억 R1~R3). 학술 단계 게이트(charter 경로 신설)도 대기.
+- (선택) CSS — `hx-spine-suggest` 버튼·`hx-spine-note` 간격 미세조정(현재 hx-btn-ghost·hx-charter-help 재사용으로 기본 스타일은 보장).
+
+---
+
 ## 2026-06-13 — A-2 단계 게이트: 미잠금 헌장 produceEpisode 차단 + 단편 2줄 경량 잠금 (main, TDD)
 
 > 2026-06-12 (2차) 핸드오프의 "다음 세션이 해야 할 한 가지"(A-2) 이행. 헌장 체인에 **단계적 집필 게이트**를 채웠다 — 척추가 잠기기 전엔 본문을 못 만든다. TDD + preview 라이브 A/B + main ff-merge. origin push 미실행.

@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-13 · Branch: `main` (**A-2 단계 게이트 — 미잠금 헌장 produceEpisode 차단 + 단편 2줄 경량 잠금, TDD·라이브·main 머지**)
+> Last Updated: 2026-06-13 (2차) · Branch: `main` (**A-3b 쇼러너 4줄 제안 — charter 단계 LLM 척추 제안, TDD·codex 라이브·main 머지**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -17,7 +17,8 @@
   - **Phase A-5 배선** (`43c6d56` 생성 · `d2fd3f8` 검토) — StoryXDesk 가 `buildContractStatus(project)` 계산 → 생성·검토 ×3 호출에 전달 → draftClient/reviewClient body·api/draft·api/review-agent·vite 브리지·storyx CLI `--contract-status` 플래그까지 전 경로. A-4 규칙이 실제 생성·검토 프롬프트에 발화. **헌장이 없으면 전 경로 no-op(하위호환).**
   - **Phase A-3 빌더+온보딩** (`54fa97a` deriveBeatSheet·buildStoryContractFromOnboarding · `2e51fa2` UI) — intake↔building 사이 'charter' 단계(연재 서사만, 에세이·학술·단독 단편 제외). 분량 등급·확정 회차·결말 2문항·4줄 척추 입력 → 헌장 빌드 → seed → createEmptyProject. **★ 헌장 체인 dormant→live** — 라이브에서 신규 장편 온보딩→헌장 패널·CTA 게이트·확정→프로젝트에 contract(long·30화·비트4·spineLocked) 영속 확인(콘솔 0). 이제 A-4/A-5 가 실제 작품에 발화.
 - **A-2 단계 게이트 완료 (2026-06-13, TDD+라이브, `3d98fe1`)** — `evaluateProductionGate(project)`: 헌장이 있고 `spineLocked=false` 면 produceEpisode 차단(reason 반환), 헌장 없으면 통과(하위호환 — 기존 작품·백업 주입). buildStoryContractFromOnboarding 단편은 desire+resolution **2줄 경량 잠금**(장편은 4줄 전부). StoryXDesk produceEpisode 진입 가드(미잠금이면 안내만) + 메인 CTA `productionBlockedReason` 비활성, App.tsx charterReady 단편 2줄(빌더와 동일 규칙). storyEngine.test +5·editorFocusLayout +2·appExperience +1. **라이브 — 미잠금 헌장 편집모드 진입 시 CTA disabled "헌장 잠금 필요"+사유 툴팁 → spineLocked 복원 시 "초안 생성" enabled · 콘솔 0 · 원본 무손상.** ★학술은 charter 경로(usesCharter 제외)가 없어 헌장이 안 생기므로 현재 no-op — 학술 헌장 경로가 생기면 같은 게이트가 매체 무관하게 자동 적용된다.
-- **다음 1순위 — A-3b/A-3c/A-6** — A-3b(4줄 LLM 제안, pace-interview 재사용)·A-3c(비트 펼침 UI)·A-6(기억 R1~R3). 그 뒤 Phase B(긴장 감수자·날것)·C(트위스트)·E(비용)·F(재실험).
+- **A-3b 쇼러너 4줄 제안 완료 (2026-06-13 2차, TDD+codex 라이브, `7486e93`)** — charter 단계에 "쇼러너에게 4줄 제안받기" 버튼 → `/api/spine-suggest`(buildSpineSuggestionPrompt·promptBuilders↔storyx.mjs byte-identical 미러·vite 브리지·codex) → 작품 맞춤 4줄을 **빈 칸만 채움**(작가가 쓴 줄 보존). 실패 시 안내만(직접 입력 유지). pace-interview 인프라 미러. promptBuilders.test +3·spineSuggestClient.test +3·appExperience +1. **codex 라이브 — freewrite "달의 탑·이름 대가"+ending 주입 시 23초에 4줄 도착, resolution 이 endingStatement 와 정렬·콘솔 0.** charter UI 진입(온보딩 intake LLM 연쇄)은 비용 과다라 codex 통합을 직접 fetch 로 검증, 버튼은 소스검사+무조건 렌더(fieldset 내부)로 보장.
+- **다음 1순위 — A-3c/A-6** — A-3c(비트 펼침 UI — 4줄→beatSheet 화수 핀 조정)·A-6(기억 R1~R3). 그 뒤 Phase B(긴장 감수자·날것)·C(트위스트)·E(비용)·F(재실험). 학술 단계 게이트(charter 경로 신설)도 대기.
 - **Phase D-3(dev 서버 사망 조사)는 Phase E-1 계측으로 이관** — 재현 없이 추정 금지.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -126,6 +127,19 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-13 2차 · A-3b 쇼러너 4줄 제안 · main)
+
+```
+init.sh            → tsc 0 · vitest 전체 녹색(테스트 7건 추가: promptBuilders 3·spineSuggestClient 3·appExperience 1) · build 통과
+                     (변경 전 512 → 519)
+A-3b               — buildSpineSuggestionPrompt(promptBuilders↔storyx.mjs byte-identical 미러)·spine-suggest CLI 명령·
+                     /api/spine-suggest 라우트·vite 브리지·spineSuggestClient(normalizeSpine)·aiStatus mode·
+                     App charter "쇼러너에게 4줄 제안받기" 버튼(빈 칸만 채움·작가 입력 보존)
+CLI dry-run        — spine-suggest --dry-run: mode·프롬프트 669자·JSON 계약 포함
+codex 라이브(preview) — /api/spine-suggest 직접 fetch: provider=codex·status complete·23.5초·
+                     4줄(desire/advance/obstacle/resolution) 작품 맞춤·resolution 이 endingStatement 와 정렬·콘솔 0
+```
 
 ## 최근 검증 (2026-06-13 · A-2 단계 게이트 · main)
 
