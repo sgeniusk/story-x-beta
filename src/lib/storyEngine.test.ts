@@ -17,6 +17,7 @@ import {
   serializeCanonCategory,
   unlockChapter,
   validateContinuity,
+  type Chapter,
   type DraftChapterPayload,
   type SeriesProject
 } from './storyEngine';
@@ -275,6 +276,36 @@ describe('storyEngine', () => {
     expect(result.updatedProject.canonFacts).toEqual(project.canonFacts);
     // intent 문구가 캐논 어디에도 새지 않는다
     expect(result.updatedProject.canonFacts.some((f) => f.statement.includes('설계자의 정체'))).toBe(false);
+  });
+
+  // 폴백 회차 번호 드리프트 (2026-06-12 Phase D) — 쇼케이스 30화에서 16화 다음이 19화로 점프(17·18 결번).
+  // 원인: 폴백 17·18화가 커밋돼 currentEpisode 를 18로 올린 뒤 chapters 에서 폐기됐는데 카운터는 그대로 남음.
+  // 다음 회차 번호는 카운터가 아니라 실제 chapters 의 마지막 회차에서 도출해야 폐기된 번호가 회복된다.
+  it('폐기된 폴백 회차의 번호를 소모하지 않는다 — 다음 회차 번호를 chapters 기준으로 도출한다', () => {
+    const base = createSeedProject();
+    const ch16: Chapter = {
+      id: 'episode-16',
+      episode: 16,
+      title: '16화',
+      hook: '',
+      outline: [],
+      beats: [],
+      prose: '본문',
+      memoryAnchors: [],
+      newCanonFacts: [],
+      rewardArc: [],
+      stakesLedger: []
+    };
+    // currentEpisode 만 18로 앞서 있고(폐기된 17·18 폴백의 잔재) 실제 마지막 chapter 는 16화.
+    const drifted: SeriesProject = { ...base, currentEpisode: 18, chapters: [ch16] };
+
+    const result = produceNextChapter(drifted, {
+      genre: 'urban-fantasy',
+      intent: '추적',
+      pressure: '시간'
+    });
+
+    expect(result.chapter.episode).toBe(17);
   });
 
   it('locks a single chapter without touching the others, and unlock reverses it', () => {

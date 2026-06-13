@@ -1116,12 +1116,21 @@ function pushUnique(target: string[], value: string): void {
   if (clean.length > 0 && !target.includes(clean)) target.push(clean);
 }
 
+// 다음 회차 번호는 독립 카운터(currentEpisode)가 아니라 실제 chapters 의 마지막 회차에서 도출한다.
+// 폴백 회차가 커밋돼 카운터를 올린 뒤 폐기되면(chapters 에서 제거) 카운터만 앞서 남아 번호가 결번되던 사고(쇼케이스 16→19)를
+// chapters 를 진실원천으로 삼아 치유한다. chapters 가 비면 카운터로 폴백(회차 미하이드레이트 프로젝트 대비).
+export function nextEpisodeNumber(project: SeriesProject): number {
+  const lastInChapters = project.chapters.reduce((max, chapter) => Math.max(max, chapter.episode), 0);
+  const base = project.chapters.length > 0 ? lastInChapters : project.currentEpisode;
+  return base + 1;
+}
+
 export function produceNextChapter(project: SeriesProject, request: ProductionRequest): ProductionResult {
   // M4 청크 A — Gap 7: 빈 프로젝트(인물 0명)에서도 안전하게 동작.
   // 시드 모티프(달의 탑·오빠의 표식·이안)는 특정 작품에 묶이므로 제거. 대신 작가 입력(intent/pressure)과 장르 메타로만 산출.
   // 이 함수는 LLM 응답이 없을 때의 deterministic fallback — 풍부함보다 안전함을 우선.
   const genre = genreProfiles[request.genre];
-  const episode = project.currentEpisode + 1;
+  const episode = nextEpisodeNumber(project);
   const memoryAnchors = project.canonFacts.slice(0, 4).map((fact) => fact.statement);
   const continuityIssues = validateContinuity(project, [request.intent, request.pressure]);
   const primaryName = project.characters[0]?.name ?? '주인공';
@@ -1237,7 +1246,7 @@ export function chapterFromDraftPayload(
   payload: DraftChapterPayload,
   request: ProductionRequest
 ): ProductionResult {
-  const episode = project.currentEpisode + 1;
+  const episode = nextEpisodeNumber(project);
   const memoryAnchors = project.canonFacts.slice(0, 4).map((fact) => fact.statement);
   const continuityIssues = validateContinuity(project, [request.intent, request.pressure]);
   const newCanonFacts: CanonFact[] = (payload.newCanonFacts ?? [])
