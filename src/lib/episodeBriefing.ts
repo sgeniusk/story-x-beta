@@ -109,6 +109,35 @@ function collectUnpaidPromises(project: StoryProject): string[] {
   return unpaid;
 }
 
+// 작품 헌장 화수 예산 상태 — Phase A-4. 위치·잔여 화수·미회수 약속을 결정론으로 산출한다.
+// overBudget(미회수 > 잔여)면 신규 발급 금지, finalStretch(잔여 ≤ 25%)면 종반 — 둘 다 생성·검토 프롬프트에 강제.
+export interface ContractStatus {
+  plannedEpisodes: number;
+  position: number;     // 마지막으로 쓴 회차(= chapters 마지막)
+  remaining: number;    // 앞으로 쓸 회차 수 (plannedEpisodes - position)
+  unpaidCount: number;  // 미회수 약속 수
+  overBudget: boolean;  // 미회수 > 잔여
+  finalStretch: boolean; // 잔여 ≤ plannedEpisodes×25%
+}
+
+export function buildContractStatus(project: StoryProject): ContractStatus | null {
+  const contract = project.storyContract;
+  if (!contract) return null;
+  const planned = contract.plannedEpisodes;
+  // 위치는 카운터가 아니라 실제 chapters 마지막 회차에서 도출(폴백 번호 드리프트 면역, Phase D 와 동일 원칙).
+  const position = project.chapters.reduce((max, chapter) => Math.max(max, chapter.episode), 0);
+  const remaining = planned - position;
+  const unpaidCount = collectUnpaidPromises(project).length;
+  return {
+    plannedEpisodes: planned,
+    position,
+    remaining,
+    unpaidCount,
+    overBudget: unpaidCount > remaining,
+    finalStretch: remaining <= planned * 0.25
+  };
+}
+
 export function buildEpisodeForks(project: StoryProject, ledger: PayoffLedgerReport): EpisodeFork[] {
   const forks: EpisodeFork[] = [];
   const unpaid = collectUnpaidPromises(project);

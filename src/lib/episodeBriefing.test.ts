@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { buildEpisodeForks, composeIntentWithFork, stripConsumedSeeds } from './episodeBriefing';
+import { buildContractStatus, buildEpisodeForks, composeIntentWithFork, stripConsumedSeeds } from './episodeBriefing';
 import { computePayoffLedger } from './payoffLedger';
-import type { Chapter, StoryProject } from './storyEngine';
+import type { Chapter, StoryContract, StoryProject } from './storyEngine';
 import { createEmptyProject } from './storyEngine';
 
 function ch(episode: number, opts: Partial<Pick<Chapter, 'rewardArc' | 'stakesLedger'>> = {}): Chapter {
@@ -365,5 +365,77 @@ describe('stripConsumedSeeds', () => {
       '자필 메모: 강태준의 표정을 클로즈업.'
     ].join('\n');
     expect(stripConsumedSeeds(intent)).toBe('자필 메모: 강태준의 표정을 클로즈업.');
+  });
+});
+
+describe('buildContractStatus (작품 헌장 화수 예산 — Phase A-4)', () => {
+  function contract(overrides: Partial<StoryContract> = {}): StoryContract {
+    return {
+      lengthClass: 'long',
+      plannedEpisodes: 30,
+      endingStatement: '끝',
+      protagonistCost: '대가',
+      beatSheet: [],
+      spineLocked: true,
+      amendments: [],
+      ...overrides
+    };
+  }
+
+  it('헌장이 없으면 null', () => {
+    const project = projectWith([ch(1)]);
+    expect(buildContractStatus(project)).toBeNull();
+  });
+
+  it('위치와 잔여 화수를 chapters 마지막 회차에서 도출한다', () => {
+    const project: StoryProject = {
+      ...projectWith([ch(16), ch(17)]),
+      storyContract: contract({ plannedEpisodes: 30 })
+    };
+    const status = buildContractStatus(project);
+    expect(status?.position).toBe(17);
+    expect(status?.remaining).toBe(13);
+  });
+
+  it('미회수 약속이 잔여 화수를 넘으면 overBudget', () => {
+    // 28화까지 진행(잔여 2), 미회수 약속 3건 → 예산 초과
+    const project: StoryProject = {
+      ...projectWith([
+        ch(28, {
+          rewardArc: [
+            { promise: 'p1', payoff: '' },
+            { promise: 'p2', payoff: '' },
+            { promise: 'p3', payoff: '' }
+          ]
+        })
+      ]),
+      storyContract: contract({ plannedEpisodes: 30 })
+    };
+    const status = buildContractStatus(project);
+    expect(status?.remaining).toBe(2);
+    expect(status?.unpaidCount).toBe(3);
+    expect(status?.overBudget).toBe(true);
+  });
+
+  it('미회수 약속이 잔여 화수 이하면 overBudget 가 아니다', () => {
+    const project: StoryProject = {
+      ...projectWith([
+        ch(20, { rewardArc: [{ promise: 'p1', payoff: '' }, { promise: 'p2', payoff: '' }] })
+      ]),
+      storyContract: contract({ plannedEpisodes: 30 })
+    };
+    const status = buildContractStatus(project);
+    expect(status?.remaining).toBe(10);
+    expect(status?.unpaidCount).toBe(2);
+    expect(status?.overBudget).toBe(false);
+  });
+
+  it('잔여 화수가 전체의 25% 이하면 종반(finalStretch) — 신규 발급 금지 구간', () => {
+    // 23/30 → 잔여 7 = 30*0.25=7.5 이하 → 종반
+    const inFinal: StoryProject = { ...projectWith([ch(23)]), storyContract: contract({ plannedEpisodes: 30 }) };
+    expect(buildContractStatus(inFinal)?.finalStretch).toBe(true);
+    // 22/30 → 잔여 8 > 7.5 → 아직 아님
+    const notYet: StoryProject = { ...projectWith([ch(22)]), storyContract: contract({ plannedEpisodes: 30 }) };
+    expect(buildContractStatus(notYet)?.finalStretch).toBe(false);
   });
 });
