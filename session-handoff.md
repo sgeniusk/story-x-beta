@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-06-12 — 품질·비용 로드맵 수립 + 작품 헌장 spec (main, 코드 변경 0)
+
+> 사용자 실독 판정 인테이크 + 7차 핸드오프의 "착수 순서 결정" 이행. 문서만 작성한 계획 세션 — 코드·테스트 변경 0.
+
+### 한 것
+- **사용자 실독 결함 인테이크 (U1~U5)** — 제목 반복 · 정체된 중후반("언제 끝날지 모르는 연재는 중구난방") · 온건한 문체(통제군 포함 — 날것·긴장감 없음, 웹소설로 식상) · 의외성 부재(보조만 하고 제안 안 함) · 토큰 비용 과대.
+- **사용자 결정 4건** — ① 분량 2등급: **단편 4~8화 · 장편 24~36화 시즌제, 중편 없음** ② 결말 역산(결말 확정 후 1화) ③ 별도 전개 에이전트 대신 CLAUDE.md 식 공유 기준 = **작품 헌장** ④ Story X 가 의외의 전개를 제안.
+- **헌장 spec** — `docs/superpowers/specs/2026-06-12-story-contract-design.md`. StoryContract 타입(plannedEpisodes·spine·endingStatement·protagonistCost·beatSheet·spineLocked·amendments) + 온보딩 결말 인터뷰 + digest/draft/review/pace 프롬프트 주입(미러 동기화) + 화수 예산 차단 게이트(overBudget·종반 25% 신규 발급 금지) + R1~R3 기억 반영 합류. 시즌 아크 플래너·R2 를 흡수.
+- **추가 결정 — 단계적 집필 + 4줄 척추** (사용자 제안, 《4줄이면 된다》 이은희). 장편·학술은 편집모드 직행 금지 — Stage 1(질문+4줄 척추 잠금) → Stage 2(비트 펼침) → Stage 3(본문). `spineLocked=false` 면 장편 produceEpisode 차단. 4줄 = 욕망/전진/시련/변화(내적 변화), 질문=기존 deepQuestion 재사용, 결말=질문의 답(표면 생사 아님). 쇼러너 검토에 "길 잃음 점검"(3줄 비대로 질문 이탈)·"없는 결말 block" 추가. spec B 절.
+- **로드맵 정본** — `docs/superpowers/plans/2026-06-12-quality-cost-roadmap.md`. 순서 D(결정론 소건) → A(헌장) → B(긴장 감수자·날것 규칙·제목/후크 다양성) · C(트위스트 제안 채널) → E(토큰 계측·검토 티어링) → F(같은 모델 재실험, **10화 중간 게이트 후 30화 결정**).
+
+### 손대지 말 것
+- 로드맵 Phase 0 표의 사용자 결함 서술(U1~U5)과 결정 4건 — 사용자 원판정. 재해석하지 말 것.
+- 7차 노트의 보존 조항 그대로 유효 — `storyscore-ab-report.md` 점수·교란 변수 서술, 실험군 백업의 19~32 번호(사고 증거).
+- 헌장 spec 의 분량 경계(4/8/24/36)·중편 없음 — 사용자 확정값.
+
+### 다음 세션이 해야 할 한 가지
+- **Phase D 착수** — 폴백 episode 번호 소모 버그부터(TDD, 앵커는 로드맵 D 절 — buildFallbackDraft storyEngine.ts:450 · buildCliDraftFallback storyx.mjs:1173 · commitChapter storyEngine.ts:1607). 이어서 StoryScore v0.2(2글자 이름 가드 + 제목 반복 신호). D 완료 후 Phase A 는 per-feature 구현 계획을 새로 써서 진행(spec 은 완성돼 있음).
+- 미결 — F-1 의 provider 전환 범위(생성만 claude vs 검토까지)는 E-1 계측 결과를 보고 사용자와 결정.
+
+---
+
 ## 2026-06-11 (7차) — 30화 완주 ×2 + StoryScore A/B: 통제군 승 (main)
 
 > 사용자 결정 3건 이행 — (1) 이 세션에서 30화 완주 (2) 맨 Claude 통제군 비교 집필 (3) StoryScore 평가 시스템+스킬화. 셋 다 완료.
