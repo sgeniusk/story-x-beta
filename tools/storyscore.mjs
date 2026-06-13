@@ -3,12 +3,14 @@
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const VERSION = 'STORYSCORE_V0_1';
+const VERSION = 'STORYSCORE_V0_2';
 const TARGET_RANGE = { min: 1800, max: 2700 };
 const FORMAT_DISCIPLINE_MAX = 10;
 const HOOK_DETERMINISM_MAX = 7;
-// 말미 후크 전환 신호 — 마지막 200자 안에서 찾는다
-const HOOK_TEXT_SIGNALS = ['그때', '순간', '갑자기'];
+// 말미 후크 전환 신호 — 마지막 200자 안에서 찾는다. v0.2에서 문학적 후크(반전어)를 추가해 저점을 보완.
+const HOOK_TEXT_SIGNALS = ['그때', '순간', '갑자기', '하지만', '그러나', '그런데'];
+// v0.2 — 제목 반복 토큰 판정에서 제외할 기능어(조사·관형어). 의미 토큰만 공유로 센다.
+const TITLE_STOPWORDS = new Set(['그리고', '그러나', '하지만', '그런데', '다시', '아직', '이제']);
 
 const args = process.argv.slice(2);
 const inputPath = readFlag(args, '--input', '');
@@ -48,6 +50,7 @@ const rosterNames = rosterRaw
 
 const lengths = analyzeLengths(episodes);
 const hooks = analyzeHooks(episodes);
+const titles = analyzeTitles(episodes);
 const roster = rosterNames.length > 0 ? analyzeRoster(episodes, rosterNames) : null;
 const scores = {
   formatDiscipline: { max: FORMAT_DISCIPLINE_MAX, value: roundScore(lengths.fitRate * FORMAT_DISCIPLINE_MAX) },
@@ -62,6 +65,7 @@ const report = {
     episodeCount: episodes.length,
     lengths,
     hooks,
+    titles,
     roster,
     scores,
     // 하네스 메타(canonFacts·stakesLedger)는 점수가 아니라 부가 진단 — 통제군 입력에는 없어 점수에 쓰면 비대칭이다
@@ -195,6 +199,7 @@ function analyzeHooks(episodes) {
     const tail = entry.prose.slice(-200);
     const signals = [];
     if (/[?？]/.test(tail)) signals.push('물음표');
+    if (/[!！]/.test(tail)) signals.push('느낌표');
     if (tail.includes('…') || tail.includes('...')) signals.push('말줄임표');
     for (const signal of HOOK_TEXT_SIGNALS) {
       if (tail.includes(signal)) signals.push(signal);
@@ -223,7 +228,8 @@ function analyzeRoster(episodes, names) {
   for (const entry of episodes) {
     const tokens = entry.prose.match(/[가-힣]+/g) ?? [];
     for (const name of names) {
-      if (name.length < 2) continue;
+      // v0.2 — 2글자 이름은 머리(1자)가 흔한 어절과 충돌해 위양성을 양산("한설"↔"한참") → 변형 의심에서 제외
+      if (name.length < 3) continue;
       const head = name.slice(0, -1);
       for (const token of tokens) {
         if (token.startsWith(name)) continue; // 정상 출현(조사 결합 포함)
@@ -241,6 +247,41 @@ function analyzeRoster(episodes, names) {
   }
 
   return { names, matrix, variantSuspicions: [...suspicionMap.values()] };
+}
+
+// v0.2 — U1 제목 반복 신호. 인접 제목이 의미 토큰(2자 이상)의 공통 어간을 공유하면 반복으로 본다.
+// 실험군 중후반 제목이 "새 소품+첫소리" 같은 동일 템플릿으로 반복된 것을 결정론으로 포착한다.
+// 조사가 붙은 토큰끼리도 잡도록 정확 일치가 아니라 최장 공통 접두(≥2자)로 어간을 비교한다.
+function analyzeTitles(episodes) {
+  const tokenize = (title) => (String(title).match(/[가-힣]+/g) ?? []).filter((token) => token.length >= 2);
+  const seenTokens = [];
+  const perEpisode = episodes.map((entry, index) => {
+    const tokens = tokenize(entry.title);
+    const shared = new Set();
+    if (index > 0) {
+      for (const token of tokens) {
+        for (const previous of seenTokens) {
+          const stem = longestCommonPrefix(token, previous);
+          if (stem.length >= 2 && !TITLE_STOPWORDS.has(stem)) shared.add(stem);
+        }
+      }
+    }
+    seenTokens.push(...tokens);
+    return {
+      episode: entry.episode,
+      title: entry.title,
+      repeatsPrevious: shared.size > 0,
+      sharedTokens: [...shared]
+    };
+  });
+  const repeatCount = perEpisode.filter((entry) => entry.repeatsPrevious).length;
+  return { perEpisode, repetitionRate: roundRate(repeatCount / Math.max(1, episodes.length)) };
+}
+
+function longestCommonPrefix(a, b) {
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i += 1;
+  return a.slice(0, i);
 }
 
 // ---------- 심사용 패키지 ----------
@@ -293,6 +334,7 @@ function renderSummary(value) {
     '',
     `분량 — 평균 ${det.lengths.averageChars}자 (${det.lengths.minChars}~${det.lengths.maxChars}자), 목표 ${det.lengths.targetRange.min}~${det.lengths.targetRange.max}자 적합률 ${formatPercent(det.lengths.fitRate)}`,
     `말미 후크 — 후크 회차 비율 ${formatPercent(det.hooks.hookRate)}`,
+    `제목 반복 — 직전 제목과 어간을 공유한 회차 비율 ${formatPercent(det.titles.repetitionRate)}`,
     '',
     `형식 규율: ${det.scores.formatDiscipline.value} / ${det.scores.formatDiscipline.max}`,
     `후크 결정론: ${det.scores.hookDeterminism.value} / ${det.scores.hookDeterminism.max}`
