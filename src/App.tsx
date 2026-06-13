@@ -712,8 +712,11 @@ function StoryXHome({
     setContractLengthClass(next);
     setContractPlannedEpisodes(defaultPlannedEpisodes(next));
   }
-  const spineComplete = [contractSpine.desire, contractSpine.advance, contractSpine.obstacle, contractSpine.resolution]
-    .every((line) => line.trim().length > 0);
+  // 단편은 욕망·변화 2줄만으로 잠금(A-2 경량 잠금), 장편은 4줄 전부 채워야 한다.
+  const spineComplete = contractLengthClass === 'short'
+    ? contractSpine.desire.trim().length > 0 && contractSpine.resolution.trim().length > 0
+    : [contractSpine.desire, contractSpine.advance, contractSpine.obstacle, contractSpine.resolution]
+        .every((line) => line.trim().length > 0);
   const charterReady = spineComplete && contractEnding.trim().length > 0 && contractCost.trim().length > 0;
   const [llmIntakeQuestions, setLlmIntakeQuestions] = useState<ProjectIntakeQuestion[] | null>(null);
   const [isInterviewLoading, setIsInterviewLoading] = useState(false);

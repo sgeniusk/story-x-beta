@@ -104,6 +104,7 @@ import {
   createEmptyProject,
   createSeedProject,
   describeCreativeWeight,
+  evaluateProductionGate,
   getCanonReviewCategoryLabel,
   getGenreProfiles,
   lockChapter,
@@ -1237,6 +1238,10 @@ export function StoryXDesk({
       : actionLabels.review;
   const mainActionRun = !latestChapter || isLatestLocked ? produceEpisode : reviewDraft;
   const MainActionIcon = !latestChapter || isLatestLocked ? WandSparkles : ClipboardCheck;
+  // 단계적 집필 게이트(A-2) — 미잠금 헌장이면 생성 CTA 만 비활성화하고 사유를 보여준다(검토·다른 동선은 유지).
+  const productionGate = evaluateProductionGate(project);
+  const productionBlockedReason =
+    (!latestChapter || isLatestLocked) && !productionGate.allowed ? productionGate.reason : undefined;
 
   // Phase 2a — floating 본문 편집 쓰기-백(단일 원천 editorText). 타이핑 경로는 bodyVersion 을 올리지 않는다.
   const handleFloatingBodyChange = useCallback((text: string) => {
@@ -1337,6 +1342,7 @@ export function StoryXDesk({
       onAskShowrunnerPace: askShowrunnerPace,
       isPaceInterviewLoading,
       paceInterviewNote,
+      productionBlockedReason,
     }),
     [
       project,
@@ -1361,6 +1367,7 @@ export function StoryXDesk({
       askShowrunnerPace,
       isPaceInterviewLoading,
       paceInterviewNote,
+      productionBlockedReason,
     ]
   );
   const draftPromptPlaceholder = isLatestLocked
@@ -1827,6 +1834,12 @@ export function StoryXDesk({
   // LLM 브리지(claude 구독) 우선, 실패하면 deterministic 생성으로 폴백한다
   async function produceEpisode() {
     if (isGenerating || isReviewing) {
+      return;
+    }
+    // 단계적 집필 게이트(A-2) — 헌장이 있는데 척추가 미잠금이면 본문을 만들지 않고 안내만 한다.
+    const gate = evaluateProductionGate(project);
+    if (!gate.allowed) {
+      setGenerationNote(gate.reason ?? '작품 헌장을 먼저 잠가야 본문을 생성할 수 있습니다.');
       return;
     }
 

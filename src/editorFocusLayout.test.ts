@@ -510,3 +510,25 @@ describe('검증 데스크 회귀 — 생성 피드백·검토 fallback (2026-06
     expect(block).toContain('marginReview.onRunAll');
   });
 });
+
+describe('단계적 집필 게이트 — 헌장 미잠금 시 본문 생성 차단 (Phase A-2)', () => {
+  // produceEpisode 진입 가드 — 헌장이 있고 척추가 미잠금이면 생성하지 않고 안내만 한다.
+  it('produceEpisode 가 진입에서 evaluateProductionGate 로 미잠금 헌장을 차단한다', () => {
+    expect(desk).toContain('evaluateProductionGate');
+    const fnStart = desk.indexOf('async function produceEpisode()');
+    expect(fnStart).toBeGreaterThan(-1);
+    // 가드는 생성(requestLlmDraft) 호출 전에 allowed=false 면 return 한다.
+    const head = desk.slice(fnStart, fnStart + 700);
+    expect(head).toContain('evaluateProductionGate(project)');
+    expect(head).toContain('.allowed');
+  });
+
+  // 미잠금 상태에서 floating 메인 CTA 는 disabled + 사유를 보여준다(생성 버튼만 막고, 다른 동선은 살린다).
+  it('floating 메인 CTA 가 헌장 미잠금 사유(productionBlockedReason)로 비활성화된다', () => {
+    const floating = componentSrc('FloatingEditor');
+    expect(floating).toContain('productionBlockedReason');
+    const propsStart = desk.indexOf('const floatingEditorProps');
+    expect(propsStart).toBeGreaterThan(-1);
+    expect(desk.slice(propsStart, propsStart + 2000)).toContain('productionBlockedReason');
+  });
+});

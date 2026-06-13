@@ -407,8 +407,11 @@ export function buildStoryContractFromOnboarding(input: {
   spine: StorySpine;
 }): StoryContract {
   const plannedEpisodes = input.plannedEpisodes ?? defaultPlannedEpisodes(input.lengthClass);
-  const spineComplete = [input.spine.desire, input.spine.advance, input.spine.obstacle, input.spine.resolution]
-    .every((line) => line.trim().length > 0);
+  // 단편은 욕망·변화 2줄만으로 경량 잠금(A-2), 장편은 4줄 전부 채워야 잠긴다.
+  const spineComplete = input.lengthClass === 'short'
+    ? input.spine.desire.trim().length > 0 && input.spine.resolution.trim().length > 0
+    : [input.spine.desire, input.spine.advance, input.spine.obstacle, input.spine.resolution]
+        .every((line) => line.trim().length > 0);
   return {
     lengthClass: input.lengthClass,
     plannedEpisodes,
@@ -441,6 +444,26 @@ export function validateContract(contract: StoryContract): string[] {
     }
   }
   return problems;
+}
+
+/** 단계적 집필 게이트(A-2) 결과 — allowed=false 면 본문 생성을 막고 reason 을 UI 안내로 쓴다. */
+export interface ProductionGate {
+  allowed: boolean;
+  reason?: string;
+}
+
+// 단계적 집필 게이트 — Phase A-2. 헌장이 있는데 척추가 잠기지 않았으면 본문(회차) 생성을 막는다.
+// 헌장이 없으면(구버전 저장본·백업 주입·계약 미수립) 통과 — 하위호환. 잠금 후에도 통과.
+export function evaluateProductionGate(project: SeriesProject): ProductionGate {
+  const contract = project.storyContract;
+  if (!contract || contract.spineLocked) {
+    return { allowed: true };
+  }
+  const label = contract.lengthClass === 'short' ? '단편' : '장편';
+  return {
+    allowed: false,
+    reason: `${label} 척추가 아직 잠기지 않았습니다 — 결말과 4줄 척추를 확정해 잠근 뒤 본문을 시작하세요.`
+  };
 }
 
 /** SeriesProject 의 공개 별칭 — 외부 모듈에서 짧게 참조할 때 사용한다. */

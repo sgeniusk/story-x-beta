@@ -61,6 +61,8 @@ export interface FloatingEditorProps {
   isPaceInterviewLoading?: boolean;
   /** 페이스 인터뷰 실패 안내 한 줄 — 있으면 fc-pace 카드 안에 표시. */
   paceInterviewNote?: string | null;
+  /** 단계적 집필 게이트(A-2) — 헌장 미잠금 사유. 있으면 메인 생성 CTA 를 비활성화하고 사유를 보여준다. */
+  productionBlockedReason?: string;
 }
 
 const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
@@ -103,6 +105,7 @@ export function FloatingEditor({
   onAskShowrunnerPace,
   isPaceInterviewLoading = false,
   paceInterviewNote,
+  productionBlockedReason,
 }: FloatingEditorProps) {
   const personaById = useCallback(
     (id: string): PersonaCard =>
@@ -413,13 +416,14 @@ export function FloatingEditor({
         <button
           className={`btn-primary${isGenerating ? ' is-generating' : ''}`}
           onClick={() => (onGenerateDraft ? onGenerateDraft() : toast('초안 생성 — 데모에서는 본문이 채워져 있습니다'))}
-          disabled={isGenerating}
+          disabled={isGenerating || Boolean(productionBlockedReason)}
           aria-busy={isGenerating}
+          title={productionBlockedReason}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
             <path d="M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5z" />
           </svg>
-          <span>{isGenerating ? '생성 중…' : mainActionLabel}</span>
+          <span>{isGenerating ? '생성 중…' : productionBlockedReason ? '헌장 잠금 필요' : mainActionLabel}</span>
         </button>
       </header>
       <button className="exitfocus" onClick={() => setIsFocus(false)}>

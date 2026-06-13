@@ -14,6 +14,7 @@ import {
   defaultPlannedEpisodes,
   deriveBeatSheet,
   deriveOnboardingSeed,
+  evaluateProductionGate,
   validateContract,
   getCanonReviewCategoryLabel,
   lockChapter,
@@ -1137,5 +1138,82 @@ describe('buildStoryContractFromOnboarding / deriveBeatSheet (Phase A-3)', () =>
       spine: { ...spine, obstacle: '' }
     });
     expect(contract.spineLocked).toBe(false);
+  });
+
+  it('buildStoryContractFromOnboarding — 단편은 desire+resolution 2줄만으로 잠근다(경량 잠금)', () => {
+    // 단편은 전진·시련 줄이 비어도 핵심 2줄(욕망·변화)만 채우면 잠긴다.
+    const twoLine = buildStoryContractFromOnboarding({
+      lengthClass: 'short',
+      plannedEpisodes: 6,
+      endingStatement: '끝',
+      protagonistCost: '대가',
+      spine: { desire: '되찾고 싶다', advance: '', obstacle: '', resolution: '받아들인다' }
+    });
+    expect(twoLine.spineLocked).toBe(true);
+    // 단편이라도 핵심 2줄 중 하나가 비면 잠기지 않는다.
+    const missingResolution = buildStoryContractFromOnboarding({
+      lengthClass: 'short',
+      plannedEpisodes: 6,
+      endingStatement: '끝',
+      protagonistCost: '대가',
+      spine: { desire: '되찾고 싶다', advance: '', obstacle: '', resolution: '' }
+    });
+    expect(missingResolution.spineLocked).toBe(false);
+  });
+});
+
+// 단계적 집필 게이트 — Phase A-2. 척추 잠금 전엔 본문(produceEpisode) 생성을 막는다.
+describe('evaluateProductionGate (단계적 집필 게이트 — Phase A-2)', () => {
+  it('헌장이 없으면 통과한다(하위호환 — 기존 작품·백업 주입)', () => {
+    const project = createEmptyProject({ title: '계약 없음' });
+    expect(evaluateProductionGate(project).allowed).toBe(true);
+  });
+
+  it('헌장이 있고 척추가 잠겼으면 통과한다', () => {
+    const contract = buildStoryContractFromOnboarding({
+      lengthClass: 'long',
+      plannedEpisodes: 30,
+      endingStatement: '주인공이 이름을 받아들인다.',
+      protagonistCost: '평범한 일상',
+      spine: {
+        desire: '잃어버린 이름을 되찾고 싶다',
+        advance: '단서를 따라 들어간다',
+        obstacle: '이름을 부르는 자가 누구인지 모른다',
+        resolution: '이름을 받아들이고 돌아선다'
+      }
+    });
+    expect(contract.spineLocked).toBe(true);
+    const project = createEmptyProject({ title: '잠긴 장편', storyContract: contract });
+    expect(evaluateProductionGate(project).allowed).toBe(true);
+  });
+
+  it('헌장이 있고 척추가 잠기지 않은 장편은 본문 생성을 차단하고 사유를 준다', () => {
+    const project = createEmptyProject({
+      title: '미잠금 장편',
+      storyContract: {
+        lengthClass: 'long',
+        plannedEpisodes: 30,
+        endingStatement: '끝',
+        protagonistCost: '대가',
+        beatSheet: [],
+        spineLocked: false,
+        amendments: []
+      }
+    });
+    const gate = evaluateProductionGate(project);
+    expect(gate.allowed).toBe(false);
+    expect(gate.reason && gate.reason.trim().length).toBeGreaterThan(0);
+  });
+
+  it('단편이 2줄 경량 잠금되면 본문 생성을 허용한다(빌더→게이트 통합)', () => {
+    const contract = buildStoryContractFromOnboarding({
+      lengthClass: 'short',
+      plannedEpisodes: 6,
+      endingStatement: '끝',
+      protagonistCost: '대가',
+      spine: { desire: '되찾고 싶다', advance: '', obstacle: '', resolution: '받아들인다' }
+    });
+    const project = createEmptyProject({ title: '단편', storyContract: contract });
+    expect(evaluateProductionGate(project).allowed).toBe(true);
   });
 });
