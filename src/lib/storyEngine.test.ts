@@ -9,7 +9,9 @@ import {
   commitChapter,
   createEmptyProject,
   createSeedProject,
+  defaultPlannedEpisodes,
   deriveOnboardingSeed,
+  validateContract,
   getCanonReviewCategoryLabel,
   lockChapter,
   normalizeChapterBeats,
@@ -19,7 +21,8 @@ import {
   validateContinuity,
   type Chapter,
   type DraftChapterPayload,
-  type SeriesProject
+  type SeriesProject,
+  type StoryContract
 } from './storyEngine';
 import { computePayoffLedger } from './payoffLedger';
 import { runStoryHarness } from './storyHarness';
@@ -956,5 +959,69 @@ describe('Arc Payoff Gate 엔드투엔드 실증', () => {
     expect(ledger.lastPayoffEpisode).toBe(1);
     expect(ledger.deferredStreak).toBe(1);   // 1화 회수 후 2화 1회만 미룸 → streak=1
     expect(ledger.isStalled).toBe(false);    // STALL_THRESHOLD=3 미달
+  });
+});
+
+// 작품 헌장(Story Contract) — Phase A-1 데이터 모델. 분량 2등급·결말 역산·4줄 척추.
+describe('StoryContract (작품 헌장 — Phase A)', () => {
+  function makeContract(overrides: Partial<StoryContract> = {}): StoryContract {
+    return {
+      lengthClass: 'long',
+      plannedEpisodes: 30,
+      endingStatement: '주인공이 잃어버린 이름을 끝내 받아들인다.',
+      protagonistCost: '평범한 일상',
+      beatSheet: [],
+      spineLocked: false,
+      amendments: [],
+      ...overrides
+    };
+  }
+
+  it('defaultPlannedEpisodes — 단편 6 · 장편 30', () => {
+    expect(defaultPlannedEpisodes('short')).toBe(6);
+    expect(defaultPlannedEpisodes('long')).toBe(30);
+  });
+
+  it('validateContract — 단편은 4~8화 범위를 강제한다', () => {
+    expect(validateContract(makeContract({ lengthClass: 'short', plannedEpisodes: 6 }))).toEqual([]);
+    expect(validateContract(makeContract({ lengthClass: 'short', plannedEpisodes: 4 }))).toEqual([]);
+    expect(validateContract(makeContract({ lengthClass: 'short', plannedEpisodes: 8 }))).toEqual([]);
+    expect(validateContract(makeContract({ lengthClass: 'short', plannedEpisodes: 3 })).length).toBeGreaterThan(0);
+    expect(validateContract(makeContract({ lengthClass: 'short', plannedEpisodes: 9 })).length).toBeGreaterThan(0);
+  });
+
+  it('validateContract — 장편은 24~36화 범위를 강제한다', () => {
+    expect(validateContract(makeContract({ lengthClass: 'long', plannedEpisodes: 30 }))).toEqual([]);
+    expect(validateContract(makeContract({ lengthClass: 'long', plannedEpisodes: 24 }))).toEqual([]);
+    expect(validateContract(makeContract({ lengthClass: 'long', plannedEpisodes: 36 }))).toEqual([]);
+    expect(validateContract(makeContract({ lengthClass: 'long', plannedEpisodes: 23 })).length).toBeGreaterThan(0);
+    expect(validateContract(makeContract({ lengthClass: 'long', plannedEpisodes: 37 })).length).toBeGreaterThan(0);
+  });
+
+  it('validateContract — 결말 문장이 비면 무효', () => {
+    expect(validateContract(makeContract({ endingStatement: '' })).length).toBeGreaterThan(0);
+    expect(validateContract(makeContract({ endingStatement: '   ' })).length).toBeGreaterThan(0);
+  });
+
+  it('validateContract — 비트 화수가 plannedEpisodes 를 넘으면 무효', () => {
+    expect(
+      validateContract(
+        makeContract({ plannedEpisodes: 30, beatSheet: [{ episode: 31, mission: '과한 핀' }] })
+      ).length
+    ).toBeGreaterThan(0);
+    expect(
+      validateContract(
+        makeContract({ plannedEpisodes: 30, beatSheet: [{ episode: 30, mission: '결말 핀' }] })
+      )
+    ).toEqual([]);
+  });
+
+  it('createEmptyProject 가 storyContract 를 시드하고, 없으면 undefined 로 둔다', () => {
+    const contract = makeContract({ lengthClass: 'short', plannedEpisodes: 6 });
+    const withContract = createEmptyProject({ title: '단편', storyContract: contract });
+    expect(withContract.storyContract).toEqual(contract);
+
+    const without = createEmptyProject({ title: '계약 없음' });
+    expect(without.storyContract).toBeUndefined();
   });
 });

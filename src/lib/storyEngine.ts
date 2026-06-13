@@ -266,6 +266,50 @@ export interface DisclosureEntry {
   rationale: string;
 }
 
+// 작품 헌장(Story Contract) — Phase A. 분량을 확정하고 결말에서 역산한 4줄 척추를 전 에이전트의 공유 기준으로 박제한다.
+// 단편(short) 4~8화 · 장편(long) 24~36화 시즌제. 중편 없음(사용자 결정 2026-06-12).
+export type ContractLengthClass = 'short' | 'long';
+
+/** 4줄 척추 — 외부 사건이 아니라 주인공의 내적 변화(욕망/전진/시련/변화)를 붙잡는다(《4줄이면 된다》). 질문은 SeriesProject.deepQuestion 재사용. */
+export interface StorySpine {
+  /** 1줄 — 결정적 상태 때문에 불가능에 가까운 욕망을 품는다 */
+  desire: string;
+  /** 2줄 — 결심하고 전진하며 독자가 응원할 기준을 보인다 */
+  advance: string;
+  /** 3줄 — 장르·기대 감정 크기에 맞는 시련으로 상황·마음이 급변한다 */
+  obstacle: string;
+  /** 4줄 — 욕망·결심이 해소되고 질문의 답에 도달한다(표면 생사 아님) */
+  resolution: string;
+}
+
+/** 화수에 핀 박힌 비트 — 4줄 척추를 회차 구간으로 펼친 것 */
+export interface ContractBeat {
+  episode: number;
+  mission: string;
+  promiseRefs?: string[];
+}
+
+/** 헌장 개정 이력 — 트위스트 수락·시즌 연장 등 */
+export interface ContractAmendment {
+  at: string;
+  reason: string;
+  change: string;
+}
+
+export interface StoryContract {
+  lengthClass: ContractLengthClass;
+  plannedEpisodes: number;
+  spine?: StorySpine;
+  /** 결말 = 질문에 대한 답 + 욕망 해소 여부(마지막 "장면"이 아니라) */
+  endingStatement: string;
+  finalImage?: string;
+  protagonistCost: string;
+  beatSheet: ContractBeat[];
+  /** 단계적 집필 게이트 — 척추 잠금 전엔 장편·학술 본문 생성 불가 */
+  spineLocked: boolean;
+  amendments: ContractAmendment[];
+}
+
 export interface SeriesProject {
   id: string;
   title: string;
@@ -319,6 +363,39 @@ export interface SeriesProject {
   disclosureLedger?: DisclosureEntry[];
   /** growth_ledger — 인물 상태 변화의 원인·대가·후속 압력을 누적한다. */
   growthLedger?: GrowthLedger;
+  /** story_contract — 작품 헌장(분량 확정·결말 역산·4줄 척추). 구버전 저장본·계약 미수립 작품에는 없다. */
+  storyContract?: StoryContract;
+}
+
+// 분량 등급별 기본 회차 수 — 온보딩에서 작가가 조정 가능. 단편 6 · 장편 30(각 범위의 대표값).
+const CONTRACT_EPISODE_RANGES: Record<ContractLengthClass, { min: number; max: number; default: number }> = {
+  short: { min: 4, max: 8, default: 6 },
+  long: { min: 24, max: 36, default: 30 }
+};
+
+export function defaultPlannedEpisodes(lengthClass: ContractLengthClass): number {
+  return CONTRACT_EPISODE_RANGES[lengthClass].default;
+}
+
+// 헌장 무결성 검사 — 문제 목록을 반환한다(빈 배열 = 유효). 온보딩·게이트가 잠금 전에 호출한다.
+export function validateContract(contract: StoryContract): string[] {
+  const problems: string[] = [];
+  const range = CONTRACT_EPISODE_RANGES[contract.lengthClass];
+  if (!range) {
+    problems.push(`알 수 없는 분량 등급: ${String(contract.lengthClass)}`);
+  } else if (contract.plannedEpisodes < range.min || contract.plannedEpisodes > range.max) {
+    const label = contract.lengthClass === 'short' ? '단편' : '장편';
+    problems.push(`${label}은 ${range.min}~${range.max}화여야 합니다 (현재 ${contract.plannedEpisodes}화).`);
+  }
+  if (!contract.endingStatement.trim()) {
+    problems.push('결말 문장(endingStatement)이 비어 있습니다 — 결말을 먼저 확정해야 합니다.');
+  }
+  for (const beat of contract.beatSheet) {
+    if (beat.episode > contract.plannedEpisodes) {
+      problems.push(`비트 화수(${beat.episode})가 확정 회차 수(${contract.plannedEpisodes})를 넘습니다.`);
+    }
+  }
+  return problems;
 }
 
 /** SeriesProject 의 공개 별칭 — 외부 모듈에서 짧게 참조할 때 사용한다. */
@@ -951,6 +1028,7 @@ export function createEmptyProject(
     deepQuestion?: string;
     medium?: CreativeMedium;
     format?: CreativeFormat;
+    storyContract?: StoryContract;
   } = {}
 ): SeriesProject {
   return {
@@ -976,7 +1054,8 @@ export function createEmptyProject(
     objects: [],
     events: [],
     timeline: [],
-    bibleOutline: []
+    bibleOutline: [],
+    ...(input.storyContract ? { storyContract: input.storyContract } : {})
   };
 }
 
