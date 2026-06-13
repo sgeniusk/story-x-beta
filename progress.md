@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-12 · Branch: `main` (**품질·비용 로드맵 수립 — 작품 헌장 spec + Phase D~F, 코드 변경 0**)
+> Last Updated: 2026-06-13 · Branch: `main` (**A-2 단계 게이트 — 미잠금 헌장 produceEpisode 차단 + 단편 2줄 경량 잠금, TDD·라이브·main 머지**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -16,7 +16,8 @@
   - **Phase A-4 프롬프트 주입** (`40646ea`) — digest 헌장 절(4줄+결말+대가+위치 N/M) + buildDraftPrompt 예산 회수/종반(새 큰 떡밥만 금지)/척추 환기(정체·초과 시만) + buildAgentReviewPrompt 쇼러너 길 잃음 점검·예산 초과 revise/block + storyx.mjs 미러. **에세이·standalone 제외(A-4=연재 서사만), 프롬프트 문구 사용자 승인.**
   - **Phase A-5 배선** (`43c6d56` 생성 · `d2fd3f8` 검토) — StoryXDesk 가 `buildContractStatus(project)` 계산 → 생성·검토 ×3 호출에 전달 → draftClient/reviewClient body·api/draft·api/review-agent·vite 브리지·storyx CLI `--contract-status` 플래그까지 전 경로. A-4 규칙이 실제 생성·검토 프롬프트에 발화. **헌장이 없으면 전 경로 no-op(하위호환).**
   - **Phase A-3 빌더+온보딩** (`54fa97a` deriveBeatSheet·buildStoryContractFromOnboarding · `2e51fa2` UI) — intake↔building 사이 'charter' 단계(연재 서사만, 에세이·학술·단독 단편 제외). 분량 등급·확정 회차·결말 2문항·4줄 척추 입력 → 헌장 빌드 → seed → createEmptyProject. **★ 헌장 체인 dormant→live** — 라이브에서 신규 장편 온보딩→헌장 패널·CTA 게이트·확정→프로젝트에 contract(long·30화·비트4·spineLocked) 영속 확인(콘솔 0). 이제 A-4/A-5 가 실제 작품에 발화.
-- **다음 1순위 — A-2 단계 게이트** — `spineLocked=false` 장편·학술의 produceEpisode 차단 + 편집모드 탭 비활성(헌장 없이 본문 생성 경로 봉쇄). 이어서 A-3b(4줄 LLM 제안)·A-3c(비트 펼침 UI)·A-6(기억 R1~R3). 그 뒤 Phase B(긴장 감수자·날것)·C(트위스트)·E(비용)·F(재실험).
+- **A-2 단계 게이트 완료 (2026-06-13, TDD+라이브, `3d98fe1`)** — `evaluateProductionGate(project)`: 헌장이 있고 `spineLocked=false` 면 produceEpisode 차단(reason 반환), 헌장 없으면 통과(하위호환 — 기존 작품·백업 주입). buildStoryContractFromOnboarding 단편은 desire+resolution **2줄 경량 잠금**(장편은 4줄 전부). StoryXDesk produceEpisode 진입 가드(미잠금이면 안내만) + 메인 CTA `productionBlockedReason` 비활성, App.tsx charterReady 단편 2줄(빌더와 동일 규칙). storyEngine.test +5·editorFocusLayout +2·appExperience +1. **라이브 — 미잠금 헌장 편집모드 진입 시 CTA disabled "헌장 잠금 필요"+사유 툴팁 → spineLocked 복원 시 "초안 생성" enabled · 콘솔 0 · 원본 무손상.** ★학술은 charter 경로(usesCharter 제외)가 없어 헌장이 안 생기므로 현재 no-op — 학술 헌장 경로가 생기면 같은 게이트가 매체 무관하게 자동 적용된다.
+- **다음 1순위 — A-3b/A-3c/A-6** — A-3b(4줄 LLM 제안, pace-interview 재사용)·A-3c(비트 펼침 UI)·A-6(기억 R1~R3). 그 뒤 Phase B(긴장 감수자·날것)·C(트위스트)·E(비용)·F(재실험).
 - **Phase D-3(dev 서버 사망 조사)는 Phase E-1 계측으로 이관** — 재현 없이 추정 금지.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -125,6 +126,18 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-13 · A-2 단계 게이트 · main)
+
+```
+init.sh            → tsc 0 · vitest 전체 녹색(테스트 8건 추가: 게이트4·단편빌더1·UI게이트2·App charter1) · build 통과
+                     (변경 전 504 녹색 → 512)
+A-2 (3d98fe1)      — evaluateProductionGate(spineLocked 기준·헌장 없으면 통과)·단편 desire+resolution 2줄 경량 잠금·
+                     produceEpisode 진입 가드·FloatingEditor productionBlockedReason CTA 비활성·App charterReady 단편 2줄
+라이브(preview)    — 미잠금 헌장(spineLocked:false) ?stage=editor 진입: 메인 CTA disabled·"헌장 잠금 필요"·
+                     title="장편 척추가 아직 잠기지 않았습니다…" → spineLocked:true 복원 시 "초안 생성" enabled·
+                     콘솔 에러 0 · 원본 작품("반납되지 않은 편지") 무손상 복원(별도 백업 키 경유)
+```
 
 ## 최근 검증 (2026-06-12 · 품질·비용 로드맵 Phase D+A · main ff-merge)
 

@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-06-13 — A-2 단계 게이트: 미잠금 헌장 produceEpisode 차단 + 단편 2줄 경량 잠금 (main, TDD)
+
+> 2026-06-12 (2차) 핸드오프의 "다음 세션이 해야 할 한 가지"(A-2) 이행. 헌장 체인에 **단계적 집필 게이트**를 채웠다 — 척추가 잠기기 전엔 본문을 못 만든다. TDD + preview 라이브 A/B + main ff-merge. origin push 미실행.
+
+### 한 것 (코드 `3d98fe1`)
+- **evaluateProductionGate(project)** (storyEngine) — 헌장이 있고 `spineLocked=false` 면 `{allowed:false, reason}`, 헌장 없거나 잠겼으면 `{allowed:true}`. **매체 무관 — spineLocked 단일 신호.**
+- **단편 2줄 경량 잠금** — buildStoryContractFromOnboarding 가 `lengthClass==='short'` 면 desire+resolution 2줄만으로 spineComplete(장편은 4줄 전부). App.tsx charterReady 의 spineComplete 도 같은 규칙.
+- **produceEpisode 진입 가드** (StoryXDesk) — 함수 앞에서 evaluateProductionGate 호출, 미잠금이면 setGenerationNote(reason) 후 return(생성 안 함).
+- **CTA 비활성** — productionGate + productionBlockedReason(produceEpisode 가 메인 액션일 때만). FloatingEditor 가 productionBlockedReason 으로 메인 CTA disabled + "헌장 잠금 필요" + 사유 title.
+- TDD — storyEngine.test +5(게이트 4·단편 빌더 1)·editorFocusLayout +2(가드·CTA prop)·appExperience +1(App 단편). 504→512.
+- 라이브 — "반납되지 않은 편지"(localStorage) 를 spineLocked:false+chapters:[] 로 패치 → ?stage=editor → CTA disabled "헌장 잠금 필요" → spineLocked:true 복원 → "초안 생성" enabled → 원본 복원(백업 키 `__bak_a2`). 콘솔 0.
+
+### 손대지 말 것
+- evaluateProductionGate 의 **헌장 없으면 통과** 가드 — 하위호환의 핵심. 헌장 없는 30화 백업·기존 작품을 차단하면 progress.md 전체의 백업 재현 워크플로가 깨진다. spec 검증도 "spineLocked=false 차단"이지 "헌장 없음 차단"이 아니다(핸드오프 표현의 "헌장 없이…봉쇄"는 온보딩 charterReady 가 이미 강제하는 부분).
+- 단편 spineComplete 기준이 **storyEngine(빌더)·App.tsx(charterReady) 두 곳**에 미러 — 한쪽만 바꾸면 온보딩 게이트와 빌더 잠금이 어긋난다. appExperience 테스트가 App 쪽 문자열(`contractSpine.desire.trim().length > 0 && contractSpine.resolution…`)을 핀.
+- productionBlockedReason 은 **produceEpisode 가 메인 액션일 때만**(`!latestChapter || isLatestLocked`) 세팅 — 검토(reviewDraft)는 게이트 무관(이미 회차 있음).
+
+### 다음 세션이 해야 할 한 가지
+- **학술 단계 게이트의 실효** — 현재 usesCharter=isSerial·非에세이·非학술 이라 학술은 헌장이 안 생겨 게이트가 no-op. 학술까지 단계적 집필을 강제하려면 학술 charter 경로(연구질문→4줄≈주장/근거/반론/응답, claimLedger 정렬)가 필요(spec B 절). A-3 범위 확장이라 아래 A-3b/A-3c 와 묶을지 사용자 결정.
+- **또는 A-3b(4줄 LLM 제안)** — charter 단계에서 쇼러너가 4줄을 제안하고 작가가 수정·승인(pace-interview 패턴 재사용). 결정론 폴백은 deepQuestion·audiencePromise 기반. 그 뒤 A-3c(비트 펼침 UI)·A-6(기억 R1~R3). 그 뒤 Phase B(긴장 감수자·날것)·C(트위스트)·E(비용)·F(재실험).
+
+---
+
 ## 2026-06-12 (2차) — Phase D 완료 + 헌장 A-1·A-4·A-5·A-3 (main, TDD 11커밋, 체인 live)
 
 > "이대로/계속/a3로 가자" 연속 이행. Phase D(결정론 소건) → Phase A 데이터모델·예산·프롬프트 주입·전 경로 배선·**온보딩 헌장 생성**까지 TDD + 라이브 검증. 전부 녹색·main. origin push 미실행. **★ A-3 으로 헌장 체인이 dormant→live — 신규 장편이 결말부터 4줄로 잡고 시작한다.**
