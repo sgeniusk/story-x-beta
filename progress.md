@@ -14,7 +14,8 @@
   - **Phase A-1** 작품 헌장 데이터 모델 — `StoryContract`·`StorySpine`(4줄)·`validateContract`(4/8/24/36 경계·결말·비트)·`defaultPlannedEpisodes`(6/30)·createEmptyProject 시드. 전 필드 optional(하위호환). (`a15728b`)
   - **Phase A-5 코어** `buildContractStatus` — 위치·잔여·`overBudget`(미회수>잔여)·`finalStretch`(잔여≤25%) 결정론. chapters 기준 도출(드리프트 면역). U2 직격. (`e92c13d`)
   - **Phase A-4 프롬프트 주입** (`40646ea`) — digest 헌장 절(4줄+결말+대가+위치 N/M) + buildDraftPrompt 예산 회수/종반(새 큰 떡밥만 금지)/척추 환기(정체·초과 시만) + buildAgentReviewPrompt 쇼러너 길 잃음 점검·예산 초과 revise/block + storyx.mjs 미러. **에세이·standalone 제외(A-4=연재 서사만), 프롬프트 문구 사용자 승인.**
-- **다음 1순위 — A-5 배선(실효)** — StoryXDesk/api/draftClient 가 `buildContractStatus` 계산→requestLlmDraft·검토에 contractStatus 전달 + storyx CLI `--contract-status` 플래그 + UI 헌장 카드. (A-4 로직을 실제 생성에 발화.) 이후 A-2 단계 게이트(UI)·A-3 온보딩(분량/결말/4줄 잠금). **헌장은 A-2/A-3 온보딩이 만들기 전엔 기존 작품에 없으므로 A-4/A-5 는 그때 라이브 발화.**
+  - **Phase A-5 배선** (`43c6d56` 생성 · `d2fd3f8` 검토) — StoryXDesk 가 `buildContractStatus(project)` 계산 → 생성·검토 ×3 호출에 전달 → draftClient/reviewClient body·api/draft·api/review-agent·vite 브리지·storyx CLI `--contract-status` 플래그까지 전 경로. A-4 규칙이 실제 생성·검토 프롬프트에 발화. **헌장이 없으면 전 경로 no-op(하위호환) — A-2/A-3 가 헌장을 만들기 전엔 dormant, 백업 주입 시 발화.**
+- **다음 1순위 — A-3 온보딩(헌장 생성)** — 이걸 해야 헌장이 실제로 생겨 A-4/A-5 가 라이브로 작동한다. 분량 등급 선택 + 결말 인터뷰 2문항(욕망 해소형) + 4줄 척추 제안·승인(Stage 1) + 비트 펼침(Stage 2), pace-interview 패턴 재사용. 이어서 A-2 단계 게이트(spineLocked 전 produceEpisode 차단 + 편집모드 탭 비활성, UI) · A-6 기억(R1~R3).
 - **Phase D-3(dev 서버 사망 조사)는 Phase E-1 계측으로 이관** — 재현 없이 추정 금지.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -135,6 +136,8 @@ Phase A-1 (a15728b) — StoryContract/StorySpine·validateContract 경계(short 
 Phase A-5코어(e92c13d) — buildContractStatus: 17/30→remaining13 · 28/30 unpaid3→overBudget · 23/30→finalStretch
 Phase A-4 (40646ea) — digest 헌장 절·draft 예산/종반/척추 규칙·review 길 잃음 점검·storyx.mjs 미러 동기화
                      (에세이·standalone·헌장없음 미주입 가드 테스트 포함)
+Phase A-5 (43c6d56·d2fd3f8) — contractStatus 전 경로 배선(생성+검토). CLI dry-run 프롬프트 검증·
+                     draftClient/reviewClient body 전달·오형식 무시 가드 테스트
 ```
 
 ## 직전 검증 (2026-06-11 6차 · Codex 검증 데스크 합류 · main)

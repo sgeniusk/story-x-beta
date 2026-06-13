@@ -4,16 +4,17 @@
 
 ---
 
-## 2026-06-12 (2차) — Phase D + 헌장 코어 착수 (main ff-merge, TDD 5커밋)
+## 2026-06-12 (2차) — Phase D 완료 + 헌장 A-1·A-4·A-5 (main, TDD 8커밋)
 
-> "이대로 코딩 진행해" 이행. 로드맵 순서대로 Phase D(결정론 소건) → Phase A 코어(데이터모델·예산)까지 TDD 로 구현. 전부 녹색. **main 머지 완료(ff-only), 브랜치 삭제. origin push 미실행.**
+> "이대로 코딩 진행해" + "계속 이어가도록" 이행. Phase D(결정론 소건) → Phase A 데이터모델·예산·프롬프트 주입·전 경로 배선까지 TDD. 전부 녹색·main. origin push 미실행. **헌장 생성 입구(A-3 온보딩)만 남아 체인 전체가 dormant 대기.**
 
-### 한 것 (main `40646ea` 까지)
+### 한 것 (main `d2fd3f8` 까지)
 - **D-1 폴백 번호 드리프트** (`cf8f1de`) — `nextEpisodeNumber(project)`=chapters 마지막+1 로 도출. 폐기된 폴백 회차가 카운터만 올리고 사라져 번호가 결번되던 사고(쇼케이스 16→19)를 chapters 진실원천으로 치유. produceNextChapter·chapterFromDraftPayload 적용.
 - **D-2 StoryScore v0.2** (`b7f59f2`) — 변형 의심 최소 길이 3(통제군 16건 위양성 차단)·analyzeTitles 어간 공유 제목 반복률(U1)·후크 신호 느낌표/반전어. 스킬 루브릭에 온건함(U3)·제목 반복(U1) 감점. V0_1→V0_2.
 - **A-1 헌장 데이터 모델** (`a15728b`) — `StoryContract`·`StorySpine`(4줄)·`validateContract`(4/8/24/36·결말·비트)·`defaultPlannedEpisodes`(6/30)·createEmptyProject 시드. 전 필드 optional.
 - **A-5 코어 예산** (`e92c13d`) — `buildContractStatus(project)`: position(chapters 마지막)·remaining·`overBudget`(미회수>잔여)·`finalStretch`(잔여≤25%).
 - **A-4 프롬프트 주입** (`40646ea`) — digest 헌장 절(4줄+결말+대가+위치) + buildDraftPrompt 예산 회수/종반(새 큰 떡밥만 금지)/척추 환기(정체·초과 시만) + buildAgentReviewPrompt 쇼러너 길 잃음 점검·예산 초과 revise/block + storyx.mjs 미러(byte-identical). 에세이·standalone·헌장없음 미주입. **프롬프트 문구 사용자 승인 후 배선.**
+- **A-5 배선** (`43c6d56` 생성 · `d2fd3f8` 검토) — StoryXDesk 가 `buildContractStatus(project)` 계산 → requestLlmDraft·requestAgentReview ×3 에 전달 → draftClient/reviewClient body·api/draft·api/review-agent·vite 브리지·storyx CLI `--contract-status` 플래그까지 전 경로. A-4 규칙이 실제 생성·검토에 발화. **헌장이 없으면 전 경로 no-op(하위호환).**
 
 ### 손대지 말 것
 - 헌장 필드는 전부 optional — 구버전 저장본·기존 30화 백업과 하위호환. 필수화하지 말 것.
@@ -23,8 +24,9 @@
 - A-4 적용 범위 = **연재(serial)·비에세이만**. 에세이·1편 standalone 은 의도적 제외(사용자 결정). 종반=새 큰 떡밥만 금지(작은 인물·소품 허용). 척추 환기=정체·초과 시만.
 
 ### 다음 세션이 해야 할 한 가지
-- **A-5 배선(A-4 로직 실발화)** — 호출자가 `buildContractStatus(project)`(episodeBriefing.ts)를 계산해 `requestLlmDraft`/draftClient/api/draft → `buildDraftPrompt` 의 `contractStatus` 로 전달, 검토 경로(agentReview)에도 전달. storyx CLI 는 `--contract-status` 플래그 추가(이미 `--payoff-status` 패턴 있음, storyx.mjs:241). UI 는 FloatingEditor 에 헌장 위치 카드(`.fc-contract`). **단 헌장은 A-2/A-3 온보딩이 만들기 전엔 기존 작품에 없다 — A-5 배선 후 라이브 발화를 보려면 백업에 storyContract 를 주입하거나 A-2/A-3 를 먼저 한다.**
-- 참고 — A-4 까지는 순수 로직(프롬프트 빌더가 입력을 받으면 옳은 텍스트를 낸다)이라 main 영향 0. 실제 생성에 발화되려면 A-5 배선 필요.
+- **A-3 온보딩(헌장 생성)** — 이게 1순위. **A-1·A-4·A-5 로 헌장 골격·프롬프트·배선이 다 갖춰졌지만, 헌장을 *만드는* 입구가 없어 전 체인이 dormant**. 온보딩에 분량 등급 선택(단편/장편) + 결말 인터뷰 2문항(욕망 해소형: "마지막은 주인공의 어떤 욕망·결심이 실현되는 순간인가" / "그 결말까지 무엇을 잃는가") + 4줄 척추 제안·승인(Stage 1, pace-interview 패턴 재사용) + 비트 펼침(Stage 2). 앵커 — interviewClient.ts·deriveOnboardingSeed(storyEngine.ts:925)·createEmptyProject(storyContract 인자 이미 받음). 그 뒤 A-2 단계 게이트(spineLocked 전 produceEpisode 차단, UI)·A-6 기억(R1~R3).
+- **즉시 라이브 확인 방법** — A-3 전에 배선 발화를 보려면 백업 JSON 의 project 에 `storyContract`(plannedEpisodes·spine·endingStatement·beatSheet) 를 손으로 넣고 주입 → 생성 시 digest 헌장 절·예산 규칙이 프롬프트에 뜨는지 확인. (데모 키트 백업 주입 스니펫 재사용.)
+- 참고 — A-5 까지 전부 하위호환 no-op 가드. 헌장 없는 기존 작품·30화 백업은 동작 불변.
 
 ---
 
