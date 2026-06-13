@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-06-13 (3차) — A-3c 비트 펼침 미리보기: charter 4줄→화수 핀 시각화 (main, TDD)
+
+> A-3b 직후 A-3c 이행. charter 단계에서 잠근 4줄(장편)이 30화의 어디에 박히는지 미리 보여준다. TDD + preview 라이브(charter 진입+4줄 주입) + main ff-merge. origin push 미실행. **이로써 Phase A 헌장 체인의 온보딩 UI(A-3 charter·A-3b 제안·A-3c 미리보기)가 완성됐다.**
+
+### 한 것 (코드 `92c7ab2`)
+- **App** — deriveBeatSheet import + charter 4줄 fieldset 아래 비트 미리보기. `contractLengthClass === 'long' && spineComplete` 일 때 `deriveBeatSheet(contractSpine, contractPlannedEpisodes)` 를 8·15·23·30화 핀+미션으로 렌더(읽기 전용).
+- **styles** — `.hx-charter-beats`(dashed 박스)·`.hx-beat-pins/pin/ep/mission`(flex, 화수 라임 강조) + A-3b 의 `.hx-spine-suggest`(풀폭)·`.hx-spine-note` CSS 보강(A-3b 커밋엔 클래스만 있고 CSS 없었음).
+- TDD — appExperience +1(소스검사: deriveBeatSheet·hx-charter-beats·"화에 이렇게 박힙니다"). 519→520.
+- 라이브 — ?stage=home 온보딩(freewrite 없이 인터뷰로 계속→작품 헌장 잡기로 charter 진입) + 4줄/결말/대가 eval 주입 → 8/15/23/30화 핀·미션 매핑·dashed 박스·라임·"헌장 확정" 활성·콘솔 0. A-3b 버튼은 freewrite 없어 풀폭 disabled(로직 확인).
+
+### 손대지 말 것
+- A-3c 미리보기 조건 `contractLengthClass === 'long' && spineComplete` — 단편은 2줄이라 미션 빈 칸이 많아 미리보기 제외(의도). 단편 포함하려면 별도 처리.
+- deriveBeatSheet 은 읽기 전용 표시 — 화수 자동 배분(25/50/75/100%, 강증가 보정). 작가 화수 조정 UI 는 추후(자동이 합리적 기본이라 우선순위 낮음).
+- charter textarea 순서 = [0]결말 [1]대가 [2]욕망 [3]전진 [4]시련 [5]변화 — 라이브 주입 시 label "욕망"이 결말 문구("어떤 욕망·결심")에도 있어 **인덱스로 주입해야 정확**(byLabel 오매칭 주의).
+
+### 다음 세션이 해야 할 한 가지
+- **A-6 장편 기억 R1~R3 (큰 작업, 신선한 세션 권장)** — `buildProjectContextDigest`(storyEngine.ts:1310 근처)·`CONTEXT_CANON_LIMIT`(1304)의 head/tail 절단이 중반부 캐논을 통째 폐기(ch23 91중 51 소실). 입력 정본 `docs/research/2026-06-11-longform-memory-compression.md`. R1(관련 캐논 top-K 결정론 주입)·R2(5화 아크 다이제스트)·R3(중요도 가중 절단). 같은 digest 빌더를 건드리므로 한 묶음 설계. 효과 측정은 Phase F 재실험(30화 A/B).
+- 보조 — Phase B(긴장 감수자·날것 규칙 — 사용자 실독 U3 "온건한 문체" 직격)·학술 단계 게이트(charter 경로 신설, academic 1.0 실험 플래그라 후순위)·charter UI 화수 조정(A-3c 확장).
+
+---
+
 ## 2026-06-13 (2차) — A-3b 쇼러너 4줄 제안: charter 단계 LLM 척추 제안 (main, TDD)
 
 > A-2 직후 다음 시퀀스(A-3b) 이행. charter 단계에서 작가가 빈 4줄을 맨손으로 채우는 대신, 쇼러너가 자유 서술·결말을 읽고 4줄을 제안한다. pace-interview 인프라를 6개 지점에 미러. TDD + codex 라이브 + main ff-merge. origin push 미실행.
