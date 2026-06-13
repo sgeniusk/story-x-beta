@@ -38,8 +38,10 @@ spec — `docs/superpowers/specs/2026-06-12-story-contract-design.md`.
 - [x] A-5(코어) 화수 예산 결정론 — `buildContractStatus`(episodeBriefing.ts): 위치·잔여·`overBudget`·`finalStretch`. chapters 기준 도출(드리프트 면역). (`e92c13d`, 5건)
 - [x] A-4 프롬프트 주입 — digest 헌장 절(4줄+결말+위치) + buildDraftPrompt 예산/종반(새 큰 떡밥만)/척추(정체·초과 시만) + buildAgentReviewPrompt 길 잃음 점검·예산 초과 block + storyx.mjs 미러. 에세이·standalone 제외. 사용자 문구 승인. (`40646ea`, 12건)
 - [x] A-5(배선) 예산 게이트 실효 — StoryXDesk 가 `buildContractStatus(project)` 계산 → 생성(requestLlmDraft)·검토(requestAgentReview ×3) 전달 → draftClient/reviewClient body·api/draft·api/review-agent 파싱·vite 브리지·storyx CLI `--contract-status` 플래그까지 전 경로. (`43c6d56`·`d2fd3f8`) **단 헌장은 A-2/A-3 가 만들기 전엔 작품에 없어 dormant — 백업 주입 시 발화.** UI 헌장 카드는 A-2 UI 묶음으로 이연.
-- [ ] A-2 단계적 집필 게이트 — Stage 1 척추 잠금(`spineLocked`) 전 장편·학술 produceEpisode 차단 + 편집모드 탭 비활성. 단편은 2줄 경량 잠금 (UI 작업 큼)
-- [ ] A-3 온보딩 — 분량 등급 선택 + 결말 인터뷰 2문항(욕망 해소형) + 4줄 척추 제안·승인(Stage 1) + 비트 펼침(Stage 2) — pace-interview 패턴 재사용
+- [x] A-3 온보딩 헌장 생성 — intake↔building 사이 'charter' 단계(연재 서사만). 분량 등급·확정 회차·결말 2문항·4줄 척추 입력 → buildStoryContractFromOnboarding → seed → createEmptyProject. **헌장 체인 dormant→live**(라이브 검증: 신규 장편 헌장 영속). (`54fa97a` 빌더 · `2e51fa2` UI)
+- [ ] A-2 단계적 집필 게이트 — `spineLocked=false` 장편·학술 produceEpisode 차단 + 편집모드 탭 비활성. 단편 2줄 경량 잠금. (A-3 는 charter 입력을 강제하지만, 백업 주입 등으로 헌장 없는 장편이 본문 생성하는 경로 차단은 미구현.) **← 다음 1순위**
+- [ ] A-3b 4줄 척추 LLM 제안 — 현재는 작가 직접 입력. pace-interview 패턴으로 쇼러너가 freewrite/deepQuestion 기반 4줄 초안 제안→작가 수정·승인(선택 강화)
+- [ ] A-3c 비트 펼침 Stage 2 UI — 현재 beatSheet 는 deriveBeatSheet 자동 4핀. 작가가 핀을 조정하는 화면(선택)
 - [ ] A-6 R1~R3 기억 반영 — 아크 다이제스트(R2, 비트 구간 단위)·관련 캐논 top-K(R1)·중요도 가중 절단(R3) — 같은 digest 빌더 묶음
 - [ ] A-라이브 — 새 장편 온보딩→Stage 1 잠금 전 편집 차단 확인→4줄 승인→위치 주입 확인→종반 백업 주입으로 발급 차단 동작 확인
 
