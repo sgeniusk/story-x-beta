@@ -4,6 +4,7 @@ import {
   buildDeterministicDataReview,
   buildContinuityContractFromProject,
   buildFallbackDraft,
+  buildProjectContextDigest,
   buildStoryEditorWorkspace,
   chapterFromDraftPayload,
   commitChapter,
@@ -1023,5 +1024,51 @@ describe('StoryContract (작품 헌장 — Phase A)', () => {
 
     const without = createEmptyProject({ title: '계약 없음' });
     expect(without.storyContract).toBeUndefined();
+  });
+});
+
+// 작품 헌장 절이 컨텍스트 다이제스트에 주입되는가 — Phase A-4.
+describe('buildProjectContextDigest — 작품 헌장 절 (Phase A-4)', () => {
+  function longContract(): StoryContract {
+    return {
+      lengthClass: 'long',
+      plannedEpisodes: 30,
+      spine: {
+        desire: '잃어버린 이름을 되찾고 싶다',
+        advance: '단서를 따라 대림장으로 들어간다',
+        obstacle: '이름을 부르는 자가 누구인지 알 수 없다',
+        resolution: '이름을 받아들이고 돌아선다'
+      },
+      endingStatement: '주인공이 잃어버린 이름을 끝내 받아들인다.',
+      protagonistCost: '평범했던 일상',
+      beatSheet: [],
+      spineLocked: true,
+      amendments: []
+    };
+  }
+
+  it('헌장이 있으면 4줄 척추·결말·대가·위치를 다이제스트에 넣는다', () => {
+    const project: SeriesProject = {
+      ...createEmptyProject({ title: '장편', medium: 'novel' }),
+      storyContract: longContract(),
+      chapters: [
+        { id: 'episode-16', episode: 16, title: '16화', hook: '', outline: [], beats: [], prose: '본문', memoryAnchors: [], newCanonFacts: [] }
+      ],
+      currentEpisode: 16
+    };
+    const digest = buildProjectContextDigest(project);
+    expect(digest).toContain('작품 헌장');
+    expect(digest).toContain('잃어버린 이름을 되찾고 싶다');
+    expect(digest).toContain('이름을 받아들이고 돌아선다');
+    expect(digest).toContain('주인공이 잃어버린 이름을 끝내 받아들인다');
+    expect(digest).toContain('평범했던 일상');
+    // 위치 — 30화 중 16화, 남은 14
+    expect(digest).toContain('30화');
+    expect(digest).toContain('16화');
+  });
+
+  it('헌장이 없으면 헌장 절을 넣지 않는다(하위호환)', () => {
+    const project = createEmptyProject({ title: '계약 없음' });
+    expect(buildProjectContextDigest(project)).not.toContain('작품 헌장');
   });
 });

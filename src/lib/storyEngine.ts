@@ -1427,6 +1427,29 @@ export function buildProjectContextDigest(project: SeriesProject): string {
   }
   lines.push(`- 무게중심: ${describeCreativeWeight(project.creativeWeight ?? 'balanced')}`);
 
+  // 작품 헌장 절 — 헌장이 있으면 4줄 척추·결말·대가·위치를 전 생성·검토 공유 기준으로 주입한다(A-4).
+  // 위치는 chapters 마지막에서 도출(폴백 번호 드리프트 면역, Phase D 원칙).
+  const contract = project.storyContract;
+  if (contract) {
+    const position = project.chapters.reduce((max, chapter) => Math.max(max, chapter.episode), 0);
+    const remaining = contract.plannedEpisodes - position;
+    lines.push('', '작품 헌장 (전 회차 공유 기준 — 길 잃으면 여기로 돌아온다):');
+    if (contract.spine) {
+      lines.push(
+        `- 4줄 척추 — 1 욕망: ${contract.spine.desire} / 2 전진: ${contract.spine.advance} / 3 시련: ${contract.spine.obstacle} / 4 변화: ${contract.spine.resolution}`
+      );
+    }
+    lines.push(`- 결말(질문에 대한 답): ${contract.endingStatement}`);
+    if (contract.protagonistCost) {
+      lines.push(`- 주인공이 잃는 것: ${contract.protagonistCost}`);
+    }
+    lines.push(`- 현재 위치: 전체 ${contract.plannedEpisodes}화 중 ${position}화 — 다음은 ${position + 1}화 (남은 화수 ${remaining})`);
+    const beat = contract.beatSheet.find((entry) => entry.episode >= position + 1);
+    if (beat) {
+      lines.push(`- 이번 구간 임무: ${beat.mission}`);
+    }
+  }
+
   if (project.chapters.length > 0) {
     lines.push('', `지금까지 ${project.currentEpisode}화까지 진행됨.`);
   }

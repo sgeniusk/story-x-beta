@@ -193,3 +193,109 @@ describe('buildPaceInterviewPrompt — storyx.mjs 미러 동기화', () => {
     expect(cli).toContain(PACE_JSON_CONTRACT);
   });
 });
+
+// 작품 헌장 프롬프트 주입 — Phase A-4. 연재(serial) + contractStatus 일 때만.
+// storyx.mjs 미러 byte-identical — 정적 핵심 문구는 양쪽 동시 갱신.
+describe('buildDraftPrompt — 작품 헌장 예산·척추 규칙 (Phase A-4)', () => {
+  const cli = readFileSync(resolve(__dirname, '../../../tools/storyx.mjs'), 'utf8');
+  const OVERBUDGET = '[헌장] 약속 예산 초과';
+  const FINALSTRETCH = '[헌장] 종반 구간';
+  const SPINE = '4줄 척추의 어느 줄';
+
+  it('overBudget 면 연재 초안에 예산 초과 회수 규칙을 넣는다', () => {
+    const p = buildDraftPrompt({
+      medium: 'novel', format: 'long-novel', freewrite: 'x',
+      contractStatus: { remaining: 2, unpaidCount: 5, overBudget: true, finalStretch: false }
+    });
+    expect(p).toContain(OVERBUDGET);
+    expect(p).toContain('가장 오래된 약속');
+  });
+
+  it('finalStretch 면 종반 규칙을 넣되 새 큰 떡밥만 금지한다(작은 인물·소품 허용)', () => {
+    const p = buildDraftPrompt({
+      medium: 'novel', format: 'long-novel', freewrite: 'x',
+      contractStatus: { remaining: 6, unpaidCount: 2, overBudget: false, finalStretch: true }
+    });
+    expect(p).toContain(FINALSTRETCH);
+    expect(p).toContain('새 큰 떡밥');
+  });
+
+  it('척추 환기는 정체(isStalled)나 예산 초과일 때만 넣는다', () => {
+    const stalled = buildDraftPrompt({
+      medium: 'novel', format: 'long-novel', freewrite: 'x',
+      payoffStatus: { isStalled: true, deferredStreak: 3, openPromises: 4 },
+      contractStatus: { remaining: 10, unpaidCount: 1, overBudget: false, finalStretch: false }
+    });
+    expect(stalled).toContain(SPINE);
+
+    const over = buildDraftPrompt({
+      medium: 'novel', format: 'long-novel', freewrite: 'x',
+      contractStatus: { remaining: 1, unpaidCount: 3, overBudget: true, finalStretch: false }
+    });
+    expect(over).toContain(SPINE);
+
+    const calm = buildDraftPrompt({
+      medium: 'novel', format: 'long-novel', freewrite: 'x',
+      contractStatus: { remaining: 10, unpaidCount: 1, overBudget: false, finalStretch: false }
+    });
+    expect(calm).not.toContain(SPINE);
+  });
+
+  it('에세이·단편 standalone 에는 헌장 규칙을 넣지 않는다 (A-4 범위 — 연재만)', () => {
+    const essay = buildDraftPrompt({
+      medium: 'essay', format: 'essay-series', freewrite: 'x',
+      contractStatus: { remaining: 2, unpaidCount: 5, overBudget: true, finalStretch: true }
+    });
+    expect(essay).not.toContain(OVERBUDGET);
+    const standalone = buildDraftPrompt({
+      medium: 'novel', format: 'short-story', freewrite: 'x',
+      contractStatus: { remaining: 2, unpaidCount: 5, overBudget: true, finalStretch: true }
+    });
+    expect(standalone).not.toContain(OVERBUDGET);
+  });
+
+  it('contractStatus 가 없으면 헌장 규칙을 넣지 않는다(하위호환)', () => {
+    const p = buildDraftPrompt({ medium: 'novel', format: 'long-novel', freewrite: 'x' });
+    expect(p).not.toContain(OVERBUDGET);
+    expect(p).not.toContain(FINALSTRETCH);
+  });
+
+  it('storyx.mjs CLI 가 같은 헌장 규칙 문구를 byte-identical 로 미러한다', () => {
+    expect(cli).toContain(OVERBUDGET);
+    expect(cli).toContain(FINALSTRETCH);
+    expect(cli).toContain(SPINE);
+    expect(cli).toContain('가장 오래된 약속');
+    expect(cli).toContain('새 큰 떡밥');
+  });
+});
+
+describe('buildAgentReviewPrompt — 작품 헌장 길 잃음 점검 (Phase A-4)', () => {
+  const cli = readFileSync(resolve(__dirname, '../../../tools/storyx.mjs'), 'utf8');
+  const LOST = '[헌장] 길 잃음 점검';
+
+  it('contractStatus 가 있으면 길 잃음 점검 지시를 넣는다', () => {
+    const p = buildAgentReviewPrompt({
+      agentId: 'showrunner', persona: 'p', target: '원고', medium: 'novel', context: '',
+      contractStatus: { remaining: 10, unpaidCount: 2, overBudget: false, finalStretch: false }
+    });
+    expect(p).toContain(LOST);
+  });
+
+  it('overBudget 면 새 약속 발급 시 revise/block 지시를 추가한다', () => {
+    const p = buildAgentReviewPrompt({
+      agentId: 'showrunner', persona: 'p', target: '원고', medium: 'novel', context: '',
+      contractStatus: { remaining: 1, unpaidCount: 4, overBudget: true, finalStretch: false }
+    });
+    expect(p).toContain('약속 예산 초과');
+    expect(p).toContain('revise');
+  });
+
+  it('contractStatus 가 없으면 길 잃음 점검을 넣지 않는다(하위호환)', () => {
+    const p = buildAgentReviewPrompt({ agentId: 'showrunner', persona: 'p', target: '원고', medium: 'novel', context: '' });
+    expect(p).not.toContain(LOST);
+  });
+
+  it('storyx.mjs CLI 가 같은 길 잃음 점검 문구를 미러한다', () => {
+    expect(cli).toContain(LOST);
+  });
+});

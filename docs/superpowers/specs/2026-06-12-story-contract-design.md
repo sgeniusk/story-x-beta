@@ -98,7 +98,11 @@ export interface StoryContract {
 - 미회수 약속 {unpaid.length}건 / 남은 화수 {remaining} — {발급 가능 | 신규 발급 금지}
 ```
 
-- `buildDraftPrompt`(promptBuilders.ts:195) — stallRules 와 같은 방식으로 헌장 규칙 주입. 종반 구간(남은 화수 ≤ plannedEpisodes×25%)에는 "새 인물·새 소품·새 떡밥 발급 금지, 회수만"을 명시. **"이 회차가 4줄 척추의 어느 줄을 전진시키는가"를 출력 의무**로 가산(곁가지 이탈 방지).
+- **A-4 적용 범위 (2026-06-12 결정)** — 매체가 아니라 **헌장 잠금 + 연재(isSerial) 포맷**일 때만 예산·척추 규칙을 주입한다. 대상 = 장편 소설·단편(4~8화 연재)·연재 만화·오디오 연재. **에세이·학술은 A-4 제외**(서사 4줄 부적합 — 진실 계약·claimLedger 가 그 역할). 1편 완결 standalone 은 예산·종반 무의미 → 질문+4줄+결말만 한 편 초점으로.
+- `buildDraftPrompt`(promptBuilders.ts:195) — stallRules 와 같은 방식으로 헌장 규칙 주입.
+  - overBudget(미회수 > 잔여) — "새 약속 발급 금지, 가장 오래된 약속 회수 의무".
+  - 종반 구간(잔여 ≤ plannedEpisodes×25%) — **"새 큰 떡밥(약속)만 금지, 결말로 수렴"**(2026-06-12 결정 — 새 인물·소품 자체는 허용, 큰 약속/스레드만 금지). 4줄 4번(변화)으로 기존 약속을 닫는다.
+  - **척추 환기 한 줄("4줄의 어느 줄을 전진시키는가·질문 이탈 금지")은 정체·이탈 신호일 때만**(isStalled OR overBudget) 주입(2026-06-12 결정 — 매 회차 주입은 토큰 낭비라 Phase E 비용과 충돌). 평상시엔 헌장 절(컨텍스트)만으로 충분.
 - `buildAgentReviewPrompt`(promptBuilders.ts:373) — 쇼러너 지시에 두 축 가산: ① 헌장 위치 대비 진척(전제진척 프롬프트 `aa98137` 자리) ② **"길 잃음 점검" — 이 회차가 아직 질문/4줄을 추적하는가, 3줄(방해요소)이 비대해져 원래 질문을 삼켰는가**(《4줄》 더 글로리 예시). 피날레 회차는 추가로 "질문에 답했는가 — 없는 결말(답 회피)이면 block".
 - `buildPaceInterviewPrompt`(promptBuilders.ts:454) — 헌장 비트를 컨텍스트로 받아 질문이 비트 임무에 정렬.
 - storyx.mjs 미러는 기존 byte-identical 동기화 테스트 패턴 그대로.

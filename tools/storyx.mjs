@@ -884,10 +884,19 @@ function loadAgentPersona(agentId) {
   }
 }
 
-function buildAgentReviewPrompt({ agentId, persona, target, medium, context, payoffStatus }) {
+function buildAgentReviewPrompt({ agentId, persona, target, medium, context, payoffStatus, contractStatus }) {
   const payoffEvidence = payoffStatus && payoffStatus.isStalled
     ? [
         `- [측정] 전제 진척 정체 신호 — 회수 없이 ${payoffStatus.deferredStreak}회차 연속(열린 약속 ${payoffStatus.openPromises}개). criteriaKey: stakes_progression_audit. 이 회차가 행동·대가·전환으로 약속에 다가가는지 특히 엄격히 본다.`
+      ]
+    : [];
+  // 작품 헌장 길 잃음 점검 — promptBuilders.ts 미러(A-4).
+  const contractChecks = contractStatus
+    ? [
+        '- [헌장] 길 잃음 점검 — 이 회차가 아직 질문·4줄 척추를 추적하는지, 방해 요소가 비대해져 원래 질문을 삼켰는지 본다. 발견·소품만 쌓고 척추가 전진하지 않으면 revise.',
+        ...(contractStatus.overBudget
+          ? ['- [헌장] 약속 예산 초과 상태에서 이 회차가 새 약속을 또 발급하면 revise/block 한다.']
+          : [])
       ]
     : [];
   return [
@@ -913,6 +922,8 @@ function buildAgentReviewPrompt({ agentId, persona, target, medium, context, pay
     '- 연재 장편이라면, 이 회차가 작품의 중심 질문(전제·독자 약속)을 진척시키는지도 본다 — 발견·추론만 쌓고 같은 질문이 여러 회차 제자리면, 인물의 행동·대가·선택 변화로 약속에 다가가지 못한 점을 지적한다.',
     // 정체 측정값이 있으면 결정론적 evidence 로 추가 주입한다 (아크 페이오프 1단계).
     ...payoffEvidence,
+    // 작품 헌장 길 잃음 점검 (A-4).
+    ...contractChecks,
     '',
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',
@@ -1061,7 +1072,7 @@ function normalizeDataReviewNotes(value) {
     .filter((note) => note.title || note.body);
 }
 
-function buildDraftPrompt({ medium, format, freewrite, title, context, payoffStatus }) {
+function buildDraftPrompt({ medium, format, freewrite, title, context, payoffStatus, contractStatus }) {
   const isEssay = medium === 'essay';
   const isSerial = isSerialFormat(format);
 
@@ -1106,6 +1117,28 @@ function buildDraftPrompt({ medium, format, freewrite, title, context, payoffSta
         ]
       : [];
 
+  // 작품 헌장 예산·종반·척추 규칙 — promptBuilders.ts 미러(byte-identical). 변경 시 양쪽 동시 갱신(A-4).
+  const contractRules =
+    isSerial && !isEssay && contractStatus
+      ? [
+          ...(contractStatus.overBudget
+            ? [
+                `- [헌장] 약속 예산 초과 — 미회수 약속이 남은 화수보다 많습니다(미회수 ${contractStatus.unpaidCount}/잔여 ${contractStatus.remaining}). 이번 화는 새 약속·새 떡밥을 만들지 말고, 가장 오래된 약속부터 인물의 선택·대가로 실제 회수합니다. 회수를 rewardArc 의 payoff 에 적습니다.`
+              ]
+            : []),
+          ...(contractStatus.finalStretch
+            ? [
+                '- [헌장] 종반 구간(전체의 마지막 25%)입니다. 새 큰 떡밥·새 약속만 금지하고(작은 인물·소품 추가는 허용), 4줄 척추의 4번(변화)으로 이미 건 약속들을 결말로 수렴시킵니다.'
+              ]
+            : []),
+          ...((payoffStatus && payoffStatus.isStalled) || contractStatus.overBudget
+            ? [
+                '- [헌장] 이 회차가 4줄 척추의 어느 줄(욕망/전진/시련/변화)을 전진시키는지 의식하고 씁니다. 곁가지가 매력적이어도 헌장의 질문에서 이탈하지 않습니다.'
+              ]
+            : [])
+        ]
+      : [];
+
   return [
     isEssay
       ? 'Story X 에세이 초안 생성 요청.'
@@ -1127,6 +1160,7 @@ function buildDraftPrompt({ medium, format, freewrite, title, context, payoffSta
     '## 규칙',
     ...rules,
     ...stallRules,
+    ...contractRules,
     '',
     isSerial ? '## 회차 구성(beats)' : '## 원고 구성(beats)',
     isEssay
