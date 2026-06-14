@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-06-14 (8차) — #4 FloatingEditor 회차 선택기: 단편 포함 회차 전환 (main, TDD+라이브, ultracode)
+
+> #3 직후 같은 ultracode 세션에서 청사진 maps[2] 기반 #4 착수·완료. floating 편집기(기본)에 회차 선택기 부재 + 단편 isSerial 게이트 차단 해소. 커밋 (아래). 라이브 검증 완료.
+
+### 한 것
+- **FloatingEditor 헤더 회차 선택기** — chapters·currentChapterId·onSelectChapter optional props 추가. ep-kicker 다음에 드롭다운(episode화·title·잠김)+이전/다음 chevron+위치(N/M). 게이트 `chapters.length > 1`(isSerial 무관 — 단편 다회차 지원). `.ep-chapter-*` 다크 토큰(--bg-2·--ink·--rule-soft, fc 스코프). floatingEditor.test +5(렌더·select·prev/next disabled·1개 미렌더·desk 핀).
+- **회차 전환 = 기존 경로 재사용** — StoryXDesk floatingEditorProps 에 chapters·currentChapterId·onSelectChapter. onSelectChapter = setLatestChapter(found) → latestChapter effect(미커밋 prose flush + 새 회차 시드)를 그대로 탄다(stepChapter·#1 본문영속과 동일). 새 전환 로직 0.
+- **라이브(preview)** — 샘플 작품 회차 2개: floating 헤더 picker 렌더(옵션 "1화·첫 회차"/"2화·둘째 회차"·다크 --bg-2) → select ch1 전환 → 본문 "한서윤은 거리를 걸었다."(ch1 prose 로드)·제목 "첫 회차"·위치 1/2·이전 비활성. (※ HMR 미반영으로 처음 picker 안 떴다가 reload 후 정상 — dev 서버 HMR 주의.)
+
+### 손대지 말 것
+- floatingEditorProps 에서 chapters·onSelectChapter 를 **productionBlockedReason 뒤(객체 끝)**에 둔 것 — editorFocusLayout.test 의 F-002·A-2 핀이 floatingEditorProps 시작부터 **2000자 윈도우**로 mainActionLabel·productionBlockedReason 존재를 검사한다. 앞쪽에 넣으면 그 둘이 윈도우 밖으로 밀려 두 핀이 깨진다(이번에 한 번 깨고 뒤로 옮겨 해결).
+- onSelectChapter 가 setLatestChapter 만 호출하는 것 — prose flush·시드는 기존 latestChapter effect(StoryXDesk:1586) 소관. 여기서 직접 prose 손대면 #1 본문영속 flush 와 충돌.
+- picker 게이트 `chapters.length > 1` — 1개면 선택 무의미라 미렌더. isSerial 로 되돌리면 단편 차단 재발(#4 원점). FloatingEditor 는 isSerial 을 받지 않으므로 라벨은 episode화 통일(단편도 회차 번호로 구분).
+
+### 다음 세션이 해야 할 한 가지
+- **중간 수정 루프 + 검토대기 #3·#4·#7 골격 완료.** 남은 베타 검토대기 — #5(잠긴 회차 편집 보호·unlockChapter UI)·#10(매체/형식 변경 confirm)·#17(떡밥·비트 보드 편집) + 매체 차별 #8(학술 마진검토 dead)·#9(매체 작업면). 리포트 `docs/reviews/2026-06-14-ultracode-beta-10/REPORT.md` §3.
+- (선택) #3 라이브 눈 확인(7차 노트) — 회차 있는 작품으로 데이터→인물 편집 시 영향 회차. 이번 #4 에서 preview 안정화됐으니(reload 로 HMR 반영) 같이 가능. ※ preview 의 "샘플 작품"은 격리 자동화 브라우저 프로필의 데모(사용자 실데이터 아님, 회차 잔여 무관).
+
+---
+
 ## 2026-06-14 (7차) — #3 영향 회차 인라인: 편집 지점에 영향 범위 미리보기 (main, TDD, ultracode)
 
 > #7 직후 같은 ultracode 세션에서 청사진 maps[1] 기반 #3 착수. 순수 로직 변경 0 — 기존 plan 을 편집 지점에 표시. 커밋 (아래 참조). ★ 라이브는 preview 환경 불안정으로 갈음(코드 검증).

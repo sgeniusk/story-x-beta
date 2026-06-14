@@ -405,3 +405,60 @@ describe('FloatingEditor 실데이터 배선', () => {
     unmount();
   });
 });
+
+describe('FloatingEditor 회차 선택기 (#4)', () => {
+  const threeChapters = [
+    { id: 'c1', episode: 1, title: '첫 회차' },
+    { id: 'c2', episode: 2, title: '둘째 회차' },
+    { id: 'c3', episode: 3, title: '셋째 회차' },
+  ];
+
+  it('회차 2개 이상 + onSelectChapter 면 회차 선택기를 렌더한다', () => {
+    const { host, unmount } = mount(
+      baseProps({ chapters: threeChapters, currentChapterId: 'c2', onSelectChapter: vi.fn() })
+    );
+    expect(host.querySelector('.ep-chapter-nav')).not.toBeNull();
+    expect(host.querySelectorAll('.ep-chapter-select option').length).toBe(3);
+    unmount();
+  });
+
+  it('select 변경 시 onSelectChapter 를 그 회차 id 로 호출한다', () => {
+    const onSelectChapter = vi.fn();
+    const { host, unmount } = mount(
+      baseProps({ chapters: threeChapters, currentChapterId: 'c2', onSelectChapter })
+    );
+    const select = host.querySelector('.ep-chapter-select') as HTMLSelectElement;
+    const nativeSetter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!;
+    nativeSetter.call(select, 'c3');
+    act(() => { select.dispatchEvent(new Event('change', { bubbles: true })); });
+    expect(onSelectChapter).toHaveBeenCalledWith('c3');
+    unmount();
+  });
+
+  it('prev/next 는 첫·마지막 회차에서 비활성이고 인접 회차로 이동한다', () => {
+    const onSelectChapter = vi.fn();
+    const { host, click, unmount } = mount(
+      baseProps({ chapters: threeChapters, currentChapterId: 'c1', onSelectChapter })
+    );
+    const steps = host.querySelectorAll('.ep-chapter-step');
+    expect((steps[0] as HTMLButtonElement).disabled).toBe(true);  // 첫 회차 — 이전 비활성
+    expect((steps[1] as HTMLButtonElement).disabled).toBe(false); // 다음 활성
+    click(steps[1]);
+    expect(onSelectChapter).toHaveBeenCalledWith('c2');
+    unmount();
+  });
+
+  it('단편 등 isSerial 무관 — 회차 1개 이하면 회차 선택기를 렌더하지 않는다', () => {
+    const { host, unmount } = mount(
+      baseProps({ chapters: [threeChapters[0]], currentChapterId: 'c1', onSelectChapter: vi.fn() })
+    );
+    expect(host.querySelector('.ep-chapter-nav')).toBeNull();
+    unmount();
+  });
+
+  it('StoryXDesk 가 floatingEditorProps 에 회차 선택기 데이터를 전달한다', () => {
+    const desk = readFileSync(resolve(__dirname, '../StoryXDesk.tsx'), 'utf8');
+    expect(desk).toContain('onSelectChapter:');
+    expect(desk).toContain('currentChapterId: latestChapter?.id');
+  });
+});

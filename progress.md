@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-14 · Branch: `main` (**울트라코드 10인 베타테스트 → 중간 수정 루프 3대 골격 완료: #1 본문영속·#1-undo·#6 인물CRUD. 후속 #7 헌장 편집(TDD·라이브)·#3 영향회차 인라인(TDD, 라이브 갈음) 완료. 이야기 품질 딥리서치 정본**)
+> Last Updated: 2026-06-14 · Branch: `main` (**울트라코드 10인 베타테스트 → 중간 수정 루프 3대 골격 완료: #1 본문영속·#1-undo·#6 인물CRUD. 후속 #7 헌장 편집·#3 영향회차 인라인·#4 회차 선택기(TDD, #7·#4 라이브) 완료 — 검토대기 #3·#4·#7 골격 마무리. 이야기 품질 딥리서치 정본**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,23 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-14 8차 · #4 FloatingEditor 회차 선택기 · main · ultracode)
+
+```
+init.sh            → tsc 0 · vitest 550(floatingEditor +5) · build 통과 (545→550)
+#4 회차 선택기     → 베타 검토대기 #4(floating 편집기에 회차 선택기 부재 + 단편 isSerial 게이트 차단 → 과거 회차 편집 동선 0).
+  floating 모드(isDraftMode)는 FloatingEditor 만 렌더 — breadcrumb picker(classic 전용)는 안 보임(확인).
+  FloatingEditor 헤더에 회차 드롭다운(episode화·title·잠김)+이전/다음+위치(N/M), 게이트 chapters.length>1(isSerial 무관·단편 포함).
+  StoryXDesk floatingEditorProps 에 chapters·currentChapterId·onSelectChapter — onSelectChapter=setLatestChapter(기존 flush 경로 재사용, 새 로직 0).
+검증             → floatingEditor.test +5(react-dom 실렌더: picker·select onSelectChapter·prev/next disabled·1개 미렌더·desk 핀).
+  ★ 회귀 1건 자가적발·수정 — editorFocusLayout F-002·A-2 핀(floatingEditorProps 2000자 윈도우)이 깨짐 →
+  회차 props 를 객체 앞→뒤(productionBlockedReason 다음)로 이동해 해결(다른 테스트 불변).
+  라이브(preview) — 샘플 작품 회차 2개: floating 헤더 picker 렌더(옵션 "1화·첫 회차"/"2화·둘째 회차"·다크 --bg-2) →
+  select ch1 전환 → 본문 "한서윤은 거리를 걸었다."(ch1 prose 로드)·제목 "첫 회차"·위치 1/2·이전 비활성. 전환+prose 시드 경로 정상.
+  (※ HMR 미반영으로 처음 picker 미렌더 → reload 후 정상. dev 서버 HMR 주의.)
+남은         → 검토대기 #5(잠긴 회차 보호)·#10(매체 변경 confirm)·#17(보드 편집) + 매체차별 #8·#9. 리포트 §3.
+```
 
 ## 최근 검증 (2026-06-14 7차 · #3 영향 회차 인라인 · main · ultracode)
 

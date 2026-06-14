@@ -63,6 +63,10 @@ export interface FloatingEditorProps {
   paceInterviewNote?: string | null;
   /** 단계적 집필 게이트(A-2) — 헌장 미잠금 사유. 있으면 메인 생성 CTA 를 비활성화하고 사유를 보여준다. */
   productionBlockedReason?: string;
+  /** #4 회차 선택기 — 회차 2개 이상 + onSelectChapter 면 헤더에 회차 드롭다운·이전/다음을 렌더(매체 무관, 단편 포함). */
+  chapters?: Array<{ id: string; episode: number; title: string; locked?: boolean }>;
+  currentChapterId?: string | null;
+  onSelectChapter?: (id: string) => void;
 }
 
 const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
@@ -106,6 +110,9 @@ export function FloatingEditor({
   isPaceInterviewLoading = false,
   paceInterviewNote,
   productionBlockedReason,
+  chapters,
+  currentChapterId,
+  onSelectChapter,
 }: FloatingEditorProps) {
   const personaById = useCallback(
     (id: string): PersonaCard =>
@@ -439,6 +446,48 @@ export function FloatingEditor({
               <span className="line" />
               <span>{charCount}</span>
             </div>
+            {chapters && chapters.length > 1 && onSelectChapter && (() => {
+              const idx = chapters.findIndex((chapter) => chapter.id === currentChapterId);
+              const prev = idx > 0 ? chapters[idx - 1] : null;
+              const next = idx >= 0 && idx < chapters.length - 1 ? chapters[idx + 1] : null;
+              return (
+                <div className="ep-chapter-nav" role="group" aria-label="회차 선택">
+                  <button
+                    type="button"
+                    className="ep-chapter-step"
+                    aria-label="이전 회차"
+                    title="이전 회차"
+                    disabled={!prev}
+                    onClick={() => prev && onSelectChapter(prev.id)}
+                  >
+                    ‹
+                  </button>
+                  <select
+                    className="ep-chapter-select"
+                    aria-label="회차 이동"
+                    value={currentChapterId ?? ''}
+                    onChange={(event) => onSelectChapter(event.target.value)}
+                  >
+                    {chapters.map((chapter) => (
+                      <option key={chapter.id} value={chapter.id}>
+                        {chapter.episode}화 · {chapter.title}{chapter.locked ? ' (잠김)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="ep-chapter-step"
+                    aria-label="다음 회차"
+                    title="다음 회차"
+                    disabled={!next}
+                    onClick={() => next && onSelectChapter(next.id)}
+                  >
+                    ›
+                  </button>
+                  <span className="ep-chapter-pos">{idx + 1}/{chapters.length}</span>
+                </div>
+              );
+            })()}
             <h1 className="ep-title">{chapterTitle}</h1>
             <p className="ep-sub">{chapterSub}</p>
             <div

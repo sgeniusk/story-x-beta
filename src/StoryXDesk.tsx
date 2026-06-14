@@ -1353,6 +1353,13 @@ export function StoryXDesk({
       isPaceInterviewLoading,
       paceInterviewNote,
       productionBlockedReason,
+      // #4 회차 선택기 — 회차 전환은 기존 setLatestChapter 경로(latestChapter effect 가 미커밋 prose flush 후 새 회차 시드)를 그대로 탄다.
+      chapters: project.chapters,
+      currentChapterId: latestChapter?.id ?? null,
+      onSelectChapter: (id: string) => {
+        const next = project.chapters.find((chapter) => chapter.id === id);
+        if (next) setLatestChapter(next);
+      },
     }),
     [
       project,
