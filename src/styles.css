@@ -6837,6 +6837,43 @@ body {
   font-style: normal;
 }
 
+/* 베타테스트 #3 — 인물 편집 지점에 영향 회차 인라인 미리보기 */
+.sx-desk .ex-canon-impact {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--sx-line);
+  border-radius: var(--nx-r-sm, 8px);
+  background: var(--sx-paper-2);
+}
+.sx-desk .ex-canon-impact strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.76rem;
+  color: var(--sx-brand);
+}
+.sx-desk .ex-canon-impact ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.sx-desk .ex-canon-impact li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 0.76rem;
+  color: var(--sx-ink);
+}
+.sx-desk .ex-canon-impact li b {
+  color: var(--sx-brand);
+}
+.sx-desk .ex-canon-impact li small {
+  font-size: 0.7rem;
+  color: var(--sx-ink-2);
+}
+
 /* 장소·사물·사건 카드 그리드 */
 .sx-desk .ex-canon-card-grid {
   display: grid;

@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-14 · Branch: `main` (**울트라코드 10인 베타테스트 → 중간 수정 루프 3대 골격 완료: #1 본문영속·#1-undo·#6 인물CRUD. 후속 #7 헌장 편집(잠긴 헌장 재열람·개정·undo) TDD·라이브 완료. 이야기 품질 딥리서치 정본**)
+> Last Updated: 2026-06-14 · Branch: `main` (**울트라코드 10인 베타테스트 → 중간 수정 루프 3대 골격 완료: #1 본문영속·#1-undo·#6 인물CRUD. 후속 #7 헌장 편집(TDD·라이브)·#3 영향회차 인라인(TDD, 라이브 갈음) 완료. 이야기 품질 딥리서치 정본**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,24 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-14 7차 · #3 영향 회차 인라인 · main · ultracode)
+
+```
+init.sh            → tsc 0 · vitest 545(editorFocusLayout +2) · build 통과 (543→545)
+#3 영향 회차 인라인 → 베타 검토대기 #3(설정 변경 영향 회차가 편집 지점에 안 뜸 — CanonRefactorPanel 이 canon 섹션에만,
+  CanonCanvas 편집 입력 지점엔 부재. 랜딩 "영향 범위 먼저 펼쳐 보여줌" 약속 위반).
+  청사진 maps[1] 대로 순수 로직 변경 0 — 기존 buildCanonRefactorPlan(project, canonChanges) 결과를 편집 지점에 표시만.
+  CanonCanvas 에 canonRefactorPlan(required) prop + characters aside 에 affectedChapters 인라인 미리보기
+  ("이 변경이 영향 주는 회차 N개", EP·title·reason, slice 5). StoryXDesk 2 호출처 배선. .ex-canon-impact 다크 토큰.
+검증             → editorFocusLayout +2 소스핀(CanonCanvas affectedChapters·desk 전달)·tsc(canonRefactorPlan required 로 배선 강제)·build.
+  배선 경로 코드 확인 — canonRefactorPlan = useMemo(buildCanonRefactorPlan(project, canonChanges), [canonChanges, project])(StoryXDesk:908)
+  → CanonCanvas. 인물 편집 → logCanonChange → canonChanges → plan.affectedChapters → 미리보기.
+★ 라이브 갈음     → preview 환경 불안정(resume 후 서버 종료·포트 5174→5173 드리프트·브라우저 컨텍스트 격리)으로 자동화 검증 불가.
+  #3 저위험(새 상태/로직 0, buildCanonRefactorPlan canonRefactor.test GREEN, CanonCanvas 렌더는 #6 세션 라이브 확인분)
+  + tsc·소스핀·build 로 갈음(#1-undo 선례). 다음 안정 세션에서 회차 있는 작품으로 눈 확인 권장.
+남은         → 검토대기 #4(FloatingEditor 회차 선택기·단편 게이트 완화 — 청사진 maps[2], 가장 침습적).
+```
 
 ## 최근 검증 (2026-06-14 6차 · #7 작품 헌장 편집 · main · ultracode)
 

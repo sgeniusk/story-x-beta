@@ -591,3 +591,18 @@ describe('#7 작품 헌장 편집 — 잠긴 헌장 재열람·개정', () => {
     expect(css).toContain('.sx-charter-amend');
   });
 });
+
+describe('#3 영향 회차 인라인 — 편집 지점에 영향 범위 미리보기', () => {
+  it('CanonCanvas 가 인물 편집 옆에 영향 회차(canonRefactorPlan.affectedChapters)를 인라인 렌더한다', () => {
+    const canvas = componentSrc('CanonCanvas');
+    expect(canvas).toContain('canonRefactorPlan');
+    expect(canvas).toContain('affectedChapters');
+    expect(canvas).toContain('ex-canon-impact');
+    expect(canvas).toContain('이 변경이 영향 주는 회차');
+    expect(css).toContain('.ex-canon-impact');
+  });
+
+  it('StoryXDesk 가 CanonCanvas 에 canonRefactorPlan 을 전달한다(편집 지점 영향 미리보기)', () => {
+    expect(desk).toMatch(/onRenameCharacter=\{handleRenameCharacter\}\s*\n\s*canonRefactorPlan=\{canonRefactorPlan\}/);
+  });
+});

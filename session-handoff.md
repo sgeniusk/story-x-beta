@@ -4,9 +4,27 @@
 
 ---
 
+## 2026-06-14 (7차) — #3 영향 회차 인라인: 편집 지점에 영향 범위 미리보기 (main, TDD, ultracode)
+
+> #7 직후 같은 ultracode 세션에서 청사진 maps[1] 기반 #3 착수. 순수 로직 변경 0 — 기존 plan 을 편집 지점에 표시. 커밋 (아래 참조). ★ 라이브는 preview 환경 불안정으로 갈음(코드 검증).
+
+### 한 것
+- **CanonCanvas 영향 회차 인라인** — `canonRefactorPlan`(required) prop 추가, characters 섹션 aside(CharacterDetailPanel 다음)에 `affectedChapters.length > 0`일 때 "이 변경이 영향 주는 회차 N개" 미리보기(EP·title·reason, slice 5). StoryXDesk 2 호출처(2319 floating·2748 classic) 배선. `.ex-canon-impact` 다크 토큰. editorFocusLayout +2 소스핀.
+- **순수 로직 0 변경** — findAffectedChapters·buildCanonRefactorPlan(canonRefactor.ts) 미수정. 기존 `canonRefactorPlan = useMemo(buildCanonRefactorPlan(project, canonChanges), [canonChanges, project])`(StoryXDesk:908)를 CanonCanvas 에도 흘림. 인물 편집 → logCanonChange → canonChanges → plan → 미리보기.
+
+### 손대지 말 것
+- canonRefactorPlan 을 CanonCanvas **required** 로 둔 것 — 두 호출처 배선을 tsc 가 강제. optional 로 바꾸면 전달 누락이 조용히 통과.
+- findAffectedChapters 의 ID 링크 우선 + substring fallback + slice(-3) 폴백 — canonRefactor.ts 불변(#3 는 표시만). 약화 금지.
+
+### 다음 세션이 해야 할 한 가지
+- **#3 라이브 눈 확인(가벼움, 먼저)** — 이번엔 preview 환경 불안정(resume 후 서버 종료·포트 5174→5173 드리프트·자동화 브라우저 컨텍스트 격리·데이터모드 네비 타이밍)으로 라이브 갈음했다. **회차 있는 작품**(예: `docs/reviews/.../backups` 23화·30화)으로 데이터→인물→욕망 편집 시 aside 에 `.ex-canon-impact`(영향 회차) 렌더를 한 번 눈으로. CanonCanvas 렌더 자체·인물 편집은 #6 세션서 확인분이라 표시 로직만 보면 된다. (주의 — preview 의 localStorage 는 사용자 실작업과 격리된 자동화 브라우저 프로필이라 "샘플 작품" 시드가 보일 수 있다. 사용자 실데이터 아님.)
+- **#4 FloatingEditor 회차 선택기** — 청사진 maps[2]. prose flush 레이스(editorTextRef·commitChapterProse·debounce, StoryXDesk:1544-1601)·isSerial 게이트 완화('length>1')라 셋 중 가장 침습적. 신규 floatingEditor.test 필요. 이로써 "중간 수정 루프 골격 + 검토대기 #3·#4·#7" 마무리.
+
+---
+
 ## 2026-06-14 (6차) — #7 작품 헌장 편집: 잠긴 헌장 재열람·개정·undo (main, TDD+라이브, ultracode)
 
-> 사용자 "세션핸드오프 읽고 울트라코드로 개발 이어가라". ultracode Workflow(Explore 3 병렬 매핑 + 청사진 합성)로 베타 검토대기 #7·#3·#4 를 정밀 매핑한 뒤 #7부터 TDD + preview 라이브 완주. 청사진의 핵심 사실 4건은 Claude 가 직접 Read 로 독립 검증. 커밋 미실행(아래 다음 한 가지 참조).
+> 사용자 "세션핸드오프 읽고 울트라코드로 개발 이어가라". ultracode Workflow(Explore 3 병렬 매핑 + 청사진 합성)로 베타 검토대기 #7·#3·#4 를 정밀 매핑한 뒤 #7부터 TDD + preview 라이브 완주. 청사진의 핵심 사실 4건은 Claude 가 직접 Read 로 독립 검증. ultracode 적대 검토(17 에이전트) 14건 전부 기각 + 다회 개정·undo 엣지 라이브 독립 확인. 커밋 `207150f`(main).
 
 ### 한 것
 - **storyEngine 순수 함수 2개 (TDD, storyEngine.test +5)** — `isSpineComplete(spine, lengthClass)`(단편 2줄·장편 4줄 잠금규칙을 buildStoryContractFromOnboarding 에서 추출해 공용화)·`applyContractAmendment(contract, {reason, at, change?, patch})`(척추·결말·대가·화수 부분 패치 → deriveBeatSheet·isSpineComplete 재실행으로 비트 재산출·잠금 재계산, amendments 누적). **at 은 인자 주입**(storyEngine 순수성 — Date/random 미사용).

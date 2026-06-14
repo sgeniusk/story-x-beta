@@ -2297,6 +2297,7 @@ export function StoryXDesk({
           onAddCharacter={handleAddCharacter}
           onRemoveCharacter={handleRemoveCharacter}
           onRenameCharacter={handleRenameCharacter}
+          canonRefactorPlan={canonRefactorPlan}
         />
       ) : dataView.kind === 'bible' ? (
         <MemoryBankStudio
@@ -2725,6 +2726,7 @@ export function StoryXDesk({
               onAddCharacter={handleAddCharacter}
               onRemoveCharacter={handleRemoveCharacter}
               onRenameCharacter={handleRenameCharacter}
+              canonRefactorPlan={canonRefactorPlan}
             />
           ) : dataView.kind === 'bible' ? (
             <MemoryBankStudio

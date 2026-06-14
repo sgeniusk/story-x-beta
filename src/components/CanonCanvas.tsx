@@ -7,6 +7,7 @@ import { CharacterGraph } from './CharacterGraph';
 import { CharacterDetailPanel } from './CharacterDetailPanel';
 import { CanonCardGrid } from './CanonCardGrid';
 import { canonCategories, getCategoryEntities, type BibleSection, type CanonCategory } from '../lib/canonDataView';
+import type { CanonRefactorPlan } from '../lib/canonRefactor';
 
 // 데이터 모드 가운데 캔버스 — 고른 캐논 분야에 따라 관계도/카드/타임라인을 띄운다.
 export function CanonCanvas({
@@ -16,7 +17,8 @@ export function CanonCanvas({
   onOpenBibleSection,
   onAddCharacter,
   onRemoveCharacter,
-  onRenameCharacter
+  onRenameCharacter,
+  canonRefactorPlan
 }: {
   category: CanonCategory;
   project: SeriesProject;
@@ -25,6 +27,7 @@ export function CanonCanvas({
   onAddCharacter?: () => void;
   onRemoveCharacter?: (characterId: string) => void;
   onRenameCharacter?: (characterId: string, name: string) => void;
+  canonRefactorPlan: CanonRefactorPlan;
 }) {
   const categoryLabel = canonCategories.find((item) => item.id === category)?.label ?? '캐논';
   const [pickedCharacterId, setPickedCharacterId] = useState<string>(project.characters[0]?.id ?? '');
@@ -58,6 +61,19 @@ export function CanonCanvas({
             />
           ) : (
             <p className="ex-beats-empty">인물을 먼저 등록하면 상세가 여기에 표시됩니다.</p>
+          )}
+          {canonRefactorPlan.affectedChapters.length > 0 && (
+            <div className="ex-canon-impact" aria-label="영향 회차 미리보기">
+              <strong>이 변경이 영향 주는 회차 {canonRefactorPlan.affectedChapters.length}개</strong>
+              <ul>
+                {canonRefactorPlan.affectedChapters.slice(0, 5).map((chapter) => (
+                  <li key={chapter.id}>
+                    <b>{chapter.episode}화</b> {chapter.title}
+                    <small>{chapter.reason}</small>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
       </div>
