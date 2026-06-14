@@ -4,11 +4,13 @@ import type { CanonChangeEntry, CanonRefactorPlan } from '../lib/canonRefactor';
 export function CanonRefactorPanel({
   changes,
   plan,
-  onClearChanges
+  onClearChanges,
+  onRevert
 }: {
   changes: CanonChangeEntry[];
   plan: CanonRefactorPlan;
   onClearChanges: () => void;
+  onRevert?: (change: CanonChangeEntry) => void;
 }) {
   return (
     <section className={`sx-canon-refactor-panel is-${plan.status}`} aria-label="캐논 리팩터">
@@ -34,6 +36,16 @@ export function CanonRefactorPanel({
                 <strong>{change.targetLabel}</strong>
                 <small>{change.kind} · {change.fieldLabel}</small>
                 <p>{change.after || '비어 있음'}</p>
+                {onRevert && (change.targetId || change.revertField) && (
+                  <button
+                    type="button"
+                    className="sx-revert-change-button"
+                    onClick={() => onRevert(change)}
+                    title={`"${change.before || '비어 있음'}" 으로 되돌립니다`}
+                  >
+                    ↩ 이 변경 되돌리기
+                  </button>
+                )}
               </div>
             ))
           )}

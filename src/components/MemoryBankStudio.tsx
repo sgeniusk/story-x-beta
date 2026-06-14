@@ -40,7 +40,8 @@ export function MemoryBankStudio({
   onRequestReview,
   canonChanges,
   canonRefactorPlan,
-  onClearCanonChanges
+  onClearCanonChanges,
+  onRevertCanonChange
 }: {
   project: SeriesProject;
   bank: StoryMemoryBank;
@@ -62,6 +63,7 @@ export function MemoryBankStudio({
   canonChanges: CanonChangeEntry[];
   canonRefactorPlan: CanonRefactorPlan;
   onClearCanonChanges: () => void;
+  onRevertCanonChange?: (change: CanonChangeEntry) => void;
 }) {
   const sectionState = buildBibleSectionState({
     activeSection,
@@ -257,6 +259,7 @@ export function MemoryBankStudio({
               changes={canonChanges}
               plan={canonRefactorPlan}
               onClearChanges={onClearCanonChanges}
+              onRevert={onRevertCanonChange}
             />
           </>
         )}

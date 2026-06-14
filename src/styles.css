@@ -3962,6 +3962,21 @@ body {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+/* 베타테스트 #1-undo — 변경 로그 항목별 되돌리기 버튼 */
+.sx-revert-change-button {
+  margin-top: 6px;
+  padding: 3px 9px;
+  font-size: 0.72rem;
+  background: transparent;
+  border: 1px solid var(--sx-line, var(--nx-hairline-strong));
+  border-radius: var(--nx-r-sm, 6px);
+  color: var(--sx-ink-soft, var(--nx-slate));
+  cursor: pointer;
+}
+.sx-revert-change-button:hover {
+  border-color: var(--sx-brand, var(--nx-primary));
+  color: var(--sx-ink, var(--nx-ink));
+}
 
 .sx-canon-refactor-grid ul {
   display: grid;

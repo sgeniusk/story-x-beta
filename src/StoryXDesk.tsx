@@ -177,6 +177,7 @@ import type { StoryXVersionInfo, StoryXVersionLogEntry } from './lib/version';
 import {
   buildCanonRefactorPlan,
   createCanonChangeEntry,
+  revertCanonChange,
   type CanonChangeEntry,
   type CanonChangeEntryInput,
   type CanonRefactorPlan
@@ -1698,6 +1699,12 @@ export function StoryXDesk({
     });
   }
 
+  // 베타테스트 #1-undo — 변경 로그의 한 항목을 before(최초 원본)로 되돌리고, 그 항목을 로그에서 제거한다.
+  function revertCanonChangeEntry(change: CanonChangeEntry) {
+    setProject((prev) => revertCanonChange(prev, change));
+    setCanonChanges((current) => current.filter((entry) => entry.id !== change.id));
+  }
+
   function updateProject(
     field: 'title' | 'logline' | 'audiencePromise' | 'deepQuestion' | 'formIntent' | 'tone',
     value: string
@@ -1717,7 +1724,8 @@ export function StoryXDesk({
       fieldLabel: labels[field],
       before: project[field],
       after: value,
-      origin: 'manual-bible-edit'
+      origin: 'manual-bible-edit',
+      revertField: field
     });
     setProject((current) => ({ ...current, [field]: value }));
   }
@@ -1729,7 +1737,8 @@ export function StoryXDesk({
       fieldLabel: '작품 무게중심',
       before: project.creativeWeight,
       after: weight,
-      origin: 'manual-bible-edit'
+      origin: 'manual-bible-edit',
+      revertField: 'creativeWeight'
     });
     setProject((current) => ({ ...current, creativeWeight: weight }));
   }
@@ -1749,7 +1758,9 @@ export function StoryXDesk({
         fieldLabel: labels[field],
         before: character[field],
         after: value,
-        origin: 'manual-bible-edit'
+        origin: 'manual-bible-edit',
+        targetId: characterId,
+        revertField: field
       });
     }
 
@@ -1771,7 +1782,8 @@ export function StoryXDesk({
         fieldLabel: '규칙과 비용',
         before: rule.rule,
         after: value,
-        origin: 'manual-bible-edit'
+        origin: 'manual-bible-edit',
+        targetId: ruleId
       });
     }
 
@@ -1791,7 +1803,8 @@ export function StoryXDesk({
         fieldLabel: '승인된 사실',
         before: fact.statement,
         after: value,
-        origin: 'manual-bible-edit'
+        origin: 'manual-bible-edit',
+        targetId: canonId
       });
     }
 
@@ -2267,6 +2280,7 @@ export function StoryXDesk({
           canonChanges={canonChanges}
           canonRefactorPlan={canonRefactorPlan}
           onClearCanonChanges={() => setCanonChanges([])}
+          onRevertCanonChange={revertCanonChangeEntry}
         />
       ) : null;
     return (
@@ -2690,6 +2704,7 @@ export function StoryXDesk({
               canonChanges={canonChanges}
               canonRefactorPlan={canonRefactorPlan}
               onClearCanonChanges={() => setCanonChanges([])}
+              onRevertCanonChange={revertCanonChangeEntry}
             />
           ) : null}
         </section>

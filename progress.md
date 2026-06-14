@@ -145,6 +145,20 @@ charter 스크롤 버그 — 사용자 실사용 발견: 작품 헌장(charter) 
 딥리서치          — 이야기 품질·의외성(U3·U4) SOTA 정본 docs/research/2026-06-14-prose-quality-surprise-research.md
 ```
 
+## 최근 검증 (2026-06-14 4차 · #1-undo 바이블 되돌리기 · main)
+
+```
+init.sh            → tsc 0 · vitest 528(canonRefactor +1·editorFocusLayout +1) · build 통과 (526→528)
+#1-undo            → 베타테스트 2순위(전원 10명). 수동 바이블 편집(인물·세계·캐논·문체축·무게중심)에
+  되돌리기 전무 → 3~6회 갈아엎기 안전망 신설.
+  canonRefactor revertCanonChange(project,change) 순수 함수(TDD) — 식별자(targetId·revertField)로
+  before(최초 원본) 정확 복원, 식별자 없으면 무변경(이름 역매칭 의존 0).
+  CanonChangeEntryInput 에 targetId·revertField 추가 + 5개 update 함수가 식별자 기록 +
+  StoryXDesk revertCanonChangeEntry(복원+로그 제거) → MemoryBankStudio → CanonRefactorPanel "↩ 이 변경 되돌리기" 버튼.
+검증             → revertCanonChange TDD 4케이스(character/world/story-core 복원·식별자 없으면 참조동일)·
+  배선 tsc·editorFocusLayout 소스 핀. 라이브 버튼 클릭은 순수 함수 TDD+배선 tsc 로 갈음(인물 주입 비용 대비).
+```
+
 ## 최근 검증 (2026-06-14 3차 · #1 본문 영속 — 편집 자동 저장 · main)
 
 ```

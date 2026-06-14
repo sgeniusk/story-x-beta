@@ -13,6 +13,10 @@ export interface CanonChangeEntryInput {
   origin: CanonChangeOrigin;
   /** M4 청크 H — Gap 8: 변경 대상 캐논의 ID. 채워지면 chapter.newCanonFacts.id 와 직접 매칭, 없으면 부분문자열 fallback. */
   targetCanonId?: string;
+  /** 베타테스트 #1-undo — 되돌리기 식별자. character/world 엔티티 id(story-core 는 미사용). */
+  targetId?: string;
+  /** 되돌릴 필드 키 — character: desire|wound|currentState, story-core/voice: project 직속 키. */
+  revertField?: string;
 }
 
 export interface CanonChangeEntry extends CanonChangeEntryInput {
@@ -87,6 +91,41 @@ export function createCanonChangeEntry(input: CanonChangeEntryInput): CanonChang
       stableHash(`${input.before}->${input.after}`)
     ].join('-')
   };
+}
+
+// 베타테스트 #1-undo — 변경의 before(최초 원본)를 식별자(targetId·revertField)로 정확히 복원한다.
+// 식별자가 없으면(구버전 로그·미지원 kind) 참조를 그대로 반환해 안전 실패한다(이름 역매칭 의존 없음).
+export function revertCanonChange(project: SeriesProject, change: CanonChangeEntry): SeriesProject {
+  const { kind, targetId, revertField, before } = change;
+  if (kind === 'character') {
+    if (!targetId || !revertField) return project;
+    return {
+      ...project,
+      characters: project.characters.map((character) =>
+        character.id === targetId ? { ...character, [revertField]: before } : character
+      )
+    };
+  }
+  if (kind === 'world') {
+    if (!targetId) return project;
+    return {
+      ...project,
+      worldRules: project.worldRules.map((rule) => (rule.id === targetId ? { ...rule, rule: before } : rule))
+    };
+  }
+  if (kind === 'canon') {
+    const id = targetId ?? change.targetCanonId;
+    if (!id) return project;
+    return {
+      ...project,
+      canonFacts: project.canonFacts.map((fact) => (fact.id === id ? { ...fact, statement: before } : fact))
+    };
+  }
+  if (kind === 'story-core' || kind === 'voice') {
+    if (!revertField) return project;
+    return { ...project, [revertField]: before };
+  }
+  return project;
 }
 
 export function buildCanonRefactorPlan(project: SeriesProject, changes: CanonChangeEntry[]): CanonRefactorPlan {

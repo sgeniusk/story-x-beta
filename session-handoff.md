@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-06-14 (4차) — #1-undo 바이블 되돌리기 (main, TDD)
+
+> 베타테스트 2순위(전원 10명) 착수·완료. 수동 바이블 편집에 변경별 되돌리기 신설. revertCanonChange 순수 함수 TDD + 배선. 커밋 완료(아래 다음 한 가지 참조).
+
+### 한 것
+- **canonRefactor `revertCanonChange(project, change)`** (TDD, canonRefactor.test +1) — change.before(최초 원본)를 식별자(targetId·revertField)로 정확 복원. character/world/canon/story-core/voice 분기, 식별자 없으면 참조 그대로(안전 실패, 이름 역매칭 의존 0).
+- **CanonChangeEntryInput 에 `targetId`·`revertField`** 추가 — 5개 update 함수(updateProject·CreativeWeight·Character·World·Canon)가 식별자 기록.
+- **StoryXDesk `revertCanonChangeEntry`** — setProject(revertCanonChange) + canonChanges 에서 해당 항목 제거. MemoryBankStudio(onRevertCanonChange) → CanonRefactorPanel(onRevert) 체인. 패널에 "↩ 이 변경 되돌리기" 버튼(revertField·targetId 있을 때만) + `.sx-revert-change-button` 다크 토큰 CSS.
+- editorFocusLayout +1 소스 핀. init.sh 528 녹색.
+
+### 손대지 말 것
+- `revertCanonChange` 식별자 가드(targetId·revertField 없으면 return project) — 구버전 변경 로그·미지원 kind(visual/audio) 안전 실패. canonRefactor.test 가 핀.
+- `before` 병합(logCanonChange 의 `existing?.before ?? input.before`) — 같은 필드 3~6회 수정해도 before 는 최초 원본 유지. 되돌리면 중간값 아니라 원본 복귀. undo 정확성 근거.
+- update 함수의 targetId·revertField 전달 — 빼면 revert 가 식별자 없어 no-op.
+
+### 다음 세션이 해야 할 한 가지
+- **#6 CRUD (중간 수정 루프 3대 골격 마지막)** — 인물·캐논 add/remove/rename. 현재 욕망/상처/현재상태 3필드 덮어쓰기만, 추가·삭제·이름 변경 핸들러 0개. 리포트 `docs/reviews/2026-06-14-ultracode-beta-10/REPORT.md` §3-6. 매체별 캐릭터 스키마(만화 외관 등)도.
+- (선택) #1-undo 라이브 눈 확인 — 데이터 모드 인물 편집 → 변경 로그 "되돌리기" 클릭 복원(순수 함수는 TDD 검증됨).
+
+---
+
 ## 2026-06-14 (3차) — #1 본문 영속: 편집 자동 저장 (main, TDD+라이브)
 
 > 베타테스트 1순위(데이터 손실) 착수·완료. editorText→chapter.prose commit 경로 신설로 편집 무음 소실 해결. TDD(storyEngine) + preview 라이브(편집→새로고침 유지). 커밋 미실행(사용자 결정 대기).
