@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-06-14 (3차) — #1 본문 영속: 편집 자동 저장 (main, TDD+라이브)
+
+> 베타테스트 1순위(데이터 손실) 착수·완료. editorText→chapter.prose commit 경로 신설로 편집 무음 소실 해결. TDD(storyEngine) + preview 라이브(편집→새로고침 유지). 커밋 미실행(사용자 결정 대기).
+
+### 한 것
+- **storyEngine `commitChapterProse(project, chapterId, prose)`** (TDD, storyEngine.test +1, 67) — chapters 에서 id 매칭 prose 만 갱신. 없는 id·동일 prose 는 참조 그대로(no-op — 불필요 저장 차단).
+- **StoryXDesk 배선** — `editorTextRef`(stale closure 회피 최신값)·debounce 800ms 자동 commit effect(editorText→latestChapter.id prose)·`latestChapter` effect 에 `loadedChapterIdRef` 추가해 회차 전환 시 이전 회차에 미커밋 편집 flush 후 새 회차 시드. editorFocusLayout +1 회귀 핀.
+- **라이브 검증** — test 회차 주입 → contentEditable 편집 → 800ms 후 localStorage chapter.prose 에 마커 commit(hasMarker:true) → 새로고침 후 본문 마커 유지(editorShowsMarker:true, 이전엔 소실). 원본 무손상 복원.
+
+### 손대지 말 것
+- `commitChapterProse` no-op 가드(없는 id·동일 prose → 참조 동일) — debounce effect 가 매 타이핑 호출해도 불필요 saveProject 안 일어나게. storyEngine.test 가 핀.
+- `loadedChapterIdRef` 전환 flush — 회차 전환 시 이전 editorText 를 이전 회차에 commit한 뒤 새 prose 시드. 제거하면 전환 시 미커밋 편집 소실 재발.
+- `editorTextRef.current` — debounce/flush 가 stale editorText 를 안 쓰도록. setTimeout/effect 안에서 editorText 직접 참조로 되돌리면 stale.
+
+### 다음 세션이 해야 할 한 가지
+- **#1 나머지 보강(선택·낮음)** — 저장 중/dirty 표시(FloatingEditor:390 '저장됨' 하드코딩 → isBodyDirty prop)·beforeunload 경고. 단 자동저장으로 '저장됨'이 사실상 참이 돼 우선순위 낮음.
+- **중간 수정 루프 3대 골격의 2·3순위** — #1-undo(바이블 되돌리기, freq10)·#6 CRUD(인물·캐논 add/remove/rename). 리포트 `docs/reviews/2026-06-14-ultracode-beta-10/REPORT.md` §3.
+
+---
+
 ## 2026-06-14 (2차) — 울트라코드 10인 베타테스트 + UI/UX 안전 자동수정 3건 (main, TDD)
 
 > 사용자 "ultracode 로 10인 베타테스터가 캐릭터·이야기 3~6회 중간수정하는 시나리오로 검사 후 UIUX 개선". 04:32 예약 → 사용자 "지금 바로 시작"으로 즉시 실행. Workflow 10인 워크스루(findings 74 → 종합 24) + 안전 자동수정 3 TDD. 커밋·push 미실행(사용자가 아침에 검토·선별).

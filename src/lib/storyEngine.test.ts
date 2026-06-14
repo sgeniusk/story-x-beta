@@ -9,6 +9,7 @@ import {
   buildStoryEditorWorkspace,
   chapterFromDraftPayload,
   commitChapter,
+  commitChapterProse,
   createEmptyProject,
   createSeedProject,
   defaultPlannedEpisodes,
@@ -117,6 +118,25 @@ describe('storyEngine', () => {
     );
     expect(result.chapter.rewardArc ?? []).toEqual([]);
     expect(result.chapter.stakesLedger ?? []).toEqual([]);
+  });
+
+  it('commitChapterProse 가 지정 회차의 prose 만 갱신하고 다른 필드·회차는 보존, 없는 id·동일 prose 는 무변경', () => {
+    // 버그(2026-06-14 베타테스트 #1) — editorText 를 chapter.prose 로 commit 하는 경로가 0개라
+    // 편집 본문이 saveProject 로 영속되지 않고 회차 전환·새로고침 시 소실됐다.
+    const empty = createEmptyProject({ title: '단편' });
+    const { chapter } = chapterFromDraftPayload(
+      empty,
+      { title: '1화', hook: 'h', outline: [], beats: [], prose: '원본 본문', newCanonFacts: [] },
+      { genre: 'urban-fantasy', intent: '진입', pressure: '' }
+    );
+    const withCh = commitChapter(empty, chapter);
+    const updated = commitChapterProse(withCh, chapter.id, '편집된 본문');
+    const target = updated.chapters.find((c) => c.id === chapter.id);
+    expect(target?.prose).toBe('편집된 본문');
+    expect(target?.title).toBe('1화');
+    // 없는 회차 id · 동일 prose 는 참조 그대로(무변경 — 불필요한 saveProject 방지)
+    expect(commitChapterProse(withCh, 'no-such-id', 'x')).toBe(withCh);
+    expect(commitChapterProse(withCh, chapter.id, '원본 본문')).toBe(withCh);
   });
 
   it('SeriesProject 의 8개 신설 optional 필드는 기본값이 undefined 이며 누락돼도 createEmptyProject 가 동작', () => {

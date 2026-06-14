@@ -113,6 +113,7 @@ import {
   type AgentRun,
   type Chapter,
   type ChapterBeat,
+  commitChapterProse,
   type AgentId,
   type CanonReviewCategory,
   type CreativeWeight,
@@ -573,6 +574,9 @@ export function StoryXDesk({
   });
   const [draftPrompt, setDraftPrompt] = useState(defaultEpisodeIntent);
   const [editorText, setEditorText] = useState('');
+  // 베타테스트 #1 — debounce/flush commit 이 stale closure 가 아닌 최신 editorText 를 쓰도록 ref 미러.
+  const editorTextRef = useRef(editorText);
+  editorTextRef.current = editorText;
   const [draftFallbackNotice, setDraftFallbackNotice] = useState(false);
   const [editedSinceReview, setEditedSinceReview] = useState(false);
   const [agentRuns, setAgentRuns] = useState<AgentRun[]>(defaultRuns);
@@ -1532,6 +1536,17 @@ export function StoryXDesk({
     saveProject(project);
   }, [project]);
 
+  // 본문 자동 저장(베타테스트 #1) — 타이핑이 멈추면 현재 회차 prose 로 commit → 위 saveProject effect 가 영속한다.
+  // commitChapterProse 는 prose 가 동일하면 no-op(참조 동일)이라 불필요한 저장을 막는다.
+  useEffect(() => {
+    if (!latestChapter) return;
+    const chapterId = latestChapter.id;
+    const timer = setTimeout(() => {
+      setProject((prev) => commitChapterProse(prev, chapterId, editorTextRef.current));
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [editorText, latestChapter]);
+
   useEffect(() => {
     function handleGlobalShortcut(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -1561,11 +1576,20 @@ export function StoryXDesk({
     return () => window.removeEventListener('keydown', handleGlobalShortcut);
   }, [isDraftMode]);
 
+  // 회차 전환·새 초안 로드 시 — 이전 회차에 미커밋 편집을 먼저 flush 한 뒤 새 회차 본문을 시드한다(베타테스트 #1).
+  const loadedChapterIdRef = useRef<string | null>(latestChapter?.id ?? null);
   useEffect(() => {
+    const prevId = loadedChapterIdRef.current;
+    const nextId = latestChapter?.id ?? null;
+    if (prevId && prevId !== nextId) {
+      const pending = editorTextRef.current;
+      setProject((prev) => commitChapterProse(prev, prevId, pending));
+    }
+    loadedChapterIdRef.current = nextId;
+
     if (!latestChapter) {
       return;
     }
-
     setEditorText(latestChapter.prose);
     setEditedSinceReview(false);
     setActiveBeatId(null);

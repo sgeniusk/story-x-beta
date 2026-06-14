@@ -1801,6 +1801,19 @@ export function commitChapter(project: SeriesProject, chapter: Chapter): SeriesP
   };
 }
 
+// 작가가 편집한 본문(editorText)을 해당 회차 prose 로 commit 한다(베타테스트 #1 — 본문 영속).
+// 없는 회차이거나 prose 가 동일하면 참조를 그대로 반환해 불필요한 저장·리렌더를 막는다.
+export function commitChapterProse(project: SeriesProject, chapterId: string, prose: string): SeriesProject {
+  const index = project.chapters.findIndex((chapter) => chapter.id === chapterId);
+  if (index < 0 || project.chapters[index].prose === prose) {
+    return project;
+  }
+  return {
+    ...project,
+    chapters: project.chapters.map((chapter, i) => (i === index ? { ...chapter, prose } : chapter))
+  };
+}
+
 // relations — 승격이 끝난 인물 목록에 owner=character 캐논의 "A의 [관계] 이름은 B" 엣지를 더한다.
 // 양쪽 인물이 모두 승격돼 있을 때만, 중복 라벨은 건너뛴다. 발명 없음(extractRelation 가 보수적으로 거른다).
 function linkRelationsFromCanon(characters: CharacterProfile[], newFacts: CanonFact[]): CharacterProfile[] {

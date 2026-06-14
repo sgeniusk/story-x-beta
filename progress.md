@@ -145,6 +145,20 @@ charter 스크롤 버그 — 사용자 실사용 발견: 작품 헌장(charter) 
 딥리서치          — 이야기 품질·의외성(U3·U4) SOTA 정본 docs/research/2026-06-14-prose-quality-surprise-research.md
 ```
 
+## 최근 검증 (2026-06-14 3차 · #1 본문 영속 — 편집 자동 저장 · main)
+
+```
+init.sh            → tsc 0 · vitest 526(storyEngine +1·editorFocusLayout +1) · build 통과 (524→526)
+#1 본문 영속       → 베타테스트 1순위(데이터 손실) 해결. editorText 가 chapter.prose 로 commit 안 돼
+  회차 전환·새로고침·import 시 무음 소실되던 버그.
+  storyEngine commitChapterProse(project,id,prose) 신설(TDD — 없는 id·동일 prose no-op 참조동일).
+  StoryXDesk 배선 — editorTextRef(stale closure 회피 최신값)·debounce 800ms 자동 commit·
+  latestChapter effect 에 loadedChapterIdRef 추가해 회차 전환 시 이전 회차에 미커밋 편집 flush 후 새 회차 시드.
+라이브(preview)    — test 회차 주입 → contentEditable 편집 '[편집마커X9]' → 800ms 후 localStorage chapter.prose commit
+  (hasMarker:true) → 새로고침 후 editorShowsMarker:true(이전엔 소실). 원본("반납되지 않은 편지") 무손상 복원.
+남은 보강(낮음)    → 저장 중 표시·beforeunload(2c/2d) edge case. 자동저장으로 '저장됨' 칩이 사실상 참이 돼 우선순위↓.
+```
+
 ## 최근 검증 (2026-06-14 2차 · 울트라코드 10인 베타테스트 + UI/UX 안전 자동수정 · main)
 
 ```
