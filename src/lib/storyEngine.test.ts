@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyApprovedMemory,
+  applyContractAmendment,
   buildDeterministicDataReview,
   buildContinuityContractFromProject,
   buildFallbackDraft,
@@ -18,6 +19,7 @@ import {
   defaultPlannedEpisodes,
   deriveBeatSheet,
   deriveOnboardingSeed,
+  isSpineComplete,
   evaluateProductionGate,
   validateContract,
   getCanonReviewCategoryLabel,
@@ -1038,6 +1040,14 @@ describe('StoryContract (작품 헌장 — Phase A)', () => {
     };
   }
 
+  const FULL_SPINE = {
+    desire: '이름을 되찾고 싶다',
+    advance: '단서를 모은다',
+    obstacle: '과거가 막아선다',
+    resolution: '이름을 받아들인다'
+  };
+  const AMEND_AT = '2026-06-14T09:00:00.000Z';
+
   it('defaultPlannedEpisodes — 단편 6 · 장편 30', () => {
     expect(defaultPlannedEpisodes('short')).toBe(6);
     expect(defaultPlannedEpisodes('long')).toBe(30);
@@ -1084,6 +1094,84 @@ describe('StoryContract (작품 헌장 — Phase A)', () => {
 
     const without = createEmptyProject({ title: '계약 없음' });
     expect(without.storyContract).toBeUndefined();
+  });
+
+  it('applyContractAmendment — 척추 1줄 교체: 해당 줄만 갱신·비트 재산출·amendments 누적·원본 불변', () => {
+    const locked = makeContract({
+      spine: { ...FULL_SPINE },
+      spineLocked: true,
+      beatSheet: deriveBeatSheet(FULL_SPINE, 30)
+    });
+    const next = applyContractAmendment(locked, {
+      reason: '욕망을 더 구체적으로',
+      at: AMEND_AT,
+      patch: { spine: { desire: '아버지의 이름을 되찾고 싶다' } }
+    });
+    expect(next.spine?.desire).toBe('아버지의 이름을 되찾고 싶다');
+    expect(next.spine?.advance).toBe(FULL_SPINE.advance);
+    expect(next.spine?.obstacle).toBe(FULL_SPINE.obstacle);
+    expect(next.spine?.resolution).toBe(FULL_SPINE.resolution);
+    // 욕망 핀(25%)이 새 문구로 다시 펼쳐진다.
+    expect(next.beatSheet[0]?.mission).toBe('아버지의 이름을 되찾고 싶다');
+    // 4줄이 여전히 차 있어 잠금 유지.
+    expect(next.spineLocked).toBe(true);
+    expect(next.amendments).toHaveLength(1);
+    expect(next.amendments[0]?.reason).toBe('욕망을 더 구체적으로');
+    expect(next.amendments[0]?.at).toBe(AMEND_AT);
+    expect(next.amendments[0]?.change.length).toBeGreaterThan(0);
+    // 순수 — 원본은 건드리지 않는다.
+    expect(locked.spine?.desire).toBe(FULL_SPINE.desire);
+    expect(locked.amendments).toHaveLength(0);
+  });
+
+  it('applyContractAmendment — 결말·대가·화수 패치 + 화수 변경 시 마지막 비트 핀 이동', () => {
+    const locked = makeContract({
+      spine: { ...FULL_SPINE },
+      spineLocked: true,
+      beatSheet: deriveBeatSheet(FULL_SPINE, 30)
+    });
+    const next = applyContractAmendment(locked, {
+      reason: '시즌 연장',
+      at: AMEND_AT,
+      patch: {
+        endingStatement: '이름을 버리고 새 이름을 짓는다',
+        protagonistCost: '옛 이름의 기억',
+        plannedEpisodes: 36
+      }
+    });
+    expect(next.endingStatement).toBe('이름을 버리고 새 이름을 짓는다');
+    expect(next.protagonistCost).toBe('옛 이름의 기억');
+    expect(next.plannedEpisodes).toBe(36);
+    expect(next.beatSheet[next.beatSheet.length - 1]?.episode).toBe(36);
+  });
+
+  it('applyContractAmendment — 장편 척추 한 줄을 공란으로 만들면 잠금이 풀린다(충돌 노출)', () => {
+    const locked = makeContract({ spine: { ...FULL_SPINE }, spineLocked: true });
+    const next = applyContractAmendment(locked, {
+      reason: '비우기',
+      at: AMEND_AT,
+      patch: { spine: { obstacle: '   ' } }
+    });
+    expect(next.spineLocked).toBe(false);
+  });
+
+  it('applyContractAmendment — change 를 명시하면 그 문구를 그대로 이력에 남긴다', () => {
+    const locked = makeContract({ spine: { ...FULL_SPINE }, spineLocked: true });
+    const next = applyContractAmendment(locked, {
+      reason: '트위스트 수락',
+      at: AMEND_AT,
+      change: '배신자=조력자 반전',
+      patch: { spine: { resolution: '조력자가 배신자였음을 받아들인다' } }
+    });
+    expect(next.amendments[0]?.change).toBe('배신자=조력자 반전');
+  });
+
+  it('isSpineComplete — 단편 2줄(욕망·변화)·장편 4줄 규칙', () => {
+    const partial = { desire: '욕망', advance: '', obstacle: '', resolution: '변화' };
+    expect(isSpineComplete(partial, 'short')).toBe(true);
+    expect(isSpineComplete(partial, 'long')).toBe(false);
+    expect(isSpineComplete(FULL_SPINE, 'long')).toBe(true);
+    expect(isSpineComplete({ desire: '', advance: '', obstacle: '', resolution: '' }, 'short')).toBe(false);
   });
 });
 

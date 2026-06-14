@@ -3,9 +3,10 @@ import type { BibleSection } from '../lib/canonDataView';
 import type { CanonChangeEntry, CanonRefactorPlan } from '../lib/canonRefactor';
 import { type MemoryApprovalDecision, type MemoryApprovalQueue, type StoryMemoryBank } from '../lib/memoryBank';
 import { describeCreativeWeight } from '../lib/storyEngine';
-import type { CreativeWeight, SeriesProject } from '../lib/storyEngine';
+import type { ContractAmendmentPatch, CreativeWeight, SeriesProject } from '../lib/storyEngine';
 import { BibleWorkbenchHeader, type BibleSectionState } from './BibleWorkbenchHeader';
 import { CanonRefactorPanel } from './CanonRefactorPanel';
+import { CharterAmendCard } from './CharterAmendCard';
 
 type ApprovalDecision = MemoryApprovalDecision;
 
@@ -41,7 +42,8 @@ export function MemoryBankStudio({
   canonChanges,
   canonRefactorPlan,
   onClearCanonChanges,
-  onRevertCanonChange
+  onRevertCanonChange,
+  onAmendCharter
 }: {
   project: SeriesProject;
   bank: StoryMemoryBank;
@@ -64,6 +66,7 @@ export function MemoryBankStudio({
   canonRefactorPlan: CanonRefactorPlan;
   onClearCanonChanges: () => void;
   onRevertCanonChange?: (change: CanonChangeEntry) => void;
+  onAmendCharter?: (patch: ContractAmendmentPatch, reason: string) => void;
 }) {
   const sectionState = buildBibleSectionState({
     activeSection,
@@ -143,6 +146,9 @@ export function MemoryBankStudio({
               <p>{describeCreativeWeight(project.creativeWeight)}</p>
             </div>
           </article>
+          {project.storyContract && onAmendCharter && (
+            <CharterAmendCard contract={project.storyContract} onAmend={onAmendCharter} />
+          )}
           <article className="sx-bible-card">
             <span>Context Packet</span>
             <h3>역할별 기억 패킷</h3>

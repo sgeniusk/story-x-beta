@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-14 · Branch: `main` (**울트라코드 10인 베타테스트 → 중간 수정 루프 3대 골격 완료: #1 본문영속·#1-undo·#6 인물CRUD, TDD·라이브·커밋. 이야기 품질 딥리서치 정본**)
+> Last Updated: 2026-06-14 · Branch: `main` (**울트라코드 10인 베타테스트 → 중간 수정 루프 3대 골격 완료: #1 본문영속·#1-undo·#6 인물CRUD. 후속 #7 헌장 편집(잠긴 헌장 재열람·개정·undo) TDD·라이브 완료. 이야기 품질 딥리서치 정본**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,22 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-14 6차 · #7 작품 헌장 편집 · main · ultracode)
+
+```
+init.sh            → tsc 0 · vitest 543(storyEngine +5·episodeBriefing +2·canonRefactor +2·editorFocusLayout +4) · build 통과 (530→543)
+#7 헌장 편집       → 베타테스트 검토대기 #7(잠근 헌장 결말·4줄 척추·화수 재열람·수정·증보 UI 전무, ContractAmendment·validateContract 모델은 있으나 미배선 → 생성은 옛 척추로 발화).
+  ultracode Workflow(Explore 3 병렬 매핑 + 청사진 합성)로 #7·#3·#4 코드 정밀 매핑 후 #7부터 TDD 착수. 청사진 핵심 사실 4건 Claude 독립 검증.
+  storyEngine isSpineComplete(단편2줄/장편4줄 잠금규칙 추출)·applyContractAmendment(척추/결말/대가/화수 부분패치→비트 재산출·잠금 재계산·amendments 누적, at 인자주입으로 순수성 유지) 신설(TDD).
+  canonRefactor revertCanonChange story-core 분기에 storyContract JSON 복원 추가(중첩 객체 — 평면대입이면 문자열 박힘, 손상 JSON 안전실패).
+  CharterAmendCard(신규 컴포넌트, 로컬 draft + 외부 헌장변경 재시드 + 바뀐 필드만 patch) · StoryXDesk amendCharter(no-op 가드·logCanonChange storyContract revert) · MemoryBankStudio overview 배선 · styles.css .sx-charter-amend 다크 토큰.
+검증             → 순수함수 TDD 5(척추교체·결말/화수패치·공란시 잠금해제·change명시·isSpineComplete)·미러불변 핀 2(buildContractStatus 형태 불변=promptBuilders↔storyx.mjs 무수정)·storyContract undo 2·소스핀 4.
+  라이브(preview) — 헌장작품("반납되지 않은 편지", spineLocked) 데이터→바이블→작품계약: CharterAmendCard 렌더(장편30화·잠김 라임배지·6 textarea·다크 rgb(15,16,17))→
+  욕망 편집 dirty 감지→"이 개정 반영"→spine 갱신·비트 핀 재산출·이력 "척추 욕망 개정"(전필드 아님)·버튼 재비활성→변경로그 "↩ 되돌리기"→storyContract 전체 원복(spine·beat·amendments)·콘솔 0·원본 무손상.
+미러 무수정       → ContractStatusInput(예산 숫자만 운반)에 amendment 미노출 → promptBuilders.ts/storyx.mjs 편집 0(회귀 핀이 보증).
+다음(#7 후속)     → 검토대기 #3(영향 회차 인라인·CanonCanvas)·#4(FloatingEditor 회차 선택기·단편 게이트 완화). 청사진 maps/blueprint 보존(이번 Workflow 산출).
+```
 
 ## 최근 검증 (2026-06-14 · charter 스크롤 핫픽스 + 이야기 품질 딥리서치 · main)
 

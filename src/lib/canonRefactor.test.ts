@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildCanonRefactorPlan, createCanonChangeEntry, revertCanonChange } from './canonRefactor';
-import { createSeedProject, produceNextChapter } from './storyEngine';
+import { applyContractAmendment, createEmptyProject, createSeedProject, produceNextChapter, type StoryContract } from './storyEngine';
 
 function projectWithEpisode() {
   const seed = createSeedProject();
@@ -99,5 +99,48 @@ describe('revertCanonChange (베타테스트 #1-undo)', () => {
       kind: 'character', targetLabel: '?', fieldLabel: '욕망', before: 'a', after: 'b', origin: 'manual-bible-edit'
     });
     expect(revertCanonChange(project, bad)).toBe(project);
+  });
+
+  it('story-core storyContract 개정은 before(직전 헌장 JSON)를 객체로 복원한다(중첩 spine, #7)', () => {
+    const baseContract: StoryContract = {
+      lengthClass: 'long',
+      plannedEpisodes: 30,
+      spine: { desire: '욕망', advance: '전진', obstacle: '시련', resolution: '변화' },
+      endingStatement: '끝',
+      protagonistCost: '대가',
+      beatSheet: [],
+      spineLocked: true,
+      amendments: []
+    };
+    const project = { ...createEmptyProject(), storyContract: baseContract };
+    const amended = applyContractAmendment(baseContract, {
+      reason: '욕망 구체화',
+      at: '2026-06-14T09:00:00.000Z',
+      patch: { spine: { desire: '아버지의 이름을 되찾고 싶다' } }
+    });
+    const change = createCanonChangeEntry({
+      kind: 'story-core', revertField: 'storyContract',
+      targetLabel: project.title, fieldLabel: '작품 헌장',
+      before: JSON.stringify(baseContract), after: JSON.stringify(amended), origin: 'manual-bible-edit'
+    });
+    const reverted = revertCanonChange({ ...project, storyContract: amended }, change);
+    // 문자열이 아니라 객체로 복원돼야 한다(평면 대입이면 storyContract 에 JSON 문자열이 들어가 깨진다).
+    expect(reverted.storyContract).toEqual(baseContract);
+  });
+
+  it('story-core storyContract revert — 손상된 before(JSON 아님)는 무변경(안전 실패)', () => {
+    const project = {
+      ...createEmptyProject(),
+      storyContract: {
+        lengthClass: 'long' as const, plannedEpisodes: 30, endingStatement: '끝', protagonistCost: '대가',
+        beatSheet: [], spineLocked: true, amendments: []
+      }
+    };
+    const change = createCanonChangeEntry({
+      kind: 'story-core', revertField: 'storyContract',
+      targetLabel: project.title, fieldLabel: '작품 헌장',
+      before: 'not-json{', after: '{}', origin: 'manual-bible-edit'
+    });
+    expect(revertCanonChange(project, change)).toBe(project);
   });
 });

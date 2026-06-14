@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-06-14 (6차) — #7 작품 헌장 편집: 잠긴 헌장 재열람·개정·undo (main, TDD+라이브, ultracode)
+
+> 사용자 "세션핸드오프 읽고 울트라코드로 개발 이어가라". ultracode Workflow(Explore 3 병렬 매핑 + 청사진 합성)로 베타 검토대기 #7·#3·#4 를 정밀 매핑한 뒤 #7부터 TDD + preview 라이브 완주. 청사진의 핵심 사실 4건은 Claude 가 직접 Read 로 독립 검증. 커밋 미실행(아래 다음 한 가지 참조).
+
+### 한 것
+- **storyEngine 순수 함수 2개 (TDD, storyEngine.test +5)** — `isSpineComplete(spine, lengthClass)`(단편 2줄·장편 4줄 잠금규칙을 buildStoryContractFromOnboarding 에서 추출해 공용화)·`applyContractAmendment(contract, {reason, at, change?, patch})`(척추·결말·대가·화수 부분 패치 → deriveBeatSheet·isSpineComplete 재실행으로 비트 재산출·잠금 재계산, amendments 누적). **at 은 인자 주입**(storyEngine 순수성 — Date/random 미사용).
+- **canonRefactor `revertCanonChange` story-core 분기에 storyContract JSON 복원 추가 (TDD, canonRefactor.test +2)** — 중첩 객체라 `before`(직전 헌장 JSON)를 `JSON.parse` 로 복원. 평면 대입이면 storyContract 자리에 문자열이 박힌다. 손상 JSON 은 참조 그대로(안전 실패). 기존 character/world/canon/voice undo 는 불변(분기 '추가'만).
+- **미러 불변 회귀 핀 (episodeBriefing.test +2)** — 척추 개정 후 `buildContractStatus` 형태 불변 + 화수 개정 시 remaining 증가. ContractStatusInput(예산 숫자만 운반)에 amendment 미노출 → **promptBuilders.ts↔storyx.mjs 무수정**을 박제.
+- **UI 배선 (editorFocusLayout.test +4)** — 신규 `CharterAmendCard`(로컬 draft state + 외부 헌장 변경 시 useEffect 재시드 + **바뀐 필드만 patch**) · StoryXDesk `amendCharter`(헌장 없으면 no-op, logCanonChange `revertField:'storyContract'` 로 #1-undo 재사용) · MemoryBankStudio overview 에 `project.storyContract && onAmendCharter` 조건부 렌더 · styles.css `.sx-charter-amend` 다크 토큰.
+- **라이브(preview)** — 헌장작품("반납되지 않은 편지") 데이터→바이블→작품 계약: 카드 렌더(장편 30화·잠김 라임 배지·척추 4줄+결말+대가 6 textarea+화수 input·다크 rgb(15,16,17)) → 욕망 편집 dirty 감지 → "이 개정 반영" → spine 갱신·비트 핀 재산출·이력 "척추 욕망 개정"(전 필드 아님) → 변경 로그 "↩ 되돌리기" → storyContract 전체 원복(spine·beat·amendments) · 콘솔 0 · 원본 무손상.
+
+### 손대지 말 것
+- `applyContractAmendment` 의 **at 인자 주입** — storyEngine 순수성. 함수 안에서 `new Date()` 호출로 바꾸면 storyEngine.test 결정론이 깨진다(#6 nextCharacterId 와 같은 원칙).
+- `revertCanonChange` 의 storyContract 전용 분기(`revertField === 'storyContract'` → JSON.parse, try/catch 안전 실패) — character/world/canon/voice 기존 undo 분기는 절대 수정 금지. '추가'만.
+- ContractStatusInput 에 amendment/spine 을 **노출하지 말 것** — 노출하는 순간 promptBuilders.ts·storyx.mjs 동시 수정 필요 + episodeBriefing.test 미러 핀이 깨진다. amendment 는 StoryContract 내부에 가두고 buildContractStatus 를 개정된 헌장에서 재계산하는 구조 유지.
+- CharterAmendCard 의 `useEffect([contract])` 재시드 — 되돌리기·다른 개정으로 헌장이 바뀌면 폼을 최신값으로 다시 시드한다. 제거하면 undo 후 폼이 옛 값으로 남는다.
+- amendCharter 의 `if (!contract) return;` no-op 가드 — 헌장 없는 기존 작품·백업은 카드 자체 미렌더(MemoryBankStudio 조건부)라 이중 안전.
+
+### 다음 세션이 해야 할 한 가지
+- **#3 영향 회차 인라인** — CanonCanvas/CharacterDetailPanel 편집 지점에 `findAffectedChapters` 결과(buildCanonRefactorPlan.affectedChapters)를 optional prop 으로 흘려 인라인 미리보기. 순수 로직 변경 0(canonRefactor.ts doNotTouch), 배선+CSS 위주. 이번 Workflow 청사진의 `maps[1]`(featureKey: canon_refactor_impact_in_edit_points)에 touchPoints·doNotTouch·TDD 후보 상세. 그 뒤 **#4 FloatingEditor 회차 선택기**(prose flush 레이스·isSerial 게이트 완화 — `maps[2]`, 가장 침습적이라 마지막).
+- 청사진 원본은 Workflow 산출(`maps`·`blueprint`) — progress.md 6차 검증 블록 + 이 노트에 요약. 커밋 시 #7 묶음(storyEngine·canonRefactor·CharterAmendCard·MemoryBankStudio·StoryXDesk·styles.css·테스트 4파일).
+
+---
+
 ## 2026-06-14 (5차) — #6 인물 CRUD: 추가·삭제·이름변경 (main, TDD)
 
 > 베타테스트 "중간 수정 루프 3대 골격" 마지막(#6)의 1단계 — 인물 add/remove/rename. 순수 함수 TDD + 컴포넌트 체인 배선. 커밋 완료.

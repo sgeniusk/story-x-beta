@@ -397,6 +397,13 @@ export function deriveBeatSheet(spine: StorySpine, plannedEpisodes: number): Con
   });
 }
 
+// 척추 잠금 규칙 — 단편은 욕망·변화 2줄, 장편은 4줄이 모두 채워져야 잠근다(A-2). 온보딩·개정이 공용으로 쓴다.
+export function isSpineComplete(spine: StorySpine, lengthClass: ContractLengthClass): boolean {
+  return lengthClass === 'short'
+    ? spine.desire.trim().length > 0 && spine.resolution.trim().length > 0
+    : [spine.desire, spine.advance, spine.obstacle, spine.resolution].every((line) => line.trim().length > 0);
+}
+
 // 온보딩 입력으로 작품 헌장을 조립한다(A-3). 비트는 척추에서 펼치고, 4줄이 모두 채워졌을 때만 잠근다.
 export function buildStoryContractFromOnboarding(input: {
   lengthClass: ContractLengthClass;
@@ -408,10 +415,7 @@ export function buildStoryContractFromOnboarding(input: {
 }): StoryContract {
   const plannedEpisodes = input.plannedEpisodes ?? defaultPlannedEpisodes(input.lengthClass);
   // 단편은 욕망·변화 2줄만으로 경량 잠금(A-2), 장편은 4줄 전부 채워야 잠긴다.
-  const spineComplete = input.lengthClass === 'short'
-    ? input.spine.desire.trim().length > 0 && input.spine.resolution.trim().length > 0
-    : [input.spine.desire, input.spine.advance, input.spine.obstacle, input.spine.resolution]
-        .every((line) => line.trim().length > 0);
+  const spineComplete = isSpineComplete(input.spine, input.lengthClass);
   return {
     lengthClass: input.lengthClass,
     plannedEpisodes,
@@ -444,6 +448,65 @@ export function validateContract(contract: StoryContract): string[] {
     }
   }
   return problems;
+}
+
+/** 헌장 개정 패치(베타테스트 #7) — 잠긴 헌장의 척추·결말·대가·화수를 부분 갱신한다. */
+export interface ContractAmendmentPatch {
+  spine?: Partial<StorySpine>;
+  endingStatement?: string;
+  protagonistCost?: string;
+  finalImage?: string;
+  plannedEpisodes?: number;
+}
+
+// 헌장 개정 사유를 패치 모양에서 한 줄로 요약한다(작가가 사유를 안 적었을 때의 기본 이력 문구).
+function summarizeAmendmentPatch(patch: ContractAmendmentPatch): string {
+  const parts: string[] = [];
+  if (patch.spine) {
+    const lineLabels: Record<keyof StorySpine, string> = {
+      desire: '욕망',
+      advance: '전진',
+      obstacle: '시련',
+      resolution: '변화'
+    };
+    const lines = (Object.keys(patch.spine) as Array<keyof StorySpine>).map((key) => lineLabels[key]);
+    if (lines.length > 0) parts.push(`척추 ${lines.join('·')}`);
+  }
+  if (patch.endingStatement !== undefined) parts.push('결말');
+  if (patch.protagonistCost !== undefined) parts.push('대가');
+  if (patch.finalImage !== undefined) parts.push('마지막 이미지');
+  if (patch.plannedEpisodes !== undefined) parts.push('화수');
+  return parts.length > 0 ? `${parts.join(', ')} 개정` : '헌장 개정';
+}
+
+// 잠긴 헌장을 개정한다(베타테스트 #7) — 척추·결말·대가·화수를 부분 패치하고 비트·잠금을 재산출한다.
+// 순수·불변. at(타임스탬프)은 호출자가 주입한다(storyEngine 순수성 — Date/random 미사용).
+// 척추가 불완전해지면 spineLocked 가 풀려 단계적 집필 게이트가 다시 본문 생성을 막는다(충돌을 숨기지 않는다).
+export function applyContractAmendment(
+  contract: StoryContract,
+  input: { reason: string; at: string; change?: string; patch: ContractAmendmentPatch }
+): StoryContract {
+  const { patch } = input;
+  const nextSpine: StorySpine | undefined = contract.spine
+    ? { ...contract.spine, ...patch.spine }
+    : patch.spine
+      ? { desire: '', advance: '', obstacle: '', resolution: '', ...patch.spine }
+      : undefined;
+  const plannedEpisodes = patch.plannedEpisodes ?? contract.plannedEpisodes;
+  const beatSheet = nextSpine ? deriveBeatSheet(nextSpine, plannedEpisodes) : contract.beatSheet;
+  const spineLocked = nextSpine ? isSpineComplete(nextSpine, contract.lengthClass) : false;
+  const change = input.change ?? summarizeAmendmentPatch(patch);
+  return {
+    ...contract,
+    ...(nextSpine ? { spine: nextSpine } : {}),
+    plannedEpisodes,
+    endingStatement: patch.endingStatement ?? contract.endingStatement,
+    protagonistCost: patch.protagonistCost ?? contract.protagonistCost,
+    ...(patch.finalImage !== undefined ? { finalImage: patch.finalImage } : {}),
+    beatSheet,
+    spineLocked,
+    amendments: [...contract.amendments, { at: input.at, reason: input.reason, change }]
+  };
 }
 
 /** 단계적 집필 게이트(A-2) 결과 — allowed=false 면 본문 생성을 막고 reason 을 UI 안내로 쓴다. */

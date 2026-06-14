@@ -1,4 +1,4 @@
-import type { AgentId, Chapter, SeriesProject } from './storyEngine';
+import type { AgentId, Chapter, SeriesProject, StoryContract } from './storyEngine';
 
 export type CanonChangeKind = 'story-core' | 'character' | 'world' | 'canon' | 'voice' | 'visual' | 'audio';
 export type CanonChangeOrigin = 'manual-bible-edit' | 'ai-review' | 'publishing-review';
@@ -123,6 +123,15 @@ export function revertCanonChange(project: SeriesProject, change: CanonChangeEnt
   }
   if (kind === 'story-core' || kind === 'voice') {
     if (!revertField) return project;
+    // 헌장(storyContract)은 중첩 객체 — before 에 JSON 으로 저장된 직전 헌장을 객체로 복원한다(베타테스트 #7).
+    // 평면 대입이면 storyContract 자리에 문자열이 박힌다. 손상된 JSON 은 참조 그대로 두어 안전 실패한다.
+    if (revertField === 'storyContract') {
+      try {
+        return { ...project, storyContract: JSON.parse(before) as StoryContract };
+      } catch {
+        return project;
+      }
+    }
     return { ...project, [revertField]: before };
   }
   return project;

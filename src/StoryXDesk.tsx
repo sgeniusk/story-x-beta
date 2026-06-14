@@ -115,10 +115,12 @@ import {
   type ChapterBeat,
   commitChapterProse,
   addCharacter,
+  applyContractAmendment,
   removeCharacter,
   renameCharacter,
   type AgentId,
   type CanonReviewCategory,
+  type ContractAmendmentPatch,
   type CreativeWeight,
   type DraftChapterPayload,
   type GenreId,
@@ -1708,6 +1710,24 @@ export function StoryXDesk({
     setCanonChanges((current) => current.filter((entry) => entry.id !== change.id));
   }
 
+  // 베타테스트 #7 — 잠긴 헌장(척추·결말·대가·화수) 개정. 헌장 없는 작품은 no-op(하위호환).
+  // 변경 로그에 직전 헌장을 JSON 으로 남겨 #1-undo(storyContract revert)로 되돌릴 수 있다.
+  function amendCharter(patch: ContractAmendmentPatch, reason: string) {
+    const contract = project.storyContract;
+    if (!contract) return;
+    const next = applyContractAmendment(contract, { reason, at: new Date().toISOString(), patch });
+    logCanonChange({
+      kind: 'story-core',
+      targetLabel: project.title,
+      fieldLabel: '작품 헌장',
+      before: JSON.stringify(contract),
+      after: JSON.stringify(next),
+      origin: 'manual-bible-edit',
+      revertField: 'storyContract'
+    });
+    setProject((current) => ({ ...current, storyContract: next }));
+  }
+
   // 베타테스트 #6 — 인물 CRUD 핸들러(순수 함수 위임).
   function handleAddCharacter() {
     setProject((prev) => addCharacter(prev));
@@ -2298,6 +2318,7 @@ export function StoryXDesk({
           canonRefactorPlan={canonRefactorPlan}
           onClearCanonChanges={() => setCanonChanges([])}
           onRevertCanonChange={revertCanonChangeEntry}
+          onAmendCharter={amendCharter}
         />
       ) : null;
     return (
@@ -2725,6 +2746,7 @@ export function StoryXDesk({
               canonRefactorPlan={canonRefactorPlan}
               onClearCanonChanges={() => setCanonChanges([])}
               onRevertCanonChange={revertCanonChangeEntry}
+              onAmendCharter={amendCharter}
             />
           ) : null}
         </section>

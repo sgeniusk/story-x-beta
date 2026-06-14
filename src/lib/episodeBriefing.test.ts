@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildContractStatus, buildEpisodeForks, composeIntentWithFork, stripConsumedSeeds } from './episodeBriefing';
 import { computePayoffLedger } from './payoffLedger';
 import type { Chapter, StoryContract, StoryProject } from './storyEngine';
-import { createEmptyProject } from './storyEngine';
+import { applyContractAmendment, createEmptyProject } from './storyEngine';
 
 function ch(episode: number, opts: Partial<Pick<Chapter, 'rewardArc' | 'stakesLedger'>> = {}): Chapter {
   return {
@@ -437,5 +437,44 @@ describe('buildContractStatus (작품 헌장 화수 예산 — Phase A-4)', () =
     // 22/30 → 잔여 8 > 7.5 → 아직 아님
     const notYet: StoryProject = { ...projectWith([ch(22)]), storyContract: contract({ plannedEpisodes: 30 }) };
     expect(buildContractStatus(notYet)?.finalStretch).toBe(false);
+  });
+
+  it('척추 개정(applyContractAmendment)은 예산 상태 형태를 바꾸지 않는다 — 미러 무수정 보증', () => {
+    const base: StoryProject = {
+      ...projectWith([ch(16), ch(17)]),
+      storyContract: contract({
+        plannedEpisodes: 30,
+        spine: { desire: '욕망', advance: '전진', obstacle: '시련', resolution: '변화' }
+      })
+    };
+    const baseStatus = buildContractStatus(base);
+    const amended: StoryProject = {
+      ...base,
+      storyContract: applyContractAmendment(base.storyContract!, {
+        reason: '욕망 구체화',
+        at: '2026-06-14T09:00:00.000Z',
+        patch: { spine: { desire: '아버지의 이름을 되찾고 싶다' } }
+      })
+    };
+    // 척추 텍스트가 바뀌어도 화수 예산은 그대로 → ContractStatusInput(미러) 형태 불변.
+    expect(buildContractStatus(amended)).toEqual(baseStatus);
+  });
+
+  it('화수를 늘리는 개정은 plannedEpisodes·remaining 을 그만큼 키운다', () => {
+    const base: StoryProject = {
+      ...projectWith([ch(16), ch(17)]),
+      storyContract: contract({ plannedEpisodes: 30 })
+    };
+    const amended: StoryProject = {
+      ...base,
+      storyContract: applyContractAmendment(base.storyContract!, {
+        reason: '시즌 연장',
+        at: '2026-06-14T09:00:00.000Z',
+        patch: { plannedEpisodes: 36 }
+      })
+    };
+    const status = buildContractStatus(amended);
+    expect(status?.plannedEpisodes).toBe(36);
+    expect(status?.remaining).toBe(19);
   });
 });
