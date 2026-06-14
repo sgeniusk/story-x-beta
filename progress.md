@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-13 (3차) · Branch: `main` (**A-3c 비트 펼침 미리보기 — charter 4줄→화수 핀 시각화, TDD·라이브·main 머지**)
+> Last Updated: 2026-06-14 · Branch: `main` (**울트라코드 10인 베타테스트 → 중간 수정 루프 3대 골격 완료: #1 본문영속·#1-undo·#6 인물CRUD, TDD·라이브·커밋. 이야기 품질 딥리서치 정본**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -153,7 +153,8 @@ init.sh            → tsc 0 · vitest 530(storyEngine +1·editorFocusLayout +1)
   storyEngine addCharacter(빈 필드·결정론 char-N id)·removeCharacter(고아 relations 정리)·renameCharacter 순수 함수(TDD).
   StoryXDesk handleAdd/Remove/RenameCharacter → CanonCanvas → CharacterDetailPanel(이름 입력·"이 인물 삭제" confirm) + "+ 인물 추가" 버튼.
 검증             → 순수 함수 TDD(add/rename/remove·relations 정리·없는 id 무변경)·배선 tsc·editorFocusLayout 소스 핀.
-  라이브 버튼 동작은 코드 검증으로 갈음(데이터모드 진입 비용 — 다음 세션 눈 확인 권장).
+  라이브(preview) 확인 — 데이터→인물 카테고리 진입 시 CanonCanvas "+ 인물 추가"·이름 입력·"이 인물 삭제" 렌더,
+  클릭 시 char-2 "새 인물" 추가(결정론 id). centerSlot 이 곧 CanonCanvas 라 floating 데이터에 정상 발화. 원본 복원.
 남은 #6          → 인물 role 편집·캐논(장소/사물/사건) CRUD·매체별 캐릭터 스키마(만화 외관)는 분리(리포트 §3-6).
 ```
 

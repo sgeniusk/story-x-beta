@@ -18,7 +18,7 @@
 - CanonCanvas "+ 인물 추가"는 `category === 'characters'` 일 때만 — 다른 캐논 카테고리(장소/사물)엔 의미 없다.
 
 ### 다음 세션이 해야 할 한 가지
-- **#6 라이브 눈 확인** — 데이터 모드 → 인물 → "+ 인물 추가" 클릭 → 새 인물 → 이름 입력·삭제(순수 함수는 TDD 검증, UI 동작은 미확인).
+- **#6 라이브 확인됨** — 데이터→인물 진입 시 "+ 인물 추가"·이름 input·"이 인물 삭제" 렌더, 추가 클릭 시 char-2 "새 인물" 생성 확인(centerSlot=CanonCanvas 라 floating 데이터 정상 발화). 원본 복원. rename/remove 는 같은 체인+순수함수 TDD.
 - **#6 잔여** — 인물 role 편집(updateCharacterMemory field 확장)·캐논 엔티티(장소/사물/사건) CRUD(CanonCardGrid)·매체별 캐릭터 스키마(만화 외관 — CharacterProfile appearance + comics 분기). 리포트 §3-6·§3-9.
 - 이로써 "중간 수정 루프 3대 골격"(#1 본문 영속·#1-undo 되돌리기·#6 CRUD) 1차 완료. 다음은 검토대기 #3(영향 회차 인라인)·#4(회차 선택기)·#7(헌장 편집).
 
