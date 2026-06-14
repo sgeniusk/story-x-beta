@@ -2061,13 +2061,12 @@ body {
   max-width: 1540px;
   margin: -4px auto 18px;
   padding: var(--sx-space-4);
-  border: 1px solid rgba(32, 32, 30, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--sx-radius-lg);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.42)),
-    radial-gradient(circle at 92% 0%, color-mix(in oklch, var(--sx-accent) 18%, transparent), transparent 28rem),
-    rgba(248, 246, 239, 0.7);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 20px 54px rgba(45, 38, 30, 0.1);
+    radial-gradient(circle at 92% 0%, color-mix(in oklch, var(--sx-accent) 16%, transparent), transparent 28rem),
+    var(--sx-card);
+  box-shadow: 0 20px 54px rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(18px);
 }
 
@@ -8992,6 +8991,11 @@ body {
 .home-page .hx-panel-building {
   grid-template-columns: 1fr;
   place-items: center;
+}
+/* 작품 헌장 패널 — aside 없는 단일 컬럼. 내부 .hx-main(overflow-y:auto)이 세로 스크롤을 맡는다.
+   (2026-06-14 — charter 콘텐츠가 길 때 .hx-panel overflow:hidden 에 하단이 잘리던 버그 수정) */
+.home-page .hx-panel-charter {
+  grid-template-columns: 1fr;
 }
 .home-page .hx-main {
   padding: 48px 52px;

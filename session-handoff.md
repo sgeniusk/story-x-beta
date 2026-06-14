@@ -4,6 +4,44 @@
 
 ---
 
+## 2026-06-14 (2차) — 울트라코드 10인 베타테스트 + UI/UX 안전 자동수정 3건 (main, TDD)
+
+> 사용자 "ultracode 로 10인 베타테스터가 캐릭터·이야기 3~6회 중간수정하는 시나리오로 검사 후 UIUX 개선". 04:32 예약 → 사용자 "지금 바로 시작"으로 즉시 실행. Workflow 10인 워크스루(findings 74 → 종합 24) + 안전 자동수정 3 TDD. 커밋·push 미실행(사용자가 아침에 검토·선별).
+
+### 한 것
+- **베타테스트(ultracode Workflow)** — 10인(장편2·단편2·에세이2·만화2·오디오1·학술1) 코드·플로우 워크스루. **첫 시도 동시 10 호출이 서버 rate limit 전멸 → 배치 3씩으로 스크립트 수정 후 성공.** 종합·적대적 검증. 리포트 `docs/reviews/2026-06-14-ultracode-beta-10/REPORT.md`, raw `synthesis-raw.json`·`walks-raw.json`.
+- **★ 핵심 발견** — "생성 중 캐릭터·이야기 설정 변경" 흐름이 구조적 미완성. 본문 영속·되돌리기·CRUD·헌장 편집 부재(상세 리포트).
+- **자동수정 3 (TDD, appExperience +3, 524 녹색)** — #2 charter 연재 building 캐러셀 빈화면(buildingPanelIndex 를 charter 제외 단계 수로 — ★직전 charter 스크롤 핫픽스의 후속 회귀)·#11 매체변경 패널 흰/크림→`var(--sx-card)` 다크·#4 오디오 낭독 60초 carry. 앱 콘솔 에러 0.
+
+### 손대지 말 것
+- `buildingPanelIndex = homeFlowSteps.filter((s) => s.id !== 'charter').length` — charter 패널이 조건부 mount(homeFlowStep==='charter')라 building 시점 unmount. `homeFlowSteps.length` 로 되돌리면 연재 생성화면 빈 다크 재발. appExperience 테스트가 핀.
+- 리포트의 검토 대기 14 / 보류 3 분류 — 자동수정은 명확·국소·저위험 3건만(사용자 "안전" 원칙). #1 본문 무음 소실 등은 흐름 재설계라 의도적으로 미수정.
+
+### 다음 세션이 해야 할 한 가지
+- **#1 본문 편집 영속 (데이터 손실, 최우선)** — editorText→chapter.prose commit 경로 신설 + dirty 가드 + 정직한 저장 표시 + beforeunload. 리포트 §3-1. 그 뒤 #1-undo(되돌리기)·#6 CRUD 가 "중간 수정 루프" 3대 골격. **이게 사용자 요청("중간 수정 UX")의 본체라 A-6(기억)보다 우선 후보.**
+- 보류 3(#14·#23·#20)은 소건이라 골격 작업에 곁들임. 라이브 미확인분(#2 charter→building 전경로)은 다음에 charter 작품으로 눈 확인 가능.
+
+---
+
+## 2026-06-14 — charter 스크롤 버그 핫픽스 + 이야기 품질 딥리서치 (main, TDD)
+
+> 사용자가 로컬 실사용 중 작품 헌장(charter) 단계 스크롤 불가·편집 곤란 발견 → systematic-debugging 으로 근본원인 특정·TDD 수정·preview 라이브 검증. 그 전에 "이야기 품질·의외성" 딥리서치(deep-research workflow, 105 에이전트)를 완주해 정본 문서화. 커밋·origin push 미실행(사용자 요청 시).
+
+### 한 것
+- **charter 스크롤 핫픽스** — 근본원인: charter 패널이 다른 온보딩 단계의 `.hx-panel > .hx-main(overflow-y:auto)` 스크롤 컨테이너 패턴을 미준수(`.hx-panel-charter > .hx-charter` 직속)해 `.hx-panel` overflow:hidden 이 긴 콘텐츠 하단을 클리핑 + padding 부재. 수정: App.tsx charter 를 `.hx-main` 으로 감쌈 + styles.css `.hx-panel-charter { grid-template-columns: 1fr }`(빈 aside 컬럼 제거). appExperience.test +1(RED→GREEN). 라이브(장편): 단일 1fr·scrollable·하단 4줄+CTA 접근·padding 복원. init.sh 521 녹색.
+- **딥리서치 정본** `docs/research/2026-06-14-prose-quality-surprise-research.md` — 이야기 품질·의외성(U3·U4) SOTA(18 확정·7 반박·23 소스). 진단(조기해소/mode collapse/typicality bias)·처방(VS·후반부 긴장 게이트·멀티 페르소나)·박제 금지·근거 공백(한국어 문체).
+
+### 손대지 말 것
+- charter 의 `.hx-main` 래퍼 + `.hx-panel-charter { grid-template-columns: 1fr }` — 스크롤·여백·단일 컬럼을 한 번에 해결. `.hx-panel` 기본은 2컬럼(minmax(0,1fr) 320px)+overflow:hidden 이라 되돌리면 버그 재발. appExperience 테스트가 핀(charterBlock 안 hx-main 순서 + CSS 규칙).
+- charter 의 `.hx-main` 들여쓰기가 hx-charter 와 동일 레벨(최소 변경) — 기능 무관, prettier 시 정리 가능.
+- 딥리서치 문서의 refuted(박제 금지) 수치 — min-p 창작 우월성·narrative-forecasting 정확 레시피는 검증 탈락. 인용 금지.
+
+### 다음 세션이 해야 할 한 가지
+- **리서치 후속 착수 결정 (사용자 대기)** — ① VS 회차 후보 생성(최저비용·training-free·Phase C 의외성 채널 직결) ② 후반부 긴장 게이트(조기 해소 차단·헌장 역설 직격·StoryScore v0.3) ③ 헌장 정보 비대칭 레인(Phase A 후속). 추천 1순위=①, 근본=②. 원래 1순위였던 A-6(장편 기억 R1~R3)도 유효.
+- charter 스크롤은 장편으로 라이브 검증함 — 단편(2줄 경량)도 같은 `.hx-panel-charter` 구조라 동일 적용(분량 무관). 의심되면 단편으로 눈 확인 한 번.
+
+---
+
 ## 2026-06-13 (3차) — A-3c 비트 펼침 미리보기: charter 4줄→화수 핀 시각화 (main, TDD)
 
 > A-3b 직후 A-3c 이행. charter 단계에서 잠근 4줄(장편)이 30화의 어디에 박히는지 미리 보여준다. TDD + preview 라이브(charter 진입+4줄 주입) + main ff-merge. origin push 미실행. **이로써 Phase A 헌장 체인의 온보딩 UI(A-3 charter·A-3b 제안·A-3c 미리보기)가 완성됐다.**

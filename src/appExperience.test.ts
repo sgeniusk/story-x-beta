@@ -84,6 +84,44 @@ describe('Story X page experience', () => {
     expect(app).toContain('화에 이렇게 박힙니다');
   });
 
+  it('charter 패널을 hx-main 스크롤 컨테이너로 감싸 긴 헌장도 세로 스크롤된다', () => {
+    // 버그(2026-06-14 사용자 실사용) — charter 콘텐츠(결말 2 + 4줄 척추 4 textarea)가
+    // 뷰포트보다 길면 .hx-panel(overflow:hidden)에 하단이 잘리고, 스크롤 컨테이너가 없어
+    // 아래 필드(전진·시련·변화)에 접근조차 못 했다. 다른 단계처럼 .hx-main(overflow-y:auto)으로 감싼다.
+    const charterStart = app.indexOf('hx-panel-charter');
+    // hx-panel-building 은 1065(인터뷰 로딩)에도 있으므로 charter 이후부터 찾는다.
+    const charterEnd = app.indexOf('hx-panel-building', charterStart);
+    const charterBlock = app.slice(charterStart, charterEnd);
+    expect(charterBlock).toContain('className="hx-main"');
+    expect(charterBlock.indexOf('hx-main')).toBeLessThan(charterBlock.indexOf('hx-charter"'));
+    // aside 가 없으니 단일 컬럼으로 — 기본 .hx-panel 의 2컬럼(빈 320px) 제거.
+    expect(css).toContain('.home-page .hx-panel-charter');
+  });
+
+  it('building 캐러셀 인덱스가 조건부 charter 패널을 제외해 연재 생성 화면이 오프스크린되지 않는다', () => {
+    // 버그(2026-06-14 베타테스트 #2) — charter 패널은 homeFlowStep==='charter'일 때만 mount 되어
+    // building 진입 시 unmount 된다. building 인덱스를 homeFlowSteps.length(charter 포함)로 두면
+    // usesCharter(연재) 작품에서 한 칸 과임 → '1화 쓰는 중' 패널이 화면 밖, 빈 다크 화면.
+    expect(app).toContain("s.id !== 'charter'");
+    const bi = app.indexOf("homeFlowStep === 'building'");
+    expect(app.slice(bi, bi + 170)).not.toContain('homeFlowSteps.length');
+  });
+
+  it('오디오북 예상 낭독 미터가 총초 환산으로 60초 carry 를 막는다', () => {
+    // 버그(2026-06-14 베타테스트 #4) — char%280/280*60 이 280 경계에서 60 → "0분 60초".
+    // 총초로 환산한 뒤 분/초를 분리해야 한다.
+    expect(app).toContain('Math.round((charCount / 280) * 60)');
+    expect(app).toContain('totalSeconds % 60');
+  });
+
+  it('매체 변경 패널이 다크 토큰을 써서 흰/크림 박스로 뜨지 않는다', () => {
+    // 버그(2026-06-14 베타테스트 #11) — .sx-media-change-panel 이 흰 그라데이션 + 크림 배경이라 다크 스튜디오에서 흰 박스.
+    const start = css.indexOf('.sx-media-change-panel {');
+    const block = css.slice(start, css.indexOf('}', start));
+    expect(block).toContain('var(--sx-card)');
+    expect(block).not.toContain('rgba(255, 255, 255, 0.8)');
+  });
+
   it('overrides --nx-ink-deep inside the .home-page dark scope so card titles stay readable', () => {
     // 회귀 방지 — .home-page 다크 블록이 --nx-ink-deep 를 오버라이드하지 않으면
     // 매체/포맷 카드 제목(strong, color: var(--nx-ink-deep))이 다크 배경(#08090a)에 묻힌다.

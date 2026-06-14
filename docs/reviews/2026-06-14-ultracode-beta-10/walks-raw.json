@@ -1,0 +1,865 @@
+[
+  {
+    "medium": "장편소설 (novel / long-novel, 24~36화 시즌제)",
+    "persona": "회귀 웹소설 작가 — 주인공 욕망·핵심 관계를 3~6회 갈아엎고, 결말·4줄 척추를 중간에 수정하며, 세계 규칙·캐논을 회차 진행 중 변경하려는 사용자",
+    "findings": [
+      {
+        "title": "편집기 본문 수정이 회차에 절대 저장되지 않음 — 회차 전환·리로드 시 무음 소실",
+        "symptom": "회차 원고를 floating 편집기에서 고쳐도 chapter.prose 로 써지는 경로가 없다. 다른 회차로 넘어가거나 새로고침하면 1569행 effect 가 editorText 를 latestChapter.prose 로 덮어써 수정이 통째로 사라진다. 그런데 FloatingEditor 상단바는 항상 '저장됨'(:390 하드코딩)이라 작가는 안전하다고 믿는다. 24~36화를 오가며 과거 회차를 손보는 시즌제 작가에게 치명적.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "575, 1248-1250, 1564-1573 (editorText 정의·write-back 부재·회차전환 재시드); src/components/FloatingEditor.tsx:390 (정적 '저장됨')",
+        "severity": "high",
+        "rootCause": "[확인] editorText 가 본문 단일 원천이지만 어떤 핸들러도 project.chapters[].prose 로 commit 하지 않는다(prose 역기록·save 핸들러 grep 0개). 자동저장 effect(1531)는 project 만 저장하는데 project 의 prose 는 갱신되지 않는다. 회차 전환 effect(1564)가 editedSinceReview 와 무관하게 무조건 editorText 를 재시드하고 bodyVersion 을 올려 dirty 본문을 폐기. beforeunload·dirty 가드도 없음.",
+        "repro": "에디터(편집 모드) → 5화 열기 → 본문 한 문장 직접 타이핑 수정 → 상단바 '저장됨' 확인 → 회차 선택기로 6화 이동 → 다시 5화로 복귀 → 방금 수정이 사라지고 원본 prose 로 돌아와 있음. (수정 직후 새로고침해도 동일.)",
+        "midEditFriction": true,
+        "scenarioStep": "편집/데이터 모드에서 이야기를 3~6회 수정 (회차 본문 직접 손질)"
+      },
+      {
+        "title": "잠근 작품 헌장(결말·4줄 척추·확정 화수)을 중간에 수정할 UI가 전무",
+        "symptom": "온보딩 charter 단계에서 결말·4줄 척추·확정 회차 수를 잠그면, 그 뒤 스튜디오 어디에서는 다시 보거나 고칠 수 없다. 시나리오가 명시한 '결말·4줄 척추 중간 수정'이 원천적으로 불가능. 바이블의 'Story Contract' 카드(MemoryBankStudio.tsx:94~)조차 로그라인·표면약속·심층질문만 노출하고 실제 storyContract(endingStatement·spine·plannedEpisodes)는 보여주지 않는다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1591-1592 (boot 시 1회 주입만); src/lib/storyEngine.ts:299-311 (StoryContract.amendments 필드), 429 (validateContract)",
+        "severity": "high",
+        "rootCause": "[확인] project.storyContract 는 부팅 시 onboarding seed 에서 1회만 박히고(StoryXDesk:1592) 이후 production gate·episodeBriefing 이 읽기만 한다. 모델에는 ContractAmendment(at·reason·change)와 validateContract 가 이미 있어 중간 개정을 설계상 전제하지만, amendments 를 쓰거나 헌장을 편집·재잠금하는 코드는 앱 전체에 0개(storyContract 쓰기 경로가 App.tsx 생성·Desk boot 주입뿐임을 grep 으로 확인).",
+        "repro": "온보딩 → 매체=소설·장편 → 작품 헌장에서 결말·4줄·30화 입력 후 '헌장 확정' → 에디터 진입 → 데이터/바이블 어디를 봐도 결말·척추·화수 편집 칸이 없음 → 중간에 결말을 바꾸려 해도 진입 동선 자체가 없음.",
+        "midEditFriction": true,
+        "scenarioStep": "결말과 4줄 척추를 중간에 수정"
+      },
+      {
+        "title": "데이터 모드에서 인물 욕망·상처를 고쳐도 영향 회차·충돌이 그 자리에서 안 보임",
+        "symptom": "데이터 모드 인물 관계도에서 노드를 눌러 욕망·상처·현재상태를 바로 고치라고 안내(CanonCanvas hint)하지만, 그 화면(CanonCanvas→CharacterDetailPanel)에는 영향 회차·충돌(CanonRefactorPanel)이 전혀 렌더되지 않는다. 충돌은 별도 바이블 작업장(MemoryBankStudio)에 들어가야만 보인다. 랜딩 약속 '설정을 바꾸면 영향 범위를 먼저 펼쳐 보여줍니다'와 정면 배치.",
+        "file": "src/components/CanonCanvas.tsx",
+        "line": "28-34 (hint '바로 고칩니다'), 45-51 (CharacterDetailPanel 만 렌더·영향패널 없음); src/StoryXDesk.tsx:2219-2247 (CanonRefactorPanel 은 MemoryBankStudio 경로에만 전달)",
+        "severity": "high",
+        "rootCause": "[확인] updateCharacterMemory(StoryXDesk:1713)가 logCanonChange 로 canonChanges 에 쌓고 즉시 setProject→자동저장 하지만, 데이터 모드 centerSlot 의 CanonCanvas/CharacterDetailPanel 에는 canonRefactorPlan 을 전달하지 않는다(두 컴포넌트에 canonRefactorPlan/영향 회차 참조 grep 0개). 충돌·영향 펼침은 bible 섹션 전용이라 '먼저 펼쳐 보여준다'가 아니라 '저장 후 다른 화면에서야 보인다'가 된다.",
+        "repro": "에디터 → 데이터 모드 → 캐논·인물 → 노드 선택 → 욕망 textarea 수정 → 화면에 충돌/영향 회차 안내가 전혀 안 뜸. '캐논 원장 열기'를 눌러 바이블로 이동해야만 영향 회차가 보임.",
+        "midEditFriction": true,
+        "scenarioStep": "주인공 욕망을 3~6회 갈아엎기 (데이터 모드 인물 수정)"
+      },
+      {
+        "title": "변경·충돌 이력(canonChanges)이 메모리에만 있어 새로고침하면 영향 분석이 통째로 증발",
+        "symptom": "인물·세계·캐논을 수정하면 변경 로그·영향 회차·검토 순서·충돌 경고(canonRefactorPlan)가 만들어지지만 모두 React state(canonChanges)다. 새로고침하면 변경 로그·영향 분석이 사라지는데, 정작 수정된 값은 project 에 저장돼 남는다. 즉 '충돌은 잊고 충돌 유발 변경만 남는' 비대칭. 3~6회에 걸쳐 세션을 오가며 갈아엎는 시나리오에서 매 세션마다 영향 추적이 리셋됨.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "602 (canonChanges useState), 1644-1675 (logCanonChange — 영속화 없음), 1731-1737 (setProject 만 영속)",
+        "severity": "med",
+        "rootCause": "[확인] logCanonChange 는 setCanonChanges 로만 쌓고 storage 에 쓰지 않는다(storage.ts 에 canonChanges 직렬화 키 없음). canonRefactorPlan 은 canonChanges 파생 useMemo 라 리로드 시 changes=[] → status 'clear' 로 초기화. 반면 캐릭터 값은 setProject→자동저장(1531)으로 디스크에 남아 충돌만 사라진다.",
+        "repro": "데이터/바이블에서 인물 욕망 수정 → 캐논 리팩터 패널에 영향 회차·충돌 경고 표시됨 → 새로고침 → 욕망 변경값은 유지되지만 변경 로그·영향 회차·검토 순서·충돌 경고는 전부 사라짐('대기 중인 변경 로그가 없습니다').",
+        "midEditFriction": true,
+        "scenarioStep": "세계 규칙·캐논을 회차 진행 중 변경"
+      },
+      {
+        "title": "수동 설정 변경에 되돌리기(undo)가 없음 — 스냅샷은 생성·반영 때만 찍힘",
+        "symptom": "인물·세계·캐논·작품핵심을 직접 고친 변경은 스냅샷이 안 찍혀 되돌릴 수 없다. pushProjectSnapshot 은 회차 생성·캐논 반영 시에만 호출된다. 욕망·관계·결말을 3~6회 갈아엎는 작가가 '한 단계 전으로'를 못 하고, 잘못 덮어쓴 캐논을 직전 값으로 복구할 길이 없다(logCanonChange 의 before 값은 화면에만, 복원 버튼 없음).",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1803·1873·1884 (생성·sync 시에만 pushProjectSnapshot), 1808-1824 (restoreProjectVersion 은 history 다이얼로그 전용)",
+        "severity": "med",
+        "rootCause": "[확인] updateCharacterMemory/updateWorldMemory/updateCanonMemory/updateProject 어디에도 pushProjectSnapshot 호출이 없다. 되돌리기는 자동 생성된 회차 스냅샷으로의 전체 복원(restoreProjectVersion)뿐이라 입도(granularity)가 맞지 않고, 수동 편집 직전 상태 복원 지점이 생성되지 않는다.",
+        "repro": "데이터/바이블에서 인물 욕망을 수정 → 다시 수정 → 이전 값으로 돌리고 싶어도 undo 버튼·단축키 없음 → '변경 로그 비우기'는 추적만 지우고 값은 그대로. 작품 이력 다이얼로그를 열어도 이 수동 편집 직전 스냅샷은 없음.",
+        "midEditFriction": true,
+        "scenarioStep": "주인공 욕망·핵심 관계를 3~6회 갈아엎기"
+      },
+      {
+        "title": "핵심 관계를 수정·재배치할 UI가 없음 — 관계도는 읽기 전용 시각화",
+        "symptom": "시나리오의 '핵심 관계를 3~6회 갈아엎기'가 불가능. CharacterGraph 는 relations 를 엣지로 그리기만 하고(읽기 전용), CharacterDetailPanel 은 욕망·상처·현재상태 3개 textarea 만 편집한다. 관계 상대·라벨(예: 적→연인)을 바꾸거나 추가·삭제하는 입력칸이 없다.",
+        "file": "src/components/CharacterDetailPanel.tsx",
+        "line": "19-42 (desire·wound·currentState 만 편집); src/components/CharacterGraph.tsx:42 (relations 는 그리기 전용); src/lib/storyEngine.ts:77 (relations 필드)",
+        "severity": "med",
+        "rootCause": "[확인] CharacterProfile.relations 는 엔진 자동 생성(addRelations 류)만 채우고 사용자 편집 핸들러가 없다. onUpdateCharacter 의 field 타입이 'desire'|'wound'|'currentState' 로 제한되어 관계는 대상이 아니다. 데이터 모드 인물 편집의 표면적 약속('관계도')과 실제 편집 가능 범위가 어긋난다.",
+        "repro": "데이터 모드 → 캐논·인물 → 관계도에서 두 인물 사이 '핵심 관계' 선을 보지만, 클릭해도 라벨/상대를 바꾸는 편집 UI가 열리지 않음. 상세 패널에도 관계 항목 자체가 없음.",
+        "midEditFriction": true,
+        "scenarioStep": "핵심 관계를 3~6회 갈아엎기"
+      },
+      {
+        "title": "잠근 회차도 경고 없이 자유 편집 가능 — 게다가 그 편집도 저장 안 됨",
+        "symptom": "회차를 '잠금'(캐논으로 굳히는 행위)으로 표시해도 floating 편집기 본문은 그대로 편집 가능하고(잠금 경고·읽기전용 없음), 회차 선택기에 '(잠김)'만 붙는다. 잠금이 약속하는 '확정' 보호가 없다. 더구나 finding #1 때문에 이 잠긴 회차 편집도 저장되지 않아, 작가는 '잠긴 과거 회차를 고쳤다'고 믿지만 실제론 아무 일도 일어나지 않는다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1329 (editable: true 하드코딩, latestChapter.locked 무시); src/components/FloatingEditor.tsx:447 (contentEditable={editable})",
+        "severity": "med",
+        "rootCause": "[확인] floatingEditorProps 의 editable 이 isLatestLocked 와 무관하게 항상 true. lockChapter(storyEngine)는 chapter.locked 플래그만 세우고 편집 가드로 이어지지 않는다. 잠금은 mainAction 라벨(다음 회차)에만 반영되고 본문 편집 차단·경고에는 미반영.",
+        "repro": "회차 잠금(출간 워크스페이스/잠금 동선) → 편집 모드로 복귀 → 잠긴 회차 본문에 커서가 들어가고 타이핑됨, 잠금 경고 없음 → (회차 전환 시 finding #1 로 편집 소실).",
+        "midEditFriction": true,
+        "scenarioStep": "편집/데이터 모드에서 과거(잠긴) 회차 수정"
+      }
+    ]
+  },
+  {
+    "medium": "장편소설 (novel · long-novel, 연재 서사)",
+    "persona": "정통 판타지 세계관 빌더 — 마법 비용 규칙·지명·인물 가계를 첫 생성 후 3~6회 수정하고 떡밥·갈림길을 재배치하려는 사용자",
+    "findings": [
+      {
+        "title": "작품 헌장 → 생성(building) 전환 시 캐러셀 transform 이 한 칸 더 밀려 '1화 쓰는 중' 패널이 화면 밖으로 사라진다",
+        "symptom": "판타지 연재(usesCharter=true) 경로에서 charter 단계의 '헌장 확정 — 1화 만들기'를 누르면 homeFlowStep='building' 으로 가는데, 1~3분 생성 동안 '작가진이 1화를 쓰고 있습니다' 진행 화면 대신 빈 다크 화면만 보인다. 사용자는 멈춘 것으로 오인한다.",
+        "file": "src/App.tsx",
+        "line": "946, 1337-1338, 1471",
+        "severity": "high",
+        "rootCause": "코드/CSS로 결정적(실제 렌더 캡처는 안 했고 DOM 자식 순서·인덱스 산술로 도출). .hx-track 은 translateX(-${homeFlowIndex*100}%) 고정 100% 스트라이드인데, charter 패널(1337-1338)은 `{homeFlowStep==='charter' && ...}` 로 조건부 마운트된다. building 단계에서 homeFlowIndex=homeFlowSteps.length=4(charter 포함)이지만 그 순간 charter 는 언마운트되어 building 패널은 실제 flex 자식 #3 위치(=-300%)에 있다 → -400% 로 한 칸 과임. .home-page overflow:clip(styles.css:8836) 이라 잘려 안 보임. charter 없는 에세이/학술/단독완결 경로는 length=3 으로 인덱스가 맞아 정상 — 즉 charter 연재 경로에서만 터진다. appExperience.test.ts(87-98)는 문자열 존재만 검사해 이 인덱스 버그를 못 잡는다. prompt 가 지목한 charter 스크롤 버그와 동일 계열의 레이아웃 회귀.",
+        "repro": "매체=소설, 장편 연재 선택 → 자유서술 → 인터뷰 → '질문 완료 — 작품 헌장 잡기' → charter 4줄+결말 채움 → '헌장 확정 — 1화 만들기' 클릭 → 생성 대기 화면이 비어 보인다(building 패널 오프스크린).",
+        "scenarioStep": "(연재 서사) 작품 헌장 4줄 척추 → 첫 생성 진입",
+        "midEditFriction": false
+      },
+      {
+        "title": "생성 후 인물 이름·역할·가계(genealogy)를 어디서도 수정할 수 없다 — 욕망/상처/현재상태만 편집 가능",
+        "symptom": "페르소나가 '인물 가계'를 3~6회 손보려 하지만, 데이터/바이블의 어떤 화면에서도 캐릭터 이름·역할·가족/혈통 관계를 바꿀 입력칸이 없다. 이름은 첫 생성값으로 박제된다.",
+        "file": "src/components/MemoryBankStudio.tsx",
+        "line": "168-169, 174-193",
+        "severity": "high",
+        "rootCause": "grep 으로 전체 src 확인했음. MemoryBankStudio 는 캐릭터 이름/역할을 `<h3>{character.name}</h3>`·`<p>{character.role}</p>` 정적 텍스트로만 렌더하고, 편집 textarea 는 desire/wound/currentState 뿐이다. CharacterDetailPanel.tsx(5-11)·CanonCanvas.tsx(20)·StoryXDesk.tsx:1713 updateCharacterMemory 시그니처도 field 가 'desire'|'wound'|'currentState' 로 하드코딩되어 name/role/관계 변경 경로 자체가 없다. CharacterGraph 에도 인라인 rename(input/onChange/contentEditable) 이 전무. 신규 인물은 storyEngine.ts:1826 캐논 승격으로만 들어오고 UI 추가 버튼도 없다.",
+        "repro": "에디터 → 데이터(바이블) 모드 → 캐릭터 섹션 → 인물 카드에서 이름/역할 칸을 찾으려 하면 정적 헤딩뿐. 가계/혈통 관계 변경 방법 없음.",
+        "scenarioStep": "첫 생성 후 인물 가계 3~6회 수정",
+        "midEditFriction": true
+      },
+      {
+        "title": "지명(장소)·세계규칙 제목을 수정할 수 없고, 장소 충돌은 '캐논 원장'으로 보내지만 거기서도 장소명 자체는 못 고친다 — 막다른 길",
+        "symptom": "페르소나가 지명을 개명하려 하지만 장소(places)는 읽기 전용 카드뿐이고, 충돌 카드의 '캐논 원장에서 해결' 버튼을 눌러도 캐논 statement 텍스트만 편집될 뿐 project.places 장소명·worldRule.title 은 바뀌지 않는다.",
+        "file": "src/components/CanonCardGrid.tsx",
+        "line": "21-44; MemoryBankStudio.tsx:209; CanonCanvas.tsx:31",
+        "severity": "med",
+        "rootCause": "places/title 편집 경로 부재를 grep 으로 확인. places 는 getCategoryEntities(project,'places')=project.places(canonDataView.ts:33-34)에서 CanonCardGrid 로 읽기 전용 렌더되고, 충돌 시 onResolveConflict 가 bible 'canon' 섹션을 여는 게 전부다. 세계규칙도 `<h3>{rule.title}</h3>` 는 정적이고 onUpdateWorldRule 은 rule.rule(본문)만 갱신(StoryXDesk.tsx:1754-1757). rule.title 은 에이전트 컨텍스트(storyEngine.ts:1562)와 충돌매칭 targetLabel(StoryXDesk.tsx:1746)에 그대로 쓰여 개명이 영구히 반영 안 된다.",
+        "repro": "데이터 모드 → 캐논 분야 → 장소 → 장소 카드에 이름 편집칸 없음. 충돌이면 '캐논 원장에서 해결' → 캐논 텍스트만 편집되고 장소명은 그대로.",
+        "scenarioStep": "첫 생성 후 지명 3~6회 수정",
+        "midEditFriction": true
+      },
+      {
+        "title": "마법 비용 규칙을 고쳐도 영향 회차 분석이 그 규칙을 처음 세운 초반 화수를 놓치고 '최근 3화'로 조용히 폴백한다",
+        "symptom": "20화 시점에 마법 비용 세계규칙을 수정하면 '영향 회차'가 그 마법이 실제 확립된 1~5화 대신 최근 3화만 가리키며 이유도 '직접 언급은 없지만 최근 흐름에 영향'으로 모호하게 뜬다.",
+        "file": "src/lib/canonRefactor.ts",
+        "line": "147-169",
+        "severity": "med",
+        "rootCause": "추정(매칭 로직상 거의 항상 폴백한다고 추론, 특정 데이터셋에서 본문에 제목이 우연히 들어가면 일부 매칭될 수 있음). findAffectedChapters 는 change.targetLabel(=rule.title)·change.before(=옛 규칙 본문 전체)를 회차 prose 등에 substring 매칭(chapterContains)한다. 마법 비용 규칙 제목은 본문에 그대로 안 나오고 before 는 긴 본문이라 회차 부분문자열도 아니어서 matched 가 빈 배열 → chapters.slice(-3)로 폴백하고 reason 을 '직접 언급 없음'으로 단다. world 규칙 편집은 targetCanonId 도 안 채워(updateWorldMemory) ID 링크 경로도 못 탄다. 휴리스틱 설계 한계지만 폴백이 '안전'이 아닌 '최근' 화수를 가리켜 세계관 빌더를 오도한다.",
+        "repro": "여러 화수 생성 후 데이터→세계관에서 마법 비용 규칙 본문 수정 → 캐논 원장 하단 캐논 리팩터 패널의 '영향 회차'가 최근 3화만, 이유는 '직접 언급 없음'.",
+        "scenarioStep": "첫 생성 후 마법 비용 규칙 3~6회 수정",
+        "midEditFriction": true
+      },
+      {
+        "title": "수동 바이블 편집에는 undo도 스냅샷도 없다 — 버전 기록은 회차 생성·캐논 반영 때만 찍혀 3~6회 수정을 개별 되돌릴 수 없다",
+        "symptom": "페르소나가 마법 비용/지명/인물을 여러 번 고치다 한 수정을 되돌리려 하면, 작품 버전 기록에 '편집 시점'이 없다. 직전 입력으로의 undo도 없어, 잘못 덮어쓴 텍스트는 손으로 다시 쳐야 한다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1713-1778, 1803, 1873-1884",
+        "severity": "med",
+        "rootCause": "스냅샷 호출 지점과 핸들러를 grep/Read 로 확인. updateCharacterMemory/updateWorldMemory/updateCanonMemory 는 logCanonChange(변경 로그)만 남기고 setProject 로 즉시 덮어쓴다. pushProjectSnapshot 은 캐논 반영(syncApprovedMemory,1803)과 회차 생성(1873/1884)에서만 호출돼 수동 편집 시점 스냅샷이 없다. 따라서 restoreProjectVersion(1808)은 수동 편집을 복구하지 못한다. saveProject(project)가 project 변경마다 자동 영속(1531-1533)이라 디스크에도 바로 덮어쓰며, textarea 브라우저 undo 는 blur/리렌더 후 사실상 끊긴다.",
+        "repro": "데이터→캐릭터에서 욕망 텍스트를 지우고 다른 내용으로 덮음 → 명령팔레트 '작품 버전 기록' 열기 → 편집 직전 시점 없음. 되돌리기 불가.",
+        "scenarioStep": "첫 생성 후 설정 3~6회 수정 중 한 번 되돌리기",
+        "midEditFriction": true
+      },
+      {
+        "title": "떡밥(열린 질문)·갈림길(구조 비트)이 읽기 전용이라 '재배치'가 불가능하다",
+        "symptom": "페르소나가 '떡밥과 갈림길을 재배치'하려 하지만, 열린 질문은 순서 고정 `<li>` 목록이고 회차 구조 트리의 비트도 클릭 선택만 될 뿐 추가·편집·순서 변경·삭제 affordance 가 전혀 없다.",
+        "file": "src/components/OpenThreadsCard.tsx",
+        "line": "11-16; ChapterStructureTree.tsx:128-147",
+        "severity": "med",
+        "rootCause": "편집/재배치 핸들러 부재를 grep 으로 확인. OpenThreadsCard 는 threads.map 으로 `<li key={thread}>{thread}</li>` 만 렌더 — 입력·드래그·삭제 핸들러 없음. ChapterStructureTree 의 비트도 onSelectBeat(선택)만 있고 reorder/drag/edit 없음(grep: drag·reorder·moveBeat 부재). 복선·분기를 '본다'만 되고 '재배치'는 제품에 미구현이라 페르소나 핵심 의도가 막힌다.",
+        "repro": "에디터 좌레일/데이터에서 열린 질문·회차 구조를 열어 떡밥 순서를 바꾸려 해도 드래그·편집 불가. 추가/삭제 버튼 없음.",
+        "scenarioStep": "떡밥과 갈림길 재배치",
+        "midEditFriction": true
+      },
+      {
+        "title": "작품 헌장 '확정 회차 수' number 입력이 min/max 를 강제하지 않아 범위 밖 값(0 포함)을 그대로 받는다",
+        "symptom": "장편(24~36)에서 확정 회차 수 칸에 키보드로 5나 999를 치면 min/max(24/36)를 무시하고 그 값이 그대로 들어간다. 빈칸/문자면 0으로 떨어진다. 이 값으로 비트 핀 미리보기·헌장이 구성된다.",
+        "file": "src/App.tsx",
+        "line": "1367-1376",
+        "severity": "low",
+        "rootCause": "onChange 핸들러에 clamp 없음을 Read 로 확인. `<input type=number min max>` 의 min/max 는 스피너/검증에만 작용할 뿐 직접 타이핑을 막지 않는데, onChange 가 setContractPlannedEpisodes(Number(event.target.value) || 0) 로 클램프 없이 저장한다. 범위 밖 값이 deriveBeatSheet(App.tsx:1448)·buildStoryContractFromOnboarding 로 전파될 수 있다.",
+        "repro": "charter 단계 → 장편 선택 → '확정 회차 수' 칸을 지우고 5 입력 → 값이 5로 유지되고 비트 핀 미리보기가 그 값 기준으로 그려짐.",
+        "scenarioStep": "(연재 서사) 작품 헌장 분량 입력",
+        "midEditFriction": false
+      }
+    ]
+  },
+  {
+    "medium": "단편소설 (short story)",
+    "persona": "문학상 지망 단편 작가 — 1~5화 단일 효과, 하나의 반전 중심으로 결말을 3~6회 고쳐 쓰고 주인공 이름·정서·문체를 미세 조정하려는 사용자",
+    "findings": [
+      {
+        "title": "본문(원고) 편집이 chapter.prose 에 절대 영속되지 않음 — 결말을 고쳐 써도 캐논·내보내기·다음 생성이 옛 원고를 봄",
+        "symptom": "FloatingEditor 에서 5화 결말을 직접 고쳐 쓴 뒤 다른 회차로 이동하거나 새로고침/가져오기를 하면 편집이 사라진다. 상단 저장 칩은 내내 '저장됨'으로 표시돼 작가는 저장됐다고 믿는다. 출간 미리보기와 다음 회차 생성 컨텍스트는 편집 전 원문을 그대로 쓴다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "575, 1246-1250, 1564-1573, 953, 2381; src/lib/storyEngine.ts:179-187, 2061",
+        "severity": "high",
+        "rootCause": "[확인 근거] 본문 편집의 단일 원천이 transient state editorText(575)인데 editorText→project.chapters[i].prose 영속 경로가 전체 src 에 grep 으로 없음. 회차 로드 effect(1564-1573)가 latestChapter.prose 로 editorText 를 덮어쓰며 editedSinceReview=false 로 리셋. lockChapter(storyEngine.ts:179-187)도 locked:true 만 세팅하고 본문을 흡수하지 않음—즉 잠금조차도 편집 미저장. 저장 칩(953)은 editedSinceReview(검토 동기화 여부)만 반영해 '본문 미저장'을 '저장됨'으로 오표시. 내보내기(2061)와 buildProjectContextDigest 는 chapter.prose 를 읽으므로 수동 편집을 못 봄(review 만 currentReviewText=editorText 로 편집을 본다).",
+        "midEditFriction": true,
+        "repro": "첫 회차 생성 → FloatingEditor 본문에서 결말 문단을 고쳐 씀 → 상단 회차 선택/새로고침/JSON 가져오기 중 하나 수행 → 편집이 사라지고 원문 복귀. 혹은 편집 직후 출간 미리보기 열면 편집 전 텍스트가 나옴.",
+        "scenarioStep": "편집/데이터 모드에서 결말을 3~6회 고쳐 쓰는 단계"
+      },
+      {
+        "title": "주인공 이름(과 역할)을 바꿀 UI 경로가 전무 — 이름 미세 조정 불가",
+        "symptom": "캐릭터 상세/기억 패킷 어디서도 주인공 이름을 고쳐 쓸 수 없다. 이름은 제목처럼 보이는 정적 텍스트로만 렌더된다. 페르소나의 '주인공 이름 미세 조정' 요구를 앱 안에서 수행할 방법이 없다.",
+        "file": "src/components/CharacterDetailPanel.tsx",
+        "line": "16 (h3 character.name 정적); src/components/MemoryBankStudio.tsx:168; src/StoryXDesk.tsx:1713 (field 타입 'desire'|'wound'|'currentState' 로 하드락)",
+        "severity": "high",
+        "rootCause": "[확인 근거] 두 캐릭터 편집 표면 모두 name·role 을 읽기 전용 헤더로 출력하고, 편집 콜백 updateCharacterMemory 의 field 유니온이 desire/wound/currentState 3종으로 고정(1713). renameCharacter · updateCharacterName 핸들러가 전 컴포넌트에 grep 상 없음. 유일한 우회는 JSON 내보내기→수작업→가져오기이며 그 가져오기는 전체 리로드 강제(아래 finding).",
+        "midEditFriction": true,
+        "repro": "데이터 모드 → 캐논/바이블 → 인물 선택 → 욕망·상처·현재상태 textarea 만 있고 이름 입력칸 없음. 이름을 바꾸려면 앱을 벗어나 JSON 을 손봐야 함.",
+        "scenarioStep": "주인공 이름·정서·문체를 미세 조정하는 단계"
+      },
+      {
+        "title": "단편(short-novel)은 standalone 으로 처리돼 다회차 작품인데도 회차 네비게이션이 아예 없음 — 1~4화로 돌아가 편집 불가",
+        "symptom": "단편소설 작가가 5화까지 생성하면 화면 어디에도 회차 선택기가 없다. 최신 회차만 본문 편집 대상이고 앞선 회차(예: 반전을 심은 3화)의 원고로 돌아갈 동선이 없다. 새로고침하면 마지막 회차만 로드된다.",
+        "file": "src/lib/projectBlueprint.ts",
+        "line": "594-605 (serialFormats 에 short-novel 없음→isSerialFormat=false); src/StoryXDesk.tsx:2334 (picker 가 isSerial && chapters>0 게이트), 2375-2376 (비연재는 정적 라벨), 579-580 (리로드 시 마지막 회차)",
+        "severity": "high",
+        "rootCause": "[확인 근거] short-novel 이 serialFormats 집합에 빠져 isSerialFormat()=false → '단독 완결형'으로 분류. 그러나 produceEpisode 는 standalone 에서도 produceNextChapter 로 episode 를 증가시켜 회차를 append 하므로 실제 5화가 쌓임. 결과적으로 '다회차 본문은 존재하나 회차 선택 UI 는 isSerial 조건에 막혀 렌더되지 않는' 함정. 회차 picker(2334)는 isSerial 필요, 비연재 분기는 latestChapter.title 정적 라벨만 렌더(2375).",
+        "midEditFriction": true,
+        "repro": "매체=소설, 형식=단편 선택 → 자유서술→인터뷰→생성 → '다음 회차 만들기'를 반복해 5화까지 생성 → 상단에 회차 선택기 없음(정적 제목만). 3화 결말을 고치려 해도 이동 수단 없음.",
+        "scenarioStep": "1~5화 누적 후 특정 화(결말)로 돌아가 고쳐 쓰는 단계"
+      },
+      {
+        "title": "작품 헌장(결말 역산 + 4줄 척추)이 단편 형식에서 구조적으로 도달 불가 — 단일 효과 단편에 가장 맞는 도구가 가려짐",
+        "symptom": "'하나의 반전 중심, 결말부터 설계'가 핵심인 단편 작가가 단편(short-novel) 형식을 고르면 작품 헌장 단계 자체가 온보딩에서 사라진다. 결말 역산·4줄 척추·종반 예산 규칙을 못 쓴 채 곧장 생성으로 넘어간다. 정작 헌장 내부에는 '단편 4~8화' 분량 칩이 있는데 그 칩은 연재 형식을 골라야만 보인다.",
+        "file": "src/App.tsx",
+        "line": "706 (usesCharter = isSerial && medium!=='essay' && !=='academic'), 900-902, 1327-1329, 1357 (헌장 내부 '단편 4~8화' 칩)",
+        "severity": "high",
+        "rootCause": "[확인 근거] usesCharter 가 isSerial 을 전제로 함(706). short-novel 은 비연재라 헌장 단계(900-902)와 진입 분기(1327)가 모두 false → intake 에서 goToBuilding 으로 직행, 헌장을 건너뜀다. 즉 단편의 자연스러운 형식을 고를수록 단편용 척추 도구가 꺼지는 모순. [추정] 설계상 '의도된 제외'일 수 있으나, 단일 효과·반전 중심의 문학상 단편 페르소나에게는 정면 충돌하는 도구 접근 막힘.",
+        "midEditFriction": false,
+        "repro": "매체=소설→형식=단편 선택 → 상단 단계 띠에 '작품 헌장' 없음 → 인터뷰 마지막 버튼이 '질문 완료 — 첫 원고 만들기'(헌장 건너뜀). 반대로 결말 역산을 쓰려면 장편/중편(연재)을 골라야 함.",
+        "scenarioStep": "(연재 서사면) 작품 헌장 4줄 척추 단계 — 단편엔 부재"
+      },
+      {
+        "title": "수동 바이블 편집에 undo/버전 스냅샷이 없음 — 정서·문체를 3~6회 손대면 되돌릴 수 없음",
+        "symptom": "캐릭터 욕망·상처, 결말·톤(문체), 작품 무게중심을 직접 고친 변경은 '버전 기록' 스냅샷으로 남지 않는다. 여러 번 미세 조정하다 이전 값이 더 좋았다고 느껴도 복원 지점이 없다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1713-1778 (updateCharacterMemory/updateWorldMemory/updateCanonMemory), 1701-1711 (updateCreativeWeight) — 모두 pushProjectSnapshot 미호출; 스냅샷은 1803·1873·1884 에서만",
+        "severity": "med",
+        "rootCause": "[확인 근거] 수동 편집 핸들러들은 logCanonChange + setProject 만 하고 pushProjectSnapshot 을 부르지 않음. 스냅샷 push 는 캐논 동기화(1803)와 회차 생성(1873,1884) 두 경우로 한정. 따라서 ProjectHistoryDialog '되돌리기'는 생성/동기화 시점으로만 회귀 가능하고 그 사이의 수동 미세조정은 한 단계도 복원되지 않는다. textarea 내 ⌘Z 는 그 입력칸에만 한정.",
+        "midEditFriction": true,
+        "repro": "데이터 모드에서 주인공 욕망을 A→B→C 로 세 번 수정 → 버전 기록 다이얼로그를 열면 이 수정들이 항목으로 없음 → A 로 되돌릴 방법 없음.",
+        "scenarioStep": "정서·문체를 3~6회 미세 조정하는 단계"
+      },
+      {
+        "title": "캐릭터·결말·문체 수동 편집이 기존 1~5화와의 충돌을 편집 지점에서 알려주지 않음",
+        "symptom": "주인공 욕망이나 결말·톤을 바꿔도 '이 변경이 이미 쓴 1~5화와 충돌한다'는 인라인 경고가 입력칸 옆에 뜨지 않는다. character/story-core/voice 종류는 conflictWarnings 가 아예 비어 status 만 needs-review 로 바뀐다.",
+        "file": "src/lib/canonRefactor.ts",
+        "line": "127-145 (buildWarnings — world/canon/빈값만 경고), 92-125 (plan); src/StoryXDesk.tsx:1644-1675 (logCanonChange), 498-503 (리팩터 인텐트 카드)",
+        "severity": "med",
+        "rootCause": "[확인 근거] buildWarnings 는 kind==='world'|'canon' 과 빈 값에만 경고 문자열을 만든다. 인물 욕망(character)·결말/톤(story-core/voice) 수동 편집은 conflictWarnings 가 비어 affectedChapters 만 부분문자열 매칭(159-161)으로 추정된다. [추정] 게다가 그 결과는 편집 textarea 와 떨어진 인텐트 카드/캐논 리팩터 패널에만 표시돼, 편집 순간의 시야에 들어오지 않는다(데이터-모드 레이아웃 분리에서 추론).",
+        "midEditFriction": true,
+        "repro": "1~5화가 있는 상태에서 데이터 모드 → 주인공 욕망을 결말과 어긋나게 수정 → 입력칸 주변에 충돌/영향 회차 경고 없음 → 캐논 리팩터 패널을 따로 열어야 needs-review 가 보이며 거기서도 character 변경 경고문은 없음.",
+        "scenarioStep": "캐릭터·이야기 설정을 바꿀 때 기존 회차·캐논과의 충돌 표시"
+      },
+      {
+        "title": "JSON 가져오기가 전체 페이지 리로드를 강제 — 진행 중 미저장 본문 편집 소실(이름 변경 우회 경로와 겹침)",
+        "symptom": "프로젝트 가져오기를 하면 window.location.reload() 로 페이지가 통째로 새로고침된다. 그 직전까지 FloatingEditor 에서 고쳐 쓰던 본문(editorText)은 chapter.prose 에 저장된 적이 없으므로 전부 사라진다. 주인공 이름을 바꾸려고 JSON 우회를 택하면 바로 이 리로드를 거치게 된다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "672-689 (handleImportFile, 684 window.location.reload())",
+        "severity": "med",
+        "rootCause": "[확인 근거] 가져오기 성공 시 무조건 location.reload()(684). editorText 가 영속되지 않는 finding #1 과 결합하면 리로드 전 미저장 본문 편집이 경고 없이 날아간다. confirm 문구('현재 작품 덮어쓰기')는 import 대상 데이터 손실만 경고할 뿐 편집 중인 본문 손실은 언급하지 않는다.",
+        "midEditFriction": true,
+        "repro": "본문 일부를 고쳐 쓴 직후(저장 안 함) → 설정/데이터에서 JSON 가져오기 실행 → confirm 승인 → 리로드되며 방금 고친 본문 사라짐.",
+        "scenarioStep": "이름 변경 등으로 설정을 바꾸려 JSON 우회·재적용하는 단계"
+      },
+      {
+        "title": "기본 편집기(FloatingEditor)에 회차 선택기가 없어, 최신이 아닌 회차 본문은 기본 동선으로 편집 불가",
+        "symptom": "연재 형식이더라도 기본 편집 화면(FloatingEditor)에는 회차 이동 수단이 없다. 회차 선택기는 기본이 아닌 구형 sx-app 브레드크럼에만 존재한다. 따라서 이전 회차의 본문을 고치려면 기본 편집기로는 불가능하다.",
+        "file": "src/components/FloatingEditor.tsx",
+        "line": "24-25, 442-443 (chapterTitle/chapterSub 단일 prop, picker 없음); src/StoryXDesk.tsx:2196-2216 (draft 모드는 FloatingEditor 만 렌더), 2335 (picker 는 sx-app 전용)",
+        "severity": "low",
+        "rootCause": "[확인 근거] FloatingEditor 는 단일 회차(chapterTitle/Sub + latestChapter.prose)만 받도록 설계되고 picker UI 가 없다. isDraftMode 분기(2196)는 항상 FloatingEditor 를 렌더(progress.md: 드래프트 모드는 항상 FloatingEditor)하며, 회차 picker(2335)는 렌더되지 않는 sx-app 경로에만 남아 있다. 결과적으로 기본 편집기에서는 최신 회차 외 본문에 접근할 동선이 없다. (단편·연재 공통으로 적용되는 더 넓은 계층의 원인)",
+        "midEditFriction": true,
+        "repro": "연재(장편) 작품에서 6화 생성 후 5화 결말로 돌아가려 함 → FloatingEditor 어디에도 회차 이동 버튼/드롭다운 없음 → 5화 본문을 고칠 수 없음.",
+        "scenarioStep": "결말 회차로 돌아가 고쳐 쓰는 단계(연재·단편 공통)"
+      }
+    ]
+  },
+  {
+    "medium": "단편소설",
+    "persona": "장르 미스터리 단편 작가 — 범인·트릭을 중간에 바꾸며 캐논·복선을 3~6회 수정하고, 단편/장편 사이에서 분량을 재고하는 사용자",
+    "findings": [
+      {
+        "title": "본문에 직접 쓴 수정(트릭 변경 문장)이 회차에 저장되지 않고 회차 전환·새로고침에 사라진다",
+        "symptom": "FloatingEditor 본문(contentEditable)에서 트릭이 드러나는 문단을 직접 고쳐도, 회차 선택기로 다른 화로 갔다 돌아오거나 새로고침하면 생성 당시 원문으로 되돌아간다. 상단은 내내 '저장됨'이라 사용자는 손실을 모른다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "575, 1564-1573 (editorText 로컬 state·latestChapter 변경 시 setEditorText(latestChapter.prose) 덮어쓰기); src/lib/storage.ts (editorText 미포함)",
+        "severity": "high",
+        "rootCause": "본문 편집값은 editorText 로컬 state 일 뿐 project.chapters[].prose 로 쓰기-백되는 경로가 없다. saveProject(project)는 project 만 저장하고 editorText 는 project 밖이다. produceEpisode/chapterFromDraftPayload(재생성)만 chapters 에 쓴다. 게다가 [latestChapter] effect 가 회차가 바뀔 때마다 setEditorText(latestChapter.prose) 로 미저장 편집을 무경고 덮어쓴다. 상단 '저장됨' pill 은 editorText 가 아니라 editedSinceReview 기준이라 손실을 가린다.",
+        "midEditFriction": true,
+        "scenarioStep": "첫 생성 후 범인/트릭을 바꾸려 본문 문단을 직접 수정",
+        "repro": "1) 온보딩으로 1화 생성 후 편집 모드 진입 2) 본문 한 문단을 직접 고쳐 트릭을 바꾼다 3) 상단 회차 선택기로 다른 화 선택 후 다시 1화로 돌아오거나 새로고침 4) 수정이 사라지고 원문으로 복귀"
+      },
+      {
+        "title": "범인 교체에 필수인 '새 인물·새 캐논·캐논 삭제'가 UI에 아예 없다 (편집 전용, 추가/삭제 불가)",
+        "symptom": "범인을 새 인물로 바꾸려 해도 새 캐릭터를 추가할 버튼이 없고, 이제 거짓이 된 캐논 사실(예: '용의자 A는 그날 밤 부재')을 삭제할 수단도 없다. 데이터 모드에서 할 수 있는 건 LLM이 만들어 둔 기존 엔티티의 텍스트 덮어쓰기뿐이다.",
+        "file": "src/components/CharacterDetailPanel.tsx, src/components/CanonCardGrid.tsx, src/components/MemoryBankStudio.tsx",
+        "line": "CharacterDetailPanel 전체(욕망·상처·현재상태 textarea 만), MemoryBankStudio 163-262(characters/world/canon 모두 map+textarea, add/remove 없음), CanonCardGrid 19-56(읽기 전용 카드)",
+        "severity": "high",
+        "rootCause": "캐릭터·캐논·세계규칙·장소·사물·사건 어디에도 onAdd/onRemove/onDelete 콜백이나 '추가/삭제' 버튼이 없다. 모든 수정은 project.characters.map / canonFacts.map 위의 in-place 텍스트 편집으로만 설계됐다. 범인 교체처럼 엔티티 집합 자체를 바꿔야 하는 미스터리 수정 시나리오의 핵심 동작이 빠져 있다.",
+        "midEditFriction": true,
+        "scenarioStep": "범인을 기존 조연→새 인물로 교체, 무효가 된 알리바이 캐논 제거",
+        "repro": "1) 생성 후 데이터 모드 진입 2) 인물 관계도/캐논 원장에서 '새 인물 추가'나 '이 캐논 삭제'를 찾는다 3) 어떤 화면에도 추가·삭제 컨트롤이 없음 — 기존 인물 이름/설명 덮어쓰기로 우회할 수밖에 없다"
+      },
+      {
+        "title": "작품 헌장(분량·결말·4줄 척추)을 생성 후 보거나 고칠 길이 없다 — amendments 모델은 있으나 미배선",
+        "symptom": "결말/범인을 바꿔도 생성·검토 프롬프트를 좌우하는 헌장(척추·결말·예산)은 온보딩에 잠긴 원본 그대로다. 데스크 어디에도 헌장을 다시 열거나 수정·증보할 화면이 없어, 작품 척추와 실제 전개가 갈라진다.",
+        "file": "src/lib/storyEngine.ts, src/StoryXDesk.tsx",
+        "line": "storyEngine.ts:310(amendments: ContractAmendment[]) ·424(amendments: [] 항상 빈 배열); StoryXDesk.tsx:1047,1154,1863,1940(buildContractStatus 소비만, 편집 UI 0)",
+        "severity": "high",
+        "rootCause": "storyContract 는 온보딩 charter 단계에서만 생성돼 createEmptyProject 에 박힌다. StoryXDesk 는 buildContractStatus(project)를 생성/검토에 4번 주입하지만, 헌장을 읽거나 고치는 UI가 전무하다. ContractAmendment[] 타입과 amendments 필드가 데이터 모델에 존재하나 항상 []로 시드되고 어떤 컴포넌트도 이를 편집/표시하지 않는다(증보 경로 미구현).",
+        "midEditFriction": true,
+        "scenarioStep": "트릭/결말을 3~6회 바꾼 뒤 헌장의 4줄 척추·결말을 그에 맞게 갱신하려 함",
+        "repro": "1) 헌장이 있는 작품으로 데스크 진입 2) 편집/데이터/출간 어디서도 '작품 헌장'·'척추 수정'을 찾는다 3) 헌장을 보거나 고칠 화면이 없음 — 생성 프롬프트는 계속 옛 척추로 발화"
+      },
+      {
+        "title": "미스터리 단편(short-novel) 페르소나는 헌장(결말 역산·4줄 척추) 단계를 통째로 건너뛴다",
+        "symptom": "매체=소설·형식=단편을 고른 미스터리 단편 작가는 온보딩에서 '작품 헌장' 단계 자체를 보지 못한다. 범인·복선을 결말부터 잠가 추적하게 해줄 척추 스캐폴딩이 바로 이 페르소나에게만 없다.",
+        "file": "src/App.tsx, src/lib/projectBlueprint.ts",
+        "line": "App.tsx:706(usesCharter = isSerial && medium!=='essay' && medium!=='academic') ·720-725(spineComplete); projectBlueprint.ts:594-604(serialFormats 에 short-novel 없음 → isSerialFormat false)",
+        "severity": "med",
+        "rootCause": "usesCharter 가 isSerial 에 게이트되는데 short-novel 은 serialFormats 에 없어 isSerialFormat=false. 따라서 단편은 charter 단계가 조건부로 제외된다(설계 의도 '연재 서사만'). 그러나 시나리오의 주 페르소나가 바로 단편 미스터리라, 범인·트릭·복선 변경을 결말 역산 척추로 잡아주는 핵심 장치가 이 사용자에겐 처음부터 제공되지 않는다.",
+        "midEditFriction": false,
+        "scenarioStep": "매체 선택 → 자유서술 → 작가 인터뷰 (단편 선택 시 charter 미노출)",
+        "repro": "1) 온보딩 매체=소설 2) 형식=단편 선택 3) 자유서술·인터뷰 진행 4) intake 다음에 '작품 헌장' 단계가 나타나지 않고 곧장 생성으로 — 4줄 척추/결말 잠금 화면 부재"
+      },
+      {
+        "title": "분량 재고(단편↔장편) 매체 변경이 기존 회차 영향 경고·확인 없이 즉시 적용된다",
+        "symptom": "'매체 변경' 패널에서 단편→장편(또는 소설→만화)을 누르면 패널이 곧장 닫히며 형식이 바뀐다. 이미 쌓인 회차·검토 작가진·회차/원고 언어가 한순간에 달라지는데 'N개 회차에 영향' 같은 경고나 확인이 전혀 없다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "2539-2577(sx-media-change-panel: 클릭→setFormat+setIsMediaPanelOpen(false), 확인 없음) ·1610-1620(selectMedium: 즉시 setFormat+saveProject)",
+        "severity": "med",
+        "rootCause": "형식 버튼 onClick 이 setFormat(option.id) 후 패널을 닫을 뿐, chapters.length>0 여부를 보지 않는다. window.confirm 가드는 import/reset/restore 에만 있고 매체·형식 전환엔 없다. 단편→장편은 isSerial·unitNoun·검토 에이전트(getMediumReviewAgentIds)·헌장 적용 여부를 모두 바꾸지만 손실/영향 안내가 없다.",
+        "midEditFriction": true,
+        "scenarioStep": "단편과 장편 사이에서 분량을 재고하며 형식 전환",
+        "repro": "1) 단편으로 1~2화 생성 2) 상단 ⌘K→'매체 변경' 또는 매체 변경 패널 열기 3) '장편' 형식 클릭 4) 경고·확인 없이 즉시 전환되고 패널이 닫힘 — 기존 회차/작가진 영향 안내 없음"
+      },
+      {
+        "title": "인물·캐논을 데이터 모드에서 고칠 때 '영향 범위'가 적용 전에 안 펼쳐진다 (랜딩 약속과 불일치)",
+        "symptom": "랜딩은 '설정을 바꾸면 영향 범위를 먼저 펼쳐 보여줍니다'라고 약속하지만, 인물 관계도(CanonCanvas)나 캐릭터 카드에서 욕망/상처/현재상태를 고치면 즉시 project 에 반영된다. 영향 회차 패널(CanonRefactorPanel)은 캐논 섹션에서만 보이고, 인물 편집 화면에는 함께 뜨지 않는다.",
+        "file": "src/StoryXDesk.tsx, src/components/MemoryBankStudio.tsx, src/components/CanonCanvas.tsx",
+        "line": "StoryXDesk.tsx:1713-1738(updateCharacterMemory: logCanonChange 후 곧장 setProject) ; MemoryBankStudio.tsx:224-262(CanonRefactorPanel 은 activeSection==='canon' 에만 렌더) ; CanonCanvas.tsx:37-52(인물 편집부에 영향 패널 없음)",
+        "severity": "med",
+        "rootCause": "편집은 setProject 로 선반영되고, 영향 범위(buildCanonRefactorPlan → CanonRefactorPanel)는 '먼저 보여주는' 사전 단계가 아니라 canon 섹션의 사후 로그 뷰다. 인물(characters)·관계도 편집 동선에는 그 패널 자체가 없어, 변경 영향을 보려면 사용자가 따로 데이터 모드 캐논 섹션으로 이동해야 한다. '먼저 펼쳐 보여준다'는 카피와 실제(즉시 적용·다른 화면에 사후 표시)가 어긋난다.",
+        "midEditFriction": true,
+        "scenarioStep": "범인 동기 변경에 맞춰 인물 욕망/상처를 데이터 모드에서 수정",
+        "repro": "1) 데이터 모드→캐논→인물 관계도 2) 노드 선택 후 욕망 textarea 수정 3) 같은 화면에 '이 변경이 N개 회차에 영향' 같은 사전 펼침이 없음 4) 영향 회차를 보려면 캐논(원장) 섹션으로 따로 이동해야 확인됨"
+      },
+      {
+        "title": "캐논·인물·헌장 수정에 되돌리기(undo)가 없고, 변경 로그는 12개 상한 + '비우기'뿐",
+        "symptom": "복선을 3~6회 고치다 한 번 잘못 덮어쓰면 직전 값으로 되돌릴 수단이 없다. 변경 로그는 최신 12개만 남고, 제공되는 동작은 값을 복원하지 않는 '변경 로그 비우기'뿐이라 추적만 사라진다.",
+        "file": "src/lib/canonRefactor.ts, src/components/CanonRefactorPanel.tsx",
+        "line": "canonRefactor.ts:1644-1674 영역의 logCanonChange ...slice(0, 12) (StoryXDesk.tsx:1673) ; CanonRefactorPanel.tsx:21-24('변경 로그 비우기' = onClearChanges, 값 복원 아님)",
+        "severity": "med",
+        "rootCause": "logCanonChange 는 before 값을 엔트리에 기록하지만 이를 되돌리는 UI/액션이 없다. 로그는 slice(0,12)로 잘리고, 노출되는 유일한 버튼 onClearCanonChanges 는 setCanonChanges([])로 추적만 비운다(원래 값 미복원). 프로젝트 스냅샷 복원(ProjectHistoryDialog)은 캐논 반영·생성 시점에만 push 되어 개별 필드 편집 단위 undo 를 대체하지 못한다.",
+        "midEditFriction": true,
+        "scenarioStep": "트릭·복선을 여러 번 고치다 직전 한 수정을 취소하려 함",
+        "repro": "1) 캐논 사실 textarea 를 수정 2) 곧바로 직전 값으로 되돌리려 한다 3) Ctrl+Z 는 textarea 내부에서만 동작하고 적용된 project 변경엔 무효 4) 캐논 리팩터 패널에는 '비우기'만 있어 값 복원이 안 됨"
+      },
+      {
+        "title": "잠긴 회차를 UI에서 해제할 수 없다 — 범인 변경이 이전 잠금 회차를 무효화하면 막다른 길",
+        "symptom": "범인이 바뀌면 앞서 잠가 둔 회차의 묘사가 거짓이 되는데, 그 회차를 다시 열어 고치거나 재생성할 방법이 없다. 회차 선택기엔 '(잠김)'만 표시되고 잠금 해제 컨트롤이 없다.",
+        "file": "src/lib/storyEngine.ts, src/StoryXDesk.tsx",
+        "line": "storyEngine.ts:188(unlockChapter 정의, 호출처 0) ; StoryXDesk.tsx:2169-2180(confirmChapterLock 만 존재) ·2358-2362(option 에 '(잠김)' 표시만)",
+        "severity": "med",
+        "rootCause": "unlockChapter(project, chapterId)가 구현돼 있으나 전 .tsx 에서 호출되지 않는다(lockChapter 만 confirmChapterLock·출간 워크스페이스에 배선). 잠금은 출간 동선에서 걸 수 있지만 해제 진입점이 어디에도 없어, 잠금 후 캐논 변경으로 모순이 생긴 회차를 수정/재생성할 수 없다. (progress.md 의 P2 'floating 잠금 UI 부재'와 같은 계열의 미해결 잔여.)",
+        "midEditFriction": true,
+        "scenarioStep": "초반 회차를 잠근 뒤 범인을 바꿔 그 회차가 모순됨",
+        "repro": "1) 출간 동선에서 1화를 잠금 2) 이후 범인을 바꿔 1화 묘사가 거짓이 됨 3) 1화를 다시 열어 고치거나 잠금 해제하려 한다 4) 회차 선택기·편집·출간 어디에도 '잠금 해제'가 없어 그 회차는 고정"
+      },
+      {
+        "title": "헌장 예산(현재 N/전체 M화·종반·예산 초과)이 데스크 어디에도 표시되지 않는다",
+        "symptom": "분량을 재고하려 해도 '지금 30화 중 몇 화', '척추 어느 비트', '예산 초과 여부'를 데스크에서 볼 수 없다. buildContractStatus 가 이 값을 계산해 생성에 주입하지만 화면 노출이 없다.",
+        "file": "src/StoryXDesk.tsx, src/lib/episodeBriefing.ts",
+        "line": "episodeBriefing.ts:123(buildContractStatus: 위치·잔여·overBudget·finalStretch 도출) ; StoryXDesk.tsx:1047·1154·1863·1940(생성/검토 주입만, 표시 컴포넌트 없음)",
+        "severity": "low",
+        "rootCause": "buildContractStatus 결과는 프롬프트로만 흐르고 UI 컴포넌트로 렌더되지 않는다. FloatingEditor 의 '긴장·분량 곡선'은 한 회차 내 beat 곡선이지 헌장 예산(N/M·종반)이 아니다. 분량 재고 판단에 필요한 진척 지표가 사용자에게 보이지 않는다.",
+        "midEditFriction": false,
+        "scenarioStep": "단편/장편 분량을 재고하며 현재 진척을 확인하려 함",
+        "repro": "1) 헌장(장편 30화)이 있는 작품으로 진행 2) 데스크에서 '현재 N/30화·척추 비트 위치·예산'을 찾는다 3) 어떤 패널에도 헌장 예산 진척이 없음"
+      },
+      {
+        "title": "데이터 모드 인물 상세 편집칸이 좁은 컬럼 + 강제 760px 높이 안의 중첩 스크롤에 갇힌다",
+        "symptom": "인물 관계도에서 노드를 눌러 욕망/상처/현재상태를 고칠 때, 상세 패널이 우측 좁은 컬럼(최소 240px)에 들어가고, 강제로 760px 높이가 걸린 캔버스 안에서 바깥 캔버스 스크롤과 내부 본문 스크롤이 겹친다.",
+        "file": "src/styles.css, src/components/CanonCanvas.tsx",
+        "line": "styles.css:6498-6503(.sx-canon-canvas min-height: min(760px, calc(100vh-260px))·height:100%) ·6555-6566(.ex-canon-canvas-body overflow-y:auto + .ex-canon-pane--graph 2컬럼 minmax(240px,0.9fr)) ·11144-11146(.fc-data-detail.sx-desk min-height:0 가 .fc-app .deck flex 안에 중첩)",
+        "severity": "low",
+        "rootCause": "floating 데이터 작업실에서 CanonCanvas 가 높이 없는 flex .deck(.fc-app .canvas overflow-y:auto) 안에 들어가는데, .sx-canon-canvas 는 height:100% + min-height:760px 를 강제하고 내부 .ex-canon-canvas-body 에 자체 overflow-y:auto 를 둔다. 결과적으로 바깥 캔버스 스크롤과 내부 스크롤이 공존하고, 인물 상세 편집 textarea 는 minmax(240px,0.9fr) 좁은 컬럼·고정 760px 블록 안에 배치돼 편집 공간이 답답하다. (charter 버그처럼 완전 클리핑은 아니고 바깥 캔버스가 스크롤되므로 경증.)",
+        "midEditFriction": true,
+        "scenarioStep": "데이터 모드 인물 관계도에서 범인 인물의 욕망/상처를 편집",
+        "repro": "1) 데이터 모드→캐논→인물 관계도 2) 노드 선택→우측 상세 패널의 textarea 편집 3) 좁은 우측 컬럼 + 강제 760px 블록 + 바깥/내부 이중 스크롤로 편집 영역이 협소하게 느껴짐"
+      }
+    ]
+  },
+  {
+    "medium": "essay",
+    "persona": "개인 회고 에세이스트 (실존 인물·실경험을 다루며, 노출 수위와 문체를 반복 조정하고 인터뷰 답변을 되돌리려는 작가)",
+    "findings": [
+      {
+        "title": "작가 인터뷰 답변(노출 수위·문체)을 생성 후 되돌리거나 다시 고칠 진입점이 전혀 없다",
+        "symptom": "온보딩에서 '실제 주변 인물은 어느 정도 드러나도 괜찮나요(식별 불가/관계만/거의 사실대로)'와 '문체는 어느 쪽(담담/따뜻/날카로움)'을 골라 1화를 생성한 뒤, 그 답을 바꾸고 싶어도 편집·데이터·출간 어디에도 인터뷰로 돌아가는 버튼이 없다. 인터뷰 상태(intakeAnswers·intakeOtherAnswers·interviewNote)는 StoryXHome 안의 지역 useState라, 에디터로 넘어가는 순간 사라지고 다시 진입할 길이 없다.",
+        "file": "src/App.tsx",
+        "line": "699-704, 833-893",
+        "severity": "high",
+        "rootCause": "인터뷰 답변은 collectAnswerLines()로 freewrite 보강 텍스트에 1회 합성돼 buildFallbackDraft/LLM 프롬프트로만 흘러가고(App.tsx:841-849), 프로젝트의 영속 필드로 저장되지 않는다. StoryXHome의 intake state는 컴포넌트 지역 상태이며 onOpenEditor 후 언마운트되어 소실. StoryXDesk(에디터)에는 'intake'/'인터뷰 다시 하기' 동선이 grep상 존재하지 않는다(에세이 노출/문체 키워드도 0건). 결국 이 시나리오의 핵심 반복 조정(노출 수위·문체 3~6회) 대상이 생성 직후부터 잠겨 버린다.",
+        "midEditFriction": true,
+        "repro": "?stage=home → 매체=에세이 → 자유 서술 → 작가 인터뷰에서 노출='관계만 남김', 문체='담담' 선택 → 1화 생성 → 에디터 진입 → 노출을 '거의 사실대로'로 바꾸려 함 → 인터뷰로 돌아갈 버튼이 없음. 상단 X 로고를 눌러 프로젝트/랜딩으로 나갔다 '새 프로젝트'로 다시 와도 새 인터뷰일 뿐 기존 작품 답변은 못 고침.",
+        "scenarioStep": "작가 인터뷰 답변을 되돌려 수정"
+      },
+      {
+        "title": "에세이의 '문체'를 생성 후 조정할 전용 입력이 없다 — voiceRules가 characters에 묶여 있어 인물 0인 에세이는 영구 빈칸",
+        "symptom": "데이터 → 바이블 → '문체 바이블'을 열면 톤(project.tone)·표면 약속만 자유 텍스트로 편집되고, 그 아래 '문체 앵커(voiceRules)' 태그 영역은 에세이에서 항상 비어 있다. 온보딩에서 고른 문체(담담/따뜻/날카로움)는 어디에도 칩/설정으로 남지 않아, 문체를 3~6회 미세 조정하려는 작가는 매번 톤 텍스트박스에 자연어로 다시 풀어 써야 한다.",
+        "file": "src/components/MemoryBankStudio.tsx",
+        "line": "281-285, 459",
+        "severity": "med",
+        "rootCause": "문체 앵커가 project.characters.flatMap(c => c.voiceRules)에서만 나온다(MemoryBankStudio.tsx:282, 459). 에세이는 '사실 보호 모드'로 인물을 발명하지 않아 project.characters가 0이므로 voiceRules 소스가 구조적으로 비어 있다. 소설 캐릭터 모델(욕망·상처·voiceRules)을 에세이에도 그대로 재사용하면서, 에세이의 1급 설정인 '문체 방향'과 '화자 거리'를 담을 매체 전용 필드를 만들지 않은 것이 원인.",
+        "midEditFriction": true,
+        "scenarioStep": "문체를 3~6회 조정"
+      },
+      {
+        "title": "데이터 모드 기본 뷰가 '인물 관계도'로 고정 — 에세이는 인물 0이라 빈 화면에 떨어지고 추가 수단도 없다",
+        "symptom": "에세이 작가가 설정을 고치러 편집 → '데이터' 탭을 누르면 곧장 인물 관계도가 열리는데, 그래프는 비어 있고 우측엔 '인물을 먼저 등록하면 상세가 여기에 표시됩니다'만 뜬다. 그런데 인물을 등록하는 버튼이 없다(사실 보호 모드라 의도된 것이나, 안내·대체 기본 뷰가 없어 막다른 길로 보인다).",
+        "file": "src/StoryXDesk.tsx",
+        "line": "586",
+        "severity": "med",
+        "rootCause": "dataView 초기값이 매체 무관하게 { kind: 'canon', category: 'characters' }로 하드코딩(StoryXDesk.tsx:586). 에세이/회고는 인물 발명을 막는 게 정책인데도 데이터 진입점이 '인물'이라, 첫인상이 비어 있는 관계도가 된다. CanonCanvas는 빈 상태 카피만 보여주고 추가 액션을 제공하지 않아(CanonCanvas.tsx:48-50) 사용자가 '내가 뭘 잘못했나' 느끼게 한다. 매체별 기본 dataView(에세이는 board 또는 voice)로 분기했어야 한다.",
+        "midEditFriction": true,
+        "scenarioStep": "편집/데이터 모드에서 캐릭터·이야기를 수정"
+      },
+      {
+        "title": "캐릭터/캐논 필드 수정에 per-edit 되돌리기(undo)가 없다 — 노출 수위를 실수로 낮췄다 올리면 원문이 사라진다",
+        "symptom": "데이터 모드에서 인물의 '현재 상태'나 캐논 문장을 직접 고치는 textarea는 controlled 입력이라 타이핑 즉시 project를 덮어쓰고 곧바로 저장된다. Ctrl+Z(브라우저 undo)는 contentEditable 본문이 아닌 textarea라 한 칸 입력 단위로만 듣고, 외부에서 setProject가 값을 재주입하면 깨진다. 노출 수위를 낮춰 식별 정보를 지웠다가 되살리려면 직접 다시 입력하는 수밖에 없다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1531-1533, 1713-1738",
+        "severity": "med",
+        "rootCause": "updateCharacterMemory/updateCanonMemory는 logCanonChange로 '변경 로그'만 적재하고(되돌리기 액션은 만들지 않음), setProject 직후 useEffect([project])가 saveProject로 즉시 영속화한다(StoryXDesk.tsx:1531). 유일한 복구 수단은 restoreProjectVersion인데(1808) 이는 window.confirm 후 작품 전체를 스냅샷으로 통째 교체하는 무거운 동작이라, '방금 그 한 필드만' 되돌리는 용도가 아니다. 변경 로그(CanonRefactorPanel)는 before/after를 '보여주기'만 하고 '되돌리기' 버튼이 없다(CanonRefactorPanel.tsx:32-39).",
+        "midEditFriction": true,
+        "repro": "데이터 → 바이블 → 캐논 원장에서 한 캐논 문장의 실명을 가명으로 교체 → 마음을 바꿔 원래 실명으로 돌리려 함 → undo 없음, 변경 로그엔 기록은 있으나 복원 버튼 없음 → 손으로 재입력. Ctrl+Z는 직전 한 글자만 듣거나 무반응.",
+        "scenarioStep": "실존 인물의 노출 수위를 조정"
+      },
+      {
+        "title": "설정을 바꿔도 기존 회차·캐논과의 충돌/영향 회차가 '변경 시점'에 안 뜬다 — 데이터>바이블>캐논 원장까지 3단 들어가야 보임",
+        "symptom": "노출 수위를 낮춰 인물 정보를 바꾸면 이미 쓴 1화 본문의 실명·디테일과 어긋날 수 있는데, 그 충돌은 편집 화면에서도, 변경 직후에도 표시되지 않는다. 작가가 데이터 → 바이블 → '캐논 원장'을 일부러 열어 CanonRefactorPanel의 '영향 회차'를 확인해야만 드러난다. 랜딩 페이지가 약속한 '설정을 바꾸면 영향 범위를 먼저 펼쳐 보여줍니다'와 실제 동선이 어긋난다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "898, 2218-2247",
+        "severity": "med",
+        "rootCause": "canonRefactorPlan(충돌·영향 회차 계산)은 항상 계산되지만(StoryXDesk.tsx:898) 그 UI(CanonRefactorPanel)는 isBibleMode의 'canon' 섹션 안 MemoryBankStudio에만 마운트된다(2228-2246). 편집(draft) 모드의 FloatingEditor에는 충돌 배너가 없고, 필드 편집 직후 토스트·인라인 경고도 없다. 즉 '충돌은 드러낸다'는 원칙이 깊은 화면에 묻혀, 노출 수위를 반복 조정하는 에세이스트가 매번 능동적으로 파고들지 않으면 모순을 놓친다.",
+        "midEditFriction": true,
+        "scenarioStep": "실존 인물의 노출 수위를 조정"
+      },
+      {
+        "title": "commercial↔literary(문체 무게중심) 슬라이더 변경이 변경 로그·영향 분석을 건너뛴다",
+        "symptom": "문체 방향을 '문학적'으로 밀거나 당기는 유일한 슬라이더(편집 지표 패널·데이터 지표 패널·DataPanel 3곳)는 움직여도 변경 로그에 안 남고, 영향 회차/충돌 분석에도 안 들어간다. 다른 모든 직접 편집(인물·세계·캐논·무게중심 텍스트)은 logCanonChange로 추적되는데 이 축만 추적 밖이라, 작가가 '내가 문체를 어디로 옮겼더라'를 되짚을 근거가 없다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "890-893",
+        "severity": "low",
+        "rootCause": "updateStoryModeAxis는 setStoryMode만 호출하고 logCanonChange를 부르지 않는다(StoryXDesk.tsx:890-893). storyMode는 project와 분리된 별도 state라 useEffect([project]) 저장 경로도 안 타고, 대신 자체 localStorage 키('storyx.studio.storyMode')로만 영속된다(751-785). 영속 자체는 되지만(리로드 생존) 변경 이력·영향 분석 파이프라인에서 빠져, '설정 변경은 추적된다'는 일관성이 이 한 컨트롤에서 깨진다. updateCreativeWeight(1701)는 같은 '무게중심'인데 logCanonChange를 부르는 것과 비대칭.",
+        "midEditFriction": true,
+        "scenarioStep": "문체를 3~6회 조정"
+      }
+    ]
+  },
+  {
+    "medium": "essay",
+    "persona": "시사 칼럼니스트",
+    "findings": [
+      {
+        "title": "생성 후 논지·문체를 의도 메모에 바꿔도 현재 초안을 다시 못 만든다 — 버튼이 '재생성'이 아니라 '결 점검'으로 동작",
+        "symptom": "칼럼 초안이 떠 있는 상태에서 주제문·논지·문체 취향을 의도 메모(쇼러너가 잡은 이번 회차 프레이밍)에 다시 써도, 상단 1차 CTA를 누르면 새 초안을 만들지 않고 기존 본문을 '결 점검'(리뷰)만 한다. 바뀐 논지를 반영한 초안을 얻으려면 현재 초안을 잠그고(출간 화면 경유) 새 편을 생성해야 해서, 지금 쓰던 초안을 버리게 된다. FloatingEditor 안에는 잠금 버튼도, 제자리 재생성 버튼도 없다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1239, 1326-1333; src/components/FloatingEditor.tsx:416-427, 728-735",
+        "severity": "high",
+        "rootCause": "mainActionRun = !latestChapter || isLatestLocked ? produceEpisode : reviewDraft (StoryXDesk.tsx:1239). 초안이 잠기지 않은 상태에서는 1차 액션이 reviewDraft로 고정된다. 의도 메모(draftPrompt)는 produceEpisode 호출 시에만 freewrite로 소비되고(1848,1858), 현재 떠 있는 초안 본문은 contentEditable DOM이 소유한다. '논지를 바꿨으니 이 글을 다시 써줘'에 해당하는 동선이 없다. FloatingEditor에 잠금 컨트롤이 없어(소스에 lock UI 없음) 잠금→새 편 생성 경로조차 출간(onOpenPublish)으로 빠져야 한다.",
+        "midEditFriction": true,
+        "repro": "매체=에세이 → 형식=에세이 연재 → 자유서술·인터뷰 → 첫 초안 생성 → 편집기에서 의도 메모에 새 주제문/논지로 교체 입력 → 상단 1차 버튼 클릭 → 본문은 그대로이고 작가진 검토만 돈다. 새 논지 초안을 얻을 방법이 편집기 안에 없음.",
+        "scenarioStep": "편집/데이터 모드에서 주제문·논지를 중간에 바꾸고 재생성 시도"
+      },
+      {
+        "title": "인물·캐논·세계 설정을 직접 고쳐도 충돌·영향 회차가 그 자리에서 안 뜬다 — 온보딩이 한 약속을 위반",
+        "symptom": "데이터/바이블에서 인물의 욕망·상처, 캐논 사실, 세계 규칙을 수정하면 변경이 즉시 project에 반영되지만, '이 변경이 기존 회차와 충돌하는지/어느 회차에 영향이 가는지'는 편집한 자리에서 전혀 보이지 않는다. 영향 회차·충돌 경고를 보여주는 CanonRefactorPanel은 바이블의 '캐논/타임라인' 섹션에서만 렌더되어, 인물 카드(캐릭터 섹션)나 데이터 모드 캐논 캔버스에서 고치면 영향 범위를 보려고 별도 섹션으로 이동해야 한다. 인터뷰 화면은 '변경이 기존 회차와 충돌하면 영향 범위를 먼저 보여줍니다'(App.tsx:1120)라고 약속했지만 실제 편집 지점에서는 지켜지지 않는다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1713-1778; src/components/MemoryBankStudio.tsx:256; src/components/CanonCanvas.tsx:47; src/App.tsx:1119-1120",
+        "severity": "high",
+        "rootCause": "updateCharacterMemory/updateCanonMemory/updateWorldMemory(StoryXDesk.tsx:1713-1778)는 logCanonChange로 변경 로그만 쌓고 setProject로 즉시 덮어쓴다. 충돌·영향 회차 계산(buildCanonRefactorPlan)은 별도 컴포넌트(CanonRefactorPanel)에 있고, MemoryBankStudio에서 activeSection==='canon'일 때만(256줄) 조건부 렌더된다. CanonCanvas의 CharacterDetailPanel 편집(47줄)이나 캐릭터 섹션 편집(MemoryBankStudio:163-201)에는 그 패널이 붙어 있지 않다. 즉 '편집 지점=충돌 표시 지점'이 분리돼 있다.",
+        "midEditFriction": true,
+        "repro": "데이터 모드 → 인물 카드에서 욕망/현재상태 수정, 또는 바이블 '캐릭터' 섹션에서 수정 → 변경은 저장되나 영향 회차·충돌 경고 0. 바이블 '캐논/타임라인' 섹션으로 따로 이동해야 비로소 영향 회차/경고가 보임.",
+        "scenarioStep": "기존 회차·캐논과의 충돌 표시(변경 시)"
+      },
+      {
+        "title": "수동 설정 편집은 스냅샷을 안 남겨 '이전 상태로 되돌리기'로 취소 불가 — 사실상 undo 없음",
+        "symptom": "인물·캐논·세계 규칙을 직접 고친 변경은 '작품 기록(이전 작품 상태로 되돌립니다)' 스냅샷에 저장되지 않는다. 회차 생성·캐논 일괄 반영은 스냅샷을 남기지만(되돌리기 가능), 수동 바이블 편집은 최대 12건짜리 변경 로그(텍스트만, 되돌리기 버튼 없음)에만 남는다. 칼럼니스트가 사례·문체 설정을 3~6회 바꾸다가 한 번 잘못 고치면, 직전 값으로 되돌릴 1클릭 수단이 없다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1732-1737 (스냅샷 없음) vs 1873/1884/1803 (생성·반영은 스냅샷 푸시); src/components/CanonRefactorPanel.tsx:21 (변경 로그 '비우기'만 존재)",
+        "severity": "high",
+        "rootCause": "updateCharacterMemory 등 수동 편집 함수는 setProject만 호출하고 setProjectSnapshots(pushProjectSnapshot(...))를 호출하지 않는다(1732-1737). 반면 produceEpisode(1873)·폴백(1884)·syncApprovedMemory(1803)는 스냅샷을 푸시한다. CanonRefactorPanel이 제공하는 유일한 액션은 onClearChanges('변경 로그 비우기', 21줄)로 되돌리기가 아니라 로그 삭제다. logCanonChange도 before/after 텍스트만 보관하고 적용을 되돌리는 경로가 없다.",
+        "midEditFriction": true,
+        "repro": "인물 카드에서 '현재 상태'를 수정 → 작품 기록(ProjectHistoryDialog) 열기 → 방금 한 수동 편집이 복원 시점으로 안 보임. 잘못 고친 값을 직전으로 되돌릴 1클릭 수단 부재.",
+        "scenarioStep": "되돌리기(undo) 부재 — 설정 3~6회 재설정 중 오작동"
+      },
+      {
+        "title": "에세이 데이터 모드가 소설 분류만 제공 — 논지·주장·사례(출처)를 다룰 데이터 면이 없다",
+        "symptom": "매체가 에세이여도 데이터 모드 좌측 분류는 인물/장소/사물/사건/시간선 5종 고정이고, 캐논 캔버스는 '인물 관계도·욕망·상처·현재 상태', '장소/사물/사건 카드', '연표'만 띄운다. 시사 칼럼니스트가 중간에 바꾸려는 핵심(주제문·논지, 주장-근거, 인용/사례 출처)을 등록·수정·재배치할 1급 데이터 면이 없다. 에세이의 주장(claimLedger)은 편집기 여백 주석('근거 없는 주장')과 학술 출간 화면에만 나오고, 데이터 모드에는 편집 surface가 없다.",
+        "file": "src/lib/canonDataView.ts",
+        "line": "8-22 (CanonCategory·canonCategories 고정); src/components/FloatingDataWorkspace.tsx:135-146; src/components/CanonCanvas.tsx:28-34",
+        "severity": "med",
+        "rootCause": "CanonCategory 타입과 canonCategories 배열이 소설 도메인으로 하드코딩돼 있고 매체 분기가 없다(canonDataView.ts:8-22). FloatingDataWorkspace의 보드/검토/캐논 패널 모두 이 분류를 그대로 순회한다. CanonCanvas의 categoryHint도 인물 관계도/장소·사물·사건/연표만 정의. 에세이용 thesis/claim 데이터 모델·뷰가 존재하지 않아, 논지 수정은 편집기 의도 메모로만 가능하다.",
+        "midEditFriction": true,
+        "repro": "에세이로 진입 → 데이터 모드 → 좌측 분류가 인물/장소/사물/사건/시간선. '논지/주장/출처' 항목 없음. 칼럼의 핵심 주장을 중간에 바꾸려 해도 데이터 모드에 편집 자리가 없음.",
+        "scenarioStep": "편집/데이터 모드에서 사례·논지 재설정 진입 동선"
+      },
+      {
+        "title": "에세이 연재인데 편집기 의도 메모·갈림길·진도 체크가 소설 어휘로 주입된다",
+        "symptom": "에세이 연재(연재 형식)는 isSerial=true라, 편집기 의도 메모가 '쇼러너가 잡은 이번 회차 프레이밍'으로 라벨링되고, '이번 화 갈림길'·'회차 진도 체크' 카드가 뜬다. 갈림길/진도 옵션을 클릭하면 '인물의 선택과 대가', '큰 reveal은 아낀다', '인물과 관계의 결을 다지고' 같은 소설 전용 문구가 칼럼니스트의 의도 메모에 그대로 append된다. 시사 칼럼에는 '인물'도 'reveal'도 맞지 않는다.",
+        "file": "src/components/FloatingEditor.tsx",
+        "line": "726 (메모 라벨); src/lib/paceInterview.ts:42,54-80 (isSerial 게이트만, 매체 무관); src/lib/episodeBriefing.ts:155-160 (fork intentSeed '인물의 선택과 대가')",
+        "severity": "med",
+        "rootCause": "buildPaceCheck는 isSerial만으로 게이트하고(paceInterview.ts:42) 매체(essay)를 구분하지 않아 essay-series에서 발화한다. buildEpisodeForks는 매체 게이트가 전혀 없고 옵션 intentSeed가 소설 문구로 하드코딩(episodeBriefing.ts:155-176). 의도 메모 라벨('쇼러너가 잡은 이번 회차 프레이밍', FloatingEditor.tsx:726)도 매체 분기가 없다. getCreativeActionLabels는 에세이용('초안 쓰기/결 점검/다음 편 쓰기')을 제대로 갖췄는데, 메모·갈림길·진도 카피만 소설 고정으로 남아 일관성이 깨진다.",
+        "midEditFriction": true,
+        "repro": "에세이 연재 첫 편 생성 → 편집기 우측 상태 패널에 '이번 화 갈림길'·'회차 진도 체크' 노출 → 옵션 클릭 시 '인물의 선택과 대가로 결판낸다' 류 문구가 의도 메모에 삽입.",
+        "scenarioStep": "편집 모드에서 문체·사례를 재설정할 때 쓰는 의도 메모 동선"
+      },
+      {
+        "title": "작가 인터뷰 화면이 모든 매체에 소설 작가진(쇼러너·캐릭터 큐레이터…)을 하드코딩 — 에세이 청사진과 모순",
+        "symptom": "에세이 연재로 인터뷰 단계에 들어가도, 우측 '선택한 파이프라인' 카드가 '쇼러너, 캐릭터 큐레이터, 배경 설계자, 장르 스타일리스트, 연속성 감수자가 작가진으로 배정됩니다'라고 소설 작가진을 그대로 표시한다. 정작 에세이 연재(essay-series)는 '인터뷰/주변 인물/문체 큐레이터/고미 라이터/휴머나이저'를 agentStack으로 정의하고 있어, 화면 카피와 실제 배정 모델이 어긋난다. 칼럼니스트가 '내 글에 캐릭터 큐레이터·장르 스타일리스트가 왜?'라고 혼란.",
+        "file": "src/App.tsx",
+        "line": "1318 (하드코딩 문구) vs src/lib/projectBlueprint.ts:360-367 (essay-series agentStack)",
+        "severity": "med",
+        "rootCause": "인터뷰 aside의 작가진 설명이 blueprint.agentStack을 참조하지 않고 소설 라인업 문자열로 하드코딩돼 있다(App.tsx:1318). projectBlueprint.ts의 essay-series는 '쇼러너 에이전트·인터뷰 에이전트·주변 인물 에이전트·문체 큐레이터 에이전트·고미 라이터 에이전트·휴머나이저 에이전트'를 명시하는데 이 데이터가 UI에 연결되지 않았다.",
+        "midEditFriction": false,
+        "repro": "에세이 연재 선택 → 인터뷰 단계 → 우측 카드에 '쇼러너, 캐릭터 큐레이터, 배경 설계자, 장르 스타일리스트, 연속성 감수자' 표기(소설 라인업). 매체와 무관하게 항상 동일.",
+        "scenarioStep": "작가 인터뷰 단계"
+      },
+      {
+        "title": "의도 메모에 '현재 초안이 아닌 다음 생성에만 반영된다'는 안내·플레이스홀더가 없음",
+        "symptom": "의도 메모 칸(rows=3, resize 불가)은 칼럼니스트가 논지·문체·사례를 다시 적는 핵심 입력인데, 이 내용이 '지금 보이는 초안'이 아니라 '다음 생성'에만 쓰인다는 설명이 전혀 없다. 플레이스홀더도 없어 빈 칸일 때 무엇을, 언제 효과가 나는지 알 수 없다(StoryXDesk가 만든 안내성 플레이스홀더 draftPromptPlaceholder는 편집기에 전달되지 않아 사실상 죽은 값). 이 불투명성이 위 1번(재생성 안 됨) 마찰을 키운다.",
+        "file": "src/components/FloatingEditor.tsx",
+        "line": "728-735 (placeholder/help 없음); src/StoryXDesk.tsx:1373 (draftPromptPlaceholder 정의되나 미사용)",
+        "severity": "low",
+        "rootCause": "FloatingEditor의 의도 메모 textarea는 defaultValue={intentMemo}만 있고 placeholder도, '다음 회차 생성에 반영' 같은 도움말도 없다(728-735). StoryXDesk:1373의 draftPromptPlaceholder는 어디에도 전달되지 않는다(단일 정의·참조 0) — 게다가 그 문구도 '용사랑 외계인…'이라 에세이엔 부적합. 결과적으로 작가는 메모 변경이 현재 초안에 즉시 반영될 거라 오해하기 쉽다.",
+        "midEditFriction": true,
+        "repro": "편집기 의도 메모 칸에 새 논지 입력 → 어떤 안내도 없음 → 1차 버튼 눌러도 본문 변화 없음(검토만). 메모가 다음 생성용임을 알려주는 텍스트 부재.",
+        "scenarioStep": "의도 메모로 논지·문체를 재설정하는 동선"
+      }
+    ]
+  },
+  {
+    "medium": "만화 (웹툰)",
+    "persona": "웹툰 스토리보드 작가",
+    "findings": [
+      {
+        "title": "편집기에 타이핑한 본문(editorText)이 회차/프로젝트에 저장되지 않음 — 회차 전환·리로드 시 무음 소실",
+        "symptom": "컷 연출 묘사를 본문에서 직접 손보고 다른 화로 넘어가거나 새로고침하면, 작가가 친 내용이 통째로 사라진다. '저장됨' 칩은 계속 떠 있어 저장된 줄 안다.",
+        "file": "src/StoryXDesk.tsx:575, 1531-1533, 1564-1573, 1247-1250",
+        "line": "575 / 1532 / 1569",
+        "severity": "high",
+        "rootCause": "editorText 는 글자수·검토 타깃·마진 단락 계산에만 쓰이고 project.chapters[].prose 로 write-back 되는 경로가 전혀 없다. handleFloatingBodyChange(1247)는 setEditorText + setEditedSinceReview 만 한다. useEffect(1531)의 saveProject(project) 는 editorText 를 받지 않은 project 만 저장하고, 회차 전환 useEffect(1564)는 가드 없이 setEditorText(latestChapter.prose) 로 덮어쓴다. 즉 타이핑은 검토를 한 번 돌려 diff 로 반영(acceptMarginDiff→setEditorText, 1208)하지 않는 한 영구화되지 않는다.",
+        "midEditFriction": true,
+        "repro": "?stage=editor 진입 → floating 본문(.ms contentEditable)에 한 단락 추가 입력 → 상단 회차 셀렉터로 다른 화 선택(또는 F5) → 돌아오면 입력분 사라짐. saveProject 는 editorText 미반영."
+      },
+      {
+        "title": "만화 매체인데 컷/말풍선 캔버스(CreativeStage)가 죽은 코드 — 작가는 소설 산문 에디터만 본다",
+        "symptom": "웹툰 작가가 편집 모드에 들어가면 컷 프레임·컷 리듬·말풍선 배치 UI가 아니라 소설용 종이 시트 + 산문 단락 + 마진 주석 에디터가 뜬다. 컷 연출을 시각적으로 잡을 화면이 없다.",
+        "file": "src/StoryXDesk.tsx:2196-2216, 2979-3076 (CreativeStage), src/lib/projectBlueprint.ts:495",
+        "line": "2199 / 3030 / 3038",
+        "severity": "high",
+        "rootCause": "comics 의 nextWorkspace='visual-storyboard-studio'(projectBlueprint 495)이지만 isDraftMode 분기(2196)는 매체와 무관하게 항상 <FloatingEditor/> 를 렌더한다. 컷 캔버스(.sx-comic-canvas)·말풍선 패스·시각 잠금을 그리는 CreativeStage(2979) 함수는 정의만 있고 호출처가 0이다(grep <CreativeStage 결과 없음). nextWorkspace 가 실제로 소비되는 곳은 displayedAgentRuns 의 visualStoryAgentRuns 병합(924)뿐. 즉 컷·말풍선 전용 작업면 전체가 도달 불가.",
+        "midEditFriction": false,
+        "repro": "온보딩 매체='만화' 선택 → 첫 생성 → 편집 모드. FloatingEditor(산문 단락 contentEditable)만 표시됨. 컷/말풍선/스크롤 리듬 캔버스 없음. CreativeStage 의 comics 분기(3030)는 어떤 경로로도 렌더되지 않음."
+      },
+      {
+        "title": "캐릭터/캐논/세계관 필드 편집에 되돌리기(undo)가 전혀 없음 — 직접 덮어쓰기 + 수동 변경로그뿐",
+        "symptom": "캐릭터 시트(욕망·상처·현재 상태)를 3~6회 고치다 한 번 잘못 지우면 직전 값으로 되돌릴 수단이 없다. Ctrl+Z 도, 필드 단위 복원도 없다.",
+        "file": "src/StoryXDesk.tsx:1713-1738 (updateCharacterMemory), 1644-1675 (logCanonChange), src/components/CharacterDetailPanel.tsx:19-42",
+        "line": "1732 / 1644",
+        "severity": "high",
+        "rootCause": "updateCharacterMemory/updateWorldMemory/updateCanonMemory 는 setProject 로 즉시 덮어쓰고 logCanonChange 로 before/after 를 12개까지 변경로그에만 남긴다. CanonRefactorPanel 의 '변경 로그 비우기'(onClearCanonChanges)는 있어도 '변경 되돌리기'는 없다. 유일한 복원은 projectSnapshots(restoreProjectVersion, 1808)인데 이는 생성·캐논반영 시점에만 push 되고(1803,1873) 수동 필드 편집은 스냅샷을 만들지 않아, 인물 텍스트 편집은 복원 지점 자체가 없다.",
+        "midEditFriction": true,
+        "repro": "데이터 모드 → 캐릭터 → 욕망 textarea 내용 전체 삭제 후 다른 곳 클릭 → 직전 값 복구 불가(브라우저 undo 는 textarea 포커스 잃으면 무력, 스냅샷에 없음)."
+      },
+      {
+        "title": "설정 변경 시 기존 회차와의 충돌·영향 범위를 편집 지점에서 보여주지 않음 (랜딩 약속과 불일치)",
+        "symptom": "랜딩은 '설정을 바꾸면 영향 범위를 먼저 펼쳐 보여줍니다'라고 약속하지만, 캐릭터 욕망/상처를 고쳐도 그 자리에서 어떤 회차가 충돌하는지 아무 표시가 없다. 영향 회차는 별도 탭(캐논)으로 따로 찾아가야 보인다.",
+        "file": "src/components/MemoryBankStudio.tsx:163-204 (characters 섹션) vs 224-260 (canon 섹션의 CanonRefactorPanel), src/components/CanonCanvas.tsx:44-51, src/App.tsx:280",
+        "line": "256 / 47",
+        "severity": "med",
+        "rootCause": "캐릭터는 activeSection==='characters'(MemoryBankStudio 163)에서 편집되는데 '영향 회차'를 그리는 CanonRefactorPanel 은 activeSection==='canon'(224)에서만 렌더된다 — 다른 탭이라 편집 직후엔 보이지 않는다. 게다가 FloatingDataWorkspace centerSlot 의 kind:'canon' 경로는 CanonCanvas→CharacterDetailPanel(세 번째 편집 지점)을 쓰는데 여기엔 refactor 패널이 아예 없다. CanonRefactorPanel.affectedChapters/conflictWarnings 도 buildCanonRefactorPlan 휴리스틱일 뿐 변경된 인물 텍스트를 회차 본문과 실제 대조하지 않는다. 결과적으로 App.tsx:280·인터뷰 카피(App.tsx:1119)의 '영향 범위 먼저 표시' 약속이 편집 지점에서 미충족.",
+        "midEditFriction": true,
+        "repro": "데이터 모드 → 캐릭터 섹션에서 욕망 수정 → 그 화면엔 충돌/영향 표시 0 → 바이블의 '캐논' 섹션으로 이동해야 비로소 변경 로그·영향 회차가 보임(그나마 본문 실대조 아님)."
+      },
+      {
+        "title": "에피소드 보드 재배치 수단 없음 — 회차 순서 변경 불가(prev/next + 드롭다운만)",
+        "symptom": "시나리오가 요구하는 '에피소드 보드 재배치'를 할 수 없다. 회차 순서를 드래그로 바꾸거나 끼워넣을 UI가 전혀 없고, 상단 셀렉터로 이동만 가능하다.",
+        "file": "src/StoryXDesk.tsx:2334-2374 (ex-chapter-picker), 960-968 (stepChapter)",
+        "line": "2346 / 960",
+        "severity": "med",
+        "rootCause": "회차 탐색은 ex-chapter-picker 의 prev/next 버튼과 <select> 로 latestChapter 만 바꾼다(stepChapter, 2350). 프로젝트 전체에서 reorder/draggable/sortable/onDragStart 가 0건(grep 결과 MentionBar 의 텍스트 드래그뿐). storyboard-agent 의 outputFormat 에 '재배치 제안'(agentReviewProcess.ts:230)이 있지만 회차 순서를 실제로 바꾸는 UI·핸들러가 없다. 컷 프레임(CreativeStage 3046)도 읽기 전용 라벨이고 도달 불가.",
+        "midEditFriction": false,
+        "repro": "편집/데이터 어디에도 회차 카드 드래그·순서 변경 컨트롤 없음. 상단 셀렉터는 이동 전용. 컷 보드는 렌더조차 안 됨."
+      },
+      {
+        "title": "잠긴 회차도 본문이 editable=true — 잠근 화에 타이핑되지만 저장도 경고도 안 됨",
+        "symptom": "이미 잠근(locked) 회차로 이동해도 본문 영역에 글자가 그대로 쳐진다. 그런데 그 입력은 저장되지 않고(위 #1), 잠금 위반 경고도 뜨지 않는다 — '잠갔는데 왜 고쳐지지?' 혼란.",
+        "file": "src/StoryXDesk.tsx:1329 (editable: true 고정), 1232-1240, src/components/FloatingEditor.tsx:447",
+        "line": "1329 / 447",
+        "severity": "med",
+        "rootCause": "floatingEditorProps 의 editable 이 latestChapter.locked 와 무관하게 항상 true(1329). FloatingEditor 의 .ms contentEditable={editable}(447)도 그대로 받는다. 잠금은 메인 CTA 라벨(produceEpisode vs reviewDraft, 1239)과 produceEpisode 게이트에만 반영될 뿐 본문 편집 자체를 막지 않아, 잠긴 화 위에서의 편집이 무의미(미저장)하게 허용된다.",
+        "midEditFriction": true,
+        "repro": "회차 잠금(출간/Publishing 에서 confirmChapterLock) → 그 화로 이동 → 본문에 입력 가능 → 회차 전환하면 사라짐, 잠금 경고 없음."
+      },
+      {
+        "title": "방금 친 본문에는 인라인 검토 밑줄이 안 그려짐 — 마진 주석만 뜨고 본문 하이라이트 누락",
+        "symptom": "토스트는 '밑줄 친 구절에 작가진 의견이 있습니다'라고 안내하는데, 작가가 직접 타이핑한 단락을 검토 돌리면 옆 마진엔 의견이 뜨지만 본문 안의 밑줄/마크는 나타나지 않는다.",
+        "file": "src/components/FloatingEditor.tsx:193-212 (bodyChildren useMemo [bodyVersion]), 285",
+        "line": "211 / 196",
+        "severity": "low",
+        "rootCause": "본문 자식(bodyChildren)은 reviewForAnchor 로 mark/has-note 를 구워 넣지만 의존성이 [bodyVersion] 뿐이다(211, IME 커서 보존 목적). 검토 결과(reviews) 도착은 bodyVersion 을 올리지 않으므로(StoryXDesk 에서 setBodyVersion 은 diff 반영·회차전환·초기화에서만, 1218/1572/2104) 타이핑으로 생성된 단락의 본문 밑줄은 외부 재시드 전까지 갱신 안 됨. layoutMargin 은 [reviews]로 동작해 마진 노트만 위치가 잡혀 비대칭이 생긴다.",
+        "midEditFriction": true,
+        "repro": "본문에 새 단락 입력(bodyVersion 불변) → 작가진 전체 검토 → 마진엔 의견 카드 출현, 본문 해당 구절엔 .mark 밑줄 미표시. diff 반영/회차 전환 후에야 밑줄 갱신."
+      }
+    ]
+  },
+  {
+    "medium": "만화 (그래픽노블)",
+    "persona": "그래픽노블 작가 — 캐릭터 디자인 방향·배경을 3~6회 바꾸고 컷 흐름을 재구성하려는 베타테스터",
+    "findings": [
+      {
+        "title": "원고 본문 편집이 회차에 저장되지 않고, 회차 전환 시 조용히 사라진다 (charter 버그와 같은 '편집 루프 무손실' 결함)",
+        "symptom": "FloatingEditor 본문에서 직접 고친 문장(editorText)이 chapter.prose 로 커밋되는 경로가 코드 어디에도 없다(grep 으로 'prose:' 쓰기·chapter.prose 갱신 경로 0건). 상단바 회차 드롭다운(StoryXDesk.tsx:2346)이나 ◀▶ 스텝(stepChapter, 960)으로 다른 화로 이동하면 setLatestChapter(next) → latestChapter 의존 effect 가 발화해 setEditorText(latestChapter.prose) 로 '저장된 옛 원고'를 다시 박는다. 방금 타이핑한 수정은 경고·확인·undo 없이 폐기. 리로드 시에는 saveProject(project)만 영속되는데 project.chapters[].prose 는 한 번도 갱신된 적이 없어, 세션 내내 손으로 다듬은 컷 설명·대사가 통째로 사라진다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1564-1573 (editorText 재시드 effect), 2346-2363 (회차 select), 960-968 (stepChapter)",
+        "severity": "high",
+        "rootCause": "editorText 가 '단일 원천'이라는 주석(1246)과 달리 실제로는 chapter.prose 로 내려쓰는 commit 함수가 없다. produceEpisode(재생성)·acceptMarginDiff 만 본문을 바꾸고, 평범한 수기 편집→저장 경로가 누락. latestChapter 가 바뀔 때마다 무조건 setEditorText(prose) 하는 effect 에 dirty-guard(editedSinceReview 체크)가 없어 미저장 편집을 덮어쓴다. (근거 신뢰=확인: grep 으로 쓰기 경로 부재 + effect 무가드 직접 확인.) charter 스크롤 버그와 동형 — 편집 루프의 구조적 누락이 조용한 손실을 만든다.",
+        "midEditFriction": true,
+        "repro": "편집 모드에서 본문 한 단락을 직접 고침(빨간 수정 표시, '수정 중') → 상단바 회차 드롭다운으로 다른 화 선택(또는 ◀▶) → 돌아오면 수정이 사라지고 원래 원고로 복귀. 또는 수정 후 새로고침 → 수정 소실.",
+        "scenarioStep": "첫 생성 후 편집 모드에서 이야기를 3~6회 수정 (컷 설명·대사 손보기)"
+      },
+      {
+        "title": "생성 후 새 캐릭터를 추가할 방법이 없다 — 시드된 인물만 편집 가능",
+        "symptom": "데이터 모드 인물 화면은 CharacterGraph(노드 클릭)+CharacterDetailPanel(욕망·상처·현재 상태 편집)뿐이고, '인물 추가' 버튼·핸들러가 전무하다(grep 으로 addCharacter/createCharacter/'새 인물'/'인물 추가' 핸들러 0건). CharacterGraph 는 characters.length===0 이면 '아직 등록된 인물이 없습니다'만 띄우고 추가 동선이 없다. 그래픽노블에서 디자인 방향을 갈아엎으며 조연·적대자를 새로 들이려 해도, 첫 생성이 만들어준 인물 외에는 한 명도 못 늘린다.",
+        "file": "src/components/CanonCanvas.tsx",
+        "line": "37-53 (인물 분기, 추가 UI 없음); src/components/CharacterGraph.tsx:63-65 (빈 상태 막다른 길)",
+        "severity": "high",
+        "rootCause": "캐릭터 CRUD 중 U(updateCharacterMemory)만 구현되고 C(생성)·D(삭제)가 없다. 인물은 첫 생성 payload 와 canon 승격(promoteCharactersFromCanon)으로만 늘어나, 작가가 능동적으로 캐스트를 설계하는 동선이 빠졌다. (근거 신뢰=확인: 컴포넌트·핸들러 grep 으로 추가 경로 부재 확인.) 디자인을 여러 번 바꾸는 그래픽노블 워크플로의 핵심(캐스트 재구성)이 막힌다.",
+        "midEditFriction": true,
+        "repro": "데이터 모드 → 캐논 → 인물(관계도). 빈 곳을 눌러도/어떤 버튼을 찾아도 새 인물 추가 수단이 없음. 관계도에는 기존 노드만.",
+        "scenarioStep": "캐릭터 디자인 방향을 3~6회 바꾸며 캐스트 재구성"
+      },
+      {
+        "title": "캐릭터에 외관·디자인 필드가 없다 — 만화의 핵심 '디자인 방향'을 담을 곳이 없음",
+        "symptom": "CharacterProfile(storyEngine.ts:63-80)에는 desire·wound·currentState·voiceRules·relations 만 있고 appearance/visual/design/costume 류 필드가 전무하다(grep 확인). CharacterDetailPanel 도 욕망·상처·현재 상태 textarea 3개뿐. 그런데 comics 챔피언 에이전트는 '캐릭터 외관 일관성'을 책임진다고 표방(StoryXDesk.tsx:229)하고 visual 소유자 캐논 owner 도 존재(storyEngine.ts:128)한다. 작가가 '머리색 은발→흑발, 코트→교복'처럼 디자인을 바꿔도 캐논에 박을 정식 칸이 없어 자유서술 '현재 상태'에 우겨넣어야 하고, 외관 변경의 영향 추적·일관성 검사가 불가능하다.",
+        "file": "src/lib/storyEngine.ts",
+        "line": "63-80 (CharacterProfile — 외관 필드 없음); src/components/CharacterDetailPanel.tsx:19-42 (편집 필드 3개)",
+        "severity": "high",
+        "rootCause": "데이터 모델이 소설 심리(욕망·상처) 중심으로 설계돼 시각 매체의 1차 속성(외관·의상·컬러팔레트)이 스키마에 없다. 매체별 캐릭터 스키마 분기가 없어 comics 에서도 novel 용 인물 카드를 그대로 쓴다. (근거 신뢰=확인: 타입 정의·편집 패널·grep 직접 확인.) 외관이 캐논 1급 시민이 아니라 '외관 일관성' 검사·충돌 표시가 원천적으로 불가.",
+        "midEditFriction": true,
+        "repro": "데이터 모드 → 인물 노드 클릭 → 상세 패널에 욕망/상처/현재 상태만. 캐릭터 외형(헤어·의상·체형·컬러)을 적을 전용 칸이 없음.",
+        "scenarioStep": "캐릭터 디자인 방향을 3~6회 바꿈"
+      },
+      {
+        "title": "만화 작가도 컷/패널 편집기가 아니라 산문 단락 편집기를 받는다 — 컷 흐름 재구성 불가",
+        "symptom": "isDraftMode 는 항상 <FloatingEditor> 를 반환한다(StoryXDesk.tsx:2196-2216). FloatingEditor 의 편집 표면은 contentEditable 산문 단락(.ms, FloatingEditor.tsx:444-460)이고 medium 분기가 전혀 없다(blueprint/medium 참조 2건은 매체 적합도 % 라벨뿐). 정작 컷 프레임·말풍선·시각 잠금을 그리는 만화 캔버스(sx-creative-stage, StoryXDesk.tsx:3030-3076)는 isDraftMode/isBibleMode/isPublishingMode 가 모두 그 앞에서 early-return 하므로 라이브 플로에서 도달 불가능한 죽은 코드다. 게다가 그 만화 캔버스조차 frameLabels·visualWorkflow 가 하드코딩된 읽기 전용 표시라 컷 순서를 바꿀 입력이 없다. 결과적으로 그래픽노블 작가는 '컷 흐름 재구성'을 할 화면 자체가 없다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "2196-2216 (isDraftMode→FloatingEditor 고정), 3030-3076 (도달 불가 만화 캔버스·읽기 전용); src/components/FloatingEditor.tsx:444-460 (산문 전용 본문)",
+        "severity": "high",
+        "rootCause": "에디터 셸이 단일(FloatingEditor·산문)로 통일되며 매체별 작업 표면 분기가 사라졌다. comics 전용 캔버스는 신셸 전환 과정에서 분기에서 누락돼 unreachable 상태로 방치. (근거 신뢰=확인: early-return 순서·FloatingEditor 무분기·만화 캔버스 정적 구조 직접 확인.) 매체=만화여도 UI 는 소설용 그대로라는 매체 부적합의 대표 사례.",
+        "midEditFriction": true,
+        "repro": "온보딩에서 매체=만화 선택 후 생성 → 편집 모드 진입. 컷·패널·말풍선 도구 없이 산문 단락 + 마진 검토 화면만 나옴. 컷 순서를 드래그·재배열할 수단 없음.",
+        "scenarioStep": "컷 흐름을 재구성하려 함 + 만화로 작업 내내"
+      },
+      {
+        "title": "캐릭터를 고치는 화면에서는 충돌·영향 회차가 안 보인다 — 변경 영향이 다른 탭에 숨음",
+        "symptom": "랜딩 카피는 '설정을 바꾸면 영향 범위를 먼저 펼쳐 보여준다'(App.tsx:280)고 약속하지만, 데이터 모드 인물 캔버스(CanonCanvas)에서 캐릭터를 편집하면 그 자리에서는 영향 회차·충돌 경고가 전혀 안 뜬다. CanonRefactorPanel(영향 회차·검토 순서·충돌 경고 렌더)은 CanonCanvas 가 import 하지 않고 MemoryBankStudio(바이블 섹션)에만 박혀 있다. updateCharacterMemory 는 logCanonChange 로 변경 로그만 쌓을 뿐(StoryXDesk.tsx:1713-1738) 즉시 피드백이 없다. 디자인을 3~6회 바꾸는 동안 '이 변경이 5화·12화와 모순된다'는 신호를 보려면 매번 다른 화면(데이터→바이블→캐논 원장)으로 빠져나가야 한다.",
+        "file": "src/components/CanonCanvas.tsx",
+        "line": "1-86 (CanonRefactorPanel import·렌더 없음); StoryXDesk.tsx:1713-1738 (updateCharacterMemory 는 로그만), 2243·2667 (CanonRefactorPanel 은 MemoryBankStudio 경유로만 전달)",
+        "severity": "med",
+        "rootCause": "변경 영향 표시(CanonRefactorPanel)와 변경 입력 지점(CharacterDetailPanel/CanonCanvas)이 서로 다른 화면에 분리돼 있다. 편집과 영향 피드백의 공간적 단절로, 제품이 내세운 '영향 먼저 펼치기'가 캐릭터 편집 흐름에서는 작동하지 않는다. (근거 신뢰=확인: CanonCanvas 가 CanonRefactorPanel 미import, 패널은 MemoryBankStudio 전용 확인.)",
+        "midEditFriction": true,
+        "repro": "데이터 모드 → 인물 노드 → 욕망/현재 상태 수정. 같은 화면에 충돌·영향 회차 표시 없음. 영향을 보려면 캐논 원장(바이블)으로 별도 이동 필요.",
+        "scenarioStep": "캐릭터·배경 설정을 바꿀 때 기존 회차·캐논과의 충돌 확인"
+      },
+      {
+        "title": "캐릭터·캐논 편집에 undo 가 없다 — 되돌리려면 전체 프로젝트 스냅샷 복원뿐",
+        "symptom": "updateCharacterMemory/updateWorldMemory/updateCanonMemory 는 입력 즉시 setProject(+자동 saveProject, StoryXDesk.tsx:1531-1533)로 영속되며 필드 단위 undo 가 없다. 유일한 되돌리기는 restoreProjectVersion(1808)인데 '이 버전으로 현재 작품 상태가 교체됩니다' confirm 과 함께 캐릭터뿐 아니라 회차·캐논·검토까지 통째로 한 시점으로 롤백한다(latestReviewResult=null, agentRuns 리셋). 디자인을 6회 시도하며 5번째만 무르고 싶어도, 그 사이 쓴 다른 작업까지 다 날아간다. 변경 로그(CanonRefactorPanel)에도 '비우기'만 있고 개별 revert 가 없다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1713-1778 (필드 편집 즉시 영속·undo 없음), 1531-1533 (project 변경 즉시 save), 1808-1824 (스냅샷 전체 교체 복원)",
+        "severity": "med",
+        "rootCause": "편집 모델이 즉시·파괴적(in-place mutate→persist)이고 편집 단위 히스토리가 없다. 되돌리기 단위가 '필드'가 아니라 '프로젝트 전체 스냅샷'이라, 반복 실험형 작업(디자인 3~6회 변경)에서 비용 대비 손실이 크다. (근거 신뢰=확인: 편집 핸들러·복원 함수 직접 확인.)",
+        "midEditFriction": true,
+        "repro": "캐릭터 욕망을 A→B 로 바꾼 뒤 A 로만 되돌리려 함. ⌘Z·필드 undo 없음. 버전 기록 복원은 전체를 그 시점으로 교체.",
+        "scenarioStep": "설정을 3~6회 바꾸다가 특정 변경만 되돌리려 함"
+      },
+      {
+        "title": "진행 중 매체·형식 변경이 깊이 숨어 있고, 바꿔도 기존 회차와의 충돌 경고가 없다",
+        "symptom": "스튜디오에서 매체/형식을 바꾸는 패널(sx-media-change-panel)은 오직 명령 팔레트 커맨드 setIsMediaPanelOpen(true)(StoryXDesk.tsx:1458)로만 열린다 — 화면에 상시 버튼이 없다. 그 패널은 legacy sx-desk 경로에 있고 CSS 가 라이트 테마 하드코딩(rgba(255,255,255,…)·var(--sx-ink), styles.css:2057-2118)이라 다크 스튜디오와 톤이 어긋난다. selectMedium(1610)은 medium·format 만 갈아끼우고 저장할 뿐, 이미 쓴 회차·캐논과의 부적합(예: 만화로 바꾸는데 인물에 외관 데이터 없음, 산문 회차가 컷으로 재구성 안 됨)에 대한 경고·마이그레이션·영향 표시가 전혀 없다. 랜딩이 약속한 '매체 전환 시 무엇을 보존/재설계할지'(media bridge)가 실제 전환 동작에는 연결돼 있지 않다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1458 (팔레트로만 열림), 1610-1620 (selectMedium — 경고 없이 교체·저장), 2539-2577 (legacy 데스크 패널); src/styles.css:2057-2118 (라이트 테마 하드코딩)",
+        "severity": "med",
+        "rootCause": "매체 전환이 메타 토글(medium/format state 교체)로만 구현되고, 기존 산출물과의 정합성 검사·데이터 마이그레이션 레이어가 없다. 진입점도 팔레트 깊숙이 있어 발견성이 낮고, 패널 CSS 는 신셸 다크 토큰으로 이행되지 않은 잔재. (근거 신뢰=추정: 진입점·핸들러·CSS 는 확인했으나, 전환 후 회차 재투영 로직 부재는 grep 범위 내 미발견에 근거 — 별도 마이그레이션 모듈 가능성 낮음.)",
+        "midEditFriction": true,
+        "repro": "⌘K → 매체 변경 커맨드 → 만화로 전환. 기존 회차·캐논 영향 안내 없이 즉시 바뀜. 패널 색이 다크 스튜디오와 이질적.",
+        "scenarioStep": "작업 중 매체/형식을 바꾸려 시도"
+      }
+    ]
+  },
+  {
+    "medium": "오디오북",
+    "persona": "오디오 드라마 연출가",
+    "findings": [
+      {
+        "title": "음성 톤·음악 큐·자막을 조정할 편집칸이 아예 없다 — 매체가 약속한 것을 편집기가 못 준다",
+        "symptom": "생성 후 낭독 톤·쉼·음악 큐·자막을 3~6회 다듬으려 데이터 모드 > 바이블 > '문체/감각(voice)' 섹션에 들어가면, '오디오 바이블 / 낭독 리듬'과 '시각 바이블' 카드는 '톤, 쉼, 반복 후크, 발음 주의 단어는 ... 기준으로 쓰입니다'라는 설명 문단(<p>)만 있고 입력칸이 없다. 실제로 고칠 수 있는 건 작품 전체의 'project.tone' 한 줄짜리 textarea(+표면 약속)뿐이다. 음악 큐·자막·화자 거리·강조를 회차/장면 단위로 조정하는 입력이 어디에도 없다.",
+        "file": "src/components/MemoryBankStudio.tsx",
+        "line": "287-296 (오디오/시각 바이블 카드는 입력 없는 <p>), 264-286 (voice 섹션에서 편집 가능한 건 project.tone·audiencePromise뿐)",
+        "severity": "high",
+        "rootCause": "projectBlueprint.ts:133 매체 설명은 '낭독, 음악, 자막, 영상 리듬까지 함께 설계'를, projectBlueprint.ts:468은 '목소리 톤, 음악 큐, 짧은 화면 지시를 준비'를 산출로 약속하지만, SeriesProject 데이터 모델에 audioCue/musicCue/caption/pauseMap 같은 필드가 없고 voice 섹션 UI가 소설용 '문체 바이블' 그대로다. 오디오 바이블은 제목·안내문만 있는 미구현 placeholder — 오디오 드라마 연출가의 핵심 반복 작업 자체가 불가능.",
+        "midEditFriction": true,
+        "repro": "매체=오디오북 선택 → 자유서술·인터뷰·헌장 → 1화 생성 → 데이터 모드 전환 → 바이블 도구 → '문체 바이블' → voice 섹션. 톤 한 줄 외에 음악 큐·자막·쉼을 적을 칸을 찾으나 없음.",
+        "scenarioStep": "편집/데이터 모드에서 음성 톤·음악 큐·자막을 3~6회 조정"
+      },
+      {
+        "title": "본문(낭독 원고) 타이핑 편집이 프로젝트에 저장되지 않고, 회차 전환·리로드 시 경고 없이 사라진다",
+        "symptom": "FloatingEditor 본문에 직접 친 낭독 원고 수정은 editorText(컴포넌트 state)에만 남는다. saveProject는 project만 저장하는데 editorText는 project에 포함되지 않아 localStorage에 절대 반영되지 않는다. 상단 바인더에서 다른 회차를 누르면 latestChapter effect가 setEditorText(latestChapter.prose)로 현재 편집칸을 덮어써 미저장 수정이 조용히 날아간다(확인창·'수정 중' 차단 없음). 페이지를 새로고침해도 동일하게 유실.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "575 (editorText state), 1531-1533 (saveProject(project)만 — editorText 비포함), 1564-1573 (latestChapter 변경 시 setEditorText로 무조건 덮어씀), 2353-2360 (바인더 회차 전환)",
+        "severity": "high",
+        "rootCause": "editorText가 단일 원천으로만 쓰이고 project.chapters[].prose로 flush되는 경로가 없다. 생성(chapterFromDraftPayload)·diff 반영(acceptMarginDiff는 editorText에만 씀)·회차 로드만 editorText를 건드릴 뿐, 사용자가 친 본문을 chapter에 커밋하는 코드가 없다. lockChapter(storyEngine.ts:179)도 locked 플래그만 바꾸고 prose를 캡처하지 않으며 beforeunload 가드도 없다. 톤을 본문에 직접 반영해가며 반복 조정하는 연출가에게 가장 치명적.",
+        "midEditFriction": true,
+        "repro": "1화 생성 → 본문 일부를 직접 수정(상단 '수정 중' 표시 확인) → 검토하러 잠깐 다른 회차를 누르거나 새로고침 → 돌아오면 수정이 사라지고 생성 원문으로 복귀.",
+        "scenarioStep": "낭독 리듬·장면 분위기 재설정을 위해 본문을 손보는 단계"
+      },
+      {
+        "title": "캐릭터·세계·캐논을 직접 고치면 되돌리기(undo)가 없다 — 생성·반영만 스냅샷되고 수동 편집은 스냅샷 안 됨",
+        "symptom": "데이터/바이블 모드에서 캐릭터 욕망·상처·현재상태, 세계 규칙, 캐논 문장을 고치면 즉시 project에 반영되지만 작품 히스토리(버전 스냅샷)에 아무것도 안 쌓인다. 생성(produceEpisode)과 캐논 반영(syncApprovedMemory)은 pushProjectSnapshot을 부르는데, 수동 편집 3종(updateCharacterMemory/updateWorldMemory/updateCanonMemory)은 안 부른다. 변경은 canonChanges(휘발성 state, 최대 12개, 저장 안 됨)에만 로깅돼 리로드하면 사라지고, '시점으로 되돌리기'로 편집 직전 상태를 복원할 방법이 없다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1713-1738 (updateCharacterMemory — setProject만, 스냅샷 없음), 1740-1778 (world/canon 동일), 대비 1803/1873/1884 (sync·생성은 pushProjectSnapshot), 1649-1674 (canonChanges는 .slice(0,12) 휘발성)",
+        "severity": "med",
+        "rootCause": "수동 바이블 편집 경로만 스냅샷 적립에서 빠졌다. 연출가가 톤·인물 설정을 3~6회 시험 삼아 바꾸다 '이전이 나았다'고 느껴도 안전망이 없다. canonChanges는 영향 분석용일 뿐 undo 스토어도 아니고 영속도 아니다.",
+        "midEditFriction": true,
+        "repro": "데이터 모드 → 인물 노드 클릭 → 욕망/현재상태를 두세 번 고침 → 작품 히스토리 열기 → 편집 직전 시점이 목록에 없음. 되돌릴 수 없음.",
+        "scenarioStep": "캐릭터·이야기 설정을 3~6회 수정"
+      },
+      {
+        "title": "'설정 바꾸면 영향 범위 먼저 보여준다'는 약속이, 정작 안내가 가리키는 인물 그래프 편집 경로에선 안 뜬다",
+        "symptom": "랜딩·온보딩 카피는 '설정을 바꾸면 영향 범위를 먼저 펼쳐 보여줍니다'라고 약속한다. 그런데 데이터 모드 캐논 캔버스의 인물 관계도는 힌트가 '노드를 눌러 욕망·상처·현재 상태를 바로 고칩니다'며 즉시 적용을 유도하고, 변경 직후 영향 회차/충돌을 보여주는 CanonRefactorPanel은 그 화면에 렌더되지 않는다. 그 패널은 '바이블 모드 > 캐논/타임라인' 섹션에서만 렌더되므로, 연출가가 인물 그래프에서 톤·설정을 바꾸면 어떤 기존 회차가 흔들리는지를 같은 자리에서 못 본다(별도 메뉴로 따로 찾아가야 함).",
+        "file": "src/components/CanonCanvas.tsx",
+        "line": "29 (힌트: '바로 고칩니다'), 37-52 (CharacterDetailPanel만 렌더, 영향 패널 없음); 대비 src/components/MemoryBankStudio.tsx:256-260 (CanonRefactorPanel은 canon 섹션에서만)",
+        "severity": "med",
+        "rootCause": "영향-범위 미리보기(canonRefactorPlan)는 buildCanonRefactorPlan으로 계산되지만 MemoryBankStudio의 canon 탭에만 배선됐고, 정작 즉시 편집을 권하는 CanonCanvas(데이터 모드 기본 진입)에는 안 꽂혔다. 변경→적용이 한 번에 일어나 '먼저 보여주고 승인' 흐름이 인물 편집에서 깨진다.",
+        "midEditFriction": true,
+        "repro": "데이터 모드(기본 = 인물 관계도) → 인물 욕망 수정 → 같은 화면에서 영향 회차/충돌 경고를 찾으나 없음. 바이블 > 캐논 섹션으로 따로 이동해야 패널이 보임.",
+        "scenarioStep": "캐릭터 설정 변경 시 기존 회차·캐논 충돌 표시"
+      },
+      {
+        "title": "같은 회차를 '다시 생성'하는 버튼이 없다 — 재생성은 항상 다음 화로 누적된다",
+        "symptom": "톤·분위기를 바꿔 같은 piece를 다시 뽑고 싶어도, 1화를 만든 뒤(미잠금) 메인 CTA는 '검토'로 바뀌고, 생성 동작은 언제나 nextEpisodeNumber로 새 회차를 append한다. 현재 회차를 새 설정으로 재생성(re-roll)하는 1급 동작이 없어, 연출가는 '검토→본문 수동 수정'으로 우회하거나 원치 않게 2화·3화를 쌓게 된다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1234-1239 (CTA 분기: latestChapter 있고 미잠금이면 reviewDraft), 1835-1844 (produceEpisode는 게이트 후 항상 append); src/lib/storyEngine.ts:1398 (nextEpisodeNumber로 새 chapter)",
+        "severity": "med",
+        "rootCause": "연속성 우선 설계상 생성=다음 화 누적 모델이라 '이 회차를 톤만 바꿔 다시'라는 반복 조정 의도가 제품에 없다. 오디오 드라마처럼 같은 장면을 여러 톤으로 시험하는 작업과 정면으로 어긋난다. (의도된 설계일 수 있으므로 근본원인은 추정 — 다만 재생성 비용/손실 인지가 어렵다는 점은 확실.)",
+        "midEditFriction": true,
+        "repro": "1화 생성 → 톤을 바꿔 다시 생성하려 함 → 메인 버튼이 '검토'라 재생성 불가, ⌘K로 생성 류 명령을 써도 2화가 새로 생김.",
+        "scenarioStep": "음성 톤·장면 분위기를 바꿔 다시 생성"
+      },
+      {
+        "title": "오디오북 자유서술 '예상 낭독' 미터가 '0분 60초'·'1분 60초'처럼 깨진 초를 표시",
+        "symptom": "자유서술 단계의 글자수 옆 '예상 낭독 N분 M초'에서, 글자수가 280의 배수 직전일 때 초가 60으로 반올림돼 '0분 60초'(279자), '1분 60초'(559자)처럼 분 올림 없이 표시된다.",
+        "file": "src/App.tsx",
+        "line": "1030-1035 (minutes=floor(c/280); seconds=round((c%280)/280*60) — 60 캐리 처리 없음)",
+        "severity": "low",
+        "rootCause": "Math.round로 초를 구하면서 60초→다음 분 올림(carry)을 처리하지 않았다. 280자/분 가정도 임의값. 기능 차단은 아니고 표시 결함이지만, 분당 낭독 시간을 신경 쓰는 오디오 연출가에게 신뢰도를 떨어뜨린다.",
+        "midEditFriction": false,
+        "repro": "매체=오디오북 → 자유서술에 279자 입력 → 미터에 '예상 낭독 0분 60초' 표시.",
+        "scenarioStep": "온보딩 자유서술(오디오북) 입력"
+      },
+      {
+        "title": "데이터 모드 캐논 분야가 소설 전용(인물/장소/사물/사건/연표)이라 오디오 작업 축이 없다",
+        "symptom": "오디오북으로 들어와도 데이터 모드의 캐논 분야는 '인물 관계도·장소·사물·사건·연표'뿐이다. 음악 큐 시트, 자막 트랙, 화자/보이스 캐스팅, 쉼·강조 맵 같은 오디오 드라마 고유 데이터 축이 전혀 없어, 생성 이후 음향·낭독 자산을 분야로 관리할 곳이 없다.",
+        "file": "src/components/CanonCanvas.tsx",
+        "line": "28-34 (categoryHint: characters/places/objects/events/timeline 고정)",
+        "severity": "med",
+        "rootCause": "canonDataView의 canonCategories가 매체와 무관하게 소설 온톨로지로 고정돼, 매체 전환(오디오·만화·학술)이 작가진 라벨·리뷰 에이전트만 바꾸고 데이터 분야 자체는 그대로다. 매체 부적합(소설용 UI 재사용)의 전형.",
+        "midEditFriction": false,
+        "repro": "오디오북 프로젝트 → 데이터 모드 캐논 도구 → 분야 목록에 음악/자막/보이스 관련 항목 없음.",
+        "scenarioStep": "생성 이후 음향·자막 자산 관리"
+      }
+    ]
+  },
+  {
+    "medium": "사회과학/학술 (academic)",
+    "persona": "사회과학 연구자 — 논제·근거 구조·반론을 3~6회 수정하고 APA 인용·주장 레저를 중간에 갈아엎으려 함",
+    "findings": [
+      {
+        "title": "주 편집기(FloatingEditor)에 학술 마진검토(주장·APA인용·반론)가 한 줄도 전달되지 않음 — displayedMarginReviews 가 dead code",
+        "symptom": "학술 매체로 생성 후 본문에서 논제·근거를 고치는 내내 '근거 없는 주장 / APA orphan citation / 반론·limitation 누락' 경고가 편집 화면에 전혀 보이지 않는다. 학술 매체의 핵심 가치(인용·주장 게이트 피드백)가 실제 편집 동선에서 증발한다. useMemo 는 currentReviewText 로 학술 검토를 정상 계산하지만(1188-1197) 화면 도달 경로가 끊겨, 사용자에겐 '아무 점검도 안 하는 일반 텍스트 에디터'로 보인다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1199-1207, 1312, 2196-2199",
+        "severity": "high",
+        "rootCause": "draft 모드는 항상 FloatingEditor 만 렌더하고 early-return 한다(2196-2199). FloatingEditor 에 넘기는 reviews 는 marginReview.reviews(=LLM 에이전트 검토)뿐이다(1312). 학술 전용 검토를 합친 displayedMarginReviews(1199, academicClaim/Citation/Integrity 포함)는 grep 결과 src/ 전체에서 소비처가 0 — 계산만 하고 버려진다. 이를 받는 classic 'sx-manuscript-editor'(3134)와 marginReviews prop(3008)은 'isClassicEditor 폴백 제거'(1223) 이후 draft 경로에서 도달 불가한 레거시다. 확인됨 — grep 으로 displayedMarginReviews/marginReviews={ 호출처 부재 검증.",
+        "midEditFriction": true,
+        "repro": "매체=학술 → 자유서술 → 인터뷰 → 첫 생성 → 편집 모드에서 주장/인용 문장을 추가·수정 → 우측 마진/본문 어디에도 학술 경고가 뜨지 않음(같은 텍스트를 academicClaimMarginReviews 가 내부적으로는 만들고 있음에도).",
+        "scenarioStep": "편집 모드에서 논제·근거·인용을 3~6회 수정"
+      },
+      {
+        "title": "학술 매체 작가 인터뷰가 소설용(욕망/상처/말투·세계관 마법비용·연재체 문체) 질문으로 폴백",
+        "symptom": "사회과학 논문/칼럼을 쓰려는데 작가 인터뷰가 '주인공의 캐릭터성은 무엇이 흔들리면 안 되나요(욕망/상처/말투)', '세계관에서 비용을 부여할 규칙(능력·마법)', '문체는 서정적/건조한 유머' 같은 픽션 질문만 묻는다. 논제·반론·표본·방법론을 묻는 칸이 없다. academic 포맷(research-paper/academic-column/literature-review)은 serialFormats 에 없어 항상 isSerial=false → '단편 소설 세팅' 라벨까지 붙는다(443).",
+        "file": "src/lib/projectIntake.ts",
+        "line": "82, 236, 390-440, 442-521",
+        "severity": "high",
+        "rootCause": "buildProjectIntakePlan 은 medium==='essay'(82)와 'comics'(236)만 전용 분기를 갖고, 'academic'(및 audiobook)은 마지막 default return(442)으로 떨어진다. default 는 novel 세팅(focusLabel '소설 연재 세팅', character-custodian/world-keeper/voice-curator 질문)이다. App.tsx 706 에서 academic 은 usesCharter=false 라 헌장 단계로도 보정되지 않는다. 확인됨 — projectIntake.ts 분기 전수(return 은 49/82/236/442 만 존재).",
+        "midEditFriction": false,
+        "repro": "매체=사회과학/학술 → 자유서술(빈칸 가능) → '인터뷰로 계속' → 1/N 질문부터 '주인공 욕망/상처/말투' 등 소설 질문이 나옴.",
+        "scenarioStep": "작가 인터뷰"
+      },
+      {
+        "title": "주장 레저(claim ledger)·APA 참고문헌을 직접 편집·갈아엎을 구조적 surface 가 없음 — 본문에서만 추출",
+        "symptom": "'주장 레저를 중간에 갈아엎으려' 해도 주장/근거 매핑이나 References 목록을 편집할 화면이 없다. claimLedger 는 본문에서 자동 추출만 하고(extract→map→find unsupported), 참고문헌은 출간 화면의 읽기전용 목록뿐이라 수정하려면 본문 텍스트를 손으로 고치는 수밖에 없다. 갈아엎기가 사실상 전 본문 수기 재작성이 된다.",
+        "file": "src/lib/claimLedger.ts",
+        "line": "78-119; src/StoryXDesk.tsx:284-296; src/components/PublishScreen.tsx:814-820",
+        "severity": "high",
+        "rootCause": "claimLedger 의 공개 API 는 extractClaims/mapClaimsToEvidence/findUnsupportedClaims 뿐 — 편집·영속 함수가 없다(추출 전용). 데이터 모드 canon 카테고리는 인물/장소/사물/사건/시간선으로 하드코딩(canonDataView.ts:15-21)이라 '주장/근거/반론/참고문헌' 엔티티 자체가 데이터 모델에 없다. References 는 buildAcademicPublishSummary 로 본문 파싱한 read-only 배열(PublishScreen 814-820). 확인됨 — components/ 전수 grep 으로 editable reference/claim surface 부재.",
+        "midEditFriction": true,
+        "repro": "편집/데이터 모드 어디에서도 '주장 목록' 또는 'References 편집'을 열 수 없음 → APA 항목 추가/순서변경/주장-근거 재배치를 본문 직접 타이핑으로만 수행해야 함.",
+        "scenarioStep": "APA 인용과 주장 레저를 중간에 갈아엎기"
+      },
+      {
+        "title": "매체 변경이 무경고·무확인으로 즉시 덮어쓰기 — 기존 회차·검토와의 충돌을 전혀 표시하지 않음",
+        "symptom": "편집 중 ⌘K '매체 변경' → 다른 매체 버튼 한 번 클릭으로 medium/format 이 즉시 바뀌고 saveProject 된다. 이미 학술로 쓴 원고가 소설로 바뀌면 학술 게이트가 조용히 꺼지고, 반대로 픽션 원고가 학술로 바뀌면 갑자기 '근거 없는 주장' 경고 대상이 된다 — 어떤 경고·되돌리기·영향범위 안내도 없다. format 버튼은 선택 즉시 패널을 닫지만(2567) medium 버튼은 닫지도 않아 빠르게 연속 클릭하면 중간 상태가 저장된다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1610-1620, 2539-2576",
+        "severity": "high",
+        "rootCause": "selectMedium(1610) 은 setMedium/setFormat 후 곧바로 setProject+saveProject 하며 window.confirm 이나 충돌 경고가 전혀 없다. 패널(2539-2576) 버튼은 onClick={()=>selectMedium(option.id)} 단일 동작. 랜딩 카피는 '설정을 바꾸면 영향 범위를 먼저 펼쳐 보여줍니다'(App.tsx 280)라고 약속하지만 매체 전환에는 그 가드가 없다. 확인됨.",
+        "midEditFriction": true,
+        "repro": "학술로 5문단 작성 → ⌘K → 매체 변경 → '소설' 클릭 → 즉시 전환, 경고/undo 없음. 다시 '학술'로 돌려도 검토 상태는 수동 재검토 전까지 어긋남.",
+        "scenarioStep": "편집 도중 설정(매체) 변경"
+      },
+      {
+        "title": "'매체 변경' 패널이 다크 스튜디오 안에서 흰색/크림 박스로 렌더 — Midnight Command Center 다크 토큰 위반",
+        "symptom": "다크 편집 화면에서 매체 변경 패널만 밝은 흰색/베이지 카드로 떠 눈을 찌른다. 같은 클래스가 라이트/다크 어느 쪽에서도 새하얀 밝은 색을 강제하므로, 학술 연구자가 매체를 자주 바꾸려 들수록 매번 시각적 마찰을 겪는다.",
+        "file": "src/styles.css",
+        "line": "2057-2108",
+        "severity": "med",
+        "rootCause": ".sx-media-change-panel 배경이 토큰이 아니라 하드코딩 rgba(255,255,255,0.8)/rgba(248,246,239,0.7)/inset white box-shadow 다(2066-2071). 패널은 .sx-desk(다크 스코프, styles.css 530: --sx-card #0f1011) 안에서 렌더되지만(StoryXDesk 2274-2285 main.sx-desk), 토큰 매핑을 무시하는 리터럴 색이라 다크에서 그대로 흰 박스가 된다. 확인됨 — :root(라이트)와 .sx-desk(다크) 토큰 분리 확인, 패널 자체는 리터럴 색 사용.",
+        "midEditFriction": true,
+        "repro": "다크 스튜디오(기본)에서 ⌘K → 매체 변경 열기 → 패널이 흰/크림으로 표시됨(주변 UI 는 pitch-black).",
+        "scenarioStep": "편집 도중 매체 변경 패널 열기"
+      },
+      {
+        "title": "본문 인라인 검토 마크가 bodyVersion 고정으로 타이핑 중 갱신 안 됨 — 수정해도 주장/인용 하이라이트가 묵음",
+        "symptom": "논제 문장을 고치는 순간 주장·인용 위반 위치(빨간 mark 하이라이트)가 본문에서 즉시 갱신되지 않는다. 새 위반은 외부 트리거(초안 생성·diff 반영·회차 전환)로 bodyVersion 이 올라가야만 반영되는데, 그 재시드는 커서/입력 상태를 흔든다. 한글 IME 는 compositionend 에서만 1회 커밋(150-151,454-457)이라 조합 도중에는 마진 검토도 지연된다.",
+        "file": "src/components/FloatingEditor.tsx",
+        "line": "190-212, 444-460",
+        "severity": "med",
+        "rootCause": "bodyChildren(인라인 mark 포함 단락)의 useMemo deps 가 의도적으로 [bodyVersion]만이고 paragraphs 를 제외한다(211). 타이핑 중 DOM 이 본문을 소유해 커서를 보존하려는 설계지만, 그 결과 새로 추출된 검토 마크는 다음 bodyVersion++ 전까지 본문에 안 박힌다. 추정 — 구조상 명백하나 우측 margin(liveReviews,465)은 다르게 갱신될 수 있어 '본문 인라인'에 한정된 마찰. (Finding 1 때문에 학술 검토는 애초 reviews 로도 안 들어오지만, 들어와도 인라인 표시는 이 한계에 걸린다.)",
+        "midEditFriction": true,
+        "repro": "FloatingEditor 에서 한 단락을 고침 → 본문 내 하이라이트는 그대로 → '검토' 등 외부 트리거가 일어나야 재시드되며 그때 입력 맥락이 끊김.",
+        "scenarioStep": "논제·근거 문장을 반복 수정"
+      },
+      {
+        "title": "편집 후 에이전트 검토는 수동 재실행 필요한데 학술 결정론 게이트는 라이브 — 피드백 신선도 불일치",
+        "symptom": "수정하면 '직접 고친 문장은 빨간 표시로 남고, 검토 버튼을 눌러야 다시 본다'고 안내한다(수동). 그러나 학술 claim/citation/integrity 검토는 currentReviewText 로 자동 재계산된다. 어떤 피드백은 즉시, 어떤 피드백은 멈춰 있어 연구자가 무엇이 최신인지 알 수 없다. save chip 도 editedSinceReview 기준 '수정 중/저장됨'(953)이라 결정론 게이트가 이미 재평가됐는데도 '수정 중'으로 보일 수 있다.",
+        "file": "src/StoryXDesk.tsx",
+        "line": "1187-1197, 3168-3174",
+        "severity": "low",
+        "rootCause": "academicClaim/Citation/IntegrityMarginReviews 는 useMemo([currentReviewText]) 로 라이브 갱신(1187-1197)이지만, LLM 에이전트 검토는 editedSinceReview 게이트 + 명시적 onReviewDraft 호출로만 갱신(3168-3174). 두 신선도 모델이 한 화면에 공존하는데 구분 라벨이 없다. 추정 — Finding 1 로 학술 검토가 주 편집기에 노출되지 않아 현재는 잠복, 그 버그 수정 시 표면화.",
+        "midEditFriction": true,
+        "repro": "(Finding 1 수정 가정 하) 수정 직후 학술 경고는 갱신되나 에이전트 검토는 '수정됨' 상태로 멈춤 → 사용자가 둘의 시점을 구분 못 함.",
+        "scenarioStep": "수정 후 검토 상태 확인"
+      },
+      {
+        "title": "데이터 모드 좌측 캐논 nav 가 academic 에서 전부 무의미한 픽션 카테고리(인물 관계도·욕망/상처) 고정",
+        "symptom": "학술 프로젝트에서 '데이터' 모드로 들어가면 인물 관계도와 '욕망·상처·현재 상태' 편집 패널, 장소/사물/사건/시간선 카드가 뜬다. 연구자가 설정을 갈아엎으려 데이터 모드를 열어도 논제/표본/변수/선행연구가 없어 빈손으로 나온다. Finding 3 과 결합해 '편집'(학술 검토 미노출)에서도 '데이터'(픽션 카테고리)에서도 구조적 설정을 손대는 자리를 찾지 못한다.",
+        "file": "src/components/CanonCanvas.tsx",
+        "line": "28-64; src/lib/canonDataView.ts:15-21",
+        "severity": "med",
+        "rootCause": "canonCategories 가 characters/places/objects/events/timeline 로 고정(canonDataView 15-21)이고, CanonCanvas 가 category==='characters' 시 CharacterGraph+CharacterDetailPanel('욕망·상처·현재 상태를 바로 고칩니다', 29/47)을 강제 렌더한다. 매체 분기가 없어 academic 도 동일 픽션 UI 를 받는다. 진입은 FloatingDataWorkspace 가 dataView.kind==='canon' 으로 centerSlot 주입(StoryXDesk 2219-2226). 확인됨.",
+        "midEditFriction": true,
+        "repro": "학술 생성 후 상단 '데이터' 탭 → 좌측 캐논(인물/장소/사물/사건/시간선) → '인물' 진입 시 관계도+욕망/상처 편집칸이 뜸(학술 무관).",
+        "scenarioStep": "데이터 모드에서 설정을 바꾸려 시도"
+      }
+    ]
+  }
+]

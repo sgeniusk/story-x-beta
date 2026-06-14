@@ -901,9 +901,11 @@ function StoryXHome({
       ? [{ id: 'charter' as HomeFlowStep, label: '작품 헌장', caption: '결말부터 4줄로 잡습니다.' }]
       : [])
   ];
+  // building 패널 앞에는 charter 를 뺀 단계만 실제 mount 된다(charter 는 homeFlowStep==='charter'일 때만 렌더).
+  const buildingPanelIndex = homeFlowSteps.filter((s) => s.id !== 'charter').length;
   const homeFlowIndex =
     homeFlowStep === 'building'
-      ? homeFlowSteps.length
+      ? buildingPanelIndex
       : homeFlowSteps.findIndex((step) => step.id === homeFlowStep);
 
   return (
@@ -1029,8 +1031,9 @@ function StoryXHome({
               {freewriteText.trim().length}자
               {blueprint.medium === 'audiobook' && (() => {
                 const charCount = freewriteText.trim().length;
-                const minutes = Math.floor(charCount / 280);
-                const seconds = Math.round((charCount % 280) / 280 * 60);
+                const totalSeconds = Math.round((charCount / 280) * 60);
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
                 return ` · 예상 낭독 ${minutes}분 ${seconds}초`;
               })()}
             </p>
@@ -1336,6 +1339,7 @@ function StoryXHome({
 
         {homeFlowStep === 'charter' && (
           <section className="hx-panel hx-panel-charter" aria-label="작품 헌장">
+            <div className="hx-main">
             <div className="hx-charter">
               <p className="hx-eyebrow">04 · 작품 헌장</p>
               <h1 className="hx-h1">결말부터 정하고 시작합니다.</h1>
@@ -1462,6 +1466,7 @@ function StoryXHome({
                   {charterReady ? '헌장 확정 — 1화 만들기' : '4줄·결말을 모두 채워 주세요'}
                 </button>
               </div>
+            </div>
             </div>
           </section>
         )}

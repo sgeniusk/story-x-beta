@@ -20,6 +20,7 @@
 - **A-3b 쇼러너 4줄 제안 완료 (2026-06-13 2차, TDD+codex 라이브, `7486e93`)** — charter 단계에 "쇼러너에게 4줄 제안받기" 버튼 → `/api/spine-suggest`(buildSpineSuggestionPrompt·promptBuilders↔storyx.mjs byte-identical 미러·vite 브리지·codex) → 작품 맞춤 4줄을 **빈 칸만 채움**(작가가 쓴 줄 보존). 실패 시 안내만(직접 입력 유지). pace-interview 인프라 미러. promptBuilders.test +3·spineSuggestClient.test +3·appExperience +1. **codex 라이브 — freewrite "달의 탑·이름 대가"+ending 주입 시 23초에 4줄 도착, resolution 이 endingStatement 와 정렬·콘솔 0.** charter UI 진입(온보딩 intake LLM 연쇄)은 비용 과다라 codex 통합을 직접 fetch 로 검증, 버튼은 소스검사+무조건 렌더(fieldset 내부)로 보장.
 - **A-3c 비트 펼침 미리보기 완료 (2026-06-13 3차, TDD+라이브, `92c7ab2`)** — charter 단계에서 잠근 4줄(장편)이 전체 화수의 어디에 박히는지 `deriveBeatSheet`(25/50/75/100%)로 미리 보여준다(읽기 전용, 화수 자동 배분). App charter 비트 미리보기 + `.hx-charter-beats`/`.hx-beat-*` CSS(+A-3b 버튼 CSS 보강). appExperience +1. **라이브 — charter 진입+4줄 주입 시 8·15·23·30화 핀+미션 매핑·dashed 박스·라임 강조·콘솔 0.** 화수 조정(작가가 핀 이동)은 추후 — deriveBeatSheet 자동이 합리적 기본.
 - **다음 1순위 — A-6(장편 기억 R1~R3)** — `buildProjectContextDigest`·`CONTEXT_CANON_LIMIT` 의 head/tail 절단이 중반부 캐논을 통째 폐기(ch23 91중 51 소실, `docs/research/2026-06-11-longform-memory-compression.md`)하는 문제. R1(관련 캐논 top-K 결정론 주입)·R2(5화 아크 다이제스트)·R3(중요도 가중 절단). digest 빌더를 건드리는 **큰 작업 — 신선한 세션 권장**. 그 뒤 Phase B(긴장·날것)·C(트위스트)·E(비용)·F(재실험). 학술 단계 게이트(charter 경로 신설)는 academic 1.0 실험 플래그라 후순위.
+- **딥리서치 — 이야기 품질·의외성 (2026-06-14)** — Phase B/C 외부 근거 정본 `docs/research/2026-06-14-prose-quality-surprise-research.md`(18 확정·7 반박·23 소스). 핵심 — LLM 평탄함은 정렬 typicality bias·mode collapse·**조기 해소(후반부 긴장 전문가 0.607 vs LLM 0.215 = 3배 낮음)**이며, 처방은 VS(회차 후보 1.6~2.1배)·후반부 긴장 게이트·멀티 페르소나(단일 LLM-judge는 의외성 과소평가 — Story X 검토망 정당화). **★ 결말 역산 헌장이 조기 해소를 baking할 위험 → 헌장에 "정보 비대칭(숨길 정보) 레인" 추가 권고.** 착수 후보(사용자 결정 대기) — ① VS 회차 생성(최저비용) ② 후반부 긴장 게이트(헌장 역설 직격) ③ 헌장 정보비대칭 레인. ⚠️ 박제 금지 — min-p 창작 우월성·narrative-forecasting 정확 레시피는 검증 탈락(refuted). 근거 공백 — 한국어 문체(번역 투)는 영어 코퍼스라 미해결.
 - **Phase D-3(dev 서버 사망 조사)는 Phase E-1 계측으로 이관** — 재현 없이 추정 금지.
 
 ## 병행 트랙 — 품질 실증 테스트: 실사용 창작자 10인 (`in_progress` · 2026-06-07 착수)
@@ -128,6 +129,37 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-14 · charter 스크롤 핫픽스 + 이야기 품질 딥리서치 · main)
+
+```
+init.sh            → tsc 0 · vitest 521(charter 스크롤 회귀 +1) · build 통과 (520→521)
+charter 스크롤 버그 — 사용자 실사용 발견: 작품 헌장(charter) 단계 세로 스크롤 불가 + 하단 4줄 척추 편집 불가.
+  근본원인 — charter 패널이 다른 온보딩 단계의 `.hx-panel > .hx-main(overflow-y:auto)` 스크롤 컨테이너 패턴을
+  안 따르고 `.hx-panel-charter > .hx-charter` 직속이라, `.hx-panel` overflow:hidden 이 긴 콘텐츠 하단을 클리핑.
+  수정 — App.tsx charter 를 `.hx-main` 으로 감쌈 + styles.css `.hx-panel-charter { grid-template-columns: 1fr }`(빈 320px aside 컬럼 제거).
+  TDD — appExperience.test +1(charter 가 hx-main 안 + .hx-panel-charter CSS). RED(charterBlock 에 hx-main 없음)→GREEN.
+라이브(preview)    — 장편 charter 진입: panelGridCols 단일 1fr(1440px)·scrollable(scrollHeight 1207 > client 840)·
+  scrollTop max 시 하단 CTA bottom 1649→92(화면 안)·4줄 척추 4 textarea 전부 접근·padding 복원·reload 후 온보딩 정상.
+  (vite 1467 JSX 에러는 1:17:36 편집 중간 HMR 잔여 로그 — init.sh tsc exit0 + 정상 렌더로 무효 확정.)
+딥리서치          — 이야기 품질·의외성(U3·U4) SOTA 정본 docs/research/2026-06-14-prose-quality-surprise-research.md
+```
+
+## 최근 검증 (2026-06-14 2차 · 울트라코드 10인 베타테스트 + UI/UX 안전 자동수정 · main)
+
+```
+init.sh            → tsc 0 · vitest 524(appExperience +3: #2·#4·#11) · build 통과 (521→524)
+베타테스트         → ultracode Workflow 10인(장편2·단편2·에세이2·만화2·오디오1·학술1) 코드·플로우 워크스루
+  (각자 캐릭터·이야기 3~6회 중간수정 시나리오) → findings 74 → 종합 24 우선순위.
+  리포트·raw docs/reviews/2026-06-14-ultracode-beta-10/. 첫 시도 동시 10 → 서버 rate limit 전멸 → 배치 3씩으로 해소.
+★ 핵심 — "생성 중 설정 변경" 흐름이 구조적 미완성(본문 영속·undo·CRUD·헌장 편집 부재). charter 스크롤급 국소 아님.
+자동수정 3 (TDD)  — #2 charter 연재 building 캐러셀 빈화면(buildingPanelIndex charter 제외 — ★직전 charter 후속 회귀)·
+  #11 매체변경 패널 흰박스→var(--sx-card)·#4 오디오 낭독 "0분 60초"→총초 환산. 앱 콘솔 에러 0.
+검토 대기 14      — 🔴#1 본문 편집 무음 소실(freq8 전매체·"저장됨" 오표시 = 데이터 손실 1순위)·undo 전무(freq10)·
+  영향회차 미표시(랜딩 약속 위반)·회차 선택기·잠금 보호·CRUD·헌장 편집·학술 마진검토 dead 등.
+보류 3            — #14 aside agentStack·#23 dataView 매체분기·#20 회차수 clamp(onBlur 권장).
+라이브            — #2 결정론 산술+테스트 검증(charter→building 전경로 라이브는 codex 생성 비용으로 생략). 콘솔 0.
+```
 
 ## 최근 검증 (2026-06-13 3차 · A-3c 비트 펼침 미리보기 · main)
 
