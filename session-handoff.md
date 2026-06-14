@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-06-14 (10차) — #10 매체/형식 변경 confirm — 무음 전환 방지 (main, TDD, ultracode)
+
+> #5 직후 검토대기 #10 착수·완료. 매체/형식 변경이 confirm·영향분석 없이 즉시 전환되던 문제 해소 + 형식 영속 버그 동시 수정. 커밋 (아래). 라이브 갈음(소스 핀).
+
+### 한 것
+- **selectMedium confirm 가드** — 기존 회차(chapters>0) 또는 헌장(storyContract)이 있고 매체가 실제 바뀔 때 window.confirm 으로 영향(작가진·생성/검토 기준 전환, 회차·헌장 유지) 안내. 취소 시 중단.
+- **selectFormat 신설** — 형식 button 이 setFormat 만 하고 project 에 영속 안 하던 버그(리로드 시 휘발)를 confirm 가드 + project 영속으로 수정. `onClick={() => selectFormat(option.id)}`.
+- editorFocusLayout.test +2 소스 핀(selectMedium·selectFormat confirm·배선).
+
+### 손대지 말 것
+- confirm 가드의 `nextMedium !== medium`(형식은 `nextFormat !== format`) — 같은 매체/형식 재선택엔 confirm 안 뜨게. 빼면 무변경에도 다이얼로그.
+- selectFormat 의 project 영속(setProject + saveProject) — 기존 setFormat 단독은 휘발 버그였다. 되돌리면 형식 변경이 리로드 시 사라진다.
+
+### 다음 세션이 해야 할 한 가지
+- (선택) #10 라이브 눈 확인 — 미디어 패널(⌘K → 매체 변경) 열고 다른 매체/형식 클릭 시 confirm 다이얼로그. 이번엔 미디어 패널 경로(palette→패널→옵션) 자동화 복잡으로 소스 핀 갈음.
+- 검토대기 잔여 — #17(떡밥·비트 보드 편집) + 매체 차별 #8(학술 마진검토 dead code)·#9(매체 작업면). 리포트 `docs/reviews/2026-06-14-ultracode-beta-10/REPORT.md` §3.
+
+---
+
 ## 2026-06-14 (9차) — #5 잠긴 회차 편집 보호 + 잠금 해제 (main, TDD+라이브, ultracode)
 
 > #4 직후 검토대기 #5 착수·완료. 잠긴 회차가 editable=true 로 무음 편집되던 데이터 손실 + unlockChapter 미배선 해소. 커밋 (아래). 라이브 검증 완료.

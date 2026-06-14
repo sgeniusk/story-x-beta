@@ -1649,6 +1649,18 @@ export function StoryXDesk({
   }, [initialDraftPayload]);
 
   function selectMedium(nextMedium: CreativeMedium) {
+    // #10 — 기존 회차·헌장이 있는데 매체를 바꾸면 작가진·생성/검토 기준이 조용히 전환된다. 무음 전환을 막기 위해 영향을 알리고 확인받는다.
+    const hasWork = project.chapters.length > 0 || !!project.storyContract;
+    if (
+      hasWork &&
+      nextMedium !== medium &&
+      !window.confirm(
+        `현재 ${project.chapters.length}화가 있고 작가진·생성 기준이 ${blueprint.mediumLabel}에 맞춰져 있습니다. ` +
+          `매체를 바꾸면 작가진과 생성·검토 기준이 새 매체로 전환됩니다(회차 본문·헌장은 유지). 계속할까요?`
+      )
+    ) {
+      return;
+    }
     setMedium(nextMedium);
     const nextFormat = getFormatOptions(nextMedium)[0].id;
     setFormat(nextFormat);
@@ -1658,6 +1670,27 @@ export function StoryXDesk({
       saveProject(next);
       return next;
     });
+  }
+
+  function selectFormat(nextFormat: CreativeFormat) {
+    // #10 — 형식(분량·연재 기준) 변경도 회차/헌장이 있으면 confirm. 기존엔 setFormat 만 하고 project 에 영속하지 않아 리로드 시 휘발했다.
+    const hasWork = project.chapters.length > 0 || !!project.storyContract;
+    if (
+      hasWork &&
+      nextFormat !== format &&
+      !window.confirm(
+        `현재 ${project.chapters.length}화가 있습니다. 형식을 ${blueprint.formatLabel}에서 바꾸면 분량·연재 기준이 전환됩니다(회차 본문·헌장은 유지). 계속할까요?`
+      )
+    ) {
+      return;
+    }
+    setFormat(nextFormat);
+    setProject((current) => {
+      const next = { ...current, format: nextFormat };
+      saveProject(next);
+      return next;
+    });
+    setIsMediaPanelOpen(false);
   }
 
   function updateDraftPrompt(value: string) {
@@ -2664,10 +2697,7 @@ export function StoryXDesk({
                   key={option.id}
                   type="button"
                   className={format === option.id ? 'is-selected' : ''}
-                  onClick={() => {
-                    setFormat(option.id);
-                    setIsMediaPanelOpen(false);
-                  }}
+                  onClick={() => selectFormat(option.id)}
                 >
                   <strong>{option.label}</strong>
                   <span>{option.cadence}</span>

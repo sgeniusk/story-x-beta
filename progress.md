@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-14 · Branch: `main` (**울트라코드 10인 베타테스트 → 중간 수정 루프 3대 골격 완료: #1 본문영속·#1-undo·#6 인물CRUD. 후속 #7 헌장 편집·#3 영향회차 인라인·#4 회차 선택기·#5 잠긴 회차 보호(TDD, #7·#4·#5 라이브) 완료 — 검토대기 #3·#4·#5·#7 처리. 이야기 품질 딥리서치 정본**)
+> Last Updated: 2026-06-14 · Branch: `main` (**울트라코드 10인 베타테스트 → 중간 수정 루프 3대 골격 완료: #1 본문영속·#1-undo·#6 인물CRUD. 후속 #7 헌장·#3 영향회차·#4 회차선택기·#5 잠긴회차·#10 매체변경confirm(TDD, #7·#4·#5 라이브) 완료 — 검토대기 #3·#4·#5·#7·#10 처리. 이야기 품질 딥리서치 정본**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,18 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-14 10차 · #10 매체/형식 변경 confirm · main · ultracode)
+
+```
+init.sh            → tsc 0 · vitest 557(editorFocusLayout +2) · build 통과 (555→557)
+#10 매체/형식 confirm → 베타 검토대기 #10(매체/형식 변경이 경고·confirm·영향분석 없이 즉시 전환 — 작가진·헌장 무음 전환).
+  selectMedium 에 confirm 가드(기존 회차/헌장 + 매체 실제 변경 시 영향 안내·취소 시 중단).
+  selectFormat 신설 — 형식 button 이 setFormat 만 하고 project 미영속(리로드 휘발 버그)을 confirm + project 영속으로 수정.
+검증             → editorFocusLayout +2 소스 핀(selectMedium·selectFormat confirm·onClick 배선).
+  ★ 라이브 갈음 — 미디어 패널 경로(⌘K→palette→패널→옵션 클릭) 자동화 복잡 + #3 류 네비 타이밍 위험. window.confirm 표준 동작 + 소스 핀으로 갈음.
+남은         → 검토대기 #17(보드 편집) + 매체차별 #8(학술 마진검토 dead)·#9(매체 작업면). 리포트 §3.
+```
 
 ## 최근 검증 (2026-06-14 9차 · #5 잠긴 회차 보호 · main · ultracode)
 
