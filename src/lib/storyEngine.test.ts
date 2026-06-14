@@ -144,6 +144,20 @@ describe('storyEngine', () => {
     expect(commitChapterProse(withCh, chapter.id, '원본 본문')).toBe(withCh);
   });
 
+  it('commitChapterProse — 잠긴 회차는 prose 변경을 무시한다(베타테스트 #5 데이터 안전)', () => {
+    const empty = createEmptyProject({ title: '단편' });
+    const { chapter } = chapterFromDraftPayload(
+      empty,
+      { title: '1화', hook: 'h', outline: [], beats: [], prose: '원본 본문', newCanonFacts: [] },
+      { genre: 'urban-fantasy', intent: '진입', pressure: '' }
+    );
+    const withCh = commitChapter(empty, chapter);
+    const locked = lockChapter(withCh, chapter.id);
+    // 잠긴 회차에 다른 prose 를 commit 해도 참조 그대로(무변경) — UI editable=false 와 이중 안전망.
+    expect(commitChapterProse(locked, chapter.id, '잠긴 뒤 편집')).toBe(locked);
+    expect(locked.chapters.find((c) => c.id === chapter.id)?.prose).toBe('원본 본문');
+  });
+
   it('addCharacter/removeCharacter/renameCharacter — 인물 CRUD (베타테스트 #6)', () => {
     // 기존엔 욕망/상처/현재상태 3필드 덮어쓰기만 가능, 추가·삭제·이름 변경 핸들러가 0개였다.
     const empty = createEmptyProject({ title: 'x' });

@@ -108,6 +108,7 @@ import {
   getCanonReviewCategoryLabel,
   getGenreProfiles,
   lockChapter,
+  unlockChapter,
   produceNextChapter,
   serializeCanonCategory,
   type AgentRun,
@@ -1336,7 +1337,7 @@ export function StoryXDesk({
       intentMemo: draftPrompt,
       intentVersion,
       personas: mediumReviewAgentIds.map((id) => findPersona(id)),
-      editable: true,
+      editable: !isLatestLocked,
       bodyVersion,
       onBodyChange: handleFloatingBodyChange,
       onIntentChange: (text: string) => setDraftPrompt(text),
@@ -1360,6 +1361,9 @@ export function StoryXDesk({
         const next = project.chapters.find((chapter) => chapter.id === id);
         if (next) setLatestChapter(next);
       },
+      // #5 잠긴 회차 보호 — 읽기전용 게이트 + 잠금 해제(편집 재개).
+      isLocked: isLatestLocked,
+      onUnlock: handleUnlockChapter,
     }),
     [
       project,
@@ -2254,6 +2258,20 @@ export function StoryXDesk({
     // reviewDraft 다(새로고침해야 produceEpisode). latestChapter 도 동기화해 같은 세션에서 다음 회차를 만든다.
     setLatestChapter((current) =>
       current && current.id === chapterId ? { ...current, locked: true } : current
+    );
+  }
+
+  // 베타테스트 #5 — 잠긴 회차 잠금 해제(편집 재개). confirmChapterLock 의 역동작.
+  function handleUnlockChapter() {
+    if (!latestChapter) return;
+    const targetId = latestChapter.id;
+    setProject((current) => {
+      const unlocked = unlockChapter(current, targetId);
+      saveProject(unlocked);
+      return unlocked;
+    });
+    setLatestChapter((current) =>
+      current && current.id === targetId ? { ...current, locked: false } : current
     );
   }
 

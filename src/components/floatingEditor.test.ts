@@ -462,3 +462,36 @@ describe('FloatingEditor 회차 선택기 (#4)', () => {
     expect(desk).toContain('currentChapterId: latestChapter?.id');
   });
 });
+
+describe('FloatingEditor 잠긴 회차 보호 (#5)', () => {
+  it('isLocked 면 본문이 읽기 전용(contentEditable=false)이고 잠김 안내를 렌더한다', () => {
+    const { host, unmount } = mount(baseProps({ isLocked: true }));
+    expect(host.querySelector('.ms')?.getAttribute('contenteditable')).toBe('false');
+    expect(host.querySelector('.ep-locked-banner')).not.toBeNull();
+    unmount();
+  });
+
+  it('isLocked + onUnlock 이면 잠금 해제 버튼이 onUnlock 을 호출한다', () => {
+    const onUnlock = vi.fn();
+    const { host, click, unmount } = mount(baseProps({ isLocked: true, onUnlock }));
+    const btn = host.querySelector('.ep-unlock-btn');
+    expect(btn).not.toBeNull();
+    click(btn);
+    expect(onUnlock).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('잠기지 않으면 잠김 안내·해제 버튼을 렌더하지 않고 본문은 편집 가능하다', () => {
+    const { host, unmount } = mount(baseProps());
+    expect(host.querySelector('.ep-locked-banner')).toBeNull();
+    expect(host.querySelector('.ep-unlock-btn')).toBeNull();
+    expect(host.querySelector('.ms')?.getAttribute('contenteditable')).toBe('true');
+    unmount();
+  });
+
+  it('StoryXDesk 가 잠긴 회차를 읽기전용으로 게이트하고 unlockChapter 를 배선한다', () => {
+    const desk = readFileSync(resolve(__dirname, '../StoryXDesk.tsx'), 'utf8');
+    expect(desk).toContain('editable: !isLatestLocked');
+    expect(desk).toContain('unlockChapter');
+  });
+});

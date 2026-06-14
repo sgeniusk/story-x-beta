@@ -67,6 +67,9 @@ export interface FloatingEditorProps {
   chapters?: Array<{ id: string; episode: number; title: string; locked?: boolean }>;
   currentChapterId?: string | null;
   onSelectChapter?: (id: string) => void;
+  /** #5 잠긴 회차 보호 — true 면 본문 읽기전용 + 잠김 안내. onUnlock 있으면 해제 버튼. */
+  isLocked?: boolean;
+  onUnlock?: () => void;
 }
 
 const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
@@ -113,6 +116,8 @@ export function FloatingEditor({
   chapters,
   currentChapterId,
   onSelectChapter,
+  isLocked = false,
+  onUnlock,
 }: FloatingEditorProps) {
   const personaById = useCallback(
     (id: string): PersonaCard =>
@@ -490,10 +495,20 @@ export function FloatingEditor({
             })()}
             <h1 className="ep-title">{chapterTitle}</h1>
             <p className="ep-sub">{chapterSub}</p>
+            {isLocked && (
+              <div className="ep-locked-banner" role="status">
+                <span>🔒 잠긴 회차 — 읽기 전용입니다. 고치려면 잠금을 해제하세요.</span>
+                {onUnlock && (
+                  <button type="button" className="ep-unlock-btn" onClick={onUnlock}>
+                    잠금 해제
+                  </button>
+                )}
+              </div>
+            )}
             <div
               className="ms"
               ref={msElRef}
-              contentEditable={editable}
+              contentEditable={editable && !isLocked}
               suppressContentEditableWarning
               onMouseUp={onBodyMouseUp}
               onInput={emitBody}

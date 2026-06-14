@@ -1868,7 +1868,8 @@ export function commitChapter(project: SeriesProject, chapter: Chapter): SeriesP
 // 없는 회차이거나 prose 가 동일하면 참조를 그대로 반환해 불필요한 저장·리렌더를 막는다.
 export function commitChapterProse(project: SeriesProject, chapterId: string, prose: string): SeriesProject {
   const index = project.chapters.findIndex((chapter) => chapter.id === chapterId);
-  if (index < 0 || project.chapters[index].prose === prose) {
+  // 잠긴 회차는 prose 를 바꾸지 않는다(베타테스트 #5) — UI editable=false 와 이중 안전망.
+  if (index < 0 || project.chapters[index].locked || project.chapters[index].prose === prose) {
     return project;
   }
   return {

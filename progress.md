@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-14 · Branch: `main` (**울트라코드 10인 베타테스트 → 중간 수정 루프 3대 골격 완료: #1 본문영속·#1-undo·#6 인물CRUD. 후속 #7 헌장 편집·#3 영향회차 인라인·#4 회차 선택기(TDD, #7·#4 라이브) 완료 — 검토대기 #3·#4·#7 골격 마무리. 이야기 품질 딥리서치 정본**)
+> Last Updated: 2026-06-14 · Branch: `main` (**울트라코드 10인 베타테스트 → 중간 수정 루프 3대 골격 완료: #1 본문영속·#1-undo·#6 인물CRUD. 후속 #7 헌장 편집·#3 영향회차 인라인·#4 회차 선택기·#5 잠긴 회차 보호(TDD, #7·#4·#5 라이브) 완료 — 검토대기 #3·#4·#5·#7 처리. 이야기 품질 딥리서치 정본**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,22 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-14 9차 · #5 잠긴 회차 보호 · main · ultracode)
+
+```
+init.sh            → tsc 0 · vitest 555(storyEngine +1·floatingEditor +4) · build 통과 (550→555)
+#5 잠긴 회차 보호   → 베타 검토대기 #5(잠긴 회차도 editable=true 무음 편집·저장 안 됨 데이터 손실 + unlockChapter 미배선).
+  commitChapterProse 잠금 가드(잠긴 회차 prose 무변경, 도메인 안전) + floatingEditorProps editable:!isLatestLocked +
+  FloatingEditor contentEditable={editable && !isLocked} + isLocked·onUnlock(🔒 배너 + 잠금 해제 버튼) +
+  StoryXDesk handleUnlockChapter(confirmChapterLock 역동작: unlockChapter+saveProject+setLatestChapter).
+검증             → storyEngine.test +1(잠긴 회차 commit no-op)·floatingEditor.test +4(react-dom 실렌더: 읽기전용·배너·onUnlock·미잠금 미렌더·desk 핀).
+  라이브(preview) — 회차 잠금 patch: 둘째 회차 🔒 배너·contentEditable=false·해제 버튼 →
+  해제 클릭 → 편집 재개(true)·배너 제거·localStorage locked=false 영속. fresh load·인터랙션 런타임 에러 0(센티넬).
+  ★ 콘솔 "error in StoryXDesk" 8건은 순차 Edit HMR 중간 상태(onUnlock→handleUnlockChapter 정의 전) 아티팩트 —
+  fresh reload 후 화면 정상·에러 불변·센티넬 0·tsc/build 정합으로 확정. DoD "콘솔 0"은 fresh load 기준.
+남은         → 검토대기 #10(매체 변경 confirm)·#17(보드 편집) + 매체차별 #8·#9. 리포트 §3.
+```
 
 ## 최근 검증 (2026-06-14 8차 · #4 FloatingEditor 회차 선택기 · main · ultracode)
 

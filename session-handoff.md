@@ -4,6 +4,31 @@
 
 ---
 
+## 2026-06-14 (9차) — #5 잠긴 회차 편집 보호 + 잠금 해제 (main, TDD+라이브, ultracode)
+
+> #4 직후 검토대기 #5 착수·완료. 잠긴 회차가 editable=true 로 무음 편집되던 데이터 손실 + unlockChapter 미배선 해소. 커밋 (아래). 라이브 검증 완료.
+
+### 한 것
+- **commitChapterProse 잠금 가드** (storyEngine.test +1) — 잠긴 회차는 prose 변경 무시(참조 동일). UI editable=false 와 이중 안전망(도메인 레벨 데이터 안전).
+- **editable 게이트** — floatingEditorProps `editable: !isLatestLocked`(기존 무조건 true). FloatingEditor `contentEditable={editable && !isLocked}`.
+- **잠김 안내 + 해제 UI** — FloatingEditor isLocked·onUnlock props. ep-sub 다음 🔒 배너(읽기전용 안내)+"잠금 해제" 버튼. floatingEditor.test +4(읽기전용·배너·onUnlock·미잠금 미렌더·desk 핀). `.ep-locked-banner`/`.ep-unlock-btn` 다크 토큰.
+- **handleUnlockChapter** (StoryXDesk) — confirmChapterLock 역동작(unlockChapter + saveProject + setLatestChapter). floatingEditorProps isLocked·onUnlock.
+- **라이브(preview)** — 회차 잠금 patch → 둘째 회차 로드: 🔒 배너·contentEditable=false·해제 버튼 → 해제 클릭 → 편집 재개(true)·배너 제거·localStorage locked=false 영속. fresh load·인터랙션 런타임 에러 0(센티넬 확인).
+
+### ★ 콘솔 에러 판정 (중요)
+라이브 중 콘솔에 "error in <StoryXDesk>" 8건이 떴으나 **순차 Edit 사이 HMR 중간 상태 아티팩트**다 — isLocked·onUnlock 을 floatingEditorProps 에 먼저 추가하고 handleUnlockChapter 함수를 그 다음에 추가하는 사이, HMR 이 onUnlock: handleUnlockChapter(미정의) 를 잡아 ReferenceError. **fresh reload 후 화면 정상·에러 불변(reload 가 에러 안 늘림)·런타임 센티넬 0·tsc/build 정합으로 확정.** 교훈 — preview 에서 한 기능을 여러 Edit 으로 나눠 배선할 때 중간 HMR 콘솔 에러는 정상이며, **DoD "콘솔 0"은 fresh load 기준으로 판정**한다.
+
+### 손대지 말 것
+- commitChapterProse 의 `project.chapters[index].locked` 가드 — editable=false(UI)와 별개 도메인 안전망. 빼면 잠긴 회차 prose 가 코드 경로(회차 전환 flush 등)로 덮일 수 있다.
+- editable: !isLatestLocked + FloatingEditor `contentEditable={editable && !isLocked}` 이중 — isLocked 만으로도 읽기전용. 둘 중 하나만 두면 게이트 약화.
+- handleUnlockChapter 가 confirmChapterLock 미러(unlockChapter+saveProject+setLatestChapter) — saveProject 빼면 새로고침 시 잠금 해제 소실.
+
+### 다음 세션이 해야 할 한 가지
+- 검토대기 잔여 — #10(매체/형식 변경 confirm·영향분석)·#17(떡밥·비트 보드 편집) + 매체 차별 #8(학술 마진검토 dead)·#9(매체 작업면). 리포트 `docs/reviews/2026-06-14-ultracode-beta-10/REPORT.md` §3.
+- (선택) #3 라이브 눈 확인(7차 노트). preview 안정화됨 — 단, 순차 Edit HMR 콘솔 에러는 fresh reload 로 판정.
+
+---
+
 ## 2026-06-14 (8차) — #4 FloatingEditor 회차 선택기: 단편 포함 회차 전환 (main, TDD+라이브, ultracode)
 
 > #3 직후 같은 ultracode 세션에서 청사진 maps[2] 기반 #4 착수·완료. floating 편집기(기본)에 회차 선택기 부재 + 단편 isSerial 게이트 차단 해소. 커밋 (아래). 라이브 검증 완료.
