@@ -114,6 +114,9 @@ import {
   type Chapter,
   type ChapterBeat,
   commitChapterProse,
+  addCharacter,
+  removeCharacter,
+  renameCharacter,
   type AgentId,
   type CanonReviewCategory,
   type CreativeWeight,
@@ -1705,6 +1708,17 @@ export function StoryXDesk({
     setCanonChanges((current) => current.filter((entry) => entry.id !== change.id));
   }
 
+  // 베타테스트 #6 — 인물 CRUD 핸들러(순수 함수 위임).
+  function handleAddCharacter() {
+    setProject((prev) => addCharacter(prev));
+  }
+  function handleRemoveCharacter(characterId: string) {
+    setProject((prev) => removeCharacter(prev, characterId));
+  }
+  function handleRenameCharacter(characterId: string, name: string) {
+    setProject((prev) => renameCharacter(prev, characterId, name));
+  }
+
   function updateProject(
     field: 'title' | 'logline' | 'audiencePromise' | 'deepQuestion' | 'formIntent' | 'tone',
     value: string
@@ -2260,6 +2274,9 @@ export function StoryXDesk({
           project={project}
           onUpdateCharacter={updateCharacterMemory}
           onOpenBibleSection={openBibleSection}
+          onAddCharacter={handleAddCharacter}
+          onRemoveCharacter={handleRemoveCharacter}
+          onRenameCharacter={handleRenameCharacter}
         />
       ) : dataView.kind === 'bible' ? (
         <MemoryBankStudio
@@ -2684,6 +2701,9 @@ export function StoryXDesk({
               project={project}
               onUpdateCharacter={updateCharacterMemory}
               onOpenBibleSection={openBibleSection}
+              onAddCharacter={handleAddCharacter}
+              onRemoveCharacter={handleRemoveCharacter}
+              onRenameCharacter={handleRenameCharacter}
             />
           ) : dataView.kind === 'bible' ? (
             <MemoryBankStudio

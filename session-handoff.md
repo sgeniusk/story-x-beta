@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-06-14 (5차) — #6 인물 CRUD: 추가·삭제·이름변경 (main, TDD)
+
+> 베타테스트 "중간 수정 루프 3대 골격" 마지막(#6)의 1단계 — 인물 add/remove/rename. 순수 함수 TDD + 컴포넌트 체인 배선. 커밋 완료.
+
+### 한 것
+- **storyEngine 인물 CRUD 순수 함수** (TDD, storyEngine.test +1) — addCharacter(빈 필드·결정론 char-N id, 충돌 회피)·removeCharacter(인물 + 다른 인물의 그 인물 향한 relations 정리)·renameCharacter. 없는 id 는 참조 그대로(무변경).
+- **배선 체인** — StoryXDesk handleAdd/Remove/RenameCharacter → CanonCanvas(onAddCharacter·onRemoveCharacter·onRenameCharacter prop + "+ 인물 추가" 버튼, characters 카테고리만) → CharacterDetailPanel(이름 input·"이 인물 삭제" confirm). `.ex-canon-detail-name-input` CSS. editorFocusLayout +1 소스 핀. init.sh 530 녹색.
+
+### 손대지 말 것
+- `nextCharacterId` 결정론(char-N, 기존 id 충돌 회피) — Date/random 미사용(storyEngine 순수성). storyEngine.test 가 id 유일성 핀.
+- removeCharacter 의 relations 정리(다른 인물의 targetId===삭제id 엣지 제거) — 빼면 고아 엣지가 관계도에 남는다.
+- CanonCanvas "+ 인물 추가"는 `category === 'characters'` 일 때만 — 다른 캐논 카테고리(장소/사물)엔 의미 없다.
+
+### 다음 세션이 해야 할 한 가지
+- **#6 라이브 눈 확인** — 데이터 모드 → 인물 → "+ 인물 추가" 클릭 → 새 인물 → 이름 입력·삭제(순수 함수는 TDD 검증, UI 동작은 미확인).
+- **#6 잔여** — 인물 role 편집(updateCharacterMemory field 확장)·캐논 엔티티(장소/사물/사건) CRUD(CanonCardGrid)·매체별 캐릭터 스키마(만화 외관 — CharacterProfile appearance + comics 분기). 리포트 §3-6·§3-9.
+- 이로써 "중간 수정 루프 3대 골격"(#1 본문 영속·#1-undo 되돌리기·#6 CRUD) 1차 완료. 다음은 검토대기 #3(영향 회차 인라인)·#4(회차 선택기)·#7(헌장 편집).
+
+---
+
 ## 2026-06-14 (4차) — #1-undo 바이블 되돌리기 (main, TDD)
 
 > 베타테스트 2순위(전원 10명) 착수·완료. 수동 바이블 편집에 변경별 되돌리기 신설. revertCanonChange 순수 함수 TDD + 배선. 커밋 완료(아래 다음 한 가지 참조).

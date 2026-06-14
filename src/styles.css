@@ -6706,6 +6706,24 @@ body {
   font-size: 1.18rem;
   line-height: 1.2;
 }
+/* 베타테스트 #6 — 인물 이름 변경 입력(h3 자리) */
+.sx-desk .ex-canon-detail-name-input {
+  margin: 0;
+  color: var(--sx-ink);
+  font-size: 1.18rem;
+  line-height: 1.2;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--sx-line, rgba(255, 255, 255, 0.12));
+  padding: 1px 0;
+  width: 100%;
+  font-family: inherit;
+}
+.sx-desk .ex-canon-detail-name-input:focus {
+  outline: none;
+  border-bottom-color: var(--sx-brand, var(--nx-primary));
+}
 
 .sx-desk .ex-canon-detail-sub {
   color: var(--sx-muted);

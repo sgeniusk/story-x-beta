@@ -145,6 +145,18 @@ charter 스크롤 버그 — 사용자 실사용 발견: 작품 헌장(charter) 
 딥리서치          — 이야기 품질·의외성(U3·U4) SOTA 정본 docs/research/2026-06-14-prose-quality-surprise-research.md
 ```
 
+## 최근 검증 (2026-06-14 5차 · #6 인물 CRUD · main)
+
+```
+init.sh            → tsc 0 · vitest 530(storyEngine +1·editorFocusLayout +1) · build 통과 (528→530)
+#6 인물 CRUD       → 베타테스트(욕망/상처/현재상태 3필드 덮어쓰기만, 추가·삭제·이름변경 핸들러 0개).
+  storyEngine addCharacter(빈 필드·결정론 char-N id)·removeCharacter(고아 relations 정리)·renameCharacter 순수 함수(TDD).
+  StoryXDesk handleAdd/Remove/RenameCharacter → CanonCanvas → CharacterDetailPanel(이름 입력·"이 인물 삭제" confirm) + "+ 인물 추가" 버튼.
+검증             → 순수 함수 TDD(add/rename/remove·relations 정리·없는 id 무변경)·배선 tsc·editorFocusLayout 소스 핀.
+  라이브 버튼 동작은 코드 검증으로 갈음(데이터모드 진입 비용 — 다음 세션 눈 확인 권장).
+남은 #6          → 인물 role 편집·캐논(장소/사물/사건) CRUD·매체별 캐릭터 스키마(만화 외관)는 분리(리포트 §3-6).
+```
+
 ## 최근 검증 (2026-06-14 4차 · #1-undo 바이블 되돌리기 · main)
 
 ```

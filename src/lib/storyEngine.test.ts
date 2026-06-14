@@ -10,6 +10,9 @@ import {
   chapterFromDraftPayload,
   commitChapter,
   commitChapterProse,
+  addCharacter,
+  removeCharacter,
+  renameCharacter,
   createEmptyProject,
   createSeedProject,
   defaultPlannedEpisodes,
@@ -137,6 +140,40 @@ describe('storyEngine', () => {
     // 없는 회차 id · 동일 prose 는 참조 그대로(무변경 — 불필요한 saveProject 방지)
     expect(commitChapterProse(withCh, 'no-such-id', 'x')).toBe(withCh);
     expect(commitChapterProse(withCh, chapter.id, '원본 본문')).toBe(withCh);
+  });
+
+  it('addCharacter/removeCharacter/renameCharacter — 인물 CRUD (베타테스트 #6)', () => {
+    // 기존엔 욕망/상처/현재상태 3필드 덮어쓰기만 가능, 추가·삭제·이름 변경 핸들러가 0개였다.
+    const empty = createEmptyProject({ title: 'x' });
+    const base = empty.characters.length;
+
+    const a1 = addCharacter(empty, '인물A');
+    const a2 = addCharacter(a1, '인물B');
+    expect(a2.characters.length).toBe(base + 2);
+    const cA = a2.characters.find((c) => c.name === '인물A')!;
+    const cB = a2.characters.find((c) => c.name === '인물B')!;
+    expect(cA.id).not.toBe(cB.id); // id 유일
+    expect(cB.desire).toBe('');
+    expect(cB.relations).toEqual([]);
+
+    // rename
+    const renamed = renameCharacter(a2, cB.id, '인물B-개명');
+    expect(renamed.characters.find((c) => c.id === cB.id)?.name).toBe('인물B-개명');
+
+    // remove — cB 제거 + cA 가 cB 로 향한 relation 정리(고아 엣지 방지)
+    const withRel = {
+      ...a2,
+      characters: a2.characters.map((c) =>
+        c.id === cA.id ? { ...c, relations: [{ targetId: cB.id, label: '동료' }] } : c
+      )
+    };
+    const removed = removeCharacter(withRel, cB.id);
+    expect(removed.characters.find((c) => c.id === cB.id)).toBeUndefined();
+    expect(removed.characters.find((c) => c.id === cA.id)?.relations.some((r) => r.targetId === cB.id)).toBe(false);
+
+    // 없는 id 는 무변경(참조 동일)
+    expect(removeCharacter(a2, 'nope')).toBe(a2);
+    expect(renameCharacter(a2, 'nope', 'x')).toBe(a2);
   });
 
   it('SeriesProject 의 8개 신설 optional 필드는 기본값이 undefined 이며 누락돼도 createEmptyProject 가 동작', () => {

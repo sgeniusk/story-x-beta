@@ -13,12 +13,18 @@ export function CanonCanvas({
   category,
   project,
   onUpdateCharacter,
-  onOpenBibleSection
+  onOpenBibleSection,
+  onAddCharacter,
+  onRemoveCharacter,
+  onRenameCharacter
 }: {
   category: CanonCategory;
   project: SeriesProject;
   onUpdateCharacter: (characterId: string, field: 'desire' | 'wound' | 'currentState', value: string) => void;
   onOpenBibleSection: (section: BibleSection) => void;
+  onAddCharacter?: () => void;
+  onRemoveCharacter?: (characterId: string) => void;
+  onRenameCharacter?: (characterId: string, name: string) => void;
 }) {
   const categoryLabel = canonCategories.find((item) => item.id === category)?.label ?? '캐논';
   const [pickedCharacterId, setPickedCharacterId] = useState<string>(project.characters[0]?.id ?? '');
@@ -44,7 +50,12 @@ export function CanonCanvas({
         />
         <div className="ex-canon-pane-aside">
           {pickedCharacter ? (
-            <CharacterDetailPanel character={pickedCharacter} onUpdateCharacter={onUpdateCharacter} />
+            <CharacterDetailPanel
+              character={pickedCharacter}
+              onUpdateCharacter={onUpdateCharacter}
+              onRename={onRenameCharacter}
+              onRemove={onRemoveCharacter}
+            />
           ) : (
             <p className="ex-beats-empty">인물을 먼저 등록하면 상세가 여기에 표시됩니다.</p>
           )}
@@ -74,6 +85,11 @@ export function CanonCanvas({
         <h2 className="ex-canon-canvas-title">{categoryLabel}</h2>
         <p className="ex-canon-canvas-hint">{categoryHint[category]}</p>
         <div className="ex-canon-canvas-actions">
+          {category === 'characters' && onAddCharacter && (
+            <button type="button" className="sx-secondary-button" onClick={onAddCharacter}>
+              + 인물 추가
+            </button>
+          )}
           <button type="button" className="sx-secondary-button" onClick={() => onOpenBibleSection('canon')}>
             <GitBranch size={14} />
             캐논 원장 열기

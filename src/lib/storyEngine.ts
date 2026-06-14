@@ -1814,6 +1814,59 @@ export function commitChapterProse(project: SeriesProject, chapterId: string, pr
   };
 }
 
+// 베타테스트 #6 — 인물 CRUD. id 는 기존 id 와 충돌하지 않는 char-N 으로 생성(결정론, Date/random 미사용).
+function nextCharacterId(project: SeriesProject): string {
+  const ids = new Set(project.characters.map((character) => character.id));
+  let n = project.characters.length + 1;
+  while (ids.has(`char-${n}`)) n += 1;
+  return `char-${n}`;
+}
+
+export function addCharacter(project: SeriesProject, name = '새 인물'): SeriesProject {
+  const character: CharacterProfile = {
+    id: nextCharacterId(project),
+    name,
+    role: '',
+    desire: '',
+    wound: '',
+    currentState: '',
+    voiceRules: [],
+    canonAnchors: [],
+    forbiddenContradictions: [],
+    relations: []
+  };
+  return { ...project, characters: [...project.characters, character] };
+}
+
+// 인물 삭제 — 다른 인물의 그 인물을 향한 relations 엣지도 함께 정리한다(고아 엣지 방지). 없는 id 면 참조 그대로.
+export function removeCharacter(project: SeriesProject, characterId: string): SeriesProject {
+  if (!project.characters.some((character) => character.id === characterId)) {
+    return project;
+  }
+  return {
+    ...project,
+    characters: project.characters
+      .filter((character) => character.id !== characterId)
+      .map((character) => ({
+        ...character,
+        relations: character.relations.filter((relation) => relation.targetId !== characterId)
+      }))
+  };
+}
+
+// 인물 이름 변경 — relations 의 targetId 는 id 기반이라 영향 없다. 없는 id 면 참조 그대로.
+export function renameCharacter(project: SeriesProject, characterId: string, name: string): SeriesProject {
+  if (!project.characters.some((character) => character.id === characterId)) {
+    return project;
+  }
+  return {
+    ...project,
+    characters: project.characters.map((character) =>
+      character.id === characterId ? { ...character, name } : character
+    )
+  };
+}
+
 // relations — 승격이 끝난 인물 목록에 owner=character 캐논의 "A의 [관계] 이름은 B" 엣지를 더한다.
 // 양쪽 인물이 모두 승격돼 있을 때만, 중복 라벨은 건너뛴다. 발명 없음(extractRelation 가 보수적으로 거른다).
 function linkRelationsFromCanon(characters: CharacterProfile[], newFacts: CanonFact[]): CharacterProfile[] {
