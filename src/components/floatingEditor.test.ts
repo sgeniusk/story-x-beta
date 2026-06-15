@@ -249,6 +249,41 @@ describe('FloatingEditor 실데이터 배선', () => {
     unmount();
   });
 
+  // VS dogfooding 발견 — VS·갈림길이 기본 닫힌 fc-p-state 패널에 숨어 발견성이 낮다.
+  // 회차가 새로 생성되면(chapters 수 증가) 결정 거리가 있을 때 상태 패널을 자동으로 1회 연다(assignAll 선례).
+  const forkSample = () => [{
+    id: 'fork-open-promise',
+    source: 'open-promise' as const,
+    question: '이번 화에서 진척시킬 약속은 무엇인가요?',
+    options: [{ label: 'A', intentSeed: '이번 화 중심은 A.' }],
+  }];
+  const ch1 = () => [{ id: 'c1', episode: 1, title: '1화' }];
+  const ch2 = () => [{ id: 'c1', episode: 1, title: '1화' }, { id: 'c2', episode: 2, title: '2화' }];
+
+  it('새 회차 생성(chapters 증가) + 갈림길이 있으면 상태 패널을 자동으로 연다', () => {
+    const { host, rerender, unmount } = mount(baseProps({ chapters: ch1(), episodeForks: forkSample() }));
+    expect(host.querySelector('#fc-p-state')?.className ?? '').not.toContain('show');
+    rerender(baseProps({ chapters: ch2(), episodeForks: forkSample() }));
+    expect(host.querySelector('#fc-p-state')?.className ?? '').toContain('show');
+    unmount();
+  });
+
+  it('회차가 늘어도 갈림길/VS 거리가 없으면 자동으로 열지 않는다', () => {
+    const { host, rerender, unmount } = mount(baseProps({ chapters: ch1() }));
+    rerender(baseProps({ chapters: ch2() }));
+    expect(host.querySelector('#fc-p-state')?.className ?? '').not.toContain('show');
+    unmount();
+  });
+
+  it('회차 수가 그대로면(과거 회차 전환) 갈림길이 있어도 자동으로 열지 않는다', () => {
+    const { host, rerender, unmount } = mount(
+      baseProps({ chapters: ch2(), currentChapterId: 'c2', episodeForks: forkSample() })
+    );
+    rerender(baseProps({ chapters: ch2(), currentChapterId: 'c1', episodeForks: forkSample() }));
+    expect(host.querySelector('#fc-p-state')?.className ?? '').not.toContain('show');
+    unmount();
+  });
+
   it('매체 슬라이더가 onMediaAxisChange 를 호출한다', () => {
     const onMediaAxisChange = vi.fn();
     const { host, unmount } = mount(baseProps({ onMediaAxisChange }));

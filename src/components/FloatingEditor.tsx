@@ -154,6 +154,19 @@ export function FloatingEditor({
   const presentCount = liveReviews.length;
 
   const [openPanel, setOpenPanel] = useState<'struct' | 'curve' | 'state' | 'writers' | 'metrics' | null>(null);
+  // VS dogfooding 발견 — VS·갈림길이 기본 닫힌 fc-p-state 패널에 숨어 발견성이 낮다.
+  // 회차가 새로 생성되면(chapters 수 증가) 결정 거리가 있을 때만 상태 패널을 1회 자동으로 연다(assignAll 선례와 동형).
+  // 닫으면(Escape/✕/resize) 재발 안 함(트리거가 증가 엣지). 과거 회차 전환(수 불변)엔 안 열린다.
+  const prevChapterCountRef = useRef(chapters?.length ?? 0);
+  useEffect(() => {
+    const count = chapters?.length ?? 0;
+    const prev = prevChapterCountRef.current;
+    prevChapterCountRef.current = count;
+    const hasDecision = (episodeForks?.length ?? 0) > 0 || (paceQuestions?.length ?? 0) > 0;
+    if (count > prev && hasDecision) {
+      setOpenPanel('state');
+    }
+  }, [chapters?.length, episodeForks, paceQuestions]);
   const [openMetric, setOpenMetric] = useState<'harness' | 'quality' | 'media' | 'ontology' | 'payoff'>(
     metrics.harness.tone === 'warn'
       ? 'harness'

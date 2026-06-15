@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-06-15 (2차) — VS 노출 자동열림 + VS dogfooding 1라운드 (fix/vs-panel-autoreveal)
+
+> 사용자 "이전 세션 오류로 멈춤 — VS dogfooding 이어가기". C-1 VS를 실전 dogfooding(내 아이디어 심야 스릴러로 온보딩→1화→VS 풀 라이브) → VS 본진 5/5 검증 + 발견된 "VS 노출 약함"을 brainstorming→TDD 로 수정. 미머지·미푸시.
+
+### 한 것
+- **VS dogfooding** — 심야 라디오 사연 PD·10년 전 뺑소니(결말=자백 고정 장편)로 온보딩→인터뷰→헌장→1화→VS 풀 라이브(preview). VS 본진 5/5(후보 4개 흔함1·의외2·파격1·배지 회색/라임/코랄·결말 불가침·파격 클릭→의도 메모 합류). codex 맞춤 인터뷰·갈림길+continuity·결말 역산 헌장 라이브 실증.
+- **VS 노출 자동열림 수정** — FloatingEditor 자동열림 useEffect(chapters 수 증가 + episodeForks/paceQuestions 있으면 state 패널 1회 자동 열림). brainstorming→설계 승인→TDD(floatingEditor.test +3, react-dom 실DOM). init.sh 580 녹색.
+
+### 손대지 말 것
+- 자동열림 트리거 — `count > prev && hasDecision`(chapters 증가 엣지 + episodeForks/paceQuestions 있을 때만). prevChapterCountRef 로 증가 감지. "닫으면 재발 X·과거 회차 전환(수 불변) X"가 의도. 매 렌더 열거나 length 비교 빼면 작성 방해.
+- 1화 직후(첫 마운트) 자동열림은 YAGNI 보류(설계 결정). 원하면 "방금 생성됨" 신호 prop 별도 필요.
+- VS·갈림길은 fc-p-state 패널 안. openPanel 초기 null 유지(자동열림이 보강).
+
+### 다음 세션이 해야 할 한 가지
+- **머지/푸시 — 사용자 결정 대기**(fix/vs-panel-autoreveal → main).
+- dogfooding 발견 백로그(progress '최근 검증 2차') — 우선순위: 분량 2체계(매체 3등급↔헌장 2등급)·온보딩/의도 영속 X·제목 ". " 누수. + 소비/소거 라이브(2화 생성으로 VS 전개 본문 반영+stripConsumedSeeds 소거).
+- preview 환경 주의 — dev 서버 간헐 사망(idle 포함)·재시작 시 localStorage 세션 격리(작품 소실)·navigate 갭(data: → location.href 수동)·preview_fill 은 native setter+input 우회.
+
+---
+
 ## 2026-06-15 — Phase C-1 VS 회차 후보: 의외성 제안 채널 (feat/vs-episode-candidates, 서브에이전트 구동)
 
 > 사용자 "A 묶음(글 품질)부터 + 경쟁 도구(Sudowrite Muse·NovelCrafter Codex) 메커니즘 정리해 반영". brainstorming→spec→plan→서브에이전트 구동 풀 사이클로 VS(Verbalized Sampling) 회차 후보 = U4 의외성 직격(딥리서치 1순위 권고) 구현. 10 task TDD + final review + codex e2e. feat 브랜치, 미머지·미푸시.

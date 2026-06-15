@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-15 · Branch: `feat/vs-episode-candidates` (**Phase C-1 VS 회차 후보 완료 — 의외성 제안 채널(전개 방향 4개+확률 verbalize→흔함/의외/파격 라벨). brainstorming→spec→plan→서브에이전트 구동 10 task TDD + codex e2e 실증(확률 0.42→0.12 꼬리분포). 직전: 울트라코드 베타 중간 수정 루프 #1·#6·#7·#3·#4·#5·#10 완료**)
+> Last Updated: 2026-06-15 · Branch: `fix/vs-panel-autoreveal` (**VS dogfooding 1라운드 — 심야 스릴러로 온보딩→인터뷰→헌장→1화→VS 풀 라이브(preview). VS 본진 5/5 검증(후보·배지·의도 합류) + 노출 자동열림 수정(TDD). 직전: Phase C-1 VS 회차 후보 완료(전개 방향 4개+확률 verbalize→흔함/의외/파격, codex e2e)**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,25 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-15 2차 · VS 노출 자동열림 + dogfooding 1라운드 · fix/vs-panel-autoreveal)
+
+```
+dogfooding       → C-1 VS를 실전 검증. 내 아이디어(심야 라디오 사연 PD·10년 전 뺑소니, 결말=자백 고정 장편)로 온보딩→인터뷰→헌장→1화→VS 풀 라이브(preview).
+  ★ VS 본진 5/5 — [전개 후보 받기]→codex→후보 4개(흔함1·의외2·파격1, C-1 e2e 분포 동일)·배지 회색/라임/코랄·결말 불가침 경로만 흔듦·파격 클릭→의도 메모 합류("이번 화의 전개: …").
+  ★ 부수 차별점 라이브 실증 — codex 맞춤 인터뷰(freewrite "청취자 사연"을 옵션까지 반영)·갈림길+continuity(1화 본문의 "17번 청취자·차 안 동승자" 미스터리를 미회수 위험으로 포착)·결말 역산 헌장.
+VS 노출 수정     → ★ 발견 — VS·갈림길이 기본 닫힌 fc-p-state 패널에 숨어 발견성 낮음(openPanel 초기 null). 해결 — FloatingEditor 자동열림 useEffect: chapters 수 증가(새 회차) + 결정거리(episodeForks/paceQuestions) 있으면 state 패널 1회 자동 열림(assignAll 선례). 닫으면 재발 X(증가 엣지)·과거 회차 전환(수 불변) X. 1화 직후(첫 마운트)는 YAGNI 보류.
+  TDD — brainstorming→설계 승인→RED(1 실패)→GREEN. floatingEditor.test +3(react-dom 실DOM: 열림/안 열림/전환).
+init.sh          → tsc 0 · vitest 580(floatingEditor +3) · build 통과 (577→580).
+라이브 갈음      → VS UI 자체는 이번 세션 스크린샷 2장으로 라이브 검증(후보·배지·의도합류). 자동 "열림" trigger 라이브(2화 생성)는 dev 서버 2회 사망 + preview localStorage 세션 격리(작품 소실)로 갈음 — react-dom 실DOM 테스트가 동등 증거(#3 선례).
+dogfooding 발견 백로그 →
+  · (제품) 분량 2체계 공존 — 매체 단계 포맷 3등급(장편/중편/단편) vs 헌장 단계 2등급(단편/장편). "중편 없음" 결정과 매체 단계 충돌.
+  · (제품) 온보딩 중간(헌장 확정 전)·VS 의도 메모가 project 에 영속 X → 새로고침/서버사망 시 입력·선택 소실.
+  · (제품) 1화 제목 ". 빗길의 이름" 앞 ". " 누수(파싱).
+  · (제품) 1화 생성 후 "다음 회차 생성" CTA 즉시 안 보임(잠금 선행 경로 모호).
+  · (환경, 제품 무관) dev 서버 간헐 사망(idle 중 포함)·preview localStorage 세션 격리·navigate 갭(data: placeholder)·preview_fill React onChange 미발화(native setter 우회).
+다음            → 위 백로그(분량 2체계·영속·제목 누수 우선)·소비/소거 라이브(2화 생성)·Phase C-2/C-3·B 날것 문체·A-6 장편 기억.
+```
 
 ## 최근 검증 (2026-06-15 · Phase C-1 VS 회차 후보 · feat/vs-episode-candidates · 서브에이전트 구동)
 
