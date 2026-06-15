@@ -28,6 +28,15 @@ export interface PaceInterviewPromptInput {
   context: string;
 }
 
+/** VS 전개 후보(Verbalized Sampling) 입력 — Phase C-1. 이번 화 방향 4개 + 확률 분포를 verbalize 시킨다. */
+export interface VsCandidatesPromptInput {
+  medium: string;
+  format: CreativeFormat;
+  contractDigest?: string;
+  recentSummary: string;
+  unpaidPromises: string[];
+}
+
 /** 4줄 척추 제안 입력 — Phase A-3b. charter 단계에 있는 자유 서술·결말·대가를 받는다. */
 export interface SpineSuggestionPromptInput {
   medium: string;
@@ -587,6 +596,40 @@ export function buildSpineSuggestionPrompt(input: SpineSuggestionPromptInput): s
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',
     '  "spine": { "desire": "...", "advance": "...", "obstacle": "...", "resolution": "..." }',
+    '}'
+  ].join('\n');
+}
+
+// 이번 화 전개 후보(Verbalized Sampling) 프롬프트 — Phase C-1. "방향 4개 + 확률"을 verbalize 시켜 꼬리분포 의외성을 띄운다.
+// storyx.mjs 의 buildVsCandidatesPrompt 와 핵심 지시문 byte-identical 유지 — 변경 시 두 곳 동시 수정.
+export function buildVsCandidatesPrompt(input: VsCandidatesPromptInput): string {
+  const { medium, format, contractDigest, recentSummary, unpaidPromises } = input;
+  return [
+    'Story X 이번 화 전개 후보(Verbalized Sampling) 요청.',
+    `매체: ${medium} / 포맷: ${format}`,
+    '',
+    '## 작품 헌장 (결말·4줄 척추·위치)',
+    contractDigest?.trim() || '(헌장 없음)',
+    '',
+    '## 최근 회차 흐름',
+    recentSummary.trim() || '(아직 회차 없음)',
+    '',
+    '## 미회수 약속',
+    unpaidPromises.length > 0 ? unpaidPromises.map((p) => `- ${p}`).join('\n') : '(없음)',
+    '',
+    '## 역할',
+    '당신은 Story X의 쇼러너입니다. 이번 화가 어떻게 전개될지 서로 다른 방향 4개를, 각 방향이 실제로 선택될 법한 확률과 함께 제안합니다.',
+    '',
+    '## 지시',
+    '- 방향 4개를 생성하되, 흔할 법한 전개부터 꼬리(의외)까지 확률 분포를 펼칩니다. 적어도 하나는 확률 0.15 미만의 파격을 포함합니다.',
+    '- 결말 헌장은 절대 배신하지 않습니다. 결말로 수렴하는 경로만 의외로 흔듭니다.',
+    '- 각 방향은 인물의 선택과 대가가 드러나는 한 문장으로 씁니다. 일반론·해설 금지.',
+    '- 확률은 0과 1 사이 숫자입니다.',
+    '- 한국어로 씁니다.',
+    '',
+    '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
+    '{',
+    '  "candidates": [{ "direction": "...", "probability": 0.0 }]',
     '}'
   ].join('\n');
 }

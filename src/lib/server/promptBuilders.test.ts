@@ -335,3 +335,26 @@ describe('buildAgentReviewPrompt — 작품 헌장 길 잃음 점검 (Phase A-4)
     expect(cli).toContain(LOST);
   });
 });
+
+// VS 전개 후보(Verbalized Sampling) 프롬프트 — Phase C-1. 방향 4개 + 확률 분포.
+// storyx.mjs 미러 byte-identical — JSON 계약 문자열은 양쪽 동시 갱신.
+import { buildVsCandidatesPrompt } from './promptBuilders';
+
+describe('buildVsCandidatesPrompt — VS 전개 후보 (Phase C-1)', () => {
+  const VS_JSON_CONTRACT = '  "candidates": [{ "direction": "...", "probability": 0.0 }]';
+  it('방향 4개·꼬리 분포·결말 불가침·JSON 계약을 담는다', () => {
+    const p = buildVsCandidatesPrompt({
+      medium: 'novel', format: 'long-novel',
+      contractDigest: '결말: X', recentSummary: '1화 흐름', unpaidPromises: ['약속A']
+    });
+    expect(p).toContain('방향 4개');
+    expect(p).toContain('파격');
+    expect(p).toContain('결말 헌장은 절대 배신하지 않습니다');
+    expect(p).toContain('약속A');
+    expect(p).toContain(VS_JSON_CONTRACT);
+  });
+  it('[vs-mirror] storyx.mjs 가 JSON 출력 계약을 byte-identical 로 미러한다', () => {
+    const cli = readFileSync(resolve(__dirname, '../../../tools/storyx.mjs'), 'utf8');
+    expect(cli).toContain(VS_JSON_CONTRACT);
+  });
+});
