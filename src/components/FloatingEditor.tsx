@@ -5,7 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import type { InlineDiff, MarginReview, Paragraph, PersonaCard, SummonHandler } from '../lib/marginReview';
 import { SEVERITY_LABEL } from '../lib/marginReview';
 import type { StudioMetrics } from '../lib/studioMetrics';
-import { composeIntentWithFork, type EpisodeFork } from '../lib/episodeBriefing';
+import { composeIntentWithFork, buildVsIntentSeed, type EpisodeFork, type VsCandidate } from '../lib/episodeBriefing';
 import { replacePaceSeed, type PaceQuestion } from '../lib/paceInterview';
 
 interface ChapterBeatLike {
@@ -70,6 +70,13 @@ export interface FloatingEditorProps {
   /** #5 잠긴 회차 보호 — true 면 본문 읽기전용 + 잠김 안내. onUnlock 있으면 해제 버튼. */
   isLocked?: boolean;
   onUnlock?: () => void;
+  /** VS 전개 후보(Phase C-1) — onRequestVsCandidates 없으면 블록 미렌더. */
+  vsCandidates?: VsCandidate[];
+  onRequestVsCandidates?: () => void;
+  isVsLoading?: boolean;
+  vsNote?: string | null;
+  /** 후보 선택 시 호출(후보 닫기 등) — intent 합류는 내부에서 처리. */
+  onSelectVsCandidate?: (direction: string) => void;
 }
 
 const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
@@ -118,6 +125,11 @@ export function FloatingEditor({
   onSelectChapter,
   isLocked = false,
   onUnlock,
+  vsCandidates,
+  onRequestVsCandidates,
+  isVsLoading = false,
+  vsNote,
+  onSelectVsCandidate,
 }: FloatingEditorProps) {
   const personaById = useCallback(
     (id: string): PersonaCard =>
@@ -170,6 +182,18 @@ export function FloatingEditor({
     const next = composeIntentWithFork(current, seed);
     if (intentRef.current) intentRef.current.value = next;
     onIntentChange(next);
+  }
+
+  const rarityLabel = (r: VsCandidate['rarity']) =>
+    r === 'common' ? '흔함' : r === 'surprising' ? '의외' : '파격';
+  function pickVsCandidate(direction: string) {
+    if (!onIntentChange) return;
+    const seed = buildVsIntentSeed(direction);
+    const current = intentRef.current ? intentRef.current.value : intentMemo;
+    const next = composeIntentWithFork(current, seed);
+    if (intentRef.current) intentRef.current.value = next;
+    onIntentChange(next);
+    onSelectVsCandidate?.(direction);
   }
 
   // 진도 체크 옵션 선택 — 같은 질문의 이전 시드를 교체(replacePaceSeed), 없으면 append.
@@ -725,6 +749,39 @@ export function FloatingEditor({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+          {onRequestVsCandidates && (
+            <div className="fc-vs">
+              <div className="fc-vs-head">
+                <div className="fc-forks-title">이번 화 전개 후보 — 쇼러너 제안</div>
+                <button
+                  type="button"
+                  className="fc-vs-ask"
+                  disabled={isVsLoading || !onIntentChange}
+                  onClick={onRequestVsCandidates}
+                >
+                  {isVsLoading ? '뽑는 중…' : '전개 후보 받기'}
+                </button>
+              </div>
+              {vsNote && <div className="fc-vs-note">{vsNote}</div>}
+              {vsCandidates && vsCandidates.length > 0 && (
+                <div className="fc-vs-opts">
+                  {vsCandidates.map((c, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className={`fc-vs-opt fc-vs-${c.rarity}${c.canonSuspect ? ' is-canon-suspect' : ''}`}
+                      disabled={!onIntentChange}
+                      onClick={() => pickVsCandidate(c.direction)}
+                    >
+                      <span className="fc-vs-rarity">{rarityLabel(c.rarity)}</span>
+                      <span className="fc-vs-dir">{c.direction}</span>
+                      {c.canonSuspect && <em className="fc-fork-suspect">캐논 확인</em>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {paceQuestions && paceQuestions.length > 0 && (

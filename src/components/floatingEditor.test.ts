@@ -495,3 +495,28 @@ describe('FloatingEditor 잠긴 회차 보호 (#5)', () => {
     expect(desk).toContain('unlockChapter');
   });
 });
+
+describe('FloatingEditor VS 전개 후보 (C-1 Task8)', () => {
+  it('[VS] onRequestVsCandidates 가 있으면 전개 후보 버튼을 렌더한다', () => {
+    const { host, unmount } = mount(baseProps({ onRequestVsCandidates: () => {}, onIntentChange: () => {} }));
+    expect(host.textContent).toContain('전개 후보 받기');
+    unmount();
+  });
+
+  it('[VS] vsCandidates 를 rarity 라벨과 함께 렌더한다', () => {
+    const { host, unmount } = mount(baseProps({
+      onRequestVsCandidates: () => {},
+      onIntentChange: () => {},
+      vsCandidates: [{ direction: '배신한다', probability: 0.1, rarity: 'radical' }],
+    }));
+    expect(host.textContent).toContain('배신한다');
+    expect(host.textContent).toContain('파격');
+    unmount();
+  });
+
+  it('[VS] onRequestVsCandidates 미주입이면 블록 미렌더', () => {
+    const { host, unmount } = mount(baseProps({ onIntentChange: () => {} }));
+    expect(host.textContent).not.toContain('전개 후보 받기');
+    unmount();
+  });
+});
