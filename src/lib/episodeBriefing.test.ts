@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildContractStatus, buildEpisodeForks, composeIntentWithFork, stripConsumedSeeds } from './episodeBriefing';
+import { buildContractStatus, buildEpisodeForks, composeIntentWithFork, stripConsumedSeeds, classifyRarity, buildVsIntentSeed } from './episodeBriefing';
 import { computePayoffLedger } from './payoffLedger';
 import type { Chapter, StoryContract, StoryProject } from './storyEngine';
 import { applyContractAmendment, createEmptyProject } from './storyEngine';
@@ -476,5 +476,33 @@ describe('buildContractStatus (작품 헌장 화수 예산 — Phase A-4)', () =
     const status = buildContractStatus(amended);
     expect(status?.plannedEpisodes).toBe(36);
     expect(status?.remaining).toBe(19);
+  });
+});
+
+describe('classifyRarity — VS 의외도 라벨 (Phase C-1)', () => {
+  it('p≥0.4 는 흔함(common)', () => {
+    expect(classifyRarity(0.4)).toBe('common');
+    expect(classifyRarity(0.9)).toBe('common');
+  });
+  it('0.15≤p<0.4 는 의외(surprising)', () => {
+    expect(classifyRarity(0.15)).toBe('surprising');
+    expect(classifyRarity(0.39)).toBe('surprising');
+  });
+  it('p<0.15 는 파격(radical)', () => {
+    expect(classifyRarity(0.14)).toBe('radical');
+    expect(classifyRarity(0)).toBe('radical');
+  });
+});
+
+describe('buildVsIntentSeed', () => {
+  it('전개 방향을 시드 한 줄로 감싼다', () => {
+    expect(buildVsIntentSeed('조력자가 배신한다')).toBe('이번 화의 전개: "조력자가 배신한다"');
+  });
+});
+
+describe('stripConsumedSeeds — VS 시드 소거', () => {
+  it('VS 전개 시드는 소거하고 작가 자필은 보존한다', () => {
+    const intent = '작가 자필 메모\n이번 화의 전개: "조력자가 배신한다"';
+    expect(stripConsumedSeeds(intent)).toBe('작가 자필 메모');
   });
 });

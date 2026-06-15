@@ -21,6 +21,26 @@ export interface EpisodeFork {
 const MAX_FORKS = 3;
 const MAX_OPTIONS = 3;
 
+export type VsRarity = 'common' | 'surprising' | 'radical';
+export interface VsCandidate {
+  direction: string;
+  probability: number;     // LLM verbalize 추정, 내부용(비노출)
+  rarity: VsRarity;
+  canonSuspect?: boolean;
+}
+
+// VS 의외도 — LLM verbalize 확률을 흔함/의외/파격 라벨로 결정론 변환(Phase C-1). 임계는 라이브 후 조정 가능.
+export function classifyRarity(probability: number): VsRarity {
+  if (probability >= 0.4) return 'common';
+  if (probability >= 0.15) return 'surprising';
+  return 'radical';
+}
+
+// VS 후보 선택을 의도 메모에 합칠 한 줄 시드. composeIntentWithFork 가 append, stripConsumedSeeds 가 소거.
+export function buildVsIntentSeed(direction: string): string {
+  return `이번 화의 전개: "${direction}"`;
+}
+
 // stake 문자열을 토큰 집합으로 정규화한다 — 2자 이상 토큰, 한국어 조사 접미 단순 제거.
 const KR_JOSA = /[의와과은는이가을를에]$/u;
 function normalizeStakeTokens(stake: string): Set<string> {
@@ -237,6 +257,8 @@ const SEED_PATTERN_PACE_NEXT = /^다음 큰 회수는 /u;
 // LLM 진도 인터뷰(paceInterviewClient) 시드 — paceInterviewClient 가 각 intentSeed 앞에 붙이는 접두.
 // 접두가 있는 줄을 소비 처리해 생성 후 자동 소거. 접두 계약 변경 시 paceInterviewClient 와 동기화.
 const SEED_PATTERN_PACE_LLM = /^\[페이스\] /u;
+// VS 전개 후보(buildVsIntentSeed) 시드 — 생성 후 자동 소거.
+const SEED_PATTERN_VS = /^이번 화의 전개: "/u;
 
 export function stripConsumedSeeds(intent: string): string {
   if (!intent) return '';
@@ -250,6 +272,7 @@ export function stripConsumedSeeds(intent: string): string {
     if (SEED_PATTERN_PACE_EPISODE.test(trimmed)) return false;
     if (SEED_PATTERN_PACE_NEXT.test(trimmed)) return false;
     if (SEED_PATTERN_PACE_LLM.test(trimmed)) return false;
+    if (SEED_PATTERN_VS.test(trimmed)) return false;
     return true;
   });
   return kept.join('\n').trim();
