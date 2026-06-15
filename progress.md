@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-14 · Branch: `main` (**울트라코드 10인 베타테스트 → 중간 수정 루프 3대 골격 완료: #1 본문영속·#1-undo·#6 인물CRUD. 후속 #7 헌장·#3 영향회차·#4 회차선택기·#5 잠긴회차·#10 매체변경confirm(TDD, #7·#4·#5 라이브) 완료 — 검토대기 #3·#4·#5·#7·#10 처리. 이야기 품질 딥리서치 정본**)
+> Last Updated: 2026-06-15 · Branch: `feat/vs-episode-candidates` (**Phase C-1 VS 회차 후보 완료 — 의외성 제안 채널(전개 방향 4개+확률 verbalize→흔함/의외/파격 라벨). brainstorming→spec→plan→서브에이전트 구동 10 task TDD + codex e2e 실증(확률 0.42→0.12 꼬리분포). 직전: 울트라코드 베타 중간 수정 루프 #1·#6·#7·#3·#4·#5·#10 완료**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,19 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-15 · Phase C-1 VS 회차 후보 · feat/vs-episode-candidates · 서브에이전트 구동)
+
+```
+init.sh            → tsc 0 · vitest 577(episodeBriefing +12·promptBuilders +2·vsCandidatesClient +2·floatingEditor +3·editorFocusLayout +1) · build 통과 (557→577)
+VS 회차 후보(C-1)  → 갈림길 카드에 [전개 후보 받기] 버튼 → LLM이 "이번 화 전개 방향 4개+확률" verbalize(VS) → 흔함/의외/파격 라벨 → 클릭 시 기존 intent 배관(buildVsIntentSeed→composeIntentWithFork) 합류 → buildDraftPrompt 소비 → stripConsumedSeeds 소거. 결말 헌장 불가침(경로만 흔듦).
+  spine-suggest 인프라 6지점 복제(빌더↔storyx 미러·CLI vs-candidates·api·vite 브리지·클라이언트) + episodeBriefing 순수함수(classifyRarity 0.4/0.15·buildVsIntentSeed·normalizeVsCandidates(overlapsCanonFact 재사용·clamp/기본0.3·4 cap)·SEED_PATTERN_VS) + FloatingEditor .fc-vs 블록 + StoryXDesk 배선(blueprint.medium/format·미회수약속 dedup·finally).
+  설계 풀 사이클 — brainstorming→spec→plan(완전한 코드 10 task)→서브에이전트 구동(배치별 implementer+검증). spec docs/superpowers/specs/2026-06-15-vs-episode-candidates-design.md · plan .../plans/2026-06-15-vs-episode-candidates.md.
+codex e2e         → ★ CLI 실호출(node tools/storyx.mjs vs-candidates --provider codex): status complete · 후보 4개 · 확률 0.42→0.27→0.19→0.12 꼬리분포 정확(흔함1·의외2·파격1) · 각 후보 인물 선택+대가 한 문장 · 결말 수렴 경로만 의외 · 미회수 약속 반영. VS 핵심 가치(의외도 분포) 실증.
+final review      → end-to-end 필드 일관성 전 계층(client→브리지/CLI→prompt→normalize→UI) confirmed · 미러 byte-identical · Minor 2(finally·약속 dedup) 반영 커밋.
+라이브 UI 갈음     → preview 눈 확인은 floatingEditor.test +3(버튼·라벨 렌더·미주입 미렌더) + styles.css .fc-vs* 소스핀 + 기존 .fc-* 토큰 재사용으로 갈음(#3·#10 선례). 다음 안정 세션 회차 작품으로 .fc-vs 다크 렌더·배지 색·클릭 합류 눈 확인 권고.
+남은         → Phase C-2(수락 시 storyContract.amendments 기록+비트 갱신)·C-3(fork 과격 선택 의무). A 묶음 나머지 — B 날것 문체(Sudowrite Muse Style Examples 이식)·후반 긴장 게이트·정보 비대칭·A-6 장편 기억(NovelCrafter Codex 차용).
+```
 
 ## 최근 검증 (2026-06-14 10차 · #10 매체/형식 변경 confirm · main · ultracode)
 

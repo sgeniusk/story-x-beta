@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-06-15 — Phase C-1 VS 회차 후보: 의외성 제안 채널 (feat/vs-episode-candidates, 서브에이전트 구동)
+
+> 사용자 "A 묶음(글 품질)부터 + 경쟁 도구(Sudowrite Muse·NovelCrafter Codex) 메커니즘 정리해 반영". brainstorming→spec→plan→서브에이전트 구동 풀 사이클로 VS(Verbalized Sampling) 회차 후보 = U4 의외성 직격(딥리서치 1순위 권고) 구현. 10 task TDD + final review + codex e2e. feat 브랜치, 미머지·미푸시.
+
+### 한 것
+- **VS 회차 후보 채널** — 갈림길 카드에 [전개 후보 받기] 버튼 → LLM이 "이번 화 전개 방향 4개+확률" verbalize → 흔함/의외/파격 라벨 → 클릭 시 buildVsIntentSeed→composeIntentWithFork(기존 배관)로 의도 메모 합류 → buildDraftPrompt 소비 → stripConsumedSeeds 소거.
+- **6지점 복제(spine-suggest 패턴)** — buildVsCandidatesPrompt(promptBuilders↔storyx.mjs byte-identical 미러) · storyx vs-candidates 명령 · api/vs-candidates.ts · vite 브리지 · vsCandidatesClient.ts · aiStatus mode 'vs-candidates'.
+- **순수함수(episodeBriefing.ts)** — VsCandidate·VsRarity·classifyRarity(0.4/0.15 임계)·buildVsIntentSeed·normalizeVsCandidates(overlapsCanonFact 재사용·확률 clamp·기본0.3·4 cap)·SEED_PATTERN_VS.
+- **UI** — FloatingEditor .fc-vs 블록(버튼·후보·rarity 배지·canonSuspect) + StoryXDesk handleRequestVsCandidates.
+- **codex e2e 실증** — CLI 실호출: 4후보 확률 0.42→0.12 꼬리분포 정확, 결말 수렴 경로만 의외, 미회수 약속 반영. classifyRarity 분포와 정합.
+- 커밋 `9e286ec`~`aad16c5`(feat/vs-episode-candidates). spec·plan 커밋 `63978b5`·`fa776e7`.
+
+### 손대지 말 것
+- buildVsCandidatesPrompt promptBuilders↔storyx.mjs **byte-identical 미러** — 핵심 지시(방향 4개·꼬리분포·파격 0.15·결말 불가침) 한쪽만 바꾸면 dev(브리지)·prod 프롬프트 드리프트. promptBuilders.test `[vs-mirror]` 핀.
+- 결말 헌장 불가침 — VS는 *경로*만 흔든다(조기 해소 방지 ≠ 결말 뒤집기). 프롬프트 문구 강제 + 검토망 보완.
+- normalizeVsCandidates를 episodeBriefing.ts에 둔 것(spec 인터페이스는 client였으나 overlapsCanonFact 의존) — client는 import만.
+- classifyRarity 임계 0.4/0.15 — 라이브 후 조정 가능하나 현재 codex 분포(0.42/0.27/0.19/0.12)와 정합.
+- handleRequestVsCandidates의 medium/format은 `project.medium`이 아니라 `blueprint.medium/format`(이 파일 다른 콜백과 동형 — 반응형 집계값).
+
+### 다음 세션이 해야 할 한 가지
+- **preview 눈 확인(가벼움)** — 회차 2개+ 작품으로 floating 편집 → [전개 후보 받기] → .fc-vs 다크 렌더·흔함(회색)/의외(라임)/파격(코랄) 배지·클릭→의도 메모 합류·생성 후 stripConsumedSeeds 소거. 이번엔 codex e2e(CLI)+단위테스트(floatingEditor +3)+소스핀으로 갈음(preview UI 미확인). preview 불안정 시 소스핀 유지.
+- **Phase C 나머지** — C-2(수락 시 storyContract.amendments 기록+비트 갱신)·C-3(fork 옵션 과격 선택 의무). 또는 A 묶음 다른 채널(B 날것 문체=Sudowrite Muse Style Examples 이식·후반 긴장 게이트·정보 비대칭·A-6 장편 기억=NovelCrafter Codex 차용).
+- 머지/푸시 — 사용자 결정 대기(feat/vs-episode-candidates → main).
+
+---
+
 ## 2026-06-14 (10차) — #10 매체/형식 변경 confirm — 무음 전환 방지 (main, TDD, ultracode)
 
 > #5 직후 검토대기 #10 착수·완료. 매체/형식 변경이 confirm·영향분석 없이 즉시 전환되던 문제 해소 + 형식 영속 버그 동시 수정. 커밋 (아래). 라이브 갈음(소스 핀).
