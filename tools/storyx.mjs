@@ -841,6 +841,52 @@ if (command === 'spine-suggest') {
   process.exit(isError ? 1 : 0);
 }
 
+if (command === 'vs-candidates') {
+  const provider = readFlag(args, '--provider', 'codex');
+  const medium = readFlag(args, '--medium', 'novel');
+  const format = readFlag(args, '--format', 'long-novel');
+  const contractDigest = readFlag(args, '--contract-digest', '');
+  const recentSummary = readFlag(args, '--recent-summary', '');
+  let unpaidPromises = [];
+  try { unpaidPromises = JSON.parse(readFlag(args, '--unpaid-json', '[]')); } catch { unpaidPromises = []; }
+  const dryRun = args.includes('--dry-run');
+
+  const prompt = buildVsCandidatesPrompt({ medium, format, contractDigest, recentSummary, unpaidPromises });
+
+  if (dryRun) {
+    printJson({ provider, medium, format, mode: 'vs-candidates', dryRun: true, prompt, warning: 'dry-run 모드 — provider 호출 없이 프롬프트만 출력합니다.' });
+    process.exit(0);
+  }
+  if (provider === 'mock') {
+    printJson({ provider, medium, mode: 'vs-candidates', status: 'complete', candidates: [] });
+    process.exit(0);
+  }
+
+  const commandPreview =
+    provider === 'claude'
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', prompt]
+      : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
+
+  // Q2 가드 — transient 실패 시 1회 재시도, 에러 raw 는 후보로 승격하지 않는다.
+  const { result: providerResult, raw: rawOutput, retried } = runProviderWithRetry(commandPreview);
+  const isError = looksLikeProviderError(rawOutput, providerResult);
+  const parsed = isError ? null : parseProviderJson(rawOutput);
+  const candidates = Array.isArray(parsed?.candidates) ? parsed.candidates : [];
+
+  printJson({
+    provider,
+    medium,
+    mode: 'vs-candidates',
+    status: isError ? 'failed' : 'complete',
+    exitCode: providerResult.status,
+    candidates,
+    warning: isError
+      ? (retried ? 'provider 호출이 재시도 후에도 실패했습니다.' : 'provider 호출이 실패했습니다.')
+      : undefined
+  });
+  process.exit(isError ? 1 : 0);
+}
+
 printJson({
   usage: [
     'npm run storyx -- doctor',
@@ -857,7 +903,8 @@ printJson({
     'npm run storyx -- review-data --provider mock --category 인물 --target "<직렬화된 엔티티>"',
     'npm run storyx -- normalize-provider-output --provider claude --scale small --raw-file ./provider-output.txt',
     'npm run storyx -- pace-interview --provider codex --medium novel --format long-novel --payoff-json \'{"isStalled":true,"deferredStreak":3,"openPromises":4}\' --dry-run',
-    'npm run storyx -- spine-suggest --provider codex --medium novel --format long-novel --freewrite "쓰고 싶은 이야기" --ending "결말 문장" --dry-run'
+    'npm run storyx -- spine-suggest --provider codex --medium novel --format long-novel --freewrite "쓰고 싶은 이야기" --ending "결말 문장" --dry-run',
+    'npm run storyx -- vs-candidates --provider codex --medium novel --format long-novel --recent-summary "최근 회차" --dry-run'
   ]
 });
 
