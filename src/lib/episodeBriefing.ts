@@ -41,6 +41,32 @@ export function buildVsIntentSeed(direction: string): string {
   return `이번 화의 전개: "${direction}"`;
 }
 
+// provider 응답({ candidates: [{ direction, probability }] })을 VsCandidate[] 로 정규화.
+// direction 빈 것 제외 · probability 0~1 clamp(누락 시 0.3) · rarity 변환 · canonSuspect(overlapsCanonFact) · 최대 4개.
+const MAX_VS_CANDIDATES = 4;
+export function normalizeVsCandidates(raw: unknown, canonStatements: string[]): VsCandidate[] {
+  if (typeof raw !== 'object' || raw === null) return [];
+  const list = (raw as Record<string, unknown>).candidates;
+  if (!Array.isArray(list)) return [];
+  const out: VsCandidate[] = [];
+  for (const item of list) {
+    if (typeof item !== 'object' || item === null) continue;
+    const r = item as Record<string, unknown>;
+    const direction = typeof r.direction === 'string' ? r.direction.trim() : '';
+    if (!direction) continue;
+    let probability = typeof r.probability === 'number' && Number.isFinite(r.probability) ? r.probability : 0.3;
+    probability = Math.min(1, Math.max(0, probability));
+    out.push({
+      direction,
+      probability,
+      rarity: classifyRarity(probability),
+      ...(overlapsCanonFact(direction, canonStatements) ? { canonSuspect: true } : {})
+    });
+    if (out.length >= MAX_VS_CANDIDATES) break;
+  }
+  return out;
+}
+
 // stake 문자열을 토큰 집합으로 정규화한다 — 2자 이상 토큰, 한국어 조사 접미 단순 제거.
 const KR_JOSA = /[의와과은는이가을를에]$/u;
 function normalizeStakeTokens(stake: string): Set<string> {

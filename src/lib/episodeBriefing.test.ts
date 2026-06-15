@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildContractStatus, buildEpisodeForks, composeIntentWithFork, stripConsumedSeeds, classifyRarity, buildVsIntentSeed } from './episodeBriefing';
+import { buildContractStatus, buildEpisodeForks, composeIntentWithFork, stripConsumedSeeds, classifyRarity, buildVsIntentSeed, normalizeVsCandidates } from './episodeBriefing';
 import { computePayoffLedger } from './payoffLedger';
 import type { Chapter, StoryContract, StoryProject } from './storyEngine';
 import { applyContractAmendment, createEmptyProject } from './storyEngine';
@@ -504,5 +504,41 @@ describe('stripConsumedSeeds — VS 시드 소거', () => {
   it('VS 전개 시드는 소거하고 작가 자필은 보존한다', () => {
     const intent = '작가 자필 메모\n이번 화의 전개: "조력자가 배신한다"';
     expect(stripConsumedSeeds(intent)).toBe('작가 자필 메모');
+  });
+});
+
+describe('normalizeVsCandidates', () => {
+  it('candidates 가 배열이 아니면 빈 배열', () => {
+    expect(normalizeVsCandidates({}, [])).toEqual([]);
+    expect(normalizeVsCandidates(null, [])).toEqual([]);
+  });
+  it('direction·probability 를 읽어 rarity 를 매긴다', () => {
+    const out = normalizeVsCandidates({ candidates: [{ direction: '배신', probability: 0.1 }] }, []);
+    expect(out[0]).toMatchObject({ direction: '배신', probability: 0.1, rarity: 'radical' });
+  });
+  it('probability 누락/비숫자 → 0.3(의외) 기본', () => {
+    const out = normalizeVsCandidates({ candidates: [{ direction: 'X' }] }, []);
+    expect(out[0].probability).toBe(0.3);
+    expect(out[0].rarity).toBe('surprising');
+  });
+  it('확률은 0~1 로 clamp', () => {
+    const out = normalizeVsCandidates({ candidates: [{ direction: 'A', probability: 1.5 }, { direction: 'B', probability: -2 }] }, []);
+    expect(out[0].probability).toBe(1);
+    expect(out[1].probability).toBe(0);
+  });
+  it('빈 direction 후보는 제외', () => {
+    const out = normalizeVsCandidates({ candidates: [{ direction: '', probability: 0.5 }] }, []);
+    expect(out).toEqual([]);
+  });
+  it('기확정 캐논과 크게 겹치면 canonSuspect 배지', () => {
+    const out = normalizeVsCandidates(
+      { candidates: [{ direction: '레나가 백작에게 정체를 고백한다', probability: 0.5 }] },
+      ['레나가 백작에게 정체를 고백한다']
+    );
+    expect(out[0].canonSuspect).toBe(true);
+  });
+  it('4개 초과는 상위 4개만', () => {
+    const five = Array.from({ length: 5 }, (_, i) => ({ direction: `D${i}`, probability: 0.5 }));
+    expect(normalizeVsCandidates({ candidates: five }, [])).toHaveLength(4);
   });
 });
