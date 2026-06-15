@@ -132,9 +132,10 @@ import {
 import { requestLlmDraft } from './lib/draftClient';
 import { requestAgentReview } from './lib/reviewClient';
 import { computePayoffLedger } from './lib/payoffLedger';
-import { buildContractStatus, buildEpisodeForks, stripConsumedSeeds } from './lib/episodeBriefing';
+import { buildContractStatus, buildEpisodeForks, stripConsumedSeeds, type VsCandidate } from './lib/episodeBriefing';
 import { buildPaceCheck, type PaceQuestion } from './lib/paceInterview';
 import { requestPaceInterview } from './lib/paceInterviewClient';
+import { requestVsCandidates } from './lib/vsCandidatesClient';
 import { requestDataReview } from './lib/dataReviewClient';
 import type { BibleSection, CanonCategory, DataReviewView, DataView } from './lib/canonDataView';
 import { describeKoreanStyleLevel, evaluateKoreanProse } from './lib/koreanStyle';
@@ -622,6 +623,9 @@ export function StoryXDesk({
   const [llmPaceQuestions, setLlmPaceQuestions] = useState<PaceQuestion[] | null>(null);
   const [isPaceInterviewLoading, setIsPaceInterviewLoading] = useState(false);
   const [paceInterviewNote, setPaceInterviewNote] = useState<string | null>(null);
+  const [vsCandidates, setVsCandidates] = useState<VsCandidate[]>([]);
+  const [isVsLoading, setIsVsLoading] = useState(false);
+  const [vsNote, setVsNote] = useState<string | null>(null);
   // 데이터 모드 분야별 검토 — 결과는 분야 id로 캐싱하고, 검토 중인 분야는 따로 표시한다.
   const [dataReviewResults, setDataReviewResults] = useState<Partial<Record<CanonCategory, DataReviewView>>>({});
   const [dataReviewingCategory, setDataReviewingCategory] = useState<CanonCategory | null>(null);
@@ -1310,6 +1314,32 @@ export function StoryXDesk({
       setIsPaceInterviewLoading(false);
     }
   }, [blueprint.medium, blueprint.format, isPaceInterviewLoading, project]);
+  const handleRequestVsCandidates = useCallback(async () => {
+    setIsVsLoading(true);
+    setVsNote(null);
+    const status = buildContractStatus(project);
+    const contractDigest = status
+      ? `위치 ${status.position}/${status.plannedEpisodes} · 잔여 ${status.remaining} · 미회수 ${status.unpaidCount}`
+      : '';
+    const last = project.chapters[project.chapters.length - 1];
+    const recentSummary = last ? `${chapterLabel(last)} ${last.title} — ${last.prose.slice(0, 200)}` : '';
+    const unpaidPromises = project.chapters
+      .flatMap((c) => c.rewardArc ?? [])
+      .filter((e) => e.promise.trim() && e.payoff.trim().length === 0)
+      .map((e) => e.promise.trim());
+    const result = await requestVsCandidates({
+      medium: blueprint.medium,
+      format: blueprint.format,
+      contractDigest,
+      recentSummary,
+      unpaidPromises,
+      canonStatements: project.canonFacts.map((f) => f.statement),
+    });
+    setIsVsLoading(false);
+    if (result.ok && result.candidates) setVsCandidates(result.candidates);
+    else setVsNote(result.reason ?? '전개 후보를 가져오지 못했습니다.');
+  }, [project, blueprint.medium, blueprint.format, chapterLabel]);
+
   // floating 이 편집 기본이므로 props 를 mainActionRun 정의 아래에서 구성한다(const 호이스팅 회피).
   const floatingEditorProps = useMemo(
     () => ({
@@ -1349,6 +1379,11 @@ export function StoryXDesk({
       metrics: studioMetrics,
       onMediaAxisChange: updateStoryModeAxis,
       episodeForks: buildEpisodeForks(project, computePayoffLedger(project.chapters)),
+      vsCandidates,
+      onRequestVsCandidates: handleRequestVsCandidates,
+      isVsLoading,
+      vsNote,
+      onSelectVsCandidate: () => { setVsCandidates([]); setVsNote(null); },
       paceQuestions: llmPaceQuestions ?? buildPaceCheck(project, computePayoffLedger(project.chapters), isSerial),
       onAskShowrunnerPace: askShowrunnerPace,
       isPaceInterviewLoading,
@@ -1389,6 +1424,10 @@ export function StoryXDesk({
       isPaceInterviewLoading,
       paceInterviewNote,
       productionBlockedReason,
+      vsCandidates,
+      handleRequestVsCandidates,
+      isVsLoading,
+      vsNote,
     ]
   );
   const draftPromptPlaceholder = isLatestLocked

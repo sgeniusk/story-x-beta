@@ -11402,3 +11402,18 @@ body {
 .fc-pace-opt:hover:not(:disabled) { border-color: var(--p-show); }
 .fc-pace-opt.is-active { border-color: var(--p-show); color: var(--p-show); }
 .fc-pace-opt:disabled { opacity: 0.4; cursor: default; }
+
+/* VS 회차 후보 카드 — fc-pace 아래 렌더(fc-vs). */
+.fc-vs { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--fc-rule, rgba(255,255,255,0.08)); }
+.fc-vs-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fc-vs-ask { font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--fc-rule, rgba(255,255,255,0.12)); background: transparent; color: var(--fc-ink, #e7e7ea); cursor: pointer; }
+.fc-vs-ask:disabled { opacity: 0.5; cursor: default; }
+.fc-vs-note { font-size: 12px; color: var(--fc-ink-dim, #9a9aa2); margin-top: 6px; }
+.fc-vs-opts { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.fc-vs-opt { display: flex; align-items: center; gap: 8px; text-align: left; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--fc-rule, rgba(255,255,255,0.1)); background: var(--fc-card, rgba(255,255,255,0.03)); color: var(--fc-ink, #e7e7ea); cursor: pointer; }
+.fc-vs-opt:disabled { opacity: 0.5; cursor: default; }
+.fc-vs-rarity { flex: 0 0 auto; font-size: 11px; padding: 2px 7px; border-radius: 999px; }
+.fc-vs-common .fc-vs-rarity { background: rgba(255,255,255,0.08); color: #b8b8c0; }
+.fc-vs-surprising .fc-vs-rarity { background: rgba(163,230,53,0.16); color: #a3e635; }
+.fc-vs-radical .fc-vs-rarity { background: rgba(251,113,133,0.18); color: #fb7185; }
+.fc-vs-dir { flex: 1 1 auto; font-size: 13px; }
