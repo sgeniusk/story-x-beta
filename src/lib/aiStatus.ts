@@ -4,7 +4,7 @@
 // 추가로 — 모든 호출이 evolutionMemory 의 history 에 자동 누적된다. 작품 수명 동안의 학습 자산.
 import { appendEvolutionEvent } from './evolutionMemory';
 
-export type AiCallMode = 'draft' | 'review' | 'review-agent' | 'review-data' | 'interview' | 'pace-interview' | 'spine-suggest';
+export type AiCallMode = 'draft' | 'review' | 'review-agent' | 'review-data' | 'interview' | 'pace-interview' | 'spine-suggest' | 'vs-candidates';
 
 export interface AiCallStatus {
   mode: AiCallMode;
@@ -78,5 +78,7 @@ export function aiCallModeLabel(mode: AiCallMode): string {
       return '진도 인터뷰';
     case 'spine-suggest':
       return '척추 제안';
+    case 'vs-candidates':
+      return '전개 후보';
   }
 }
