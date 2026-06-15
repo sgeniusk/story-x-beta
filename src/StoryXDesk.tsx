@@ -1323,21 +1323,29 @@ export function StoryXDesk({
       : '';
     const last = project.chapters[project.chapters.length - 1];
     const recentSummary = last ? `${chapterLabel(last)} ${last.title} — ${last.prose.slice(0, 200)}` : '';
-    const unpaidPromises = project.chapters
-      .flatMap((c) => c.rewardArc ?? [])
-      .filter((e) => e.promise.trim() && e.payoff.trim().length === 0)
-      .map((e) => e.promise.trim());
-    const result = await requestVsCandidates({
-      medium: blueprint.medium,
-      format: blueprint.format,
-      contractDigest,
-      recentSummary,
-      unpaidPromises,
-      canonStatements: project.canonFacts.map((f) => f.statement),
-    });
-    setIsVsLoading(false);
-    if (result.ok && result.candidates) setVsCandidates(result.candidates);
-    else setVsNote(result.reason ?? '전개 후보를 가져오지 못했습니다.');
+    // 같은 약속이 여러 회차에 같은 문구로 기록될 수 있어 중복 제거(collectUnpaidPromises 와 동형 — 프롬프트 중복 줄 방지).
+    const unpaidPromises = Array.from(
+      new Set(
+        project.chapters
+          .flatMap((c) => c.rewardArc ?? [])
+          .filter((e) => e.promise.trim() && e.payoff.trim().length === 0)
+          .map((e) => e.promise.trim())
+      )
+    );
+    try {
+      const result = await requestVsCandidates({
+        medium: blueprint.medium,
+        format: blueprint.format,
+        contractDigest,
+        recentSummary,
+        unpaidPromises,
+        canonStatements: project.canonFacts.map((f) => f.statement),
+      });
+      if (result.ok && result.candidates) setVsCandidates(result.candidates);
+      else setVsNote(result.reason ?? '전개 후보를 가져오지 못했습니다.');
+    } finally {
+      setIsVsLoading(false);
+    }
   }, [project, blueprint.medium, blueprint.format, chapterLabel]);
 
   // floating 이 편집 기본이므로 props 를 mainActionRun 정의 아래에서 구성한다(const 호이스팅 회피).
