@@ -222,6 +222,22 @@ export default defineConfig({
       String(input.endingStatement ?? ''),
       '--cost',
       String(input.protagonistCost ?? '')
+    ]),
+    storyxBridge('/api/vs-candidates', (input) => [
+      'tools/storyx.mjs',
+      'vs-candidates',
+      '--provider',
+      'codex',
+      '--medium',
+      String(input.medium ?? 'novel'),
+      '--format',
+      String(input.format ?? 'long-novel'),
+      '--contract-digest',
+      String(input.contractDigest ?? ''),
+      '--recent-summary',
+      String(input.recentSummary ?? ''),
+      '--unpaid-json',
+      JSON.stringify(Array.isArray(input.unpaidPromises) ? input.unpaidPromises : [])
     ])
   ]
 });
