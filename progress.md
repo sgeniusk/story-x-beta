@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-15 · Branch: `fix/onboarding-medium-format` (**온보딩 분량 2체계 정합 — 매체 단계 포맷 카드에서 중편 제거(3→2등급)·단편 화수 4~8화로 헌장과 일치(사용자 결정 '중편 없음' 반영, dogfooding 발견 #1). 직전: VS dogfooding 1라운드 — VS 본진 5/5 검증 + 노출 자동열림 수정(main 머지·푸시 완료)**)
+> Last Updated: 2026-06-15 · Branch: `fix/title-prefix-leak` (**제목 ". " 누수 수정 — deriveProjectTitle 회차 접두 정규식에 마침표 구분자 추가(codex "1화. 제목"→". 제목" 버그, dogfooding 발견). 직전: 온보딩 분량 2체계 정합 · VS 노출 자동열림(둘 다 main 머지·푸시 완료)**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,16 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-15 4차 · 제목 ". " 누수 수정 · fix/title-prefix-leak)
+
+```
+제목 누수 수정    → dogfooding 발견 — 1화 생성 시 작품 제목이 ". 빗길의 이름"(앞 ". " 누수). 원인 추적 — createEmptyProject(StoryXDesk:1671)가 deriveProjectTitle(storyEngine:1107)로 회차 접두 제거하는데, 정규식 구분자 클래스 [—\-:·] 에 마침표 누락. codex 가 "1화. 제목" 형식으로 title 을 내면 "1화"만 떨어지고 ". 제목" 잔존.
+  수정 — 정규식 [—\-:·]? → [—\-:.·]?(마침표 추가). TDD storyEngine.test +1(1화./3화. 마침표 케이스 + em대시·콜론 회귀 가드).
+init.sh          → tsc 0 · vitest 581 · build 통과.
+라이브 갈음      → 제목 누수는 codex 가 "1화." 형식 낼 때만 발생하는 비결정적 산출물이라 라이브 재현 불안정 → deriveProjectTitle 을 결정론적으로 직접 검증하는 단위테스트로 갈음.
+남은 백로그       → 온보딩/의도 메모 영속 X(가장 아픔, 큰 작업·brainstorming)·다음 회차 CTA 모호·format 축 vs lengthClass 축 깊은 정합.
+```
 
 ## 최근 검증 (2026-06-15 3차 · 온보딩 분량 2체계 정합 · fix/onboarding-medium-format)
 

@@ -61,6 +61,15 @@ describe('storyEngine', () => {
     expect(empty.title).not.toBe('샘플 작품');
   });
 
+  it('createEmptyProject 가 회차 접두의 마침표 구분자(1화. 제목)도 떼어낸다', () => {
+    // dogfooding 발견 — codex 가 "1화. 제목" 형식으로 title 을 내면 마침표가 남아 ". 제목"이 되던 버그.
+    expect(createEmptyProject({ title: '1화. 빗길의 이름' }).title).toBe('빗길의 이름');
+    expect(createEmptyProject({ title: '3화. 0시의 우편함' }).title).toBe('0시의 우편함');
+    // 기존 구분자(em대시·콜론) 회귀 가드
+    expect(createEmptyProject({ title: '1화 — 잊혀진 골목' }).title).toBe('잊혀진 골목');
+    expect(createEmptyProject({ title: '2화: 제목' }).title).toBe('제목');
+  });
+
   it('createEmptyProject falls back to a neutral title when the draft has none', () => {
     expect(createEmptyProject().title).toBe('새 작품');
     expect(createEmptyProject({ title: '   ' }).title).toBe('새 작품');

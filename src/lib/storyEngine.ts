@@ -1109,8 +1109,8 @@ function deriveProjectTitle(rawTitle: string | undefined): string {
   if (cleaned.length === 0) {
     return '새 작품';
   }
-  // "1화 — 제목", "1화: 제목" 같은 회차 접두를 떼어 작품 제목으로 쓴다.
-  const withoutEpisode = cleaned.replace(/^\s*\d+\s*화\s*[—\-:·]?\s*/u, '').trim();
+  // "1화 — 제목", "1화: 제목", "1화. 제목" 같은 회차 접두를 떼어 작품 제목으로 쓴다(구분자에 마침표 포함 — dogfooding 발견).
+  const withoutEpisode = cleaned.replace(/^\s*\d+\s*화\s*[—\-:.·]?\s*/u, '').trim();
   return withoutEpisode.length > 0 ? withoutEpisode : cleaned;
 }
 
