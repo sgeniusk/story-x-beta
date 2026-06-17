@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-15 · Branch: `fix/vs-panel-autoreveal` (**VS dogfooding 1라운드 — 심야 스릴러로 온보딩→인터뷰→헌장→1화→VS 풀 라이브(preview). VS 본진 5/5 검증(후보·배지·의도 합류) + 노출 자동열림 수정(TDD). 직전: Phase C-1 VS 회차 후보 완료(전개 방향 4개+확률 verbalize→흔함/의외/파격, codex e2e)**)
+> Last Updated: 2026-06-15 · Branch: `fix/onboarding-medium-format` (**온보딩 분량 2체계 정합 — 매체 단계 포맷 카드에서 중편 제거(3→2등급)·단편 화수 4~8화로 헌장과 일치(사용자 결정 '중편 없음' 반영, dogfooding 발견 #1). 직전: VS dogfooding 1라운드 — VS 본진 5/5 검증 + 노출 자동열림 수정(main 머지·푸시 완료)**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,17 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-15 3차 · 온보딩 분량 2체계 정합 · fix/onboarding-medium-format)
+
+```
+분량 2체계 수정   → dogfooding 발견 #1 — 온보딩 매체 단계 포맷 카드는 3등급(장편/중편/단편·단편 1-5화)인데 헌장 단계·ContractLengthClass·화수 로직은 이미 2등급(단편 4~8/장편 24~36, '중편 없음' 2026-06-12 결정 반영). 매체 단계만 옛 3등급 잔존 → 노출 불일치.
+  Explore 전수 매핑 — 원인은 formatOptions(projectBlueprint.ts:150)·serialFormats 만 medium-novel 잔존, 타입/화수/도메인 로직은 정합. 수정 = 매체 단계 포맷 카드에서 중편 제거 + 단편 cadence '1-5화'→'4~8화'. serialFormats·blueprintByFormat·CreativeFormat 타입은 구버전 저장본 호환 위해 유지(폴백 안전, 정당화 주석).
+  TDD — projectBlueprint.test 2등급 단언(RED 1 실패→GREEN). 변경 최소(formatOptions 만, 도메인 로직 무수정).
+init.sh          → tsc 0 · vitest 580 · build 통과(무회귀).
+라이브(preview)   → 매체 단계 소설 포맷 = 장편 + 단편(4~8화) 2등급. 중편/6-20화/3막 어디에도 없음(has48 true·has15 false·hasMid false). 헌장 단계와 정합.
+남은 백로그       → format 축(long/short-novel)과 lengthClass 축(short/long)이 둘 다 '분량'인 더 깊은 정합 이슈(예: short-novel isSerial=false → charter 미진입 가능성)는 별도. 온보딩/의도 메모 영속 X·제목 ". " 누수·다음 회차 CTA 모호도 백로그.
+```
 
 ## 최근 검증 (2026-06-15 2차 · VS 노출 자동열림 + dogfooding 1라운드 · fix/vs-panel-autoreveal)
 

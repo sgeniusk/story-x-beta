@@ -155,17 +155,13 @@ const formatOptions: Record<CreativeMedium, FormatOption[]> = {
       description: '수십 회차 이상 이어지는 시리즈. 캐논 레저와 떡밥 관리가 중심입니다.',
       cadence: '시즌 / 권 / 장기 연재'
     },
-    {
-      id: 'medium-novel',
-      label: '중편',
-      description: '제한된 분량 안에서 인물 변화와 사건 해소를 균형 있게 설계합니다.',
-      cadence: '6-20화 / 3막 구조'
-    },
+    // 중편(medium-novel)은 사용자 결정(2026-06-12 '중편 없음')으로 신규 포맷 선택지에서 제외한다.
+    // CreativeFormat 타입·serialFormats·blueprintByFormat 에는 구버전 저장본 호환을 위해 남긴다.
     {
       id: 'short-novel',
       label: '단편',
       description: '하나의 질문과 하나의 정서적 반전을 또렷하게 완결합니다.',
-      cadence: '1-5화 / 단일 효과'
+      cadence: '4~8화 / 단일 효과'
     }
   ],
   essay: [

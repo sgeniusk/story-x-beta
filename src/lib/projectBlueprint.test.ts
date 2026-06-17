@@ -15,7 +15,8 @@ describe('projectBlueprint', () => {
       format: 'long-novel'
     });
 
-    expect(options.map((option) => option.id)).toEqual(['long-novel', 'medium-novel', 'short-novel']);
+    // 사용자 결정(2026-06-12 '중편 없음') — 매체 단계 포맷 카드는 장편·단편 2등급만 노출한다.
+    expect(options.map((option) => option.id)).toEqual(['long-novel', 'short-novel']);
     expect(blueprint.mediumLabel).toBe('소설');
     expect(blueprint.formatLabel).toBe('장편');
     expect(blueprint.managementFocus).toContain('시리즈 바이블');

@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-06-15 (3차) — 온보딩 분량 2체계 정합: 매체 단계 중편 제거 (fix/onboarding-medium-format)
+
+> dogfooding 발견 #1 후속. 매체 단계 포맷 카드 3등급(장편/중편/단편)이 헌장 단계·사용자 결정(2등급 '중편 없음')과 충돌하던 문제. Explore 전수 매핑 → TDD 수정. 미머지·미푸시.
+
+### 한 것
+- **매체 단계 중편 제거** — projectBlueprint.ts formatOptions.novel 에서 medium-novel 카드 삭제(3→2등급) + 단편 cadence '1-5화'→'4~8화'(헌장 정합). projectBlueprint.test 2등급 단언(TDD RED→GREEN). init.sh 580 녹색. 라이브(preview) — 매체 단계 장편+단편(4~8화)·중편 없음 확인(has48 true·has15/hasMid false).
+
+### 손대지 말 것
+- serialFormats·blueprintByFormat·CreativeFormat 타입의 'medium-novel'은 **구버전 저장본 호환 위해 의도적으로 남김**(formatOptions 에서만 제거). 폴백 안전. 제거하면 구버전 medium-novel 작품이 단독 취급되거나 Record 타입 에러.
+- ContractLengthClass('short'|'long')·CONTRACT_EPISODE_RANGES·isSpineComplete 등 화수 로직은 이미 2등급 정합(2026-06-12 결정) — 무수정 유지.
+
+### 다음 세션이 해야 할 한 가지
+- 머지/푸시 — 사용자 결정 대기(fix/onboarding-medium-format → main).
+- 백로그 — format 축 vs lengthClass 축 깊은 정합(short-novel isSerial 게이트로 charter 미진입 가능성, 미확인)·온보딩/의도 메모 영속 X·제목 ". " 누수·다음 회차 CTA 모호.
+
+---
+
 ## 2026-06-15 (2차) — VS 노출 자동열림 + VS dogfooding 1라운드 (fix/vs-panel-autoreveal)
 
 > 사용자 "이전 세션 오류로 멈춤 — VS dogfooding 이어가기". C-1 VS를 실전 dogfooding(내 아이디어 심야 스릴러로 온보딩→1화→VS 풀 라이브) → VS 본진 5/5 검증 + 발견된 "VS 노출 약함"을 brainstorming→TDD 로 수정. 미머지·미푸시.
