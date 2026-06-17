@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-15 · Branch: `fix/title-prefix-leak` (**제목 ". " 누수 수정 — deriveProjectTitle 회차 접두 정규식에 마침표 구분자 추가(codex "1화. 제목"→". 제목" 버그, dogfooding 발견). 직전: 온보딩 분량 2체계 정합 · VS 노출 자동열림(둘 다 main 머지·푸시 완료)**)
+> Last Updated: 2026-06-15 · Branch: `feat/persist-state` (**영속 보강 Part 1 — 의도 메모(VS·fork 합류분)를 SeriesProject.nextEpisodeIntent 로 영속·복원, 새로고침/서버사망 시 VS 선택 보존. Part 2(온보딩 자동 복원)는 다음 세션. 직전: 제목 ". " 누수 · 분량 2체계 · VS 노출 자동열림(모두 main 머지·푸시)**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,18 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-15 5차 · 영속 보강 Part 1 — 의도 메모 · feat/persist-state)
+
+```
+영속 Part 1      → dogfooding 발견 — VS/fork 선택 의도 메모(draftPrompt)가 SeriesProject 필드가 아니라 StoryXDesk state 라, 회차 생성 전 새로고침/서버사망 시 ''로 초기화(VS 파격 선택 등 소실).
+  Explore 영속 전수 매핑 — saveProject/loadProject(storage.ts)는 project 통째 직렬화 + normalizeProject 백필. 이 패턴 재사용.
+  수정 — SeriesProject.nextEpisodeIntent?: string + normalizeProject 백필(formIntent 패턴). StoryXDesk: draftPrompt 초기값 project.nextEpisodeIntent 복원 + debounce(600ms) effect 로 모든 변경(타이핑·VS·fork·소거) 영속.
+  TDD — normalizeProject export 후 순수 검증(vitest jsdom 의 localStorage.setItem 미작동 → loadProject 라운드트립 대신 normalizeProject 직접). storage.test +1(백필 + 보존).
+init.sh          → tsc 0 · vitest 583 · build 통과.
+Part 2 남음      → 온보딩 중간 입력(11 state·intakeAnswers Map 직렬화)·stage/step 복원·클리어 엣지 = App.tsx 대수술. 다음 세션 신선하게(사용자 결정 — Part 1 매듭).
+라이브 갈음      → 영속은 새로고침+codex 회차 맥락 필요라 비결정적 → normalizeProject 순수 테스트 + StoryXDesk debounce effect 소스로 검증. 다음 안정 세션 라이브 눈 확인 권고(회차작품 의도 메모 입력→새로고침→복원).
+```
 
 ## 최근 검증 (2026-06-15 4차 · 제목 ". " 누수 수정 · fix/title-prefix-leak)
 

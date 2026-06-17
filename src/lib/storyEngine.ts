@@ -329,6 +329,8 @@ export interface SeriesProject {
   /** 형식·구조 의도 — 시점·시제·구성이 주제를 어떻게 수행하는가 */
   formIntent: string;
   currentEpisode: number;
+  /** 다음 회차 의도 메모(VS·fork 선택 합류분 포함). 영속해 새로고침·dev서버 사망 시 선택이 날아가지 않게 한다. 구버전 저장본엔 없을 수 있다. */
+  nextEpisodeIntent?: string;
   characters: CharacterProfile[];
   worldRules: WorldRule[];
   canonFacts: CanonFact[];

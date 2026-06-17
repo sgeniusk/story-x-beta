@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-06-15 (5차) — 영속 보강 Part 1: 의도 메모 영속 (feat/persist-state)
+
+> dogfooding 발견 — VS/fork 선택 의도 메모가 영속 안 돼 새로고침 시 소실. brainstorming(범위·복원UX)→Part 1 TDD. 사용자 "둘 다" 골랐으나 Part 2(온보딩 대수술)는 세션 길어 다음으로 매듭. main 머지·푸시함.
+
+### 한 것
+- **의도 메모 영속** — `SeriesProject.nextEpisodeIntent?: string` + normalizeProject 백필. StoryXDesk: draftPrompt 초기값을 project.nextEpisodeIntent 로 복원 + debounce(600ms) effect 로 모든 변경(타이핑·VS·fork·소거) 영속. storage.test +1. init.sh 583 녹색.
+- normalizeProject **export**(테스트 위해 — vitest jsdom 의 localStorage.setItem 미작동으로 loadProject 라운드트립 불가 → normalizeProject 순수 검증).
+
+### 손대지 말 것
+- draftPrompt 영속 effect debounce(600ms) — 매 키 saveProject(전체 project JSON) 폭주 방지.
+- 가드 `(prev.nextEpisodeIntent ?? '') === draftPrompt` — 불필요 setProject/saveProject 차단.
+- normalizeProject 백필 `typeof ... === 'string' ? ... : ''` — 구버전 undefined → '' 보장.
+
+### 다음 세션이 해야 할 한 가지
+- **Part 2 — 온보딩 자동 복원(대수술, 미착수)**: App.tsx StoryXHome 11 state 영속(intakeAnswers 는 Map 이라 직렬화 변환)·stage/step 복원·클리어 엣지(editor 졸업·명시 취소). 설계는 **자동 복원** 채택(brainstorming 정함 — 새로고침 시 마지막 단계+입력 복원). storage.ts 에 serialize/parse 순수 함수 + save/load/clear 래퍼 권장(localStorage 직접 테스트는 jsdom 한계로 순수 함수 분리).
+- 라이브 — 회차 작품에서 의도 메모 입력→새로고침→복원 눈 확인(이번엔 비결정적이라 갈음).
+
+---
+
 ## 2026-06-15 (4차) — 제목 ". " 누수 수정: deriveProjectTitle 마침표 구분자 (fix/title-prefix-leak)
 
 > dogfooding 발견 후속. 1화 생성 시 작품 제목 앞에 ". "가 붙던 파싱 버그. 원인 추적 → TDD 수정. 미머지·미푸시.

@@ -580,7 +580,20 @@ export function StoryXDesk({
     intent: defaultEpisodeIntent,
     pressure: '낮은 감정선에서 시작해 마지막에 큰 반전을 둔다'
   });
-  const [draftPrompt, setDraftPrompt] = useState(defaultEpisodeIntent);
+  const [draftPrompt, setDraftPrompt] = useState(() => project.nextEpisodeIntent ?? defaultEpisodeIntent);
+  // 의도 메모 영속(dogfooding 발견) — draftPrompt(VS·fork 합류 포함)를 debounce 후 project.nextEpisodeIntent 에
+  // 동기화·저장해 새로고침·dev서버 사망 시 선택이 날아가지 않게 한다. 마운트 초기값은 위 useState 가 복원한다.
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setProject((prev) => {
+        if ((prev.nextEpisodeIntent ?? '') === draftPrompt) return prev;
+        const next = { ...prev, nextEpisodeIntent: draftPrompt };
+        saveProject(next);
+        return next;
+      });
+    }, 600);
+    return () => window.clearTimeout(t);
+  }, [draftPrompt]);
   const [editorText, setEditorText] = useState('');
   // 베타테스트 #1 — debounce/flush commit 이 stale closure 가 아닌 최신 editorText 를 쓰도록 ref 미러.
   const editorTextRef = useRef(editorText);

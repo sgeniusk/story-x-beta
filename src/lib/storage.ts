@@ -220,7 +220,7 @@ function defaultBibleOutline(): BibleSection[] {
   ];
 }
 
-function normalizeProject(project: SeriesProject): SeriesProject {
+export function normalizeProject(project: SeriesProject): SeriesProject {
   // 표면 약속/심층 질문/무게중심 도입 이전에 저장된 프로젝트를 위한 백필.
   // 회차 구성(beats) 도입 이전 회차에는 beats: []를 채우고, beat에 tension이 없으면 기본값으로 보정한다.
   // 데이터 모드(places·objects·events·timeline·bibleOutline)와 인물 relations 도입 이전 저장본도 함께 백필한다.
@@ -230,6 +230,7 @@ function normalizeProject(project: SeriesProject): SeriesProject {
     deepQuestion: typeof project.deepQuestion === 'string' ? project.deepQuestion : '',
     creativeWeight: project.creativeWeight ?? 'balanced',
     formIntent: typeof project.formIntent === 'string' ? project.formIntent : '',
+    nextEpisodeIntent: typeof project.nextEpisodeIntent === 'string' ? project.nextEpisodeIntent : '',
     characters: Array.isArray(project.characters)
       ? project.characters.map((character): CharacterProfile => ({
           ...character,
