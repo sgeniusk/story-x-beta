@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-06-18 — 영속 보강 Part 2: 온보딩 자동 복원 (feat/persist-onboarding)
+
+> 핸드오프 5차 "다음 한 가지"(Part 2 온보딩 대수술) 착수·완료. brainstorming 기정(자동 복원)대로 TDD. 결정적이라 풀 라이브 검증. 미머지·미푸시. 사용자 결정 2건 반영 — 진행=바로 TDD, 영속 범위=LLM 캐시 포함.
+
+### 한 것
+- **온보딩 입력 영속** — `OnboardingDraft`(16필드: 매체/형식 2 + 사용자입력 11 + LLM캐시 3) 를 독립 키 `serial-story-studio/onboarding` 에 저장. storage.ts 순수함수 serialize/parse(손상·구버전 null·누락 백필)·save/load/clear·hasMeaningfulOnboardingInput. storage.test +5.
+- **HomeFlowStep 이동** — App.tsx 로컬 타입을 projectBlueprint.ts 로 옮겨 storage 와 공유(순환 import 회피). appExperience:54 핀을 import 형태로 완화.
+- **배선** — App: `restoredOnboarding` 으로 stage(home 자동복원·URL param 우선)·medium·format 복원 + `onOpenEditor` 에서 clearOnboardingDraft(졸업 청소). StoryXHome: 14 state lazy init + debounce(600ms) save effect(빈입력이면 clear). appExperience +1.
+- **라이브** — 복원/저장/빈입력가드 3경로 풀 확인 + 콘솔 0 + charter 복원 화면 스크린샷. init.sh 589 녹색.
+
+### 손대지 말 것
+- **빈입력 가드(hasMeaningfulOnboardingInput)** — save effect 가 빈 draft 를 저장하면 신규 사용자가 home 만 들러도 다음 방문에 랜딩 대신 온보딩 복원. 빈입력이면 saveOnboardingDraft 대신 clearOnboardingDraft. 빼면 랜딩 진입을 가로챈다(라이브로 null 확인함).
+- **독립 키(project 필드 아님)** — 온보딩은 작품 생성 전이라 SeriesProject 가 없다. Part 1 처럼 project 필드에 못 넣어 독립 키. 졸업(작품 생성) 시 clearOnboardingDraft 로 청소 안 하면 다음 새 프로젝트가 옛 온보딩을 복원해 오염.
+- **HomeFlowStep 위치 = projectBlueprint.ts** — App.tsx 로 되돌리면 storage import 가 순환(App→storage→App). appExperience:54 가 import 핀.
+- **initialStage URL param 우선** — `?stage=` 있으면 param, 없고 draft 있으면 home, 둘 다 없으면 landing. 순서 바꾸면 기존 딥링크가 깨진다.
+- save effect debounce(600ms) — 매 키 saveOnboardingDraft(전체 draft) 폭주 방지(Part 1 동형).
+
+### 다음 세션이 해야 할 한 가지
+- **머지/푸시 — 사용자 결정 대기**(feat/persist-onboarding → main). Part 1(fa01acd)은 이미 main.
+- (선택) 졸업 clear 라이브 — 작품 생성(LLM)까지 가서 onboarding key 소거 눈 확인. 이번엔 단일 경로(onOpenEditor)+소스핀으로 갈음했다.
+- 백로그(핸드오프 4차) — 다음 회차 CTA 모호 · format 축 vs lengthClass 축 깊은 정합.
+
+---
+
 ## 2026-06-15 (5차) — 영속 보강 Part 1: 의도 메모 영속 (feat/persist-state)
 
 > dogfooding 발견 — VS/fork 선택 의도 메모가 영속 안 돼 새로고침 시 소실. brainstorming(범위·복원UX)→Part 1 TDD. 사용자 "둘 다" 골랐으나 Part 2(온보딩 대수술)는 세션 길어 다음으로 매듭. main 머지·푸시함.

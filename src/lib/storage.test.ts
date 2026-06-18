@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { appendSnapshot, buildProjectSnapshot, normalizeProject, type ProjectSnapshot } from './storage';
+import {
+  appendSnapshot,
+  buildProjectSnapshot,
+  hasMeaningfulOnboardingInput,
+  normalizeProject,
+  parseOnboardingDraft,
+  serializeOnboardingDraft,
+  type OnboardingDraft,
+  type ProjectSnapshot
+} from './storage';
 import { createSeedProject } from './storyEngine';
 
 describe('project snapshots', () => {
@@ -40,5 +49,77 @@ describe('의도 메모 영속 (nextEpisodeIntent)', () => {
     const legacy = createSeedProject();
     delete (legacy as { nextEpisodeIntent?: string }).nextEpisodeIntent;
     expect(normalizeProject(legacy).nextEpisodeIntent).toBe('');
+  });
+});
+
+describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
+  function fullDraft(): OnboardingDraft {
+    return {
+      schema: 'storyx/onboarding/v1',
+      medium: 'novel',
+      format: 'long-novel',
+      homeFlowStep: 'charter',
+      intakeAnswers: { q1: 'opt-a', q2: 'opt-b' },
+      intakeOtherAnswers: { q1: '직접 입력한 답' },
+      interviewNote: '인터뷰 메모',
+      freewriteText: '심야 라디오 PD 가 10년 전 뺑소니를 마주한다',
+      intakeQuestionIndex: 2,
+      contractLengthClass: 'long',
+      contractPlannedEpisodes: 30,
+      contractEnding: '자백으로 끝난다',
+      contractCost: '직업과 신뢰를 잃는다',
+      contractSpine: { desire: '진실', advance: '추적', obstacle: '은폐', resolution: '자백' },
+      llmIntakeQuestions: [
+        { id: 'q1', agentId: 'showrunner', agentLabel: '쇼러너', question: '무엇을 숨기나', options: [], recommendedOptionId: '' }
+      ],
+      interviewPersonaLineup: [
+        { id: 'p1', label: '쇼러너', tone: '구조', category: 'novel', isFictionalized: false }
+      ],
+      interviewFallbackReason: null
+    };
+  }
+
+  it('라운드트립이 사용자 입력과 LLM 인터뷰 캐시를 모두 보존한다', () => {
+    const draft = fullDraft();
+    const restored = parseOnboardingDraft(serializeOnboardingDraft(draft));
+    expect(restored).toEqual(draft);
+  });
+
+  it('무효하거나 손상되거나 스키마가 다른 입력은 null 을 돌려준다', () => {
+    expect(parseOnboardingDraft(null)).toBeNull();
+    expect(parseOnboardingDraft('{ broken json')).toBeNull();
+    expect(parseOnboardingDraft(JSON.stringify({ schema: 'storyx/onboarding/v0' }))).toBeNull();
+  });
+
+  it('부분 저장본은 누락된 필드를 기본값으로 백필한다', () => {
+    const partial = JSON.stringify({
+      schema: 'storyx/onboarding/v1',
+      freewriteText: '한 줄만 썼다',
+      homeFlowStep: 'freewrite'
+    });
+    const restored = parseOnboardingDraft(partial);
+    expect(restored?.freewriteText).toBe('한 줄만 썼다');
+    expect(restored?.homeFlowStep).toBe('freewrite');
+    expect(restored?.intakeAnswers).toEqual({});
+    expect(restored?.contractSpine).toEqual({ desire: '', advance: '', obstacle: '', resolution: '' });
+    expect(restored?.contractLengthClass).toBe('long');
+    expect(restored?.contractPlannedEpisodes).toBe(30);
+    expect(restored?.llmIntakeQuestions).toBeNull();
+    expect(restored?.interviewPersonaLineup).toEqual([]);
+    expect(restored?.medium).toBe('novel');
+  });
+
+  it('갓 시작한 빈 온보딩은 진행 중으로 보지 않는다', () => {
+    const empty = parseOnboardingDraft(JSON.stringify({ schema: 'storyx/onboarding/v1' }));
+    expect(empty).not.toBeNull();
+    expect(hasMeaningfulOnboardingInput(empty as OnboardingDraft)).toBe(false);
+  });
+
+  it('단계 진행·자유서술·인터뷰 답·헌장 입력은 진행 중으로 본다', () => {
+    const base = parseOnboardingDraft(JSON.stringify({ schema: 'storyx/onboarding/v1' })) as OnboardingDraft;
+    expect(hasMeaningfulOnboardingInput({ ...base, homeFlowStep: 'freewrite' })).toBe(true);
+    expect(hasMeaningfulOnboardingInput({ ...base, freewriteText: '한 줄' })).toBe(true);
+    expect(hasMeaningfulOnboardingInput({ ...base, intakeAnswers: { q1: 'a' } })).toBe(true);
+    expect(hasMeaningfulOnboardingInput({ ...base, contractEnding: '자백으로 끝난다' })).toBe(true);
   });
 });

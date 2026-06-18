@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-15 · Branch: `feat/persist-state` (**영속 보강 Part 1 — 의도 메모(VS·fork 합류분)를 SeriesProject.nextEpisodeIntent 로 영속·복원, 새로고침/서버사망 시 VS 선택 보존. Part 2(온보딩 자동 복원)는 다음 세션. 직전: 제목 ". " 누수 · 분량 2체계 · VS 노출 자동열림(모두 main 머지·푸시)**)
+> Last Updated: 2026-06-18 · Branch: `feat/persist-onboarding` (**영속 보강 Part 2 — 온보딩 자동 복원. 매체 선택~작품 헌장 중간 입력(OnboardingDraft 16필드)을 작품 생성 전에도 localStorage 에 debounce 저장·복원. 새로고침/서버사망 시 마지막 단계+입력 복원, 빈 입력은 저장 안 해 신규 사용자 랜딩 보존, 졸업 시 청소. 미머지·미푸시. Part 1(의도 메모)은 main 머지·푸시 완료(fa01acd).**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,24 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-18 · 영속 보강 Part 2 — 온보딩 자동 복원 · feat/persist-onboarding)
+
+```
+영속 Part 2      → 핸드오프 5차 "다음 한 가지". 온보딩 중간 입력은 작품 생성 전이라 SeriesProject 가 없어 새로고침/서버사망 시 전부 소실. brainstorming 기정(자동 복원)대로 TDD.
+  설계 — OnboardingDraft 16필드(매체/형식 2 + 사용자입력 11 + LLM캐시 3) 를 독립 키 'serial-story-studio/onboarding' 에 저장. Part 1 은 project 필드였지만 작품 생성 전 단계라 독립 키.
+  순수함수(storage.ts) — serializeOnboardingDraft·parseOnboardingDraft(손상/구버전 null·누락 백필·normalizeProject 패턴)·save/load/clear·hasMeaningfulOnboardingInput(빈입력 가드).
+  HomeFlowStep 을 App.tsx→projectBlueprint.ts 이동(storage 공유·순환 회피). appExperience:54 핀 import 형태로 완화.
+  배선 — App: restoredOnboarding 으로 stage(home 자동복원·URL param 우선)·medium·format 복원 + 졸업(onOpenEditor) clearOnboardingDraft. StoryXHome: 14 state lazy init + debounce(600ms) save effect(빈입력이면 clear).
+  TDD — storage.test +5(라운드트립·무효 null·부분 백필·빈입력 가드 2)·appExperience +1(소스 핀).
+init.sh          → tsc 0 · vitest 589 · build 통과 (583→589).
+라이브(preview)   → ★ 결정적이라 풀 라이브 확인(Part 1 은 비결정적이라 갈음했음).
+  복원 — charter draft 주입→reload→stage home 자동복원(isHome)·track translateX(-960=charter 패널)·freewrite/결말/대가/4줄척추/화수30 전부 복원.
+  저장 — charter 결말 textarea UI 변경→750ms→localStorage contractEnding 갱신(다른 필드 보존).
+  빈입력 가드 — clear+빈 home 진입→800ms→onboarding key null(저장 안 함, 신규 사용자 랜딩 보존).
+  콘솔 에러 0(fresh load). charter 복원 화면 스크린샷.
+남음             → 졸업(작품 생성) clear 라이브는 LLM 호출 무거워 단일 경로(onOpenEditor)+소스핀으로 갈음. 머지/푸시 사용자 결정 대기.
+```
 
 ## 최근 검증 (2026-06-15 5차 · 영속 보강 Part 1 — 의도 메모 · feat/persist-state)
 

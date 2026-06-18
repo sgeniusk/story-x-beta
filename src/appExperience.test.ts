@@ -51,7 +51,7 @@ describe('Story X page experience', () => {
 
   it('keeps the stepped home flow with a light Notion theme and a stepped nav', () => {
     // A-3 — 연재 서사는 intake 와 building 사이에 'charter'(작품 헌장) 단계가 조건부로 들어간다.
-    expect(app).toContain("type HomeFlowStep = 'medium' | 'freewrite' | 'intake' | 'charter' | 'building'");
+    expect(app).toContain('type HomeFlowStep');
     expect(app).toContain('const [homeFlowStep, setHomeFlowStep]');
     expect(app).toContain('className="home-page"');
     expect(app).toContain('className="hx-track"');
@@ -62,6 +62,19 @@ describe('Story X page experience', () => {
     expect(css).toContain('.home-page .hx-track');
     expect(css).toContain('.home-page .hx-step');
     expect(css).toContain('.home-page .hx-medium-card');
+  });
+
+  it('온보딩 입력을 localStorage 에 자동 저장·복원한다 (영속 Part 2)', () => {
+    // 복원 — App 과 StoryXHome 이 loadOnboardingDraft 로 stage·매체·입력을 되살린다.
+    expect(app).toContain('loadOnboardingDraft()');
+    expect(app).toContain('restoredOnboarding?.medium');
+    expect(app).toContain('restoredDraft?.freewriteText');
+    expect(app).toContain('restoredDraft?.homeFlowStep');
+    // 저장 — 변경을 debounce 저장하되, 의미있는 입력일 때만(빈 입력은 청소해 랜딩 보존).
+    expect(app).toContain('saveOnboardingDraft(draft)');
+    expect(app).toContain('hasMeaningfulOnboardingInput(draft)');
+    // 졸업 — 작품 생성 시 onboarding draft 청소(다음 새 프로젝트 오염 방지).
+    expect(app).toContain('clearOnboardingDraft();');
   });
 
   it('A-2 — 단편 헌장은 욕망·변화 2줄만으로 잠긴다(경량 잠금)', () => {

@@ -1,15 +1,20 @@
 // 작품 프로젝트와 버전 스냅샷을 브라우저 localStorage에 저장·복원한다
 import {
   createSeedProject,
+  defaultPlannedEpisodes,
   DEFAULT_BEAT_TENSION,
   type BibleSection,
   type CanonEntity,
   type CharacterProfile,
+  type ContractLengthClass,
   type SeriesProject,
+  type StorySpine,
   type TimelineEntry
 } from './storyEngine';
 import { getProjectLocalization } from './localization';
 import { loadEvolutionHistory, replaceEvolutionHistory, type EvolutionHistory } from './evolutionMemory';
+import type { CreativeFormat, CreativeMedium, HomeFlowStep } from './projectBlueprint';
+import type { ProjectIntakeQuestion } from './projectIntake';
 
 const storageKey = 'serial-story-studio/project';
 const snapshotsKey = 'serial-story-studio/snapshots';
@@ -271,4 +276,158 @@ export function normalizeProject(project: SeriesProject): SeriesProject {
       outline: chapter.outline.map((line) => line.replace(/^달의 문서고\s+/, ''))
     }))
   };
+}
+
+// 온보딩 중간 입력(매체 선택~작품 헌장)을 작품 생성 전에도 영속한다.
+// 작품(SeriesProject)이 아직 없는 단계라 project 필드가 아니라 독립 키에 저장한다(영속 보강 Part 2).
+const onboardingKey = 'serial-story-studio/onboarding';
+
+export interface OnboardingPersonaLineupEntry {
+  id: string;
+  label: string;
+  tone: string;
+  category: string;
+  isFictionalized: boolean;
+}
+
+export interface OnboardingDraft {
+  schema: 'storyx/onboarding/v1';
+  medium: CreativeMedium;
+  format: CreativeFormat;
+  homeFlowStep: HomeFlowStep;
+  intakeAnswers: Record<string, string>;
+  intakeOtherAnswers: Record<string, string>;
+  interviewNote: string;
+  freewriteText: string;
+  intakeQuestionIndex: number;
+  contractLengthClass: ContractLengthClass;
+  contractPlannedEpisodes: number;
+  contractEnding: string;
+  contractCost: string;
+  contractSpine: StorySpine;
+  // LLM 인터뷰 캐시 — 복원 시 codex 재호출을 막아 비용·시간을 아끼고 질문을 고정한다.
+  llmIntakeQuestions: ProjectIntakeQuestion[] | null;
+  interviewPersonaLineup: OnboardingPersonaLineupEntry[];
+  interviewFallbackReason: string | null;
+}
+
+export function serializeOnboardingDraft(draft: OnboardingDraft): string {
+  return JSON.stringify(draft);
+}
+
+// 저장본을 안전하게 복원한다. 손상·구버전 스키마는 null, 누락 필드는 기본값으로 백필(normalizeProject 패턴).
+export function parseOnboardingDraft(raw: string | null): OnboardingDraft | null {
+  if (!raw) {
+    return null;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+
+  if (!isRecord(parsed) || parsed.schema !== 'storyx/onboarding/v1') {
+    return null;
+  }
+
+  const lengthClass: ContractLengthClass = parsed.contractLengthClass === 'short' ? 'short' : 'long';
+  const spine = isRecord(parsed.contractSpine) ? parsed.contractSpine : {};
+
+  return {
+    schema: 'storyx/onboarding/v1',
+    medium: isCreativeMedium(parsed.medium) ? parsed.medium : 'novel',
+    format: typeof parsed.format === 'string' ? (parsed.format as CreativeFormat) : 'long-novel',
+    homeFlowStep: isHomeFlowStep(parsed.homeFlowStep) ? parsed.homeFlowStep : 'medium',
+    intakeAnswers: isStringRecord(parsed.intakeAnswers) ? parsed.intakeAnswers : {},
+    intakeOtherAnswers: isStringRecord(parsed.intakeOtherAnswers) ? parsed.intakeOtherAnswers : {},
+    interviewNote: typeof parsed.interviewNote === 'string' ? parsed.interviewNote : '',
+    freewriteText: typeof parsed.freewriteText === 'string' ? parsed.freewriteText : '',
+    intakeQuestionIndex:
+      typeof parsed.intakeQuestionIndex === 'number' && Number.isFinite(parsed.intakeQuestionIndex)
+        ? parsed.intakeQuestionIndex
+        : 0,
+    contractLengthClass: lengthClass,
+    contractPlannedEpisodes:
+      typeof parsed.contractPlannedEpisodes === 'number' && Number.isFinite(parsed.contractPlannedEpisodes)
+        ? parsed.contractPlannedEpisodes
+        : defaultPlannedEpisodes(lengthClass),
+    contractEnding: typeof parsed.contractEnding === 'string' ? parsed.contractEnding : '',
+    contractCost: typeof parsed.contractCost === 'string' ? parsed.contractCost : '',
+    contractSpine: {
+      desire: typeof spine.desire === 'string' ? spine.desire : '',
+      advance: typeof spine.advance === 'string' ? spine.advance : '',
+      obstacle: typeof spine.obstacle === 'string' ? spine.obstacle : '',
+      resolution: typeof spine.resolution === 'string' ? spine.resolution : ''
+    },
+    llmIntakeQuestions: Array.isArray(parsed.llmIntakeQuestions)
+      ? (parsed.llmIntakeQuestions as ProjectIntakeQuestion[])
+      : null,
+    interviewPersonaLineup: Array.isArray(parsed.interviewPersonaLineup)
+      ? (parsed.interviewPersonaLineup as OnboardingPersonaLineupEntry[])
+      : [],
+    interviewFallbackReason: typeof parsed.interviewFallbackReason === 'string' ? parsed.interviewFallbackReason : null
+  };
+}
+
+export function saveOnboardingDraft(draft: OnboardingDraft): void {
+  try {
+    window.localStorage.setItem(onboardingKey, serializeOnboardingDraft(draft));
+  } catch {
+    // 용량 초과 등은 무시 — 온보딩 입력 영속은 best-effort.
+  }
+}
+
+export function loadOnboardingDraft(): OnboardingDraft | null {
+  try {
+    return parseOnboardingDraft(window.localStorage.getItem(onboardingKey));
+  } catch {
+    return null;
+  }
+}
+
+export function clearOnboardingDraft(): void {
+  try {
+    window.localStorage.removeItem(onboardingKey);
+  } catch {
+    // 무시
+  }
+}
+
+// 빈 온보딩(매체 단계에 머문 채 입력 없음)은 영속하지 않는다 — 신규 사용자의 랜딩 진입을 가로채지 않기 위함.
+export function hasMeaningfulOnboardingInput(draft: OnboardingDraft): boolean {
+  return (
+    draft.homeFlowStep !== 'medium' ||
+    draft.freewriteText.trim().length > 0 ||
+    draft.interviewNote.trim().length > 0 ||
+    Object.keys(draft.intakeAnswers).length > 0 ||
+    Object.keys(draft.intakeOtherAnswers).length > 0 ||
+    draft.contractEnding.trim().length > 0 ||
+    draft.contractCost.trim().length > 0 ||
+    draft.contractSpine.desire.trim().length > 0 ||
+    draft.contractSpine.advance.trim().length > 0 ||
+    draft.contractSpine.obstacle.trim().length > 0 ||
+    draft.contractSpine.resolution.trim().length > 0
+  );
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return isRecord(value) && Object.values(value).every((entry) => typeof entry === 'string');
+}
+
+function isCreativeMedium(value: unknown): value is CreativeMedium {
+  return (
+    value === 'novel' || value === 'essay' || value === 'audiobook' || value === 'comics' || value === 'academic'
+  );
+}
+
+function isHomeFlowStep(value: unknown): value is HomeFlowStep {
+  return (
+    value === 'medium' ||
+    value === 'freewrite' ||
+    value === 'intake' ||
+    value === 'charter' ||
+    value === 'building'
+  );
 }

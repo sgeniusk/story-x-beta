@@ -19,7 +19,8 @@ import {
   isSerialFormat,
   type CreativeBlueprint,
   type CreativeFormat,
-  type CreativeMedium
+  type CreativeMedium,
+  type HomeFlowStep
 } from './lib/projectBlueprint';
 import {
   buildProjectIntakePlan,
@@ -61,7 +62,14 @@ import {
   type StoryContract,
   type StorySpine
 } from './lib/storyEngine';
-import { loadProject } from './lib/storage';
+import {
+  clearOnboardingDraft,
+  hasMeaningfulOnboardingInput,
+  loadOnboardingDraft,
+  loadProject,
+  saveOnboardingDraft,
+  type OnboardingDraft
+} from './lib/storage';
 import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
 import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
@@ -135,9 +143,13 @@ const mediaBridgeRoutes = [
 ];
 
 type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor' | 'publish';
-type HomeFlowStep = 'medium' | 'freewrite' | 'intake' | 'charter' | 'building';
 
 function App() {
+  // 영속 Part 2 — 진행 중이던 온보딩 입력을 한 번 읽어 stage·medium·format 복원에 공유한다.
+  const restoredOnboarding = useMemo<OnboardingDraft | null>(
+    () => (typeof window === 'undefined' ? null : loadOnboardingDraft()),
+    []
+  );
   const initialStage = useMemo<AppStage>(() => {
     if (typeof window === 'undefined') return 'landing';
     const stageParam = new URLSearchParams(window.location.search).get('stage');
@@ -151,11 +163,15 @@ function App() {
     ) {
       return stageParam;
     }
+    // URL 지정이 없고 진행 중인 온보딩이 남아 있으면 홈(온보딩)으로 자동 복원한다.
+    if (restoredOnboarding) {
+      return 'home';
+    }
     return 'landing';
-  }, []);
+  }, [restoredOnboarding]);
   const [stage, setStage] = useState<AppStage>(initialStage);
-  const [medium, setMedium] = useState<CreativeMedium>('novel');
-  const [format, setFormat] = useState<CreativeFormat>('long-novel');
+  const [medium, setMedium] = useState<CreativeMedium>(restoredOnboarding?.medium ?? 'novel');
+  const [format, setFormat] = useState<CreativeFormat>(restoredOnboarding?.format ?? 'long-novel');
   // 새 프로젝트 플로우의 빌드 단계에서 만든 첫 회차 초안 — 에디터가 이걸로 시작한다
   const [pendingDraft, setPendingDraft] = useState<DraftChapterPayload | null>(null);
 
@@ -221,6 +237,8 @@ function App() {
         onSelectFormat={setFormat}
         onOpenLanding={() => setStage('landing')}
         onOpenEditor={(draft) => {
+          // 작품 생성 졸업 — 온보딩 draft 청소(다음 새 프로젝트 복원 오염 방지).
+          clearOnboardingDraft();
           setPendingDraft(draft ?? null);
           setStage('editor');
         }}
@@ -696,19 +714,29 @@ function StoryXHome({
   // 연재형이면 "회차" 언어를 쓰고, 단편·단독 완결형이면 "글/원고" 언어를 쓴다.
   const isSerial = isSerialFormat(format);
   const draftUnitLabel = isSerial ? '첫 회차' : '첫 원고';
-  const [intakeAnswers, setIntakeAnswers] = useState<Record<string, string>>({});
-  const [intakeOtherAnswers, setIntakeOtherAnswers] = useState<Record<string, string>>({});
-  const [interviewNote, setInterviewNote] = useState('');
-  const [freewriteText, setFreewriteText] = useState('');
-  const [intakeQuestionIndex, setIntakeQuestionIndex] = useState(0);
-  const [homeFlowStep, setHomeFlowStep] = useState<HomeFlowStep>('medium');
+  // 영속 Part 2 — 진행 중이던 온보딩 입력을 한 번 복원한다(없으면 null → 각 기본값).
+  const restoredDraft = useMemo(() => loadOnboardingDraft(), []);
+  const [intakeAnswers, setIntakeAnswers] = useState<Record<string, string>>(() => restoredDraft?.intakeAnswers ?? {});
+  const [intakeOtherAnswers, setIntakeOtherAnswers] = useState<Record<string, string>>(
+    () => restoredDraft?.intakeOtherAnswers ?? {}
+  );
+  const [interviewNote, setInterviewNote] = useState(() => restoredDraft?.interviewNote ?? '');
+  const [freewriteText, setFreewriteText] = useState(() => restoredDraft?.freewriteText ?? '');
+  const [intakeQuestionIndex, setIntakeQuestionIndex] = useState(() => restoredDraft?.intakeQuestionIndex ?? 0);
+  const [homeFlowStep, setHomeFlowStep] = useState<HomeFlowStep>(() => restoredDraft?.homeFlowStep ?? 'medium');
   // 작품 헌장(Stage 1) — 연재 서사만. 결말 역산 + 4줄 척추를 잠근 뒤 본문으로 넘어간다(A-3).
   const usesCharter = isSerial && blueprint.medium !== 'essay' && blueprint.medium !== 'academic';
-  const [contractLengthClass, setContractLengthClass] = useState<ContractLengthClass>('long');
-  const [contractPlannedEpisodes, setContractPlannedEpisodes] = useState<number>(defaultPlannedEpisodes('long'));
-  const [contractEnding, setContractEnding] = useState('');
-  const [contractCost, setContractCost] = useState('');
-  const [contractSpine, setContractSpine] = useState<StorySpine>({ desire: '', advance: '', obstacle: '', resolution: '' });
+  const [contractLengthClass, setContractLengthClass] = useState<ContractLengthClass>(
+    () => restoredDraft?.contractLengthClass ?? 'long'
+  );
+  const [contractPlannedEpisodes, setContractPlannedEpisodes] = useState<number>(
+    () => restoredDraft?.contractPlannedEpisodes ?? defaultPlannedEpisodes('long')
+  );
+  const [contractEnding, setContractEnding] = useState(() => restoredDraft?.contractEnding ?? '');
+  const [contractCost, setContractCost] = useState(() => restoredDraft?.contractCost ?? '');
+  const [contractSpine, setContractSpine] = useState<StorySpine>(
+    () => restoredDraft?.contractSpine ?? { desire: '', advance: '', obstacle: '', resolution: '' }
+  );
   // A-3b — 쇼러너 4줄 제안 상태
   const [isSpineSuggesting, setIsSpineSuggesting] = useState(false);
   const [spineSuggestNote, setSpineSuggestNote] = useState<string | null>(null);
@@ -723,15 +751,68 @@ function StoryXHome({
     : [contractSpine.desire, contractSpine.advance, contractSpine.obstacle, contractSpine.resolution]
         .every((line) => line.trim().length > 0);
   const charterReady = spineComplete && contractEnding.trim().length > 0 && contractCost.trim().length > 0;
-  const [llmIntakeQuestions, setLlmIntakeQuestions] = useState<ProjectIntakeQuestion[] | null>(null);
+  const [llmIntakeQuestions, setLlmIntakeQuestions] = useState<ProjectIntakeQuestion[] | null>(
+    () => restoredDraft?.llmIntakeQuestions ?? null
+  );
   const [isInterviewLoading, setIsInterviewLoading] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
   // LLM 인터뷰 결과 메타 — 라인업 띠 / 폴백 안내에 쓴다
   const [interviewPersonaLineup, setInterviewPersonaLineup] = useState<
     Array<{ id: string; label: string; tone: string; category: string; isFictionalized: boolean }>
-  >([]);
-  const [interviewFallbackReason, setInterviewFallbackReason] = useState<string | null>(null);
+  >(() => restoredDraft?.interviewPersonaLineup ?? []);
+  const [interviewFallbackReason, setInterviewFallbackReason] = useState<string | null>(
+    () => restoredDraft?.interviewFallbackReason ?? null
+  );
   const effectiveIntakeQuestions = llmIntakeQuestions ?? intakePlan.questions;
+
+  // 영속 Part 2 — 온보딩 입력 변경을 debounce(600ms) 저장한다.
+  // 의미있는 입력이 없으면 저장 대신 청소해 신규 사용자의 랜딩 진입을 가로채지 않는다.
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      const draft: OnboardingDraft = {
+        schema: 'storyx/onboarding/v1',
+        medium,
+        format,
+        homeFlowStep,
+        intakeAnswers,
+        intakeOtherAnswers,
+        interviewNote,
+        freewriteText,
+        intakeQuestionIndex,
+        contractLengthClass,
+        contractPlannedEpisodes,
+        contractEnding,
+        contractCost,
+        contractSpine,
+        llmIntakeQuestions,
+        interviewPersonaLineup,
+        interviewFallbackReason
+      };
+      if (hasMeaningfulOnboardingInput(draft)) {
+        saveOnboardingDraft(draft);
+      } else {
+        clearOnboardingDraft();
+      }
+    }, 600);
+    return () => window.clearTimeout(handle);
+  }, [
+    medium,
+    format,
+    homeFlowStep,
+    intakeAnswers,
+    intakeOtherAnswers,
+    interviewNote,
+    freewriteText,
+    intakeQuestionIndex,
+    contractLengthClass,
+    contractPlannedEpisodes,
+    contractEnding,
+    contractCost,
+    contractSpine,
+    llmIntakeQuestions,
+    interviewPersonaLineup,
+    interviewFallbackReason
+  ]);
 
   // 자유 서술이나 매체가 바뀌면 LLM 인터뷰 질문 캐시·라인업·폴백 사유를 비워 다음 진입 때 새로 생성한다
   useEffect(() => {
