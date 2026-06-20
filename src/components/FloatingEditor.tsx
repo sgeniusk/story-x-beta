@@ -77,6 +77,10 @@ export interface FloatingEditorProps {
   vsNote?: string | null;
   /** 후보 선택 시 호출(후보 닫기 등) — intent 합류는 내부에서 처리. */
   onSelectVsCandidate?: (direction: string) => void;
+  /** 다음 회차 동선 — 미잠금 최신 회차일 때 메인 CTA 옆 "이 회차 확정" 버튼 노출. 클릭 시 잠금 → 메인 CTA 가 다음 회차로 전환. */
+  canConfirmLock?: boolean;
+  onConfirmLock?: () => void;
+  lockLabel?: string;
 }
 
 const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
@@ -130,6 +134,9 @@ export function FloatingEditor({
   isVsLoading = false,
   vsNote,
   onSelectVsCandidate,
+  canConfirmLock = false,
+  onConfirmLock,
+  lockLabel = '이 회차 확정',
 }: FloatingEditorProps) {
   const personaById = useCallback(
     (id: string): PersonaCard =>
@@ -462,6 +469,19 @@ export function FloatingEditor({
           </svg>
           <span>출간</span>
         </button>
+        {canConfirmLock && (
+          <button
+            className="btn-confirm-lock"
+            onClick={() => onConfirmLock?.()}
+            title="검토 후 확정을 권장합니다 — 확정하면 이 회차가 잠기고 다음 회차로 넘어갑니다."
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <rect x="5" y="11" width="14" height="10" rx="2" />
+              <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+            </svg>
+            <span>{lockLabel}</span>
+          </button>
+        )}
         <button
           className={`btn-primary${isGenerating ? ' is-generating' : ''}`}
           onClick={() => (onGenerateDraft ? onGenerateDraft() : toast('초안 생성 — 데모에서는 본문이 채워져 있습니다'))}

@@ -1420,6 +1420,10 @@ export function StoryXDesk({
       // #5 잠긴 회차 보호 — 읽기전용 게이트 + 잠금 해제(편집 재개).
       isLocked: isLatestLocked,
       onUnlock: handleUnlockChapter,
+      // 다음 회차 CTA 모호 수정 — 미잠금 최신 회차일 때 편집 모드에 확정 동선 노출(잠금 → 메인 CTA 가 다음 회차로 전환).
+      canConfirmLock: !!latestChapter && !isLatestLocked,
+      onConfirmLock: latestChapter ? () => confirmChapterLock(latestChapter.id) : undefined,
+      lockLabel: actionLabels.lock,
     }),
     [
       project,

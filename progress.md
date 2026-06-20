@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-18 · Branch: `feat/persist-onboarding` (**영속 보강 Part 2 — 온보딩 자동 복원. 매체 선택~작품 헌장 중간 입력(OnboardingDraft 16필드)을 작품 생성 전에도 localStorage 에 debounce 저장·복원. 새로고침/서버사망 시 마지막 단계+입력 복원, 빈 입력은 저장 안 해 신규 사용자 랜딩 보존, 졸업 시 청소. 미머지·미푸시. Part 1(의도 메모)은 main 머지·푸시 완료(fa01acd).**)
+> Last Updated: 2026-06-19 · Branch: `feat/persist-onboarding` (**다음 회차 CTA 모호 수정 — 미잠금 최신 회차일 때 편집 모드에 "이 회차 확정→다음 회차" 동선 노출(잠금 버튼이 출간 화면에만 있던 마찰 해소). 같은 브랜치 앞선 묶음: 영속 Part 2(온보딩 자동 복원)·Part 1(의도 메모). 모두 미머지·미푸시.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,19 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-19 · 다음 회차 CTA 모호 수정 · feat/persist-onboarding)
+
+```
+다음 회차 CTA   → dogfooding 발견(핸드오프 5차 백로그). 1화 생성 후 편집 모드 메인 CTA 는 "흐름 검증"에서 멈추고, 다음 회차 전제인 회차 확정(잠금) 버튼이 출간 준비 화면(FloatingPublishWorkspace)에만 있어 편집 모드에서 다음 회차 동선이 막힘.
+  brainstorming → 사용자 선택 "편집 모드에 확정→다음 노출". 잠금(연속성 확정) 의도 유지, 검토는 권고 유지(강제 X).
+  구현 — FloatingEditor 헤더 메인 CTA 옆에 "이 회차 확정" 버튼(canConfirmLock=미잠금 최신 회차일 때만). 클릭 → 기존 confirmChapterLock(setLatestChapter 동기화, P2) → isLatestLocked → 메인 CTA 가 "다음 회차 만들기"로 자동 전환(기존 상태머신 재사용).
+  배선 — StoryXDesk floatingEditorProps canConfirmLock·onConfirmLock(confirmChapterLock(latestChapter.id))·lockLabel(actionLabels.lock). styles.css .btn-confirm-lock(accent outline, 메인 CTA fill 과 출간 outline 사이 위계).
+  TDD — floatingEditor.test +2(canConfirmLock 시 버튼 렌더+클릭→onConfirmLock·미렌더)·editorFocusLayout +1(배선+렌더 핀).
+init.sh         → tsc 0 · vitest 592 · build 통과 (589→592).
+라이브(preview) → 작품 주입(createSeedProject + 미잠금 1화, /src ESM 동적 import)→편집 모드:
+  "출간 확정" 버튼 렌더(accent outline·자물쇠)·메인 CTA "흐름 검증" → 확정 클릭 → latestLocked true·확정 버튼 사라짐·메인 CTA "다음 회차 만들기" 전환. 콘솔 0. 스크린샷.
+```
 
 ## 최근 검증 (2026-06-18 · 영속 보강 Part 2 — 온보딩 자동 복원 · feat/persist-onboarding)
 

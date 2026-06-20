@@ -554,4 +554,27 @@ describe('FloatingEditor VS 전개 후보 (C-1 Task8)', () => {
     expect(host.textContent).not.toContain('전개 후보 받기');
     unmount();
   });
+
+  it('[다음회차] canConfirmLock 이면 회차 확정 버튼을 렌더하고 클릭 시 onConfirmLock 을 호출한다', () => {
+    const onConfirmLock = vi.fn();
+    const { host, click, unmount } = mount(
+      baseProps({ canConfirmLock: true, onConfirmLock, lockLabel: '이 회차 확정' })
+    );
+    const btn = Array.from(host.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('이 회차 확정')
+    );
+    expect(btn).toBeTruthy();
+    click(btn ?? null);
+    expect(onConfirmLock).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('[다음회차] canConfirmLock 이 아니면 회차 확정 버튼을 렌더하지 않는다', () => {
+    const { host, unmount } = mount(baseProps({ canConfirmLock: false, lockLabel: '이 회차 확정' }));
+    const btn = Array.from(host.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('이 회차 확정')
+    );
+    expect(btn).toBeFalsy();
+    unmount();
+  });
 });

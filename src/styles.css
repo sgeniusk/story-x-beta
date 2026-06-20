@@ -11077,6 +11077,9 @@ body {
 .fc-app .btn-publish{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;white-space:nowrap;flex:none;color:var(--p-world);border:1px solid color-mix(in oklch,var(--p-world) 50%,var(--rule));background:color-mix(in oklch,var(--p-world) 10%,transparent)}
 .fc-app .btn-publish:hover{background:color-mix(in oklch,var(--p-world) 18%,transparent);border-color:var(--p-world)}
 .fc-app .btn-publish svg{width:14px;height:14px}
+.fc-app .btn-confirm-lock{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;white-space:nowrap;flex:none;cursor:pointer;color:var(--accent);border:1px solid color-mix(in oklch,var(--accent) 50%,var(--rule));background:color-mix(in oklch,var(--accent) 10%,transparent)}
+.fc-app .btn-confirm-lock:hover{background:color-mix(in oklch,var(--accent) 18%,transparent);border-color:var(--accent)}
+.fc-app .btn-confirm-lock svg{width:14px;height:14px}
 /* canvas + sheet */
 .fc-app .canvas{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden}
 .fc-app .canvas::-webkit-scrollbar{width:10px}

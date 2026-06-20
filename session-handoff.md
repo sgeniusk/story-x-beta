@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-06-19 — 다음 회차 CTA 모호 수정 (feat/persist-onboarding)
+
+> 핸드오프 5차 백로그 "다음 회차 CTA 모호" 착수·완료. brainstorming(사용자 선택: 편집 모드에 확정→다음 노출)→TDD→풀 라이브. 미머지·미푸시. 영속 Part 2 위에 쌓은 별도 커밋.
+
+### 한 것
+- **편집 모드 회차 확정 동선** — 회차 잠금 버튼이 출간 준비 화면(FloatingPublishWorkspace)에만 있어, 1화 생성 후 편집 모드에서 다음 회차 동선이 막히던 마찰 해소. FloatingEditor 헤더 메인 CTA 옆에 "이 회차 확정" 버튼(`canConfirmLock`=미잠금 최신 회차) 추가. 클릭 → 기존 confirmChapterLock → isLatestLocked → 메인 CTA "다음 회차 만들기" 자동 전환.
+- **배선** — StoryXDesk floatingEditorProps `canConfirmLock`·`onConfirmLock`·`lockLabel`(actionLabels.lock). styles.css `.btn-confirm-lock`(accent outline).
+- TDD — floatingEditor.test +2 · editorFocusLayout +1. 라이브 — 확정 버튼 렌더·클릭→잠금→다음 회차 CTA 전환·콘솔 0·스크린샷.
+
+### 손대지 말 것
+- **canConfirmLock 게이트 = 최신 회차 존재 && 미잠금** — 잠긴 회차엔 확정 버튼 미렌더(기존 #5 잠금 해제 UI 가 담당). 회차 0개면 미렌더.
+- **상태머신 재사용** — 확정 버튼은 confirmChapterLock 만 호출한다. 잠금→"다음 회차 만들기" 전환은 기존 mainActionLabel 로직(isLatestLocked → nextDraft) + P2(setLatestChapter 동기화)가 담당. 여기에 별도 생성 로직 추가 금지.
+- **검토는 권고 유지** — 확정 전 검토 강제 안 함(마찰은 동선 부재이지 검토 누락이 아님). 확정 버튼 title 로 권장만.
+
+### 다음 세션이 해야 할 한 가지
+- **머지/푸시 — 사용자 결정 대기**(feat/persist-onboarding → main). 이 브랜치에 영속 Part 2 + 다음 회차 CTA 두 묶음 커밋.
+- 백로그(핸드오프 4차) — format 축 vs lengthClass 축 깊은 정합(short-novel charter 미진입 가능성).
+
+---
+
 ## 2026-06-18 — 영속 보강 Part 2: 온보딩 자동 복원 (feat/persist-onboarding)
 
 > 핸드오프 5차 "다음 한 가지"(Part 2 온보딩 대수술) 착수·완료. brainstorming 기정(자동 복원)대로 TDD. 결정적이라 풀 라이브 검증. 미머지·미푸시. 사용자 결정 2건 반영 — 진행=바로 TDD, 영속 범위=LLM 캐시 포함.
