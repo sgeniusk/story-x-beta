@@ -424,4 +424,31 @@ describe('qualityGates', () => {
     expect(metrics.ethicalCostPresent).toBe(true);
     expect(metrics.sceneSequelRatio).toBe(1);
   });
+
+  // gate_prompt_leak (B1) — 프롬프트/지시문 누수는 common 트랙 blocking.
+  it('gate_prompt_leak blocks when prompt leak count is positive', () => {
+    const report = evaluateQualityGates(
+      { ...fullyPassingInput, promptLeakCount: 1 },
+      { commercialWeight: 0, literaryWeight: 0 }
+    );
+    const leakGate = report.results.find((r) => r.gate === 'gate_prompt_leak');
+    expect(leakGate?.requirement).toBe('blocking');
+    expect(leakGate?.passed).toBe(false);
+    expect(report.blockingPassed).toBe(false);
+  });
+
+  it('gate_prompt_leak passes for clean prose', () => {
+    const report = evaluateQualityGates({ ...fullyPassingInput, promptLeakCount: 0 }, balancedMode);
+    const leakGate = report.results.find((r) => r.gate === 'gate_prompt_leak');
+    expect(leakGate?.passed).toBe(true);
+  });
+
+  it('gate_prompt_leak derives leak count from text when not provided', () => {
+    const report = evaluateQualityGates(
+      { ...fullyPassingInput, text: '물론입니다, 다음 장면을 작성하겠습니다. 비가 내렸다.' },
+      balancedMode
+    );
+    const leakGate = report.results.find((r) => r.gate === 'gate_prompt_leak');
+    expect(leakGate?.passed).toBe(false);
+  });
 });

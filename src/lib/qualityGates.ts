@@ -2,6 +2,7 @@ import { extractClaims, findUnsupportedClaims, mapClaimsToEvidence } from './cla
 import { auditCitations } from './citationGate';
 import { auditCounterArgument, auditResearchEthics } from './academicIntegrity';
 import { inspectKoreanVoice } from './koreanVoiceGate';
+import { detectPromptLeak } from './leakGate';
 
 // M4 청크 E · Layer 4 — 기본 품질 게이트 + academic extension.
 // 정본 — docs/storyx-harness-architecture.md § 5-3, 3-3 (두 트랙 설계).
@@ -21,6 +22,7 @@ export type GateKey =
   | 'gate_scene_sequel_balance'
   | 'gate_voice_match_70'
   | 'gate_pressure_triangle_active'
+  | 'gate_prompt_leak'
   | 'gate_ambiguity_at_finale'
   | 'gate_ethical_cost_present'
   | 'gate_motif_variation'
@@ -46,6 +48,8 @@ export interface StoryMode {
 export interface GateInput {
   /** 생성된 본문 — gate_hook_first_300 / gate_hook_last_200 가 본다. */
   text?: string;
+  /** 프롬프트/지시문 누수 건수 — 없으면 text 에서 detectPromptLeak 로 파생. */
+  promptLeakCount?: number;
   /** 매체 — 에세이/학술 게이트 활성 여부. */
   medium?: string;
   /** 연재형 여부 — gate_hook_last_200 는 serial 일 때만 평가. */
@@ -254,6 +258,14 @@ const GATE_DEFS: GateDef[] = [
     failReason: 'pressure triangle 이 비어 있거나 작동하지 않습니다.'
   },
   {
+    key: 'gate_prompt_leak',
+    track: 'common',
+    evaluate: (i) => resolvePromptLeakCount(i) === 0,
+    passReason: '프롬프트/지시문 누수가 본문에 없습니다.',
+    failReason: (i) =>
+      `프롬프트/지시문 누수 ${resolvePromptLeakCount(i)}건이 본문에 남아 있습니다 — 회차 확정 전 제거가 필요합니다.`
+  },
+  {
     key: 'gate_ambiguity_at_finale',
     track: 'literary',
     metricKey: 'ambiguityScore',
@@ -357,6 +369,13 @@ function resolveRequirement(def: GateDef, mode: StoryMode): GateRequirement {
 
 function resolveGateReason(reason: GateDef['passReason'], input: GateInput): string {
   return typeof reason === 'function' ? reason(input) : reason;
+}
+
+function resolvePromptLeakCount(input: GateInput): number {
+  if (typeof input.promptLeakCount === 'number') return Math.max(0, input.promptLeakCount);
+  const text = input.text ?? '';
+  if (!text.trim()) return 0;
+  return detectPromptLeak(text).length;
 }
 
 function resolveUnsupportedClaimCount(input: GateInput): number {
