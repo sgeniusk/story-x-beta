@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-19 · Branch: `feat/persist-onboarding` (**다음 회차 CTA 모호 수정 — 미잠금 최신 회차일 때 편집 모드에 "이 회차 확정→다음 회차" 동선 노출(잠금 버튼이 출간 화면에만 있던 마찰 해소). 같은 브랜치 앞선 묶음: 영속 Part 2(온보딩 자동 복원)·Part 1(의도 메모). 모두 미머지·미푸시.**)
+> Last Updated: 2026-06-21 · Branch: `feat/ai-leak-gate` (**B1 AI 누수 방지 게이트 — 회차 확정 전 프롬프트/지시문 누수 차단 + AI 상투구 경고. deep-research UX 벤치마킹(P7·한국 별점테러 리스크) 기반. 4 착수후보(B1~B4) feature_list 등재 후 B1 완주. 미머지·미푸시.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,19 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-21 · B1 AI 누수 방지 게이트 · feat/ai-leak-gate)
+
+```
+딥리서치        → /deep-research 로 스토리텔링 서비스 제품·UX 벤치마킹(111 에이전트·28소스·18확정·7기각). 정본 docs/research/2026-06-21-storytelling-service-ux-benchmark.md. 4 착수후보(B1 누수게이트·B2 target/habit 리텐션·B3 캐논 인라인 멘션·B4 자동 버전) feature_list 등재. 사용자 "AI 누수방지부터".
+B1 게이트       → 벤치마킹 P7 — 한국 텍스트 웹소설은 AI 탐지 거의 불가라 '누수 사고'(프롬프트/AI 상투구 노출)가 사실상 유일한 별점테러·연재중단 트리거. 회차 확정 전 프롬프트 누수 차단 + 상투구 경고.
+  brainstorming → ① 프롬프트누수=차단(blocking)·상투구=경고(advisory) ② MVP(확정차단+품질리포트). spec docs/superpowers/specs/2026-06-21-ai-leak-gate-design.md · plan .../plans/2026-06-21-ai-leak-gate.md.
+  구현(TDD) — leakGate.ts(detectPromptLeak 4범주 llm-meta·english-ai·role-marker·markdown-residue + inspectLeak, 상투구는 koreanVoiceGate 재사용·오탐 가드) · qualityGates gate_prompt_leak(common/blocking, promptLeakCount 없으면 text 파생) · StoryXDesk confirmChapterLock 진입 inspectLeak→blocked면 setLeakBlock+잠금중단 · FloatingEditor .ep-leak-banner(canvas 상단·header absolute 겹침 회피 margin-top 72).
+  TDD — leakGate.test +9(4범주 양성+오탐 가드+blocked+빈)·qualityGates.test +3·floatingEditor.test +3.
+init.sh         → tsc 0 · vitest 607 · build 통과 (592→607, +15).
+라이브(preview) → 누수 본문("물론입니다, 다음 장면을 작성하겠습니다") 회차 주입(createSeedProject+chapter, /src ESM)→?stage=editor→확정 클릭 → .ep-leak-banner(잔여 2건·"물론입니다"/"작성하겠습니다" LLM-META 인용)·잠금 차단(미잠금 유지)·배너 header 안 겹침(top72>bottom60)·콘솔 0. 스크린샷.
+남음            → B2 리텐션·B3 캐논 인라인·B4 자동 버전(백로그). 머지/푸시 사용자 결정 대기. (오탐 패턴은 라이브 누적 후 조정 — spec 명시.)
+```
 
 ## 최근 검증 (2026-06-19 · 다음 회차 CTA 모호 수정 · feat/persist-onboarding)
 

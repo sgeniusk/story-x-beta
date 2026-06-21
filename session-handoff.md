@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-06-21 — B1 AI 누수 방지 게이트 (feat/ai-leak-gate)
+
+> 사용자 "/deep-research 로 스토리텔링 서비스 벤치마킹 후 개발 이어가기". 딥리서치(제품·UX) → 4 착수후보(B1~B4) feature_list 등재 → B1(AI 누수 게이트) brainstorming→spec→plan→TDD→라이브. 미머지·미푸시.
+
+### 한 것
+- **딥리서치** — 글로벌+한국 스토리텔링 서비스 제품·UX 벤치마킹(111 에이전트·18확정·7기각). 정본 `docs/research/2026-06-21-storytelling-service-ux-benchmark.md`. B1~B4 feature_list 등재(notes 세 갈래 트랙).
+- **B1 AI 누수 게이트** — `leakGate.ts`(detectPromptLeak 4범주 + inspectLeak) · qualityGates `gate_prompt_leak`(blocking) · `confirmChapterLock` 누수 차단 · FloatingEditor `.ep-leak-banner`. spec·plan 정본. TDD +15(607). 라이브 차단 검증(스크린샷).
+
+### 손대지 말 것
+- **detectPromptLeak 보수적 패턴** — '물론'·'다음 날' 단독 같은 정상어는 누수 아님(종결어미/메타 맥락 동반 시만). `leakGate.test` 오탐 가드가 핀. blocking이라 패턴 넓히면 오탐→작가가 갇힌다.
+- **confirmChapterLock 누수 게이트** — `inspectLeak(target.prose).blocked` 면 `lockChapter` 안 함 + `setLeakBlock`. 상투구(clicheFlags)는 경고만(차단 X). 차단을 상투구로 확대 금지(주관적·오탐).
+- **`.ep-leak-banner`는 canvas 안 + margin-top 72** — header가 absolute라 canvas 최상단(top0)과 겹친다. header 다음(흐름)에 두면 겹침 재발. `floatingEditor.test`가 `.ep-leak-banner` 존재 핀.
+- **`gate_prompt_leak` common/blocking** — track common이라 자동 blocking. `promptLeakCount` 없으면 text 에서 `detectPromptLeak` 파생.
+
+### 다음 세션이 해야 할 한 가지
+- 머지/푸시 — 사용자 결정 대기(`feat/ai-leak-gate` → main).
+- B 트랙 잔여 — B2 target/habit 리텐션(4영역 최약 65%)·B3 캐논 인라인 멘션+AI주입 토글·B4 자동 버전 히스토리(캐논+프롬프트). 정본 `docs/research/2026-06-21-storytelling-service-ux-benchmark.md` §3.
+
+---
+
 ## 2026-06-19 — 다음 회차 CTA 모호 수정 (feat/persist-onboarding)
 
 > 핸드오프 5차 백로그 "다음 회차 CTA 모호" 착수·완료. brainstorming(사용자 선택: 편집 모드에 확정→다음 노출)→TDD→풀 라이브. 미머지·미푸시. 영속 Part 2 위에 쌓은 별도 커밋.
