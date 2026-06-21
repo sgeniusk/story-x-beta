@@ -577,4 +577,35 @@ describe('FloatingEditor VS 전개 후보 (C-1 Task8)', () => {
     expect(btn).toBeFalsy();
     unmount();
   });
+
+  it('[B1] leakBlock 이 있으면 누수 차단 배너를 evidence 와 함께 렌더한다', () => {
+    const { host, unmount } = mount(
+      baseProps({
+        leakBlock: {
+          promptLeaks: [{ kind: 'llm-meta', evidence: '물론입니다', index: 0 }],
+          clicheFlags: [],
+          blocked: true,
+        },
+      })
+    );
+    expect(host.querySelector('.ep-leak-banner')).toBeTruthy();
+    expect(host.textContent).toContain('물론입니다');
+    unmount();
+  });
+
+  it('[B1] leakBlock 이 없으면 누수 배너 미렌더', () => {
+    const { host, unmount } = mount(baseProps());
+    expect(host.querySelector('.ep-leak-banner')).toBeFalsy();
+    unmount();
+  });
+
+  it('[B1] StoryXDesk confirmChapterLock 이 inspectLeak 으로 누수를 차단하고 leakBlock 을 배선한다', () => {
+    const desk = readFileSync(resolve(__dirname, '../StoryXDesk.tsx'), 'utf8');
+    const start = desk.indexOf('function confirmChapterLock');
+    expect(start).toBeGreaterThan(-1);
+    const window = desk.slice(start, start + 700);
+    expect(window).toContain('inspectLeak');
+    expect(window).toContain('setLeakBlock');
+    expect(desk).toContain('leakBlock');
+  });
 });

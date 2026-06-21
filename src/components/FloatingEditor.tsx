@@ -7,6 +7,7 @@ import { SEVERITY_LABEL } from '../lib/marginReview';
 import type { StudioMetrics } from '../lib/studioMetrics';
 import { composeIntentWithFork, buildVsIntentSeed, type EpisodeFork, type VsCandidate } from '../lib/episodeBriefing';
 import { replacePaceSeed, type PaceQuestion } from '../lib/paceInterview';
+import type { LeakReport } from '../lib/leakGate';
 
 interface ChapterBeatLike {
   id: string;
@@ -81,6 +82,8 @@ export interface FloatingEditorProps {
   canConfirmLock?: boolean;
   onConfirmLock?: () => void;
   lockLabel?: string;
+  /** B1 누수 차단 — 있으면 확정이 막히고 프롬프트 누수 위치를 배너로 보여준다. */
+  leakBlock?: LeakReport | null;
 }
 
 const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
@@ -137,6 +140,7 @@ export function FloatingEditor({
   canConfirmLock = false,
   onConfirmLock,
   lockLabel = '이 회차 확정',
+  leakBlock,
 }: FloatingEditorProps) {
   const personaById = useCallback(
     (id: string): PersonaCard =>
@@ -501,6 +505,21 @@ export function FloatingEditor({
 
       {/* canvas */}
       <div className="canvas" id="fc-canvas" onScroll={() => layoutMargin()}>
+        {leakBlock && leakBlock.promptLeaks.length > 0 && (
+          <div className="ep-leak-banner" role="alert">
+            <strong>AI 누수 차단</strong> — 프롬프트/지시문 잔여 {leakBlock.promptLeaks.length}건이 본문에 남아 있어요. 확정 전에 제거하세요.
+            <ul className="ep-leak-list">
+              {leakBlock.promptLeaks.slice(0, 5).map((hit, i) => (
+                <li key={i}>
+                  <code>{hit.evidence}</code> <span className="ep-leak-kind">{hit.kind}</span>
+                </li>
+              ))}
+            </ul>
+            {leakBlock.clicheFlags.length > 0 && (
+              <p className="ep-leak-cliche">경고 — AI 상투구 신호 {leakBlock.clicheFlags.length}건(차단은 아님).</p>
+            )}
+          </div>
+        )}
         <div className="deck" ref={deckRef}>
           <article className="sheet" ref={sheetRef}>
             <div className="ep-kicker">

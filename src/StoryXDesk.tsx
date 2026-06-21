@@ -39,6 +39,7 @@ import { getAgentValidationProcess, type ValidationAgentId } from './lib/agentRe
 import { fallbackAgentPersona, getAgentPersona, type AgentPersona } from './lib/agentPersonas';
 import { defaultRuns, getMediumReviewAgentIds, visualStoryAgentRuns } from './lib/agentSeedData';
 import { STUDIO_ACCENT_VALUES, STUDIO_CANVAS_VALUES, type StudioAccent, type StudioCanvas } from './lib/studioConstants';
+import { inspectLeak, type LeakReport } from './lib/leakGate';
 import storyXSymbol from './assets/brand/story-x-symbol-light.svg';
 import { AiStatusBadge } from './components/AiStatusBadge';
 import { AgentIntentCard } from './components/AgentIntentCard';
@@ -601,6 +602,7 @@ export function StoryXDesk({
   const [draftFallbackNotice, setDraftFallbackNotice] = useState(false);
   const [editedSinceReview, setEditedSinceReview] = useState(false);
   const [agentRuns, setAgentRuns] = useState<AgentRun[]>(defaultRuns);
+  const [leakBlock, setLeakBlock] = useState<LeakReport | null>(null);
   const [latestChapter, setLatestChapter] = useState<Chapter | null>(
     project.chapters.length > 0 ? project.chapters[project.chapters.length - 1] : null
   );
@@ -1424,6 +1426,7 @@ export function StoryXDesk({
       canConfirmLock: !!latestChapter && !isLatestLocked,
       onConfirmLock: latestChapter ? () => confirmChapterLock(latestChapter.id) : undefined,
       lockLabel: actionLabels.lock,
+      leakBlock,
     }),
     [
       project,
@@ -1453,6 +1456,7 @@ export function StoryXDesk({
       handleRequestVsCandidates,
       isVsLoading,
       vsNote,
+      leakBlock,
     ]
   );
   const draftPromptPlaceholder = isLatestLocked
@@ -2346,6 +2350,14 @@ export function StoryXDesk({
   }
 
   function confirmChapterLock(chapterId: string) {
+    // B1 — 확정 전 누수 게이트. 프롬프트/지시문 잔여가 있으면 잠그지 않고 배너로 차단(상투구는 경고만).
+    const target = project.chapters.find((chapter) => chapter.id === chapterId);
+    const report = inspectLeak(target?.prose ?? '');
+    if (report.blocked) {
+      setLeakBlock(report);
+      return;
+    }
+    setLeakBlock(null);
     setProject((current) => {
       const locked = lockChapter(current, chapterId);
       saveProject(locked);
