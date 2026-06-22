@@ -635,3 +635,20 @@ describe('B2 — streak 배지(상시 노출)', () => {
     unmount();
   });
 });
+
+describe('B2 — 지표 패널 리텐션 섹션', () => {
+  it('target N/M화 + 최장연속을 보여준다', () => {
+    const { host, unmount } = mount(baseProps({
+      retention: {
+        stats: { currentStreak: 5, longestStreak: 9, thisWeekDays: 4, totalDays: 20, lastActiveDay: '2026-06-22', activeToday: true },
+        target: { current: 12, planned: 30 },
+      },
+    }));
+    const card = host.querySelector('.fc-metric-retention');
+    expect(card).not.toBeNull();
+    expect(card?.textContent).toContain('12');
+    expect(card?.textContent).toContain('30');
+    expect(card?.textContent).toContain('9');
+    unmount();
+  });
+});

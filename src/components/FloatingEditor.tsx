@@ -182,7 +182,7 @@ export function FloatingEditor({
       setOpenPanel('state');
     }
   }, [chapters?.length, episodeForks, paceQuestions]);
-  const [openMetric, setOpenMetric] = useState<'harness' | 'quality' | 'media' | 'ontology' | 'payoff'>(
+  const [openMetric, setOpenMetric] = useState<'retention' | 'harness' | 'quality' | 'media' | 'ontology' | 'payoff'>(
     metrics.harness.tone === 'warn'
       ? 'harness'
       : (['quality', 'media', 'ontology'] as const).find((k) => metrics[k].tone === 'warn') ?? 'harness'
@@ -928,6 +928,27 @@ export function FloatingEditor({
           <button className="x" onClick={closeAll}>✕</button>
         </div>
         <div className="pb fc-metrics">
+          {retention && (
+            <div className={`fc-metric fc-metric-retention${openMetric === 'retention' ? ' open' : ''}`}>
+              <button className="fc-metric-h" onClick={() => setOpenMetric('retention')}>
+                <span className="nm">리텐션</span>
+                <span className="lead">
+                  {retention.stats.currentStreak > 0 ? `🔥 ${retention.stats.currentStreak}일 연속` : '오늘 첫 문장'}
+                </span>
+                <span className="sub">
+                  {retention.target.planned
+                    ? `${retention.target.current}/${retention.target.planned}화`
+                    : `${retention.target.current}화`}
+                </span>
+              </button>
+              <div className="fc-metric-b">
+                <span className="fc-row">진도 — 전체 {retention.target.planned ?? '?'}화 중 {retention.target.current}화</span>
+                <span className="fc-row">현재 연속 — {retention.stats.currentStreak}일</span>
+                <span className="fc-row">최장 연속 — {retention.stats.longestStreak}일</span>
+                <span className="fc-row">이번 주 — {retention.stats.thisWeekDays}/7일</span>
+              </div>
+            </div>
+          )}
           <div className={`fc-metric tone-${metrics.harness.tone}${openMetric === 'harness' ? ' open' : ''}`}>
             <button className="fc-metric-h" onClick={() => setOpenMetric('harness')}>
               <span className="nm">하니스</span>
