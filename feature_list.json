@@ -351,10 +351,10 @@
       "id": "B3-canon-inline-mention",
       "name": "캐논 인라인 멘션 + 엔트리별 AI주입 토글",
       "description": "벤치마킹 P4(Novelcrafter Codex) — 본문에 추적 캐논 이름이 나오면 밑줄+미리보기 카드, 엔트리별 'AI 컨텍스트 항상 포함' 토글로 작가가 LLM 주입을 엔트리 단위 통제. 현재 캐논은 별도 패널(CanonCanvas)이라 집필면 인라인 참조 부재. 캐논/바이블을 'AI 입력 통제판'으로.",
-      "status": "todo",
+      "status": "done",
       "dependencies": [],
-      "done_criteria": "(착수 시 brainstorming) 본문 캐논 멘션 탐지+밑줄+popover + 엔트리 AI주입 토글 → digest 반영 + TDD",
-      "evidence": null
+      "done_criteria": "canonMentions 순수모듈 + CanonFact.alwaysInclude·백필 + digest 절단 면제 + 칩 바·popover 토글 + TDD + init.sh 녹색 + 라이브 검증 — 전부 충족",
+      "evidence": "src/lib/canonMentions.ts(+test 6) · CanonFact.alwaysInclude + normalizeProject 백필(storage.test +2) · buildProjectContextDigest 절단 면제(storyEngine.test +1) · FloatingEditor .ep-mention-bar 칩+popover 토글(floatingEditor.test +3) · StoryXDesk canonMentionViews/handleToggleCanonInclude(editorFocusLayout +1) · styles.css · 639 tests · build · 라이브(preview) 칩·popover·토글 영속·콘솔 0 · feat/canon-inline-mention"
     },
     {
       "id": "B4-auto-version-history",

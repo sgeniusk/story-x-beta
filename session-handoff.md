@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-06-22 — B3 캐논 인라인 멘션 + AI주입 토글 (feat/canon-inline-mention)
+
+> 사용자 "남은 기능 다 마무리". B2 main 머지 후 B3 brainstorming→spec→plan→TDD 5 task→preview 라이브 완주. 미머지·미푸시.
+
+### 한 것
+- **canonMentions.ts** — detectCanonMentions(prose, canonFacts): extractEntityName(인물 이름)으로 본문 등장 캐논 탐지·이름별 그룹화·등장순 정렬. 순수.
+- **CanonFact.alwaysInclude** + normalizeProject 백필(구버전 false).
+- **digest 절단 면제** — buildProjectContextDigest 가 alwaysInclude=true 캐논을 40개 절단에서 면제·우선 포함. A-6(중반 캐논 소실) 작가 통제.
+- **UI** — FloatingEditor .ep-mention-bar 칩 바(본문 하단, .ms 밖) + popover(statement + 'AI 항상 포함' 토글). StoryXDesk canonMentionViews useMemo + handleToggleCanonInclude useCallback. styles.css fc-app 다크 토큰.
+- TDD +13(626→639). 라이브 — 칩·popover·토글 영속·콘솔 0.
+
+### 손대지 말 것
+- **extractEntityName(storyOntology)** — 재사용·무변경. 인물 이름만 추출하므로 멘션은 인물 캐논 중심(장소/사물 캐논은 멘션 안 됨 — 설계 비목표).
+- **digest 절단 면제 로직** — CONTEXT_CANON_LIMIT/HEAD 상수 유지, alwaysInclude 만 우선 포함 추가. pinned 가 LIMIT 초과 시 pinned 전부(작가 의도) + rest 최소. 다른 절(작품 계약·헌장·contextPack) 불변.
+- **canonMentionViews 별도 useMemo([editorText, canonFacts])** — floatingEditorProps 안에 inline detect 하면 editorText 타이핑마다 전체 props 재계산. 분리 유지.
+- **contentEditable 본문** — 읽기만. 칩 바는 .ms 밖 .sheet 하단.
+- canonMentions/onToggleCanonInclude optional — 미주입 시 칩 바 미렌더(하위호환).
+
+### 다음 세션이 해야 할 한 가지
+- 머지/푸시 — 사용자 결정 대기(feat/canon-inline-mention → main). B1·B2 는 main.
+- B 트랙 잔여 — B4 자동 버전 히스토리(본문+캐논+프롬프트 시간순 스냅샷, 최대 작업·신선한 세션 권장). 정본 docs/research/2026-06-21-storytelling-service-ux-benchmark.md §3(P3).
+
+---
+
 ## 2026-06-22 — B2 target/habit 이원 리텐션 (feat/dual-retention)
 
 > 사용자 "남은 기능 다 마무리"(B2·B3·B4). 순서 B2→B3→B4·기능마다 brainstorming 결정. B2(이원 리텐션) brainstorming→spec→plan→TDD 6 task→preview 라이브 완주. 미머지·미푸시.

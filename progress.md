@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-22 · Branch: `feat/dual-retention` (**B2 target/habit 이원 리텐션 — 활동일 기준 streak(habit)을 산출 진도(target)와 별개 1급 지표로. P5 벤치마킹(리텐션 4영역 최약 65%) 기반. retentionStats 순수모듈 + writingLog 영속 + 편집·생성·확정 활동기록 + 상시 streak 배지 + 지표 패널. TDD 6 task + 라이브 완주. 미머지·미푸시. B1 은 main 에 있음.**)
+> Last Updated: 2026-06-22 · Branch: `feat/canon-inline-mention` (**B3 캐논 인라인 멘션 + AI주입 토글 — 본문 등장 캐논 칩 바 + canonFact 단위 always-include 토글로 digest 절단 면제(A-6 작가 통제). P4 벤치마킹 기반. canonMentions 순수모듈 + alwaysInclude + 칩바/popover/토글. TDD 5 task + 라이브 완주. 미머지·미푸시. B1·B2 는 main.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,16 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-22 · B3 캐논 인라인 멘션 + AI주입 토글 · feat/canon-inline-mention)
+
+```
+딥리서치 P4     → 본문에 추적 이름 나오면 밑줄+카드 + 엔트리 'Always Include' 토글로 LLM 주입 작가 통제. 캐논을 'AI 입력 통제판'으로. brainstorming — ① 둘 다(A 멘션+B 토글) ② A 표시=본문 하단 칩 바(contentEditable 충돌 회피) ③ B 의미=always-include opt-in(digest 절단 면제) ④ A·B 대상=canonFacts 통일. spec/plan 정본.
+구현(TDD 5 task) — canonMentions.ts(detectCanonMentions, extractEntityName 재사용·인물 이름 중심·등장순 정렬) · CanonFact.alwaysInclude + normalizeProject 백필 · buildProjectContextDigest 절단 면제(alwaysInclude 우선 포함) · FloatingEditor .ep-mention-bar 칩 바 + popover(statement+토글) · StoryXDesk canonMentionViews useMemo(editorText·canonFacts) + handleToggleCanonInclude.
+init.sh         → tsc 0 · vitest 639 · build 통과 (626→639).
+라이브(preview) → createSeedProject + 회차1(prose 인물명) + canonFacts2(/src ESM)→?stage=editor → ★칩 바 "등장 캐논 한지욱·서가을"·칩 클릭→popover(statement "한지욱은 각성자다."+토글)·★토글 클릭→alwaysInclude false→true 영속·📌 표시·콘솔 0. 스크린샷.
+남음            → 머지/푸시 사용자 결정 대기. B4 자동 버전 히스토리(최대, 신선한 세션 권장).
+```
 
 ## 최근 검증 (2026-06-22 · B2 target/habit 이원 리텐션 · feat/dual-retention)
 
