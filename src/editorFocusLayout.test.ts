@@ -663,3 +663,17 @@ describe('B3 — 캐논 멘션 배선', () => {
     expect(desk).toContain('onToggleCanonInclude');
   });
 });
+
+describe('B4 — 자동 스냅샷 트리거 확대', () => {
+  it('confirmChapterLock 이 스냅샷을 남긴다', () => {
+    const start = desk.indexOf('function confirmChapterLock');
+    expect(start).toBeGreaterThan(-1);
+    expect(desk.slice(start, start + 1200)).toContain('pushProjectSnapshot');
+  });
+
+  it('amendCharter 가 스냅샷을 남긴다', () => {
+    const start = desk.indexOf('function amendCharter');
+    expect(start).toBeGreaterThan(-1);
+    expect(desk.slice(start, start + 700)).toContain('pushProjectSnapshot');
+  });
+});

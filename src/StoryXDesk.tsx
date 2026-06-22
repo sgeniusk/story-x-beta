@@ -1892,7 +1892,12 @@ export function StoryXDesk({
       origin: 'manual-bible-edit',
       revertField: 'storyContract'
     });
-    setProject((current) => ({ ...current, storyContract: next }));
+    setProject((current) => {
+      const updated = { ...current, storyContract: next };
+      // B4 — 헌장 개정도 굵직한 마일스톤이라 자동 버전 스냅샷을 남긴다.
+      setProjectSnapshots(pushProjectSnapshot(updated, '헌장 개정'));
+      return updated;
+    });
   }
 
   // 베타테스트 #6 — 인물 CRUD 핸들러(순수 함수 위임).
@@ -2417,6 +2422,8 @@ export function StoryXDesk({
       const locked = lockChapter(current, chapterId);
       const stamped = withWritingDay(locked, todayStr());
       saveProject(stamped);
+      // B4 — 회차 확정은 굵직한 마일스톤이라 자동 버전 스냅샷을 남긴다.
+      setProjectSnapshots(pushProjectSnapshot(stamped, `${chapterLabel(target ?? stamped.chapters[stamped.chapters.length - 1])} 확정`));
       return stamped;
     });
     // P2 — 잠금 직후 편집으로 돌아가면 latestChapter 가 stale 해 mainActionRun 이 여전히
