@@ -3001,6 +3001,7 @@ export function StoryXDesk({
       {isHistoryOpen && (
         <ProjectHistoryDialog
           snapshots={projectSnapshots}
+          current={project}
           onRestore={restoreProjectVersion}
           onClose={() => setIsHistoryOpen(false)}
         />

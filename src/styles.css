@@ -11443,3 +11443,6 @@ body {
 .fc-app .ep-mention-fact:last-child { border-bottom: none; }
 .fc-app .ep-mention-toggle { align-self: flex-start; font-size: 11px; padding: 2px 8px; border-radius: 6px; background: transparent; border: 1px solid var(--rule-soft); color: var(--ink-faint); cursor: pointer; }
 .fc-app .ep-mention-toggle.on { background: var(--accent); border-color: var(--accent); color: #10120f; }
+/* B4 — 버전 기록 복원 영향범위. */
+.sx-snapshot-impact { margin: 4px 0 0; font-size: 12px; color: var(--ink-dim, #9a9aa2); }
+.sx-snapshot-impact.is-rollback { color: var(--coral, #fb7185); }

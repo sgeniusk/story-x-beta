@@ -8,6 +8,7 @@ const desk = readFileSync(resolve(__dirname, '../StoryXDesk.tsx'), 'utf8');
 // rank5 — VersionLogDialog는 components로 추출됨. 정의 단언은 해당 파일에서 검사한다.
 const versionLogDialog = readFileSync(resolve(__dirname, '../components/VersionLogDialog.tsx'), 'utf8');
 const docs = readFileSync(resolve(__dirname, '../../docs/storyx-version-log.md'), 'utf8');
+const projectHistoryDialog = readFileSync(resolve(__dirname, '../components/ProjectHistoryDialog.tsx'), 'utf8');
 
 describe('Story X version log', () => {
   it('publishes the current alpha version as a reusable product constant', () => {
@@ -53,5 +54,20 @@ describe('Story X version log', () => {
     expect(docs).toContain('현재 기준 버전: `Alpha v0.10.0`');
     expect(docs).toContain('Quiet Studio');
     expect(docs).toContain('v1.0.0-alpha');
+  });
+});
+
+describe('B4 — ProjectHistoryDialog 영향범위', () => {
+  it('describeSnapshotImpact 로 영향범위를 계산한다', () => {
+    expect(projectHistoryDialog).toContain('describeSnapshotImpact');
+  });
+
+  it('rollback 시 복원 전 confirm 한다', () => {
+    expect(projectHistoryDialog).toContain('window.confirm');
+    expect(projectHistoryDialog).toContain('isRollback');
+  });
+
+  it('current project 를 prop 으로 받는다', () => {
+    expect(projectHistoryDialog).toMatch(/current[?:]/);
   });
 });
