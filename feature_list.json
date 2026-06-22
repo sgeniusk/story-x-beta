@@ -342,10 +342,10 @@
       "id": "B2-dual-retention",
       "name": "target/habit 이원 리텐션",
       "description": "벤치마킹 P5(TrackBear) — 산출량 목표(target/progress bar)와 습관·연속성 목표(habit/streak)를 별개 1급 객체로 분리. 현재 리텐션은 화수 예산(target류)만 있고 streak/습관 완전 부재(4영역 최약 65%). 회차 산출 진도와 별개로 집필 cadence streak을 1급 지표로.",
-      "status": "todo",
+      "status": "done",
       "dependencies": [],
-      "done_criteria": "(착수 시 brainstorming) target/habit 분리 데이터 모델 + streak 계산 + 진도/습관 UI + TDD",
-      "evidence": null
+      "done_criteria": "retentionStats 순수모듈 + writingLog 영속·백필 + 편집·생성·확정 활동기록 + streak 배지·지표 패널 + TDD + init.sh 녹색 + 라이브 검증 — 전부 충족",
+      "evidence": "src/lib/retentionStats.ts(+test 11) · SeriesProject.writingLog + normalizeProject 백필(storage.test +2) · StoryXDesk withWritingDay 3지점(editorFocusLayout +2) · FloatingEditor .ep-streak + .fc-metric-retention(floatingEditor.test +3) · styles.css · 626 tests · build · 라이브(preview) 배지 3일연속·끊김규칙·패널·편집→오늘기록(streak 2→3)·콘솔 0 · feat/dual-retention"
     },
     {
       "id": "B3-canon-inline-mention",

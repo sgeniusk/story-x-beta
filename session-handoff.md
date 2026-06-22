@@ -4,6 +4,31 @@
 
 ---
 
+## 2026-06-22 — B2 target/habit 이원 리텐션 (feat/dual-retention)
+
+> 사용자 "남은 기능 다 마무리"(B2·B3·B4). 순서 B2→B3→B4·기능마다 brainstorming 결정. B2(이원 리텐션) brainstorming→spec→plan→TDD 6 task→preview 라이브 완주. 미머지·미푸시.
+
+### 한 것
+- **retentionStats.ts 순수 모듈** — recordWritingDay·computeRetentionStats·isValidDayStr·normalizeWritingLog·emptyWritingLog. today/dateStr 주입(순수, UTC epoch-day). 끊김 규칙(today 또는 어제까지 유지)·thisWeekDays rolling 7일.
+- **writingLog 영속** — SeriesProject.writingLog?(retentionStats 에서 type-only import) + normalizeProject 백필. export/import 자동 포함.
+- **활동 기록 3지점** — StoryXDesk todayStr/withWritingDay + 편집(자동저장 effect)·생성(applyProductionResult)·확정(confirmChapterLock). 같은 날 dedup no-op.
+- **UI** — FloatingEditor .ep-streak 배지(헤더 상시, "N일 연속"/"오늘 첫 문장") + .fc-metric-retention 패널 섹션(target N/M화·최장·주간). floatingEditorProps retention 주입. styles.css fc-app 다크 토큰.
+- TDD +19(607→626). 라이브 — 배지·끊김규칙·패널·편집→오늘기록(streak 2→3)·콘솔 0.
+
+### 손대지 말 것
+- **retentionStats today/dateStr 주입** — Date 현재시각·random 미사용(storyEngine 순수성). 끊김 규칙은 retentionStats.test 가 핀. UTC epoch-day(타임존 드리프트 회피).
+- **withWritingDay no-op 가드**(`log === project.writingLog`) — 같은 날 중복은 참조 동일 반환. 자동저장 effect 가 매 타이핑 호출해도 불필요 saveProject 차단.
+- **commitChapterProse === prev 검사** — 실제 편집 있을 때만 활동 기록(회차 전환 flush 가 오기록 안 되게).
+- **retention props optional** — 미주입 시 배지·패널 미렌더(하위호환). target.planned 은 storyContract?.plannedEpisodes(헌장 없으면 null → "?화").
+- **todayStr 는 UI 레이어(StoryXDesk)** — 로컬 '오늘'. storyEngine/retentionStats 순수성은 주입으로 유지.
+- **editorFocusLayout P2 윈도우 700→1000** — confirmChapterLock 블록이 B1(누수)+B2(활동기록)로 길어져 setLatestChapter 가 700자 밖. 가드 의도(setLatestChapter 존재) 보존하며 범위만 확장.
+
+### 다음 세션이 해야 할 한 가지
+- 머지/푸시 — 사용자 결정 대기(feat/dual-retention → main). B1 은 이미 main.
+- B 트랙 잔여 — B3 캐논 인라인 멘션 + 엔트리별 AI주입 토글 · B4 자동 버전 히스토리(최대 작업, 신선한 세션 권장). 정본 docs/research/2026-06-21-storytelling-service-ux-benchmark.md §3.
+
+---
+
 ## 2026-06-21 — B1 AI 누수 방지 게이트 (feat/ai-leak-gate)
 
 > 사용자 "/deep-research 로 스토리텔링 서비스 벤치마킹 후 개발 이어가기". 딥리서치(제품·UX) → 4 착수후보(B1~B4) feature_list 등재 → B1(AI 누수 게이트) brainstorming→spec→plan→TDD→라이브. 미머지·미푸시.

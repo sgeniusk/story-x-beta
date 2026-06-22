@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-21 · Branch: `feat/ai-leak-gate` (**B1 AI 누수 방지 게이트 — 회차 확정 전 프롬프트/지시문 누수 차단 + AI 상투구 경고. deep-research UX 벤치마킹(P7·한국 별점테러 리스크) 기반. 4 착수후보(B1~B4) feature_list 등재 후 B1 완주. 미머지·미푸시.**)
+> Last Updated: 2026-06-22 · Branch: `feat/dual-retention` (**B2 target/habit 이원 리텐션 — 활동일 기준 streak(habit)을 산출 진도(target)와 별개 1급 지표로. P5 벤치마킹(리텐션 4영역 최약 65%) 기반. retentionStats 순수모듈 + writingLog 영속 + 편집·생성·확정 활동기록 + 상시 streak 배지 + 지표 패널. TDD 6 task + 라이브 완주. 미머지·미푸시. B1 은 main 에 있음.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,18 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-22 · B2 target/habit 이원 리텐션 · feat/dual-retention)
+
+```
+딥리서치 P5     → target(누적 진도) ≠ habit(규칙적 집필 streak). 합치면 둘 다 약해진다. Story X 는 화수 예산(target류, buildContractStatus)만 있고 habit/streak 완전 gap(리텐션 65%, 4영역 최약). brainstorming — ① streak=활동일 ② 추적 중심(목표 설정·경쟁 배제, refuted 리더보드) ③ 상시 배지 + 패널 상세. spec docs/superpowers/specs/2026-06-22-dual-retention-design.md · plan .../plans/2026-06-22-dual-retention.md.
+구현(TDD 6 task) — retentionStats.ts(recordWritingDay·computeRetentionStats·isValidDayStr·normalizeWritingLog, today/dateStr 주입 순수·UTC epoch-day) · SeriesProject.writingLog?(type-only import) + normalizeProject 백필 · StoryXDesk todayStr/withWritingDay + 편집(자동저장 effect)·생성(applyProductionResult)·확정(confirmChapterLock) 3지점 활동기록 · FloatingEditor .ep-streak 배지(헤더 상시) + .fc-metric-retention 패널 섹션 · floatingEditorProps retention 주입.
+  끊김 규칙 — 마지막 활동일이 today 또는 어제면 currentStreak 유효, 그 이전이면 0. longestStreak 는 전체 최장. thisWeekDays 는 최근 7일 rolling. target 은 buildContractStatus 대신 plannedEpisodes 직접(헌장 없으면 null).
+TDD — retentionStats.test +11 · storage.test +2(writingLog 백필) · editorFocusLayout +2(헬퍼·3지점·props 핀) · floatingEditor.test +3(배지 2·패널 1). P2 confirmChapterLock 윈도우 700→1000 보정(B1+B2 로 블록 확장, 가드 의도 보존).
+init.sh         → tsc 0 · vitest 626 · build 통과 (607→626).
+라이브(preview) → createSeedProject + 회차1 + writingLog(/src ESM)→?stage=editor → ★배지 "🔥 3일 연속"(연속3)·끊김 규칙(오늘 빼면 "2일 연속 (오늘 이어가기)")·지표 패널 .fc-metric-retention(진도 ?화 중 1화·최장3·이번주3/7)·★활동기록 effect(본문 편집→오늘 자동 append→streak 2→3)·콘솔 0. 스크린샷.
+남음            → 머지/푸시 사용자 결정 대기. B3 캐논 인라인 멘션·B4 자동 버전(백로그).
+```
 
 ## 최근 검증 (2026-06-21 · B1 AI 누수 방지 게이트 · feat/ai-leak-gate)
 
