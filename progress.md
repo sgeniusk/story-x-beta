@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-23 · Branch: `feat/auto-version-history` (**B4 자동 버전 히스토리 — 회차 확정·헌장 개정 자동 스냅샷 + 복원 영향범위 표시·rollback confirm. P3 벤치마킹. 이로써 B 트랙(B1~B4) 전부 완주. 미머지·미푸시(B1·B2·B3 는 이미 main).**)
+> Last Updated: 2026-06-23 · Branch: `main` (**B 트랙(B1~B4) 전부 완주·main 머지 완료(origin 미푸시). B1=AI 누수 게이트·B2=target/habit 리텐션·B3=캐논 인라인 멘션+AI주입 토글·B4=자동 버전 히스토리(영향범위·rollback confirm). 다음은 새 트랙 — 품질·비용 로드맵 잔여(Phase B/C/E/F)·A-6 장편 기억 등.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
