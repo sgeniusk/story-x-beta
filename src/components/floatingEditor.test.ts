@@ -652,3 +652,36 @@ describe('B2 — 지표 패널 리텐션 섹션', () => {
     unmount();
   });
 });
+
+describe('B3 — 등장 캐논 칩 바 + AI주입 토글', () => {
+  const MENTIONS = [
+    { name: '한지욱', facts: [{ id: 'f1', statement: '한지욱은 각성자다.', alwaysInclude: false }] },
+    { name: '서가을', facts: [{ id: 'f2', statement: '서가을은 길드원이다.', alwaysInclude: true }] },
+  ];
+
+  it('등장 캐논 칩을 이름으로 렌더한다', () => {
+    const { host, unmount } = mount(baseProps({ canonMentions: MENTIONS }));
+    const chips = host.querySelectorAll('.ep-mention-chip');
+    expect(chips.length).toBe(2);
+    expect(chips[0].textContent).toContain('한지욱');
+    unmount();
+  });
+
+  it('칩 클릭 시 popover 에 fact + 토글이 뜨고, 토글이 onToggleCanonInclude 를 호출한다', () => {
+    const onToggleCanonInclude = vi.fn();
+    const { host, click, unmount } = mount(baseProps({ canonMentions: MENTIONS, onToggleCanonInclude }));
+    click(host.querySelector('.ep-mention-chip'));
+    const pop = host.querySelector('.ep-mention-pop');
+    expect(pop).not.toBeNull();
+    expect(pop?.textContent).toContain('한지욱은 각성자다.');
+    click(pop?.querySelector('.ep-mention-toggle') ?? null);
+    expect(onToggleCanonInclude).toHaveBeenCalledWith('f1');
+    unmount();
+  });
+
+  it('멘션 0 이면 칩 바 미렌더', () => {
+    const { host, unmount } = mount(baseProps({ canonMentions: [] }));
+    expect(host.querySelector('.ep-mention-bar')).toBeNull();
+    unmount();
+  });
+});

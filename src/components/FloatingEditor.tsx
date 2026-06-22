@@ -87,6 +87,9 @@ export interface FloatingEditorProps {
   leakBlock?: LeakReport | null;
   /** B2 — target/habit 이원 리텐션. 없으면 배지·패널 섹션 미렌더(하위호환). */
   retention?: { stats: RetentionStats; target: { current: number; planned: number | null } };
+  /** B3 — 본문 등장 캐논 멘션. 없거나 빈 배열이면 칩 바 미렌더. */
+  canonMentions?: Array<{ name: string; facts: Array<{ id: string; statement: string; alwaysInclude?: boolean }> }>;
+  onToggleCanonInclude?: (factId: string) => void;
 }
 
 const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
@@ -145,6 +148,8 @@ export function FloatingEditor({
   lockLabel = '이 회차 확정',
   leakBlock,
   retention,
+  canonMentions,
+  onToggleCanonInclude,
 }: FloatingEditorProps) {
   const personaById = useCallback(
     (id: string): PersonaCard =>
@@ -187,6 +192,7 @@ export function FloatingEditor({
       ? 'harness'
       : (['quality', 'media', 'ontology'] as const).find((k) => metrics[k].tone === 'warn') ?? 'harness'
   );
+  const [openMention, setOpenMention] = useState<string | null>(null);
   const [openReview, setOpenReview] = useState<MarginReview | null>(null);
   const [isFocus, setIsFocus] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
@@ -611,6 +617,39 @@ export function FloatingEditor({
             >
               {bodyChildren}
             </div>
+            {canonMentions && canonMentions.length > 0 && (
+              <div className="ep-mention-bar">
+                <span className="ep-mention-label">등장 캐논</span>
+                {canonMentions.map((m) => (
+                  <span key={m.name} className="ep-mention-wrap">
+                    <button
+                      type="button"
+                      className="ep-mention-chip"
+                      onClick={() => setOpenMention(openMention === m.name ? null : m.name)}
+                    >
+                      {m.name}
+                      {m.facts.some((f) => f.alwaysInclude) ? ' 📌' : ''}
+                    </button>
+                    {openMention === m.name && (
+                      <div className="ep-mention-pop" role="dialog">
+                        {m.facts.map((f) => (
+                          <div key={f.id} className="ep-mention-fact">
+                            <span>{f.statement}</span>
+                            <button
+                              type="button"
+                              className={`ep-mention-toggle${f.alwaysInclude ? ' on' : ''}`}
+                              onClick={() => onToggleCanonInclude?.(f.id)}
+                            >
+                              {f.alwaysInclude ? 'AI 항상 포함 ✓' : 'AI 항상 포함'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
           </article>
 
           {/* margin notes (wide screens) */}
