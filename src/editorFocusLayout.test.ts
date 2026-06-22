@@ -655,3 +655,11 @@ describe('B2 — 활동일 기록 배선 (편집·생성·확정)', () => {
     expect(desk).toContain('computeRetentionStats(');
   });
 });
+
+describe('B3 — 캐논 멘션 배선', () => {
+  it('StoryXDesk 가 detectCanonMentions 로 canonMentions 를 만들고 토글을 배선한다', () => {
+    expect(desk).toContain('detectCanonMentions(');
+    expect(desk).toMatch(/canonMentions:/);
+    expect(desk).toContain('onToggleCanonInclude');
+  });
+});

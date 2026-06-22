@@ -11432,3 +11432,14 @@ body {
 .fc-app .ep-streak { display: inline-flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 12px; }
 .fc-app .ep-streak span { padding: 2px 9px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--rule-soft); color: var(--ink-dim); }
 .fc-app .fc-metric-retention .lead { color: var(--accent); }
+/* B3 — 등장 캐논 칩 바 + AI주입 토글 popover. fc-app 스코프. */
+.fc-app .ep-mention-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule-soft); }
+.fc-app .ep-mention-label { font-size: 11px; color: var(--ink-faint); margin-right: 2px; }
+.fc-app .ep-mention-wrap { position: relative; display: inline-block; }
+.fc-app .ep-mention-chip { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--rule-soft); color: var(--ink-dim); cursor: pointer; }
+.fc-app .ep-mention-chip:hover { color: var(--ink); }
+.fc-app .ep-mention-pop { position: absolute; bottom: 100%; left: 0; margin-bottom: 6px; z-index: 20; min-width: 240px; max-width: 360px; padding: 10px; border-radius: 10px; background: var(--sheet); border: 1px solid var(--rule-soft); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.fc-app .ep-mention-fact { display: flex; flex-direction: column; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--rule-soft); font-size: 12px; color: var(--ink-dim); }
+.fc-app .ep-mention-fact:last-child { border-bottom: none; }
+.fc-app .ep-mention-toggle { align-self: flex-start; font-size: 11px; padding: 2px 8px; border-radius: 6px; background: transparent; border: 1px solid var(--rule-soft); color: var(--ink-faint); cursor: pointer; }
+.fc-app .ep-mention-toggle.on { background: var(--accent); border-color: var(--accent); color: #10120f; }

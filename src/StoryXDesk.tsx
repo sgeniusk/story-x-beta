@@ -41,6 +41,7 @@ import { defaultRuns, getMediumReviewAgentIds, visualStoryAgentRuns } from './li
 import { STUDIO_ACCENT_VALUES, STUDIO_CANVAS_VALUES, type StudioAccent, type StudioCanvas } from './lib/studioConstants';
 import { inspectLeak, type LeakReport } from './lib/leakGate';
 import { recordWritingDay, emptyWritingLog, computeRetentionStats } from './lib/retentionStats';
+import { detectCanonMentions } from './lib/canonMentions';
 import storyXSymbol from './assets/brand/story-x-symbol-light.svg';
 import { AiStatusBadge } from './components/AiStatusBadge';
 import { AgentIntentCard } from './components/AgentIntentCard';
@@ -1381,6 +1382,31 @@ export function StoryXDesk({
   }, [project, blueprint.medium, blueprint.format, chapterLabel]);
 
   // floating 이 편집 기본이므로 props 를 mainActionRun 정의 아래에서 구성한다(const 호이스팅 회피).
+  // B3 — 본문(editorText) 등장 캐논 멘션. editorText/canonFacts 변경 시만 재계산(floatingEditorProps 전체 재계산 회피).
+  const canonMentionViews = useMemo(
+    () =>
+      detectCanonMentions(editorText, project.canonFacts).map((m) => ({
+        name: m.name,
+        facts: m.factIds
+          .map((id) => project.canonFacts.find((f) => f.id === id))
+          .filter((f): f is NonNullable<typeof f> => Boolean(f))
+          .map((f) => ({ id: f.id, statement: f.statement, alwaysInclude: f.alwaysInclude })),
+      })),
+    [editorText, project.canonFacts]
+  );
+  const handleToggleCanonInclude = useCallback((factId: string) => {
+    setProject((current) => {
+      const next = {
+        ...current,
+        canonFacts: current.canonFacts.map((fact) =>
+          fact.id === factId ? { ...fact, alwaysInclude: !fact.alwaysInclude } : fact
+        ),
+      };
+      saveProject(next);
+      return next;
+    });
+  }, []);
+
   const floatingEditorProps = useMemo(
     () => ({
       title: project.title,
@@ -1448,6 +1474,8 @@ export function StoryXDesk({
         stats: computeRetentionStats(project.writingLog ?? emptyWritingLog(), todayStr()),
         target: { current: project.chapters.length, planned: project.storyContract?.plannedEpisodes ?? null },
       },
+      canonMentions: canonMentionViews,
+      onToggleCanonInclude: handleToggleCanonInclude,
     }),
     [
       project,
@@ -1478,6 +1506,8 @@ export function StoryXDesk({
       isVsLoading,
       vsNote,
       leakBlock,
+      canonMentionViews,
+      handleToggleCanonInclude,
     ]
   );
   const draftPromptPlaceholder = isLatestLocked
