@@ -609,3 +609,29 @@ describe('FloatingEditor VS 전개 후보 (C-1 Task8)', () => {
     expect(desk).toContain('leakBlock');
   });
 });
+
+describe('B2 — streak 배지(상시 노출)', () => {
+  const RETENTION_ACTIVE = {
+    stats: { currentStreak: 5, longestStreak: 9, thisWeekDays: 4, totalDays: 20, lastActiveDay: '2026-06-22', activeToday: true },
+    target: { current: 3, planned: 30 },
+  };
+
+  it('currentStreak>0 이면 "N일 연속" 배지', () => {
+    const { host, unmount } = mount(baseProps({ retention: RETENTION_ACTIVE }));
+    const badge = host.querySelector('.ep-streak');
+    expect(badge?.textContent).toContain('5');
+    expect(badge?.textContent).toContain('연속');
+    unmount();
+  });
+
+  it('currentStreak=0 이면 시작 유도 문구', () => {
+    const { host, unmount } = mount(baseProps({
+      retention: {
+        stats: { currentStreak: 0, longestStreak: 0, thisWeekDays: 0, totalDays: 0, lastActiveDay: null, activeToday: false },
+        target: { current: 0, planned: null },
+      },
+    }));
+    expect(host.querySelector('.ep-streak')?.textContent).toContain('오늘 첫 문장');
+    unmount();
+  });
+});

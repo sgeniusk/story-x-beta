@@ -8,6 +8,7 @@ import type { StudioMetrics } from '../lib/studioMetrics';
 import { composeIntentWithFork, buildVsIntentSeed, type EpisodeFork, type VsCandidate } from '../lib/episodeBriefing';
 import { replacePaceSeed, type PaceQuestion } from '../lib/paceInterview';
 import type { LeakReport } from '../lib/leakGate';
+import type { RetentionStats } from '../lib/retentionStats';
 
 interface ChapterBeatLike {
   id: string;
@@ -84,6 +85,8 @@ export interface FloatingEditorProps {
   lockLabel?: string;
   /** B1 누수 차단 — 있으면 확정이 막히고 프롬프트 누수 위치를 배너로 보여준다. */
   leakBlock?: LeakReport | null;
+  /** B2 — target/habit 이원 리텐션. 없으면 배지·패널 섹션 미렌더(하위호환). */
+  retention?: { stats: RetentionStats; target: { current: number; planned: number | null } };
 }
 
 const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
@@ -141,6 +144,7 @@ export function FloatingEditor({
   onConfirmLock,
   lockLabel = '이 회차 확정',
   leakBlock,
+  retention,
 }: FloatingEditorProps) {
   const personaById = useCallback(
     (id: string): PersonaCard =>
@@ -527,6 +531,15 @@ export function FloatingEditor({
               <span className="line" />
               <span>{charCount}</span>
             </div>
+            {retention && (
+              <div className="ep-streak" aria-label="집필 연속">
+                {retention.stats.currentStreak > 0 ? (
+                  <span>🔥 {retention.stats.currentStreak}일 {retention.stats.activeToday ? '연속' : '연속 (오늘 이어가기)'}</span>
+                ) : (
+                  <span>오늘 첫 문장을 써보세요</span>
+                )}
+              </div>
+            )}
             {chapters && chapters.length > 1 && onSelectChapter && (() => {
               const idx = chapters.findIndex((chapter) => chapter.id === currentChapterId);
               const prev = idx > 0 ? chapters[idx - 1] : null;
