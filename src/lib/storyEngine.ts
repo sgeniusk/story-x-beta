@@ -1602,10 +1602,20 @@ export function buildProjectContextDigest(project: SeriesProject): string {
     if (facts.length <= CONTEXT_CANON_LIMIT) {
       facts.forEach(printFact);
     } else {
-      const tailCount = CONTEXT_CANON_LIMIT - CONTEXT_CANON_HEAD;
-      facts.slice(0, CONTEXT_CANON_HEAD).forEach(printFact);
-      lines.push(`- … 초반 캐논 ${facts.length - CONTEXT_CANON_LIMIT}개 생략, 최근 캐논 우선 …`);
-      facts.slice(facts.length - tailCount).forEach(printFact);
+      // B3 — 작가가 'AI 항상 포함'으로 표시한 캐논은 절단 구간에 있어도 우선 포함(A-6 작가 통제).
+      const pinned = facts.filter((fact) => fact.alwaysInclude);
+      const rest = facts.filter((fact) => !fact.alwaysInclude);
+      const restBudget = Math.max(0, CONTEXT_CANON_LIMIT - pinned.length);
+      const head = Math.min(CONTEXT_CANON_HEAD, restBudget);
+      const tailCount = Math.max(0, restBudget - head);
+      pinned.forEach(printFact);
+      if (rest.length <= restBudget) {
+        rest.forEach(printFact);
+      } else {
+        rest.slice(0, head).forEach(printFact);
+        lines.push(`- … 중반 캐논 ${rest.length - restBudget}개 생략(고정 캐논 ${pinned.length}개는 항상 포함), 최근 캐논 우선 …`);
+        rest.slice(rest.length - tailCount).forEach(printFact);
+      }
     }
   }
   if (contextPack.livingState.length > 0) {

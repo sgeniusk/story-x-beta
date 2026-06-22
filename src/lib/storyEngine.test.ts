@@ -1385,3 +1385,20 @@ describe('evaluateProductionGate (단계적 집필 게이트 — Phase A-2)', ()
     expect(evaluateProductionGate(project).allowed).toBe(true);
   });
 });
+
+describe('B3 — digest always-include 절단 면제', () => {
+  it('alwaysInclude 캐논은 40개 초과로 절단돼도 digest 에 포함된다', () => {
+    const project = createSeedProject();
+    const facts = Array.from({ length: 50 }, (_, i) => ({
+      id: `c${i}`,
+      episode: 1,
+      owner: 'plot' as const,
+      statement: `사건 ${i} 가 일어났다.`,
+    }));
+    // 중반(절단 구간 facts[6..15], head6 다음·tail 전)에 always-include 마킹된 핵심 캐논 하나
+    facts[10] = { ...facts[10], statement: '한지욱은 진짜 배신자다.', alwaysInclude: true } as typeof facts[10];
+    const withFacts = { ...project, canonFacts: facts };
+    const digest = buildProjectContextDigest(withFacts);
+    expect(digest).toContain('한지욱은 진짜 배신자다.');
+  });
+});
