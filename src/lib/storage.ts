@@ -12,6 +12,7 @@ import {
   type TimelineEntry
 } from './storyEngine';
 import { getProjectLocalization } from './localization';
+import { normalizeWritingLog } from './retentionStats';
 import { loadEvolutionHistory, replaceEvolutionHistory, type EvolutionHistory } from './evolutionMemory';
 import type { CreativeFormat, CreativeMedium, HomeFlowStep } from './projectBlueprint';
 import type { ProjectIntakeQuestion } from './projectIntake';
@@ -236,6 +237,7 @@ export function normalizeProject(project: SeriesProject): SeriesProject {
     creativeWeight: project.creativeWeight ?? 'balanced',
     formIntent: typeof project.formIntent === 'string' ? project.formIntent : '',
     nextEpisodeIntent: typeof project.nextEpisodeIntent === 'string' ? project.nextEpisodeIntent : '',
+    writingLog: normalizeWritingLog(project.writingLog),
     characters: Array.isArray(project.characters)
       ? project.characters.map((character): CharacterProfile => ({
           ...character,

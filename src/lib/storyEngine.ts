@@ -6,6 +6,7 @@ import { planAgentRuns } from './agentRunEngine';
 import { extractCharacterNames, extractRelation } from './storyOntology';
 // M4 청크 F — AgentRun.agentId 를 ValidationAgentId 로 통합. 신설 12 에이전트도 AgentRun 의 source 가 될 수 있게.
 import type { ValidationAgentId } from './agentReviewProcess';
+import type { WritingLog } from './retentionStats';
 // M4 청크 H — validateContinuity 가 continuityContract.classifyCanonChange 로 의미적 충돌 감지를 보강.
 // 기존 forbiddenContradictions 흐름은 그대로 보존하고, hard-canon 위반만 추가 issue 로 노출.
 import {
@@ -331,6 +332,8 @@ export interface SeriesProject {
   currentEpisode: number;
   /** 다음 회차 의도 메모(VS·fork 선택 합류분 포함). 영속해 새로고침·dev서버 사망 시 선택이 날아가지 않게 한다. 구버전 저장본엔 없을 수 있다. */
   nextEpisodeIntent?: string;
+  /** B2 — target/habit 이원 리텐션 중 habit 측. 활동일(YYYY-MM-DD) 목록. 구버전 저장본엔 없을 수 있다. */
+  writingLog?: WritingLog;
   characters: CharacterProfile[];
   worldRules: WorldRule[];
   canonFacts: CanonFact[];

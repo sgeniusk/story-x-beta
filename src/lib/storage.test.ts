@@ -52,6 +52,22 @@ describe('의도 메모 영속 (nextEpisodeIntent)', () => {
   });
 });
 
+describe('활동일 영속 (writingLog · B2)', () => {
+  it('normalizeProject 가 writingLog activeDays 를 정렬·dedup 보존한다', () => {
+    const normalized = normalizeProject({
+      ...createSeedProject(),
+      writingLog: { activeDays: ['2026-06-20', '2026-06-18', '2026-06-20'] },
+    });
+    expect(normalized.writingLog).toEqual({ activeDays: ['2026-06-18', '2026-06-20'] });
+  });
+
+  it('writingLog 없는 구버전 저장본은 빈 활동일로 백필한다', () => {
+    const legacy = createSeedProject();
+    delete (legacy as { writingLog?: unknown }).writingLog;
+    expect(normalizeProject(legacy).writingLog).toEqual({ activeDays: [] });
+  });
+});
+
 describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
   function fullDraft(): OnboardingDraft {
     return {
