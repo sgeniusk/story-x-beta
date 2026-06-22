@@ -68,6 +68,28 @@ describe('활동일 영속 (writingLog · B2)', () => {
   });
 });
 
+describe('AI주입 토글 영속 (canonFact.alwaysInclude · B3)', () => {
+  it('normalizeProject 가 alwaysInclude 를 보존한다', () => {
+    const seed = createSeedProject();
+    const withFlag = {
+      ...seed,
+      canonFacts: [{ id: 'c1', episode: 1, owner: 'character' as const, statement: '한지욱은 각성자다.', alwaysInclude: true }],
+    };
+    const normalized = normalizeProject(withFlag);
+    expect(normalized.canonFacts[0].alwaysInclude).toBe(true);
+  });
+
+  it('alwaysInclude 없는 구버전 캐논은 false 로 백필', () => {
+    const seed = createSeedProject();
+    const legacy = {
+      ...seed,
+      canonFacts: [{ id: 'c1', episode: 1, owner: 'character' as const, statement: '한지욱은 각성자다.' }],
+    };
+    const normalized = normalizeProject(legacy);
+    expect(normalized.canonFacts[0].alwaysInclude).toBe(false);
+  });
+});
+
 describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
   function fullDraft(): OnboardingDraft {
     return {

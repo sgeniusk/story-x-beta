@@ -128,6 +128,8 @@ export interface CanonFact {
   // aiCliHarness · memoryBank 가 이미 6개로 받고 있어 다운캐스트 제거.
   owner: 'character' | 'world' | 'plot' | 'voice' | 'visual' | 'audio';
   statement: string;
+  /** B3 — AI 컨텍스트 항상 포함(always-include). true 면 digest 절단에서 면제·우선 포함. */
+  alwaysInclude?: boolean;
 }
 
 // 회차 구성 단위 — 이야기 흐름의 의미 단위 하나. 번호·라벨·요약으로 원고 위에 오버레이된다.

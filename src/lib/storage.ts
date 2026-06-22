@@ -238,6 +238,12 @@ export function normalizeProject(project: SeriesProject): SeriesProject {
     formIntent: typeof project.formIntent === 'string' ? project.formIntent : '',
     nextEpisodeIntent: typeof project.nextEpisodeIntent === 'string' ? project.nextEpisodeIntent : '',
     writingLog: normalizeWritingLog(project.writingLog),
+    canonFacts: Array.isArray(project.canonFacts)
+      ? project.canonFacts.map((fact) => ({
+          ...fact,
+          alwaysInclude: typeof fact.alwaysInclude === 'boolean' ? fact.alwaysInclude : false,
+        }))
+      : [],
     characters: Array.isArray(project.characters)
       ? project.characters.map((character): CharacterProfile => ({
           ...character,
