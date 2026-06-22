@@ -638,3 +638,15 @@ describe('#10 매체 변경 confirm — 무음 전환 방지', () => {
     expect(desk).toContain('onClick={() => selectFormat(option.id)}');
   });
 });
+
+describe('B2 — 활동일 기록 배선 (편집·생성·확정)', () => {
+  it('todayStr·withWritingDay 헬퍼가 있다', () => {
+    expect(desk).toMatch(/function todayStr\(\)/);
+    expect(desk).toMatch(/function withWritingDay\(/);
+  });
+
+  it('withWritingDay 가 편집·생성·확정 3지점에서 활동일을 합성한다', () => {
+    const calls = desk.match(/withWritingDay\([^;]*todayStr\(\)/g) ?? [];
+    expect(calls.length).toBe(3);
+  });
+});

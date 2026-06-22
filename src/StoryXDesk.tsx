@@ -40,6 +40,7 @@ import { fallbackAgentPersona, getAgentPersona, type AgentPersona } from './lib/
 import { defaultRuns, getMediumReviewAgentIds, visualStoryAgentRuns } from './lib/agentSeedData';
 import { STUDIO_ACCENT_VALUES, STUDIO_CANVAS_VALUES, type StudioAccent, type StudioCanvas } from './lib/studioConstants';
 import { inspectLeak, type LeakReport } from './lib/leakGate';
+import { recordWritingDay, emptyWritingLog } from './lib/retentionStats';
 import storyXSymbol from './assets/brand/story-x-symbol-light.svg';
 import { AiStatusBadge } from './components/AiStatusBadge';
 import { AgentIntentCard } from './components/AgentIntentCard';
@@ -558,6 +559,22 @@ interface StoryXDeskProps {
   onOpenLanding?: () => void;
   /** 출간 버튼을 누르면 4파트 중 마지막 퍼블리시 stage 로 빠진다. */
   onOpenPublish?: () => void;
+}
+
+// B2 — 활동일 기록 헬퍼. todayStr 는 작가 로컬 '오늘'(UI 레이어라 Date 허용),
+// withWritingDay 는 recordWritingDay 를 project 레벨로 감싼 순수 합성(같은 날 중복은 참조 동일 no-op).
+function todayStr(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function withWritingDay(project: SeriesProject, dateStr: string): SeriesProject {
+  const log = recordWritingDay(project.writingLog ?? emptyWritingLog(), dateStr);
+  if (log === project.writingLog) return project;
+  return { ...project, writingLog: log };
 }
 
 export function StoryXDesk({
@@ -1627,7 +1644,11 @@ export function StoryXDesk({
     if (!latestChapter) return;
     const chapterId = latestChapter.id;
     const timer = setTimeout(() => {
-      setProject((prev) => commitChapterProse(prev, chapterId, editorTextRef.current));
+      setProject((prev) => {
+        const committed = commitChapterProse(prev, chapterId, editorTextRef.current);
+        // 실제 prose 변화가 있을 때만 활동일 기록(commitChapterProse no-op 이면 참조 동일).
+        return committed === prev ? prev : withWritingDay(committed, todayStr());
+      });
     }, 800);
     return () => clearTimeout(timer);
   }, [editorText, latestChapter]);
@@ -2007,7 +2028,7 @@ export function StoryXDesk({
   }
 
   function applyProductionResult(result: ProductionResult) {
-    setProject(result.updatedProject);
+    setProject(withWritingDay(result.updatedProject, todayStr()));
     setAgentRuns(result.agentRuns);
     setLatestChapter(result.chapter);
     setActiveTrack('draft');
@@ -2360,8 +2381,9 @@ export function StoryXDesk({
     setLeakBlock(null);
     setProject((current) => {
       const locked = lockChapter(current, chapterId);
-      saveProject(locked);
-      return locked;
+      const stamped = withWritingDay(locked, todayStr());
+      saveProject(stamped);
+      return stamped;
     });
     // P2 — 잠금 직후 편집으로 돌아가면 latestChapter 가 stale 해 mainActionRun 이 여전히
     // reviewDraft 다(새로고침해야 produceEpisode). latestChapter 도 동기화해 같은 세션에서 다음 회차를 만든다.
