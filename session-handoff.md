@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-06-23 — B4 자동 버전 히스토리 (feat/auto-version-history)
+
+> 사용자 "남은거 해결하고 마무리". B3 main 머지 후 B4(B 트랙 마지막) brainstorming→spec→plan→TDD 3 task. 미머지·미푸시. 이로써 B 트랙(B1~B4) 전부 완주.
+
+### 한 것
+- **snapshotImpact.ts** — describeSnapshotImpact(current, snapshot): 회차·캐논·회차번호 delta + isRollback(회차/캐논 감소). 순수.
+- **자동 트리거 확대** — confirmChapterLock(회차 확정)·amendCharter(헌장 개정)에 pushProjectSnapshot. 기존(회차 생성·캐논 반영) 유지.
+- **영향범위 표시** — ProjectHistoryDialog 각 스냅샷에 describeSnapshotImpact 인라인("회차 N→M·캐논 N→M")+isRollback 코랄. 복원 전 rollback 이면 window.confirm(교체 안내). current prop 배선.
+- ★현황 발견 — B4 인프라 대부분 존재(ProjectSnapshot·pushProjectSnapshot·ProjectHistoryDialog·restoreProjectVersion). 신규는 영향범위+트리거 2개뿐. "최대 작업" 추정은 인프라 발견 전.
+- TDD +9(639→648).
+
+### 손대지 말 것
+- ProjectSnapshot 구조·pushProjectSnapshot·appendSnapshot max·restoreProjectVersion — 불변(추가만).
+- describeSnapshotImpact 순수 — delta 부호 snapshot - current(음수=복원 시 감소). isRollback=chapter<0||canon<0.
+- ProjectHistoryDialog current prop required — tsc 가 호출처 전달 강제.
+- 프롬프트 버전 — 비목표(작가 프롬프트 편집 기능 없어 버전 대상 없음).
+
+### ★ preview 라이브 한계 (중요)
+- preview CommandPalette 명령 button[role=option] 의 onClick 이 dispatchEvent(click)·.click() 으로 발화 안 됨(React 합성 이벤트 통합 한계). ⌘K 로 팔레트는 열렸으나(paletteOpen·btnFound true) 명령 실행이 안 돼 ProjectHistoryDialog 를 라이브로 못 엶.
+- 갈음 — projectHistoryDialog.test(react-dom 실제 렌더)로 영향범위·rollback·confirm 동등 검증. B2(배지)·B3(칩) 라이브는 정상 — CommandPalette 경로만 한계.
+
+### 다음 세션이 해야 할 한 가지
+- 머지/푸시 — 사용자 결정 대기(feat/auto-version-history → main). B1·B2·B3 는 main.
+- B 트랙(B1~B4) 완주 — 다음은 새 트랙(품질·비용 로드맵 잔여 Phase B/C/E/F·A-6 장편 기억 등). 정본 progress.md 활성 트랙.
+
+---
+
 ## 2026-06-22 — B3 캐논 인라인 멘션 + AI주입 토글 (feat/canon-inline-mention)
 
 > 사용자 "남은 기능 다 마무리". B2 main 머지 후 B3 brainstorming→spec→plan→TDD 5 task→preview 라이브 완주. 미머지·미푸시.

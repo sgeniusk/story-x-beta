@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-22 · Branch: `main` (**이번 세션 B2·B3 완주 후 main 머지 — B1·B2·B3 모두 main(origin 미푸시). B2=target/habit 이원 리텐션(streak), B3=캐논 인라인 멘션+AI주입 토글(always-include digest 면제). 남은 B4(자동 버전 히스토리)는 최대 작업이라 신선한 세션 권장.**)
+> Last Updated: 2026-06-23 · Branch: `feat/auto-version-history` (**B4 자동 버전 히스토리 — 회차 확정·헌장 개정 자동 스냅샷 + 복원 영향범위 표시·rollback confirm. P3 벤치마킹. 이로써 B 트랙(B1~B4) 전부 완주. 미머지·미푸시(B1·B2·B3 는 이미 main).**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,16 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 최근 검증 (2026-06-23 · B4 자동 버전 히스토리 · feat/auto-version-history)
+
+```
+딥리서치 P3     → 명시적 저장 아닌 시간순 자동 스냅샷, 본문·캐논·바이블 되돌리기. §5 공백=영향범위 표시. ★현황 발견 — 인프라 대부분 존재(ProjectSnapshot 전체 project+메타·pushProjectSnapshot·ProjectHistoryDialog·restoreProjectVersion). brainstorming — ① 프롬프트 제외(작가 편집 기능 없음) ② 트리거 확대=회차 확정·헌장 개정 ③ 영향범위=인라인 표시+rollback confirm. spec/plan 정본.
+구현(TDD 3 task) — snapshotImpact.ts(describeSnapshotImpact: 회차·캐논·회차번호 delta + isRollback, 순수) · confirmChapterLock·amendCharter 에 pushProjectSnapshot(굵직한 마일스톤) · ProjectHistoryDialog describeSnapshotImpact 인라인("회차 N→M·캐논 N→M")+isRollback 코랄+복원 전 confirm(교체 안내)+current prop.
+init.sh         → tsc 0 · vitest 648 · build 통과 (639→648).
+검증           → snapshotImpact.test +4 · editorFocusLayout +2(트리거 핀) · version.test +3(소스 핀) · projectHistoryDialog.test +3(react-dom 렌더: 영향범위 "회차 3→1·캐논 5→2"·rollback 코랄·confirm 취소 시 onRestore 미호출·동일 confirm 없이 복원). ★라이브 갈음 — preview CommandPalette 명령 클릭이 React onClick 미발화(자동화 한계)라 다이얼로그 못 엶 → react-dom 렌더 테스트가 동등 검증.
+남음            → 머지/푸시 사용자 결정 대기. B 트랙(B1~B4) 전부 완주.
+```
 
 ## 최근 검증 (2026-06-22 · B3 캐논 인라인 멘션 + AI주입 토글 · feat/canon-inline-mention)
 
