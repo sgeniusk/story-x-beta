@@ -474,7 +474,7 @@ describe('회차 생성 동작 회귀 — 의도 메모 오염·잠금 동기화
   it('회차 잠금(onConfirmChapterLock) 시 latestChapter 를 동기화한다 (P2)', () => {
     const start = desk.indexOf('function confirmChapterLock');
     expect(start).toBeGreaterThan(-1);
-    const block = desk.slice(start, start + 700);
+    const block = desk.slice(start, start + 1000);
     expect(block).toContain('lockChapter');
     expect(block).toContain('setLatestChapter');
     expect(desk).toContain('onConfirmChapterLock={confirmChapterLock}');
@@ -648,5 +648,10 @@ describe('B2 — 활동일 기록 배선 (편집·생성·확정)', () => {
   it('withWritingDay 가 편집·생성·확정 3지점에서 활동일을 합성한다', () => {
     const calls = desk.match(/withWritingDay\([^;]*todayStr\(\)/g) ?? [];
     expect(calls.length).toBe(3);
+  });
+
+  it('floatingEditorProps 가 retention(stats+target)을 주입한다', () => {
+    expect(desk).toMatch(/retention:\s*\{/);
+    expect(desk).toContain('computeRetentionStats(');
   });
 });

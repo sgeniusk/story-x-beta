@@ -40,7 +40,7 @@ import { fallbackAgentPersona, getAgentPersona, type AgentPersona } from './lib/
 import { defaultRuns, getMediumReviewAgentIds, visualStoryAgentRuns } from './lib/agentSeedData';
 import { STUDIO_ACCENT_VALUES, STUDIO_CANVAS_VALUES, type StudioAccent, type StudioCanvas } from './lib/studioConstants';
 import { inspectLeak, type LeakReport } from './lib/leakGate';
-import { recordWritingDay, emptyWritingLog } from './lib/retentionStats';
+import { recordWritingDay, emptyWritingLog, computeRetentionStats } from './lib/retentionStats';
 import storyXSymbol from './assets/brand/story-x-symbol-light.svg';
 import { AiStatusBadge } from './components/AiStatusBadge';
 import { AgentIntentCard } from './components/AgentIntentCard';
@@ -1444,6 +1444,10 @@ export function StoryXDesk({
       onConfirmLock: latestChapter ? () => confirmChapterLock(latestChapter.id) : undefined,
       lockLabel: actionLabels.lock,
       leakBlock,
+      retention: {
+        stats: computeRetentionStats(project.writingLog ?? emptyWritingLog(), todayStr()),
+        target: { current: project.chapters.length, planned: project.storyContract?.plannedEpisodes ?? null },
+      },
     }),
     [
       project,

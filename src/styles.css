@@ -11428,3 +11428,7 @@ body {
 .fc-vs-surprising .fc-vs-rarity { background: rgba(163,230,53,0.16); color: #a3e635; }
 .fc-vs-radical .fc-vs-rarity { background: rgba(251,113,133,0.18); color: #fb7185; }
 .fc-vs-dir { flex: 1 1 auto; font-size: 13px; }
+/* B2 — 리텐션: streak 배지(상시) + 지표 패널 섹션. fc-app 스코프 다크 토큰. */
+.fc-app .ep-streak { display: inline-flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 12px; }
+.fc-app .ep-streak span { padding: 2px 9px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--rule-soft); color: var(--ink-dim); }
+.fc-app .fc-metric-retention .lead { color: var(--accent); }
