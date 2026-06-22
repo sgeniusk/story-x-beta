@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-22 · Branch: `feat/canon-inline-mention` (**B3 캐논 인라인 멘션 + AI주입 토글 — 본문 등장 캐논 칩 바 + canonFact 단위 always-include 토글로 digest 절단 면제(A-6 작가 통제). P4 벤치마킹 기반. canonMentions 순수모듈 + alwaysInclude + 칩바/popover/토글. TDD 5 task + 라이브 완주. 미머지·미푸시. B1·B2 는 main.**)
+> Last Updated: 2026-06-22 · Branch: `main` (**이번 세션 B2·B3 완주 후 main 머지 — B1·B2·B3 모두 main(origin 미푸시). B2=target/habit 이원 리텐션(streak), B3=캐논 인라인 멘션+AI주입 토글(always-include digest 면제). 남은 B4(자동 버전 히스토리)는 최대 작업이라 신선한 세션 권장.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
