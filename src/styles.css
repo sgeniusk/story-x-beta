@@ -11470,8 +11470,9 @@ body {
 .dx-approve-actions { display: flex; gap: 8px; margin-top: 12px; }
 .dx-approve-actions button { padding: 8px 14px; border-radius: 8px; border: 1px solid #44464d; background: #1c1d21; color: #eceef3; cursor: pointer; }
 .dx-approve-actions button:first-child { background: #7CFF6B; color: #0b0c0e; border-color: #7CFF6B; font-weight: 600; }
-.dx-composer { display: flex; gap: 8px; position: sticky; bottom: 0; padding: 10px 0; background: #0b0c0e; }
-.dx-input { flex: 1; padding: 11px 13px; border-radius: 8px; border: 1px solid #3a3c43; background: #16171a; color: #f2f3f7; font-size: 14px; }
+.dx-status { color: #9aa0aa; font-size: 13px; padding: 2px 4px 6px; }
+.dx-composer { display: flex; gap: 8px; align-items: flex-end; position: sticky; bottom: 0; padding: 10px 0; background: #0b0c0e; }
+.dx-input { flex: 1; padding: 11px 13px; border-radius: 8px; border: 1px solid #3a3c43; background: #16171a; color: #f2f3f7; font-size: 14px; font-family: inherit; line-height: 1.5; resize: none; field-sizing: content; min-height: 46px; max-height: 160px; }
 .dx-input::placeholder { color: #8a8f98; }
 .dx-send, .dx-condense-manual { padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; }
 .dx-send { background: #f2f3f7; color: #0b0c0e; font-weight: 600; }

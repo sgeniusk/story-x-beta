@@ -49,7 +49,13 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<DiveCondensePayload | null>(null);
   const [leakWarn, setLeakWarn] = useState<string | null>(null);
+  const [condensing, setCondensing] = useState(false);
   const card = useMemo(() => characterCardText(project, session.characterId), [project, session.characterId]);
+  const charName = useMemo(() => {
+    const c = project.characters.find((x) => x.id === session.characterId)
+      ?? DIVE_SEED_CHARACTERS.find((s) => s.character.id === session.characterId)?.character;
+    return c?.name ?? '상대';
+  }, [project, session.characterId]);
   const suggest = shouldSuggestCondense(session);
 
   async function send() {
@@ -80,6 +86,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
   async function condense() {
     if (busy) return;
     setBusy(true);
+    setCondensing(true);
     try {
       const { condense: span } = selectCondenseSpan(session);
       const episode = project.chapters.length + 1;
@@ -98,6 +105,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
     } finally {
       // fetch 거절 시에도 busy 가 고착되지 않게 항상 해제.
       setBusy(false);
+      setCondensing(false);
     }
   }
 
@@ -165,14 +173,26 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
         </div>
       )}
 
+      {busy && (
+        <div className="dx-status">
+          {condensing ? '이야기를 한 회차로 응결하는 중… 수십 초 걸릴 수 있어요.' : `${charName} 입력 중…`}
+        </div>
+      )}
+
       <div className="dx-composer">
-        <input
+        <textarea
           className="dx-input"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') send(); }}
-          placeholder="말을 걸어보세요"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              send();
+            }
+          }}
+          placeholder="말을 걸어보세요 (Enter 전송 · Shift+Enter 줄바꿈)"
           disabled={busy || pending !== null}
+          rows={1}
         />
         <button className="dx-send" onClick={send} disabled={busy || pending !== null}>보내기</button>
         <button className="dx-condense-manual" onClick={condense} disabled={busy || pending !== null || session.chatBuffer.length <= CONDENSE_KEEP_RECENT}>
