@@ -238,6 +238,34 @@ export default defineConfig({
       String(input.recentSummary ?? ''),
       '--unpaid-json',
       JSON.stringify(Array.isArray(input.unpaidPromises) ? input.unpaidPromises : [])
+    ]),
+    storyxBridge('/api/dive-chat', (input) => [
+      'tools/storyx.mjs',
+      'dive-chat',
+      '--provider',
+      'codex',
+      '--character',
+      String(input.character ?? ''),
+      '--context',
+      String(input.context ?? ''),
+      '--dialogue',
+      String(input.dialogue ?? ''),
+      '--query',
+      String(input.query ?? '')
+    ]),
+    storyxBridge('/api/dive-condense', (input) => [
+      'tools/storyx.mjs',
+      'dive-condense',
+      '--provider',
+      'codex',
+      '--character',
+      String(input.character ?? ''),
+      '--context',
+      String(input.context ?? ''),
+      '--transcript',
+      String(input.transcript ?? ''),
+      '--episode',
+      String(input.episode ?? '1')
     ])
   ]
 });
