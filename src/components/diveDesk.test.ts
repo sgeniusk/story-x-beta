@@ -29,4 +29,21 @@ describe('DiveDesk', () => {
     expect(html).toContain('안녕');
     expect(html).toContain('말을 걸어보세요');
   });
+
+  it('대사 속 *별표* 묘사를 dx-action 기울임으로 분리 렌더한다', () => {
+    const project = createEmptyProject({ title: 't' });
+    let session = createDiveSession('seed-childhood', project.id);
+    session = {
+      ...session,
+      chatBuffer: [{ id: 'm1', role: 'character', text: '그래. *목도리를 둘러준다*', turn: 1 }]
+    };
+    const html = renderToStaticMarkup(
+      createElement(DiveDesk, { session, project, onChange: () => {}, onBack: () => {} })
+    );
+    // 별표 구간은 dx-action 으로 분리되고, 별표 기호 자체는 렌더에서 사라진다.
+    expect(html).toContain('class="dx-action"');
+    expect(html).toContain('목도리를 둘러준다');
+    expect(html).toContain('그래. ');
+    expect(html).not.toContain('*');
+  });
 });

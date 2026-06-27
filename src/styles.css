@@ -11459,6 +11459,8 @@ body {
 .dx-bubble { max-width: 78%; padding: 9px 13px; border-radius: 14px; font-size: 14px; line-height: 1.5; color: #f2f3f7; }
 .dx-user { align-self: flex-end; background: #1f6f78; }
 .dx-character { align-self: flex-start; background: #2a2b30; }
+.dx-action { font-style: italic; color: #aeb3bd; }
+.dx-user .dx-action { color: #cfe7ea; }
 .dx-condense-chip { align-self: center; padding: 9px 16px; border-radius: 20px; background: #1f3d1f; color: #8dff7b; border: 1px solid #2f5f2f; cursor: pointer; font-size: 13px; }
 .dx-leak { color: #ff8a7a; font-size: 13px; }
 .dx-approve { border: 1px solid #7c5cff66; border-radius: 12px; padding: 14px; background: rgba(124,92,255,0.14); }

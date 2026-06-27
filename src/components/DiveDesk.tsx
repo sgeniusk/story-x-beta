@@ -30,6 +30,20 @@ function characterCardText(project: SeriesProject, characterId: string): string 
   return `${c.name} — ${c.role}. 욕망: ${c.desire}. 말투: ${c.voiceRules.join(', ')}`;
 }
 
+// 대사 속 *행동·묘사*를 기울임으로 분리 렌더(제타류 관례) — 대사는 그대로, 별표 구간은 지문처럼.
+function renderDialogue(text: string) {
+  return text.split(/(\*[^*]+\*)/g).map((seg, i) => {
+    if (seg.length > 2 && seg.startsWith('*') && seg.endsWith('*')) {
+      return (
+        <em key={i} className="dx-action">
+          {seg.slice(1, -1)}
+        </em>
+      );
+    }
+    return <span key={i}>{seg}</span>;
+  });
+}
+
 export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -126,7 +140,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
 
       <div className="dx-chat">
         {session.chatBuffer.map((m) => (
-          <div key={m.id} className={`dx-bubble dx-${m.role}`}>{m.text}</div>
+          <div key={m.id} className={`dx-bubble dx-${m.role}`}>{renderDialogue(m.text)}</div>
         ))}
       </div>
 
