@@ -246,6 +246,8 @@ export default defineConfig({
       'codex',
       '--character',
       String(input.character ?? ''),
+      '--scene',
+      String(input.scene ?? ''),
       '--context',
       String(input.context ?? ''),
       '--dialogue',
@@ -260,12 +262,22 @@ export default defineConfig({
       'codex',
       '--character',
       String(input.character ?? ''),
+      '--scene',
+      String(input.scene ?? ''),
       '--context',
       String(input.context ?? ''),
       '--transcript',
       String(input.transcript ?? ''),
       '--episode',
       String(input.episode ?? '1')
+    ]),
+    storyxBridge('/api/dive-showrunner', (input) => [
+      'tools/storyx.mjs',
+      'dive-showrunner',
+      '--provider', 'codex',
+      '--scene', String(input.scene ?? ''),
+      '--context', String(input.context ?? ''),
+      '--directive', String(input.directive ?? '')
     ])
   ]
 });
