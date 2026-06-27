@@ -246,12 +246,17 @@ if (command === 'review-agent') {
 if (command === 'dive-chat') {
   const provider = readFlag(args, '--provider', 'mock');
   const characterCard = readFlag(args, '--character', '');
+  const scene = readFlag(args, '--scene', '');
   const context = readFlag(args, '--context', '');
   const dialogue = readFlag(args, '--dialogue', '');
   const userTurn = readFlag(args, '--query', '');
   const prompt = [
-    '당신은 Dive X의 캐릭터 연기 엔진입니다. 아래 캐릭터로 1인칭/2인칭 대화를 이어가세요.',
-    '사용자("나")에게 직접 말하는 현재형으로 답하세요. 먼저 사용자가 방금 한 말의 내용에 반응하세요 — 질문엔 답하고, 꺼낸 화제(농담·사건 등)를 받아치세요. 대사가 중심이고, 행동·표정 묘사는 *별표*로 감싸되 짧게·가끔만 넣고 같은 행동(목도리·캔 등)을 반복하지 마세요. 3인칭 전지적 서술이나 메타 설명은 금지합니다.',
+    '당신은 이 이야기의 쇼러너입니다. 사용자("나")는 주인공이고, 당신은 현재 장면 안에서 세계를 서술하고 그 자리에 있는 인물을 연기합니다.',
+    '서술(세계·상황·분위기)은 평문 줄로, 인물의 말은 "이름: 대사" 줄로, 행동·표정은 *별표*로 쓰세요. 한 응답에 여러 줄을 섞어도 됩니다.',
+    '사용자가 한 행동·말에 세계와 인물이 반응하게 하세요. 현재 장면에 없는 인물은 등장시키지 말고, 사용자("나")의 말과 행동을 대신 지어내지 마세요. 3인칭 전지적 요약·메타 설명은 금지합니다.',
+    '',
+    '## 현재 장면',
+    scene || '(장면 미설정 — 시작점 캐릭터와의 일상 대화로 진행)',
     '',
     '## 캐릭터',
     characterCard || '(미정)',
@@ -265,7 +270,7 @@ if (command === 'dive-chat') {
     `## 나의 말\n${userTurn}`,
     '',
     '## 출력 형식 — JSON 객체 하나만. 코드펜스 금지.',
-    '{ "reply": "대사 1~2문장 (+필요하면 *짧은 행동* 한 번)" }'
+    '{ "reply": "서술 줄 + 인물 \\"이름: 대사\\" 줄 (행동은 *별표*). 2~5줄." }'
   ].join('\n');
 
   if (provider === 'mock') {
@@ -292,12 +297,16 @@ if (command === 'dive-chat') {
 if (command === 'dive-condense') {
   const provider = readFlag(args, '--provider', 'mock');
   const characterCard = readFlag(args, '--character', '');
+  const scene = readFlag(args, '--scene', '');
   const context = readFlag(args, '--context', '');
   const transcript = readFlag(args, '--transcript', '');
   const episode = readFlag(args, '--episode', '1');
   const prompt = [
     'Dive X 회차 응결 요청. 아래 실시간 대화를, 나와 캐릭터를 함께 주인공으로 한 3인칭 서사 회차로 압축하세요.',
     '대사를 그대로 옮기지 말고 장면으로 재구성하되, 일어난 사건·감정 변화·약속은 보존하세요.',
+    '',
+    '## 현재 장면',
+    scene || '(장면 미설정)',
     '',
     '## 캐릭터',
     characterCard || '(미정)',
@@ -345,6 +354,50 @@ if (command === 'dive-condense') {
     beats: Array.isArray(parsed?.beats) ? parsed.beats : [],
     prose: readString(parsed?.prose),
     newCanonFacts: Array.isArray(parsed?.newCanonFacts) ? parsed.newCanonFacts : [],
+    warning: isError ? 'provider 호출 실패' : undefined
+  });
+  process.exit(isError ? 1 : 0);
+}
+
+if (command === 'dive-showrunner') {
+  const provider = readFlag(args, '--provider', 'mock');
+  const scene = readFlag(args, '--scene', '');
+  const context = readFlag(args, '--context', '');
+  const directive = readFlag(args, '--directive', '');
+  const prompt = [
+    '당신은 이 이야기의 쇼러너(연출자·신)입니다. 사용자는 이야기 위에서 당신에게 직접 지시합니다.',
+    '지시에 연출자 목소리로 짧게 응답하고, 지시를 반영해 "현재 장면"을 새로 제안하세요(장면을 바꿀 필요가 없으면 sceneUpdate는 빈 문자열).',
+    'sceneUpdate는 장소·상황·등장인물·사용자의 목적을 담은 새 현재 장면 전체입니다(누적이 아니라 교체본).',
+    '',
+    '## 현재 장면',
+    scene || '(아직 없음)',
+    '',
+    '## 이야기 기억(캐논 — 모순 금지)',
+    context || '(아직 없음)',
+    '',
+    `## 연출자의 지시\n${directive}`,
+    '',
+    '## 출력 형식 — JSON 객체 하나만. 코드펜스 금지.',
+    '{ "reply": "연출자에게 하는 짧은 응답", "sceneUpdate": "바뀐 현재 장면 전체 또는 빈 문자열" }'
+  ].join('\n');
+
+  if (provider === 'mock') {
+    printJson({ provider, mode: 'dive-showrunner', status: 'complete', reply: '뜻대로.', sceneUpdate: scene ? `${scene} (비가 내리기 시작한다)` : '' });
+    process.exit(0);
+  }
+  const commandPreview =
+    provider === 'claude'
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', '--model', 'sonnet', prompt]
+      : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
+  const { result: providerResult, raw: rawOutput } = runProviderWithRetry(commandPreview);
+  const isError = looksLikeProviderError(rawOutput, providerResult);
+  const parsed = isError ? null : parseProviderJson(rawOutput);
+  printJson({
+    provider,
+    mode: 'dive-showrunner',
+    status: isError ? 'failed' : 'complete',
+    reply: readString(parsed?.reply) || '…',
+    sceneUpdate: readString(parsed?.sceneUpdate),
     warning: isError ? 'provider 호출 실패' : undefined
   });
   process.exit(isError ? 1 : 0);
