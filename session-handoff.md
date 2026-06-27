@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-06-27 — Dive X 가벼운 로컬 프로토타입 (feat/dive-x-prototype)
+
+> 제타류 딥리서치 + 외부 3종 리서치 → 브레인스토밍 → 스펙 → 계획 → 서브에이전트 주도 TDD(7그룹). 미머지·미푸시. 신규 트랙. 정본 progress.md "신규 트랙 — Dive X" 절.
+
+### 한 것
+- **개념** — 관계형 캐릭터 챗 + 대화가 휘발 않고 "나+캐릭터 공동주연 연재물"로 응결. Story X 연속성 엔진을 해자로 재투영. 결정 7건은 스펙 §2 표.
+- **구현** — `diveSession.ts`(순수·TDD) · `diveSeedCharacters.ts`(3종) · `storage.ts` DiveState · `storyx.mjs` dive-chat/condense + vite 2라우트 · `diveClient.ts` · `DiveDesk.tsx` · `App.tsx` `?stage=dive` + `.dx-*`. 연대기=SeriesProject 재사용(`chapterFromDraftPayload`→내부 commitChapter, `buildProjectContextDigest` 주입으로 기억 회수, `inspectLeak` 품질 게이트).
+- **검증** — init.sh 녹색(vitest 665). 라이브 codex `/api/dive-chat` 왕복 성공(도윤 말투 일관). 홀리스틱 리뷰 4건 수정(`785091f`).
+
+### 손대지 말 것
+- **연대기=SeriesProject** — 응결 회차는 반드시 `chapterFromDraftPayload`(이미 내부 commitChapter+성장레저). 별도 commitChapter 호출 금지(이중 커밋).
+- **승인형 캐논** — 응결은 자동 생성하되 하드 캐논 고정은 사용자 승인 후. 자동 박제 금지(신뢰).
+- **모델 티어링** — dive-chat=경량/dive-condense=고급은 라우트 `--provider codex` 단일이라 의도만 배선(실분리는 productization).
+- **dive UI 라이브 검증 한계** — 자동화 클릭이 React onClick 미발화 + codex condense >30s. UI 한 바퀴(클릭→응결→승인→회수)는 사용자 dogfooding서 눈으로.
+
+### 다음 세션이 해야 할 한 가지
+- **머지 결정** — feat/dive-x-prototype → main(사용자 결정 대기). B 트랙은 이미 main.
+- 그 후 — 사용자 dogfooding으로 응결 회차 품질 만족까지(막히면 Story X 품질 로드맵 Phase B/헌장 정보비대칭). 검증 통과 후에야 캐릭터 생성·공개 연재·졸업 다리·B2C/B2B 포크·법적 아키텍처.
+
+---
+
 ## 2026-06-23 — B4 자동 버전 히스토리 (feat/auto-version-history)
 
 > 사용자 "남은거 해결하고 마무리". B3 main 머지 후 B4(B 트랙 마지막) brainstorming→spec→plan→TDD 3 task. 미머지·미푸시. 이로써 B 트랙(B1~B4) 전부 완주.
