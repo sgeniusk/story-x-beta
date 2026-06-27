@@ -42,38 +42,47 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
     const userText = input.trim();
     setInput('');
     setBusy(true);
-    let next = appendMessage(session, 'user', userText);
-    onChange(next, project);
-    const res = await requestDiveChat({
-      character: card,
-      context: buildProjectContextDigest(project),
-      dialogue: buildRecentDialogue(next),
-      query: userText
-    });
-    next = appendMessage(next, 'character', res.reply || '…');
-    onChange(next, project);
-    setBusy(false);
+    try {
+      let next = appendMessage(session, 'user', userText);
+      onChange(next, project);
+      const res = await requestDiveChat({
+        character: card,
+        context: buildProjectContextDigest(project),
+        dialogue: buildRecentDialogue(next),
+        query: userText
+      });
+      next = appendMessage(next, 'character', res.reply || '…');
+      onChange(next, project);
+    } finally {
+      // fetch 거절(네트워크 오류·JSON 파싱 실패) 시에도 busy 가 고착돼 입력이 얼지 않게 항상 해제.
+      setBusy(false);
+    }
   }
 
   async function condense() {
     if (busy) return;
     setBusy(true);
-    const { condense: span } = selectCondenseSpan(session);
-    const episode = project.chapters.length + 1;
-    const payload = await requestDiveCondense({
-      character: card,
-      context: buildProjectContextDigest(project),
-      transcript: buildTranscript(span),
-      episode
-    });
-    const leak = inspectLeak(payload.prose);
-    setLeakWarn(leak.blocked ? '본문에 프롬프트/AI 누수가 감지됐습니다. 다시 응결하세요.' : null);
-    setPending(leak.blocked ? null : payload);
-    setBusy(false);
+    try {
+      const { condense: span } = selectCondenseSpan(session);
+      const episode = project.chapters.length + 1;
+      const payload = await requestDiveCondense({
+        character: card,
+        context: buildProjectContextDigest(project),
+        transcript: buildTranscript(span),
+        episode
+      });
+      const leak = inspectLeak(payload.prose);
+      setLeakWarn(leak.blocked ? '본문에 프롬프트/AI 누수가 감지됐습니다. 다시 응결하세요.' : null);
+      setPending(leak.blocked ? null : payload);
+    } finally {
+      // fetch 거절 시에도 busy 가 고착되지 않게 항상 해제.
+      setBusy(false);
+    }
   }
 
   function approve() {
     if (!pending) return;
+    // intent·pressure 는 의도적으로 빈 값 — 본문은 응결 payload 에서 오지, intent/pressure 로 생성하지 않는다.
     const request: ProductionRequest = { genre: project.genre, intent: '', pressure: '' };
     const { updatedProject } = chapterFromDraftPayload(
       project,
