@@ -243,6 +243,113 @@ if (command === 'review-agent') {
   process.exit(isError ? 1 : 0);
 }
 
+if (command === 'dive-chat') {
+  const provider = readFlag(args, '--provider', 'mock');
+  const characterCard = readFlag(args, '--character', '');
+  const context = readFlag(args, '--context', '');
+  const dialogue = readFlag(args, '--dialogue', '');
+  const userTurn = readFlag(args, '--query', '');
+  const prompt = [
+    '당신은 Dive X의 캐릭터 연기 엔진입니다. 아래 캐릭터로 1인칭/2인칭 대화를 이어가세요.',
+    '사용자("나")에게 말을 거는 현재형 대사·행동으로만 답하고, 3인칭 서술이나 메타 설명은 금지합니다.',
+    '',
+    '## 캐릭터',
+    characterCard || '(미정)',
+    '',
+    '## 기억(이미 확정된 사실 — 반드시 일관되게 반영)',
+    context || '(아직 없음)',
+    '',
+    '## 최근 대화',
+    dialogue || '(처음 — 먼저 자연스럽게 말을 거세요)',
+    '',
+    `## 나의 말\n${userTurn}`,
+    '',
+    '## 출력 형식 — JSON 객체 하나만. 코드펜스 금지.',
+    '{ "reply": "캐릭터의 대사/행동 (1~3문장)" }'
+  ].join('\n');
+
+  if (provider === 'mock') {
+    printJson({ provider, mode: 'dive-chat', status: 'complete', reply: '…그래, 듣고 있어.' });
+    process.exit(0);
+  }
+  const commandPreview =
+    provider === 'claude'
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', '--model', 'haiku', prompt]
+      : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
+  const { result: providerResult, raw: rawOutput } = runProviderWithRetry(commandPreview);
+  const isError = looksLikeProviderError(rawOutput, providerResult);
+  const parsed = isError ? null : parseProviderJson(rawOutput);
+  printJson({
+    provider,
+    mode: 'dive-chat',
+    status: isError ? 'failed' : 'complete',
+    reply: readString(parsed?.reply) || '…',
+    warning: isError ? 'provider 호출 실패' : undefined
+  });
+  process.exit(isError ? 1 : 0);
+}
+
+if (command === 'dive-condense') {
+  const provider = readFlag(args, '--provider', 'mock');
+  const characterCard = readFlag(args, '--character', '');
+  const context = readFlag(args, '--context', '');
+  const transcript = readFlag(args, '--transcript', '');
+  const episode = readFlag(args, '--episode', '1');
+  const prompt = [
+    'Dive X 회차 응결 요청. 아래 실시간 대화를, 나와 캐릭터를 함께 주인공으로 한 3인칭 서사 회차로 압축하세요.',
+    '대사를 그대로 옮기지 말고 장면으로 재구성하되, 일어난 사건·감정 변화·약속은 보존하세요.',
+    '',
+    '## 캐릭터',
+    characterCard || '(미정)',
+    '',
+    '## 기존 기억(캐논 — 모순 금지)',
+    context || '(아직 없음)',
+    '',
+    '## 응결할 대화',
+    transcript,
+    '',
+    '## 출력 형식 — JSON 객체 하나만. 코드펜스 금지.',
+    '{',
+    '  "title": "이 회차 제목",',
+    '  "hook": "다음을 부르는 한 줄",',
+    '  "outline": ["장면 비트 1", "비트 2"],',
+    '  "beats": [{ "label": "구성 단위", "summary": "한 문장", "tension": 0 }],',
+    '  "prose": "3인칭 본문",',
+    '  "newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 회차에서 확정된 새 사실(약속·사건·관계 변화)" }]',
+    '}'
+  ].join('\n');
+
+  if (provider === 'mock') {
+    printJson({
+      provider, mode: 'dive-condense', status: 'complete',
+      title: `${episode}화 — 응결`, hook: '...', outline: ['mock 비트'],
+      beats: [{ label: '도입', summary: 'mock', tension: 0 }],
+      prose: 'mock 3인칭 회차 본문.',
+      newCanonFacts: [{ owner: 'character', statement: 'mock 캐논' }]
+    });
+    process.exit(0);
+  }
+  const commandPreview =
+    provider === 'claude'
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', '--model', 'sonnet', prompt]
+      : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
+  const { result: providerResult, raw: rawOutput } = runProviderWithRetry(commandPreview);
+  const isError = looksLikeProviderError(rawOutput, providerResult);
+  const parsed = isError ? null : parseProviderJson(rawOutput);
+  printJson({
+    provider, mode: 'dive-condense',
+    status: isError ? 'failed' : 'complete',
+    title: readString(parsed?.title) || `${episode}화`,
+    hook: readString(parsed?.hook),
+    outline: normalizeStringList(parsed?.outline),
+    beats: Array.isArray(parsed?.beats) ? parsed.beats : [],
+    prose: readString(parsed?.prose),
+    newCanonFacts: Array.isArray(parsed?.newCanonFacts) ? parsed.newCanonFacts : [],
+    warning: isError ? 'provider 호출 실패' : undefined
+  });
+  process.exit(isError ? 1 : 0);
+}
+
 if (command === 'draft') {
   const provider = readFlag(args, '--provider', 'mock');
   const medium = readFlag(args, '--medium', 'novel');
