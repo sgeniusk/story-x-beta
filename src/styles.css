@@ -11446,3 +11446,18 @@ body {
 /* B4 — 버전 기록 복원 영향범위. */
 .sx-snapshot-impact { margin: 4px 0 0; font-size: 12px; color: var(--ink-dim, #9a9aa2); }
 .sx-snapshot-impact.is-rollback { color: var(--coral, #fb7185); }
+/* Dive X — 캐릭터 대화 연대기 데스크. .dx-* 다크 토큰 스타일. */
+.dx-desk { display: flex; flex-direction: column; gap: 12px; max-width: 760px; margin: 0 auto; padding: 24px; color: var(--nx-ink, #f7f7fb); background: var(--nx-page, #08090a); min-height: 100vh; }
+.dx-head { display: flex; align-items: center; gap: 12px; }
+.dx-chronicle { display: flex; flex-direction: column; gap: 8px; }
+.dx-chapter { border: 1px solid #2a2a2a; border-radius: 10px; padding: 12px; background: rgba(124,92,255,0.06); }
+.dx-chat { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; }
+.dx-bubble { max-width: 78%; padding: 7px 11px; border-radius: 12px; font-size: 14px; }
+.dx-user { align-self: flex-end; background: rgba(43,179,192,0.18); }
+.dx-character { align-self: flex-start; background: #242424; }
+.dx-condense-chip { align-self: center; padding: 8px 14px; border-radius: 20px; background: #1d3a1d; color: #7CFF6B; border: none; cursor: pointer; }
+.dx-leak { color: #ff8a7a; font-size: 13px; }
+.dx-approve { border: 1px solid #7c5cff55; border-radius: 12px; padding: 14px; background: rgba(124,92,255,0.08); }
+.dx-approve-actions { display: flex; gap: 8px; margin-top: 10px; }
+.dx-composer { display: flex; gap: 8px; position: sticky; bottom: 0; padding-top: 8px; }
+.dx-input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #333; background: #111; color: inherit; }

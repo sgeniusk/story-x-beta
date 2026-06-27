@@ -53,6 +53,7 @@ function mediumDisplayLabel(medium: CreativeMedium): string {
 import {
   buildFallbackDraft,
   buildStoryContractFromOnboarding,
+  createEmptyProject,
   defaultPlannedEpisodes,
   deriveBeatSheet,
   deriveOnboardingSeed,
@@ -65,11 +66,17 @@ import {
 import {
   clearOnboardingDraft,
   hasMeaningfulOnboardingInput,
+  loadDiveState,
   loadOnboardingDraft,
   loadProject,
+  saveDiveState,
   saveOnboardingDraft,
+  type DiveState,
   type OnboardingDraft
 } from './lib/storage';
+import { DiveDesk } from './components/DiveDesk';
+import { DIVE_SEED_CHARACTERS } from './lib/diveSeedCharacters';
+import { createDiveSession } from './lib/diveSession';
 import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
 import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
@@ -142,7 +149,24 @@ const mediaBridgeRoutes = [
   }
 ];
 
-type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor' | 'publish';
+type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor' | 'publish' | 'dive';
+
+// Dive X 세션 상태를 소유하고 변경 시 localStorage에 영속하는 래퍼 컴포넌트.
+function DiveStage({ initial, onBack }: { initial: DiveState; onBack: () => void }) {
+  const [state, setState] = useState<DiveState>(initial);
+  return (
+    <DiveDesk
+      session={state.session}
+      project={state.project}
+      onBack={onBack}
+      onChange={(session, project) => {
+        const next: DiveState = { schema: 'storyx/dive/v1', session, project };
+        setState(next);
+        saveDiveState(next);
+      }}
+    />
+  );
+}
 
 function App() {
   // 영속 Part 2 — 진행 중이던 온보딩 입력을 한 번 읽어 stage·medium·format 복원에 공유한다.
@@ -159,7 +183,8 @@ function App() {
       stageParam === 'projects' ||
       stageParam === 'login' ||
       stageParam === 'landing' ||
-      stageParam === 'publish'
+      stageParam === 'publish' ||
+      stageParam === 'dive'
     ) {
       return stageParam;
     }
@@ -243,6 +268,22 @@ function App() {
           setStage('editor');
         }}
       />
+    );
+  }
+
+  if (stage === 'dive') {
+    const seed = DIVE_SEED_CHARACTERS[0];
+    const restored = loadDiveState();
+    const initial = restored ?? {
+      schema: 'storyx/dive/v1' as const,
+      session: createDiveSession(seed.character.id, ''),
+      project: (() => {
+        const p = createEmptyProject({ title: `${seed.character.name}과의 연대기` });
+        return { ...p, characters: [seed.character] };
+      })()
+    };
+    return (
+      <DiveStage initial={initial} onBack={() => setStage('editor')} />
     );
   }
 
