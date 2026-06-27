@@ -10,7 +10,7 @@ describe('diveClient', () => {
       json: async () => ({ status: 'complete', reply: '왔어?' })
     });
     vi.stubGlobal('fetch', fetchMock);
-    const res = await requestDiveChat({ character: 'c', context: '', dialogue: '', query: '안녕' });
+    const res = await requestDiveChat({ character: 'c', scene: '', context: '', dialogue: '', query: '안녕' });
     expect(fetchMock).toHaveBeenCalledWith('/api/dive-chat', expect.objectContaining({ method: 'POST' }));
     expect(res.reply).toBe('왔어?');
   });

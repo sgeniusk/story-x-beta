@@ -55,6 +55,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
   const [srInput, setSrInput] = useState('');
   const [srReply, setSrReply] = useState<string | null>(null);
   const [srSceneUpdate, setSrSceneUpdate] = useState('');
+  const [srBusy, setSrBusy] = useState(false);
   const scene = session.scene ?? '';
   const card = useMemo(() => characterCardText(project, session.characterId), [project, session.characterId]);
   const charName = useMemo(() => {
@@ -126,6 +127,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
     const directive = srInput.trim();
     setSrInput('');
     setBusy(true);
+    setSrBusy(true);
     try {
       const res = await requestDiveShowrunner({
         scene,
@@ -139,6 +141,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
       setSrSceneUpdate('');
     } finally {
       setBusy(false);
+      setSrBusy(false);
     }
   }
 
@@ -266,7 +269,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
 
       {busy && (
         <div className="dx-status">
-          {condensing ? '이야기를 한 회차로 응결하는 중… 수십 초 걸릴 수 있어요.' : `${charName} 입력 중…`}
+          {condensing ? '이야기를 한 회차로 응결하는 중… 수십 초 걸릴 수 있어요.' : srBusy ? '쇼러너가 연출 중…' : `${charName} 입력 중…`}
         </div>
       )}
 
