@@ -274,14 +274,18 @@ function App() {
   if (stage === 'dive') {
     const seed = DIVE_SEED_CHARACTERS[0];
     const restored = loadDiveState();
-    const initial = restored ?? {
-      schema: 'storyx/dive/v1' as const,
-      session: createDiveSession(seed.character.id, ''),
-      project: (() => {
-        const p = createEmptyProject({ title: `${seed.character.name}과의 연대기` });
-        return { ...p, characters: [seed.character] };
-      })()
-    };
+    let initial = restored;
+    if (!initial) {
+      const seededProject = {
+        ...createEmptyProject({ title: `${seed.character.name}과의 연대기` }),
+        characters: [seed.character]
+      };
+      initial = {
+        schema: 'storyx/dive/v1' as const,
+        session: createDiveSession(seed.character.id, seededProject.id),
+        project: seededProject
+      };
+    }
     return (
       <DiveStage initial={initial} onBack={() => setStage('editor')} />
     );

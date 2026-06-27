@@ -5,6 +5,7 @@ import { chapterFromDraftPayload, buildProjectContextDigest } from '../lib/story
 import { inspectLeak } from '../lib/leakGate';
 import {
   type DiveSession,
+  CONDENSE_KEEP_RECENT,
   appendMessage,
   shouldSuggestCondense,
   buildTranscript,
@@ -38,13 +39,13 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
   const suggest = shouldSuggestCondense(session);
 
   async function send() {
-    if (!input.trim() || busy) return;
+    if (!input.trim() || busy || pending !== null) return;
     const userText = input.trim();
     setInput('');
     setBusy(true);
+    let next = appendMessage(session, 'user', userText);
+    onChange(next, project);
     try {
-      let next = appendMessage(session, 'user', userText);
-      onChange(next, project);
       const res = await requestDiveChat({
         character: card,
         context: buildProjectContextDigest(project),
@@ -52,6 +53,9 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
         query: userText
       });
       next = appendMessage(next, 'character', res.reply || '…');
+      onChange(next, project);
+    } catch {
+      next = appendMessage(next, 'character', '…(지금은 대답하기 어려워.)');
       onChange(next, project);
     } finally {
       // fetch 거절(네트워크 오류·JSON 파싱 실패) 시에도 busy 가 고착돼 입력이 얼지 않게 항상 해제.
@@ -74,6 +78,9 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
       const leak = inspectLeak(payload.prose);
       setLeakWarn(leak.blocked ? '본문에 프롬프트/AI 누수가 감지됐습니다. 다시 응결하세요.' : null);
       setPending(leak.blocked ? null : payload);
+    } catch {
+      setLeakWarn('응결 요청에 실패했습니다. 다시 시도하세요.');
+      setPending(null);
     } finally {
       // fetch 거절 시에도 busy 가 고착되지 않게 항상 해제.
       setBusy(false);
@@ -151,10 +158,10 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') send(); }}
           placeholder="말을 걸어보세요"
-          disabled={busy}
+          disabled={busy || pending !== null}
         />
-        <button className="dx-send" onClick={send} disabled={busy}>보내기</button>
-        <button className="dx-condense-manual" onClick={condense} disabled={busy || session.chatBuffer.length === 0}>
+        <button className="dx-send" onClick={send} disabled={busy || pending !== null}>보내기</button>
+        <button className="dx-condense-manual" onClick={condense} disabled={busy || pending !== null || session.chatBuffer.length <= CONDENSE_KEEP_RECENT}>
           지금 응결
         </button>
       </div>
