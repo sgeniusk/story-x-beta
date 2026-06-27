@@ -11452,6 +11452,7 @@ body {
 .dx-title { color: #c9cdd6; font-size: 13px; line-height: 1.5; }
 .dx-back { background: #1c1d21; color: #eceef3; border: 1px solid #34363d; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
 .dx-chronicle { display: flex; flex-direction: column; gap: 8px; }
+.dx-chronicle-toggle { align-self: flex-start; background: #1c1d21; color: #c4b6ff; border: 1px solid #34363d; border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
 .dx-chapter { border: 1px solid #34363d; border-radius: 10px; padding: 12px 14px; background: rgba(124,92,255,0.12); }
 .dx-chapter h4 { margin: 0 0 6px; color: #c4b6ff; font-size: 14px; }
 .dx-chapter p { margin: 0; color: #d7dae1; line-height: 1.6; }

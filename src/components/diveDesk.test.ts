@@ -22,9 +22,9 @@ describe('DiveDesk', () => {
     const html = renderToStaticMarkup(
       createElement(DiveDesk, { session, project, onChange: () => {}, onBack: () => {} })
     );
-    // 연대기 분기 — 커밋된 회차의 제목·본문이 렌더된다.
-    expect(html).toContain('첫 회차');
-    expect(html).toContain('비 오는 날');
+    // 연대기 분기 — 회차가 있으면 접이식 토글이 렌더되고, 기본은 접혀 본문이 안 보인다.
+    expect(html).toContain('지난 이야기 1화');
+    expect(html).not.toContain('비 오는 날');
     // 채팅 버블 + 컴포저.
     expect(html).toContain('안녕');
     expect(html).toContain('말을 걸어보세요');

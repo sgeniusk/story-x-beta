@@ -56,6 +56,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
   const [srReply, setSrReply] = useState<string | null>(null);
   const [srSceneUpdate, setSrSceneUpdate] = useState('');
   const [srBusy, setSrBusy] = useState(false);
+  const [chronicleOpen, setChronicleOpen] = useState(false);
   const scene = session.scene ?? '';
   const card = useMemo(() => characterCardText(project, session.characterId), [project, session.characterId]);
   const charName = useMemo(() => {
@@ -216,14 +217,20 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
         </div>
       )}
 
-      <div className="dx-chronicle">
-        {project.chapters.map((ch) => (
-          <article key={ch.id} className="dx-chapter">
-            <h4>{ch.episode}화 「{ch.title}」</h4>
-            <p>{ch.prose}</p>
-          </article>
-        ))}
-      </div>
+      {project.chapters.length > 0 && (
+        <div className="dx-chronicle">
+          <button className="dx-chronicle-toggle" onClick={() => setChronicleOpen((v) => !v)}>
+            📖 지난 이야기 {project.chapters.length}화 {chronicleOpen ? '▾' : '▸'}
+          </button>
+          {chronicleOpen &&
+            project.chapters.map((ch) => (
+              <article key={ch.id} className="dx-chapter">
+                <h4>{ch.episode}화 「{ch.title}」</h4>
+                <p>{ch.prose}</p>
+              </article>
+            ))}
+        </div>
+      )}
 
       <div className="dx-chat">
         {session.chatBuffer.map((m) =>
