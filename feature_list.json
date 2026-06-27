@@ -373,6 +373,15 @@
       "dependencies": ["M4-story-harness-implementation", "B1-ai-leak-gate"],
       "done_criteria": "diveSession(순수 TDD)·시드3종·DiveState 영속·storyx dive-chat/condense+vite 브리지·diveClient·DiveDesk(채팅·응결·승인형 캐논·연대기)·App ?stage=dive 배선 + init.sh 녹색 + 라이브 codex 대화 왕복 — 충족. 판정 기준(사용자 만족)은 코드 DoD 밖, dogfooding 루프 목표.",
       "evidence": "src/lib/{diveSession,diveSeedCharacters,diveClient}.ts(+tests) · storage.ts DiveState · tools/storyx.mjs dive-chat·dive-condense · vite.config.ts 2라우트 · src/components/DiveDesk.tsx · src/App.tsx ?stage=dive · styles.css .dx-* · vitest 665 · build · feat/dive-x-prototype(미머지) · 라이브 /api/dive-chat 왕복 성공 · 홀리스틱 리뷰 4건 수정 785091f"
+    },
+    {
+      "id": "DX2-dive-x-scene-showrunner",
+      "name": "Dive X 2차 — 장면 연출 + 쇼러너 채널",
+      "description": "1차 프로토타입 dogfooding에서 확장. 1:1 관계챗 → 사용자가 주인공으로 현재 장면을 연출하고 AI 쇼러너가 세계를 서술하며 그 자리 인물을 연기하는 인터랙티브 스토리. 별도 쇼러너 채널(연출자/신에게 직접 지시→응답+현재 장면 교체, 승인형, 포인트 과금 이음새). 딥리서치가 짚은 user-as-protagonist 장면 연출 white space 직격. 정본 스펙 docs/superpowers/specs/2026-06-27-dive-x-scene-showrunner-design.md · 계획 docs/superpowers/plans/2026-06-27-dive-x-scene-showrunner.md. 비목표 — 쇼러너의 인물/캐논 직접 변경·실결제·장면 프리셋·분기 선택지.",
+      "status": "done",
+      "dependencies": ["DX1-dive-x-light-prototype"],
+      "done_criteria": "diveSession.scene+parseSceneSegments(서술/화자 파서)·DiveState scene 영속·storyx dive-chat 쇼러너화/dive-condense 장면/dive-showrunner 신규·vite /api/dive-showrunner+--scene·diveClient.requestDiveShowrunner·DiveDesk(장면 패널·세그먼트 렌더·쇼러너 시트·승인형 sceneUpdate) + init.sh 녹색 + 라이브 codex 쇼러너/장면채팅 왕복 + 최종 홀리스틱 APPROVE — 충족.",
+      "evidence": "feat/dive-x-scene-showrunner 7커밋(9332fc4~6295b2e)+리뷰수정 2a6349f · vitest 674 · build · 라이브 /api/dive-showrunner(reply+sceneUpdate 장면 재작성)·/api/dive-chat 장면인지(도윤 부재 서술)·세그먼트 렌더·콘솔 0 · App 무변경(scene=세션 영속)"
     }
   ]
 }
