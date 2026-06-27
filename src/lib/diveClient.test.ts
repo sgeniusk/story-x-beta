@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { requestDiveChat, requestDiveCondense } from './diveClient';
+import { requestDiveChat, requestDiveCondense, requestDiveShowrunner } from './diveClient';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -20,8 +20,19 @@ describe('diveClient', () => {
       ok: true,
       json: async () => ({ status: 'complete', title: '1화', prose: '본문', newCanonFacts: [] })
     }));
-    const res = await requestDiveCondense({ character: 'c', context: '', transcript: '나: 안녕', episode: 1 });
+    const res = await requestDiveCondense({ character: 'c', scene: '', context: '', transcript: '나: 안녕', episode: 1 });
     expect(res.title).toBe('1화');
     expect(res.prose).toBe('본문');
+  });
+
+  it('requestDiveShowrunner는 /api/dive-showrunner에 POST하고 reply·sceneUpdate를 반환', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'complete', reply: '뜻대로.', sceneUpdate: '비 오는 도윤네 집 앞' })
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const res = await requestDiveShowrunner({ scene: '도윤네 집 앞', context: '', directive: '비를 내려줘' });
+    expect(fetchMock).toHaveBeenCalledWith('/api/dive-showrunner', expect.objectContaining({ method: 'POST' }));
+    expect(res.sceneUpdate).toBe('비 오는 도윤네 집 앞');
   });
 });

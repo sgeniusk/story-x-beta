@@ -2,6 +2,7 @@
 
 export interface DiveChatRequest {
   character: string;
+  scene: string;
   context: string;
   dialogue: string;
   query: string;
@@ -15,6 +16,7 @@ export interface DiveChatResponse {
 
 export interface DiveCondenseRequest {
   character: string;
+  scene: string;
   context: string;
   transcript: string;
   episode: number;
@@ -46,4 +48,11 @@ export function requestDiveChat(req: DiveChatRequest): Promise<DiveChatResponse>
 
 export function requestDiveCondense(req: DiveCondenseRequest): Promise<DiveCondensePayload> {
   return postJson<DiveCondensePayload>('/api/dive-condense', req);
+}
+
+export interface DiveShowrunnerRequest { scene: string; context: string; directive: string; }
+export interface DiveShowrunnerResponse { status: string; reply: string; sceneUpdate: string; warning?: string; }
+
+export function requestDiveShowrunner(req: DiveShowrunnerRequest): Promise<DiveShowrunnerResponse> {
+  return postJson<DiveShowrunnerResponse>('/api/dive-showrunner', req);
 }
