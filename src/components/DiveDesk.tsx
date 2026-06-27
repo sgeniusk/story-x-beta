@@ -47,6 +47,7 @@ function renderDialogue(text: string) {
 
 export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) {
   const [input, setInput] = useState('');
+  const [choices, setChoices] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<DiveCondensePayload | null>(null);
   const [leakWarn, setLeakWarn] = useState<string | null>(null);
@@ -66,11 +67,12 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
   }, [project, session.characterId]);
   const suggest = shouldSuggestCondense(session);
 
-  async function send() {
-    if (!input.trim() || busy || pending !== null) return;
-    const userText = input.trim();
-    setInput('');
+  async function send(textArg?: string) {
+    const userText = (textArg ?? input).trim();
+    if (!userText || busy || pending !== null) return;
+    if (textArg === undefined) setInput('');
     setBusy(true);
+    setChoices([]);
     let next = appendMessage(session, 'user', userText);
     onChange(next, project);
     try {
@@ -83,6 +85,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
       });
       next = appendMessage(next, 'character', res.reply || '…');
       onChange(next, project);
+      setChoices(res.choices ?? []);
     } catch {
       next = appendMessage(next, 'character', '…(지금은 대답하기 어려워.)');
       onChange(next, project);
@@ -96,6 +99,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
     if (busy) return;
     setBusy(true);
     setCondensing(true);
+    setChoices([]);
     try {
       const { condense: span } = selectCondenseSpan(session);
       const episode = project.chapters.length + 1;
@@ -129,6 +133,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
     setSrInput('');
     setBusy(true);
     setSrBusy(true);
+    setChoices([]);
     try {
       const res = await requestDiveShowrunner({
         scene,
@@ -253,6 +258,14 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
         )}
       </div>
 
+      {choices.length > 0 && !busy && pending === null && (
+        <div className="dx-choices">
+          {choices.map((c, i) => (
+            <button key={i} className="dx-choice-chip" onClick={() => send(c)}>{c}</button>
+          ))}
+        </div>
+      )}
+
       {suggest && !pending && (
         <button className="dx-condense-chip" onClick={condense} disabled={busy}>
           이 장면을 한 회차로 응결할까요?
@@ -295,9 +308,12 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
           disabled={busy || pending !== null}
           rows={1}
         />
-        <button className="dx-send" onClick={send} disabled={busy || pending !== null}>보내기</button>
+        <button className="dx-send" onClick={() => send()} disabled={busy || pending !== null}>보내기</button>
         <button className="dx-condense-manual" onClick={condense} disabled={busy || pending !== null || session.chatBuffer.length <= CONDENSE_KEEP_RECENT}>
           지금 응결
+        </button>
+        <button className="dx-continue" onClick={() => send('(가만히 지켜본다. 시간이 잠시 흐른다.)')} disabled={busy || pending !== null}>
+          ⏳ 계속
         </button>
       </div>
     </div>

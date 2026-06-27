@@ -63,4 +63,13 @@ describe('DiveDesk', () => {
     expect(html).toContain('도윤 母');
     expect(html).toContain('누구세요?');
   });
+
+  it('⏳ 계속 버튼이 항상 렌더된다', () => {
+    const project = createEmptyProject({ title: 't' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const html = renderToStaticMarkup(
+      createElement(DiveDesk, { session, project, onChange: () => {}, onBack: () => {} })
+    );
+    expect(html).toContain('계속');
+  });
 });
