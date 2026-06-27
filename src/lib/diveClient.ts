@@ -2,6 +2,7 @@
 
 export interface DiveChatRequest {
   character: string;
+  scene: string;
   context: string;
   dialogue: string;
   query: string;
@@ -15,6 +16,7 @@ export interface DiveChatResponse {
 
 export interface DiveCondenseRequest {
   character: string;
+  scene: string;
   context: string;
   transcript: string;
   episode: number;
@@ -31,13 +33,23 @@ export interface DiveCondensePayload {
   warning?: string;
 }
 
+// 코덱스가 멈춰도 영영 "입력 중…"에 갇히지 않도록 타임아웃. 응결(고급 모델)은 느려서 넉넉히 120초.
+const DIVE_TIMEOUT_MS = 120000;
+
 async function postJson<T>(route: string, body: unknown): Promise<T> {
-  const res = await fetch(route, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  return (await res.json()) as T;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), DIVE_TIMEOUT_MS);
+  try {
+    const res = await fetch(route, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function requestDiveChat(req: DiveChatRequest): Promise<DiveChatResponse> {
@@ -46,4 +58,11 @@ export function requestDiveChat(req: DiveChatRequest): Promise<DiveChatResponse>
 
 export function requestDiveCondense(req: DiveCondenseRequest): Promise<DiveCondensePayload> {
   return postJson<DiveCondensePayload>('/api/dive-condense', req);
+}
+
+export interface DiveShowrunnerRequest { scene: string; context: string; directive: string; }
+export interface DiveShowrunnerResponse { status: string; reply: string; sceneUpdate: string; warning?: string; }
+
+export function requestDiveShowrunner(req: DiveShowrunnerRequest): Promise<DiveShowrunnerResponse> {
+  return postJson<DiveShowrunnerResponse>('/api/dive-showrunner', req);
 }

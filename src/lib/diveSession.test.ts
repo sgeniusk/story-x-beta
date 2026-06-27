@@ -8,6 +8,7 @@ import {
   applyCondenseResult,
   buildTranscript,
   buildRecentDialogue,
+  parseSceneSegments,
   CONDENSE_SUGGEST_TURNS,
   CONDENSE_KEEP_RECENT
 } from './diveSession';
@@ -79,5 +80,33 @@ describe('diveSession', () => {
     expect(recent.split('\n')).toHaveLength(4);
     expect(recent).toContain('t7');
     expect(recent).not.toContain('t3');
+  });
+
+  // Task 1: DiveSession.scene + parseSceneSegments
+  it('createDiveSession은 scene을 비워 둔다(하위호환)', () => {
+    expect(createDiveSession('c', 'p').scene).toBeUndefined();
+  });
+
+  it('parseSceneSegments는 평문 줄을 내레이션으로', () => {
+    const segs = parseSceneSegments('도윤네 집은 불이 꺼져 있다.');
+    expect(segs).toEqual([{ kind: 'narration', text: '도윤네 집은 불이 꺼져 있다.' }]);
+  });
+
+  it('parseSceneSegments는 "이름: 대사" 줄을 화자 대사로', () => {
+    const segs = parseSceneSegments('도윤 母: 누구세요?');
+    expect(segs).toEqual([{ kind: 'dialogue', speaker: '도윤 母', text: '누구세요?' }]);
+  });
+
+  it('parseSceneSegments는 서술+대사 혼합을 줄 단위로 분해하고 빈 줄을 버린다', () => {
+    const segs = parseSceneSegments('현관이 열려 있다.\n\n도윤 母: 누구세요? *문틈으로 본다*');
+    expect(segs).toHaveLength(2);
+    expect(segs[0]).toEqual({ kind: 'narration', text: '현관이 열려 있다.' });
+    expect(segs[1]).toEqual({ kind: 'dialogue', speaker: '도윤 母', text: '누구세요? *문틈으로 본다*' });
+  });
+
+  it('parseSceneSegments는 콜론 앞이 길거나(>20) 별표면 화자로 오인하지 않는다', () => {
+    const long = '그러니까 내가 하고 싶은 말은 사실 이거였는데: 외계인이야';
+    expect(parseSceneSegments(long)[0].kind).toBe('narration');
+    expect(parseSceneSegments('*그가 웃는다: 짧게*')[0].kind).toBe('narration');
   });
 });

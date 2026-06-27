@@ -14,6 +14,7 @@ export interface DiveSession {
   chatBuffer: DiveMessage[];
   lastCondensedTurn: number;
   pendingCondenseSuggested: boolean;
+  scene?: string;
 }
 
 export const CONDENSE_SUGGEST_TURNS = 12;
@@ -78,4 +79,28 @@ export function buildTranscript(messages: DiveMessage[]): string {
 export function buildRecentDialogue(session: DiveSession, limit = 6): string {
   const recent = session.chatBuffer.slice(-limit);
   return buildTranscript(recent);
+}
+
+// 한 줄: "이름: 대사" → 화자 대사, 그 외 → 내레이션. 이름은 1~20자·별표 없음.
+export interface SceneSegment {
+  kind: 'narration' | 'dialogue';
+  speaker?: string;
+  text: string;
+}
+
+const SPEAKER_LINE = /^([^:：\n]{1,20})[:：]\s*(.+)$/;
+
+export function parseSceneSegments(text: string): SceneSegment[] {
+  const out: SceneSegment[] = [];
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    const m = line.match(SPEAKER_LINE);
+    if (m && m[1].trim() && !m[1].includes('*')) {
+      out.push({ kind: 'dialogue', speaker: m[1].trim(), text: m[2].trim() });
+    } else {
+      out.push({ kind: 'narration', text: line });
+    }
+  }
+  return out;
 }

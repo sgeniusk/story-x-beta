@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-27 · Branch: `feat/dive-x-prototype` (**신규 트랙 — Dive X 가벼운 로컬 프로토타입 구현 완료(미머지·미푸시). 관계형 캐릭터 챗 → 대화 응결 → 캐논·기억 고정 → 다음 대화 회수. Story X 엔진 직접 재사용. 별개로 B 트랙(B1~B4) 전부 완주·main 머지 완료(origin 미푸시). 다음은 Dive X 머지 결정 + 품질·비용 로드맵 잔여(Phase B/C/E/F)·A-6 장편 기억 등.**)
+> Last Updated: 2026-06-27 · Branch: `feat/dive-x-scene-showrunner` (**Dive X 2차 — 장면 연출 + 쇼러너 채널 구현 완료(미머지). AI=쇼러너(세계 서술+그 자리 인물 연기)·현재 장면 패널(공유 상태)·서술/화자 세그먼트 렌더·쇼러너 메타 채널(응답+장면 교체 승인형, 과금 이음새). 1차 프로토타입(feat/dive-x-prototype, PR #4)은 main 머지+UX 핫픽스 다수. 별개로 B 트랙(B1~B4) main 머지 완료. 다음 — Dive X 2차 머지 결정 + dogfooding 품질 판정 + 품질·비용 로드맵 잔여·A-6 장편 기억.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -130,7 +130,15 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
 
-## 신규 트랙 — Dive X 가벼운 로컬 프로토타입 (`done` · 2026-06-27 · feat/dive-x-prototype, 미머지)
+## Dive X 2차 — 장면 연출 + 쇼러너 채널 (`done` · 2026-06-27 · feat/dive-x-scene-showrunner, 미머지)
+
+1차 프로토타입 dogfooding에서 사용자 요청·발명으로 수립. 정본 — 스펙 `docs/superpowers/specs/2026-06-27-dive-x-scene-showrunner-design.md`, 계획 `docs/superpowers/plans/2026-06-27-dive-x-scene-showrunner.md`. 1:1 관계챗 → "사용자가 주인공으로 장면을 연출하고 AI 쇼러너가 세계·등장인물을 운영하는 인터랙티브 스토리"로 확장 — 딥리서치가 짚은 white space(user-as-protagonist 장면 연출) 직격.
+- **결정** — ① 응답 주체=AI 쇼러너(장면 서술+그 자리 인물 연기, 도윤 없는 장면도 가능) ② 상단 '현재 장면' 패널(편집·공유 상태) ③ 출력=서술 평문 블록·`이름: 대사` 화자 말풍선·`*별표*` 행동 ④ 멀티 캐릭터는 응결 시 기존 엔진이 캐논 승격 ⑤ 쇼러너 채널(이번 가볍게)=연출자 지시→응답+현재 장면 교체(승인형), 포인트 과금은 이음새만(실결제 비목표).
+- **구현 (서브에이전트 주도 TDD, 7태스크·2단 검토 + 최종 홀리스틱 APPROVE)** — `diveSession` scene 필드+`parseSceneSegments`(서술/화자 파서) · DiveState scene 영속 핀 · `storyx.mjs` dive-chat 쇼러너화·dive-condense 장면·**dive-showrunner 신규** · vite `/api/dive-showrunner`+`--scene` · `diveClient.requestDiveShowrunner` · `DiveDesk` 현재 장면 패널·세그먼트 렌더·쇼러너 시트 · `.dx-scene/.dx-narration/.dx-speaker/.dx-showrunner` 스타일. App 무변경(scene이 세션에 실려 자동 영속). 승인형(sceneUpdate 자동교체 금지)·내레이션 키 안전성·async busy 모두 리뷰 통과.
+- **검증** — init.sh tsc·vitest 674·build 녹색. **라이브(preview, 실 codex)** — 현재 장면 패널·쇼러너 시트 렌더 · `/api/dive-showrunner` 왕복(연출 응답 + 비 내리는 으스스한 장면 전체 재작성 sceneUpdate) · 장면 인지 채팅(도윤 학원 부재 장면 → 도윤 등장 없이 세계 서술: 초인종·인터폰 불빛·숨죽인 기척) · 세그먼트 렌더(기존 메시지 가운데 내레이션 블록) · 콘솔 0. 최종 리뷰 수정 2건(srBusy 상태바·클라 테스트 scene) 반영.
+- **다음** — 사용자 dogfooding 품질 판정. 머지 결정. 후속(비목표) — 쇼러너의 인물/캐논 직접 변경·실결제·장면 프리셋·분기 선택지.
+
+## 신규 트랙 — Dive X 가벼운 로컬 프로토타입 (`done` · 2026-06-27 · feat/dive-x-prototype, 미머지+main 머지)
 
 제타(Zeta)류 AI 캐릭터 챗 딥리서치 + 외부 3종 리서치(GPT-5·Claude·Gemini) 삼각측량 → 브레인스토밍 합의로 수립. 정본 — 스펙 `docs/superpowers/specs/2026-06-27-dive-x-light-prototype-design.md`, 계획 `docs/superpowers/plans/2026-06-27-dive-x-light-prototype.md`.
 - **결정** — ① Story X와 별도 제품 + 공유 엔진 + 단방향 다리(검증 단계는 in-repo `/dive` surface) ② 관계/몰입 우선, 작품화=관계 영속·기억 장치 ③ 자동 연대기 루프 + 하이브리드 응결 트리거 ④ 승인형 캐논(자동 박제 금지) ⑤ 검증 먼저 — 외부 모집·A/B 없이 사용자 본인 dogfooding으로 품질 만족까지. **차별점은 비용이 아니라 일관성·영속(리서치 교정).** white space는 좁음(제타가 프레임 점유·바이어스/크랙이 인접 구현, 단 장편 연속성+오리지널+폐루프 교집합은 미점유).

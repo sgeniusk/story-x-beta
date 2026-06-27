@@ -22,9 +22,9 @@ describe('DiveDesk', () => {
     const html = renderToStaticMarkup(
       createElement(DiveDesk, { session, project, onChange: () => {}, onBack: () => {} })
     );
-    // 연대기 분기 — 커밋된 회차의 제목·본문이 렌더된다.
-    expect(html).toContain('첫 회차');
-    expect(html).toContain('비 오는 날');
+    // 연대기 분기 — 회차가 있으면 접이식 토글이 렌더되고, 기본은 접혀 본문이 안 보인다.
+    expect(html).toContain('지난 이야기 1화');
+    expect(html).not.toContain('비 오는 날');
     // 채팅 버블 + 컴포저.
     expect(html).toContain('안녕');
     expect(html).toContain('말을 걸어보세요');
@@ -45,5 +45,22 @@ describe('DiveDesk', () => {
     expect(html).toContain('목도리를 둘러준다');
     expect(html).toContain('그래. ');
     expect(html).not.toContain('*');
+  });
+
+  it('캐릭터 응답의 서술/화자 줄을 내레이션 블록과 화자 말풍선으로 분리 렌더한다', () => {
+    const project = createEmptyProject({ title: 't' });
+    let session = createDiveSession('seed-childhood', project.id);
+    session = {
+      ...session,
+      chatBuffer: [{ id: 'm1', role: 'character', text: '현관이 열려 있다.\n도윤 母: 누구세요?', turn: 1 }]
+    };
+    const html = renderToStaticMarkup(
+      createElement(DiveDesk, { session, project, onChange: () => {}, onBack: () => {} })
+    );
+    expect(html).toContain('class="dx-narration"');
+    expect(html).toContain('현관이 열려 있다.');
+    expect(html).toContain('class="dx-speaker"');
+    expect(html).toContain('도윤 母');
+    expect(html).toContain('누구세요?');
   });
 });

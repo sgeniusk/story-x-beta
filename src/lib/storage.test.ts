@@ -111,6 +111,17 @@ describe('DiveState 영속 (Dive X)', () => {
     expect(parseDiveState('{not json')).toBeNull();
     expect(parseDiveState(JSON.stringify({ schema: 'wrong' }))).toBeNull();
   });
+
+  it('DiveState는 session.scene을 라운드트립으로 보존한다', () => {
+    const session = { ...createDiveSession('seed-childhood', 'p'), scene: '도윤네 집 앞. 도윤은 학원.' };
+    const state: DiveState = {
+      schema: 'storyx/dive/v1',
+      session,
+      project: createEmptyProject({ title: 't' })
+    };
+    const parsed = parseDiveState(serializeDiveState(state));
+    expect(parsed?.session.scene).toBe('도윤네 집 앞. 도윤은 학원.');
+  });
 });
 
 describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {

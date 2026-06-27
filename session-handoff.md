@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-06-27 — Dive X 2차: 장면 연출 + 쇼러너 채널 (feat/dive-x-scene-showrunner)
+
+> 1차 프로토타입 dogfooding → 브레인스토밍 → 스펙 → 계획 → 서브에이전트 주도 TDD(7태스크). 미머지. 정본 progress.md "Dive X 2차" 절.
+
+### 한 것
+- **확장** — 1:1 관계챗 → 사용자가 주인공으로 장면 연출, AI=쇼러너(세계 서술+그 자리 인물 연기). 결정 6건은 스펙 §2 표.
+- **구현** — `diveSession.scene`+`parseSceneSegments`(서술/화자 파서) · DiveState scene 영속 · `storyx.mjs` dive-chat 쇼러너화·dive-condense 장면·`dive-showrunner` 신규 · vite `/api/dive-showrunner`+`--scene` · `diveClient.requestDiveShowrunner` · `DiveDesk` 장면 패널·세그먼트 렌더·쇼러너 시트 · 스타일. App 무변경.
+- **검증** — init.sh 녹색(674). 라이브 codex — 쇼러너 reply+sceneUpdate·장면 인지 채팅(도윤 부재 서술)·세그먼트 렌더·콘솔 0. 최종 홀리스틱 APPROVE + 수정 2건.
+
+### 손대지 말 것
+- **승인형 sceneUpdate** — 쇼러너가 제안한 장면은 `applySceneUpdate`(버튼)로만 교체. 자동 적용 금지.
+- **parseSceneSegments** — `이름(≤20자): 대사`만 화자, 그 외 내레이션. 별표 포함 prefix 제외. 순수.
+- **scene은 DiveSession에** — App 무변경 근거(DiveStage가 세션 전체 영속). DiveChatRequest/DiveCondenseRequest에 scene 필수(호출부 tsc 강제).
+- **dive-chat=쇼러너 프롬프트** — "장면에 없는 인물 등장 금지·사용자 말 대신 짓지 말 것". dive-showrunner=별도 연출자 프롬프트(reply+sceneUpdate 교체본).
+- 포인트 과금 = 비활성 라벨(이음새)만. 실결제·인물/캐논 직접 변경은 비목표.
+
+### 다음 세션이 해야 할 한 가지
+- **머지 결정** — feat/dive-x-scene-showrunner(1차 feat/dive-x-prototype 위). 1차는 이미 local main + PR #4.
+- 그 후 — 사용자 dogfooding 품질 판정. 막히면 Story X 품질 로드맵으로 분기.
+
+---
+
 ## 2026-06-27 — Dive X 가벼운 로컬 프로토타입 (feat/dive-x-prototype)
 
 > 제타류 딥리서치 + 외부 3종 리서치 → 브레인스토밍 → 스펙 → 계획 → 서브에이전트 주도 TDD(7그룹). 미머지·미푸시. 신규 트랙. 정본 progress.md "신규 트랙 — Dive X" 절.
