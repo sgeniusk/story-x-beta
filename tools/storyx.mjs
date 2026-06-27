@@ -269,12 +269,13 @@ if (command === 'dive-chat') {
     '',
     `## 나의 말\n${userTurn}`,
     '',
+    '응답 끝에, 주인공("나")이 이 장면에서 자연스럽게 취할 만한 행동·말 2~3개를 choices 배열로 제안하세요(짧은 동사구). 사용자는 이를 탭하거나 무시하고 자유롭게 입력할 수 있습니다.',
     '## 출력 형식 — JSON 객체 하나만. 코드펜스 금지.',
-    '{ "reply": "서술 줄 + 인물 \\"이름: 대사\\" 줄 (행동은 *별표*). 2~5줄." }'
+    '{ "reply": "서술 줄 + 인물 \\"이름: 대사\\" 줄 (행동은 *별표*). 2~5줄.", "choices": ["행동 2~3개"] }'
   ].join('\n');
 
   if (provider === 'mock') {
-    printJson({ provider, mode: 'dive-chat', status: 'complete', reply: '…그래, 듣고 있어.' });
+    printJson({ provider, mode: 'dive-chat', status: 'complete', reply: '…그래, 듣고 있어.', choices: ['문 안으로 들어간다', '도윤에게 무슨 일인지 묻는다'] });
     process.exit(0);
   }
   const commandPreview =
@@ -289,6 +290,7 @@ if (command === 'dive-chat') {
     mode: 'dive-chat',
     status: isError ? 'failed' : 'complete',
     reply: readString(parsed?.reply) || '…',
+    choices: normalizeStringList(parsed?.choices),
     warning: isError ? 'provider 호출 실패' : undefined
   });
   process.exit(isError ? 1 : 0);
@@ -304,6 +306,7 @@ if (command === 'dive-condense') {
   const prompt = [
     'Dive X 회차 응결 요청. 아래 실시간 대화를, 나와 캐릭터를 함께 주인공으로 한 3인칭 서사 회차로 압축하세요.',
     '대사를 그대로 옮기지 말고 장면으로 재구성하되, 일어난 사건·감정 변화·약속은 보존하세요.',
+    '사용자가 자유롭게 들이민 비현실·즉흥 설정도 버리지 말고, 기존 캐논·현재 장면과 모순되지 않는 선에서 그럴듯한 인과로 봉합해 매끄러운 소설로 재구성하세요. 단 이미 확정된 하드 캐논을 임의로 뒤집지는 마세요.',
     '',
     '## 현재 장면',
     scene || '(장면 미설정)',
