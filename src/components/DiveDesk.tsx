@@ -11,9 +11,10 @@ import {
   buildTranscript,
   buildRecentDialogue,
   selectCondenseSpan,
-  applyCondenseResult
+  applyCondenseResult,
+  parseSceneSegments
 } from '../lib/diveSession';
-import { requestDiveChat, requestDiveCondense, type DiveCondensePayload } from '../lib/diveClient';
+import { requestDiveChat, requestDiveCondense, requestDiveShowrunner, type DiveCondensePayload } from '../lib/diveClient';
 import { DIVE_SEED_CHARACTERS } from '../lib/diveSeedCharacters';
 
 interface DiveDeskProps {
@@ -50,6 +51,11 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
   const [pending, setPending] = useState<DiveCondensePayload | null>(null);
   const [leakWarn, setLeakWarn] = useState<string | null>(null);
   const [condensing, setCondensing] = useState(false);
+  const [srOpen, setSrOpen] = useState(false);
+  const [srInput, setSrInput] = useState('');
+  const [srReply, setSrReply] = useState<string | null>(null);
+  const [srSceneUpdate, setSrSceneUpdate] = useState('');
+  const scene = session.scene ?? '';
   const card = useMemo(() => characterCardText(project, session.characterId), [project, session.characterId]);
   const charName = useMemo(() => {
     const c = project.characters.find((x) => x.id === session.characterId)
@@ -68,6 +74,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
     try {
       const res = await requestDiveChat({
         character: card,
+        scene,
         context: buildProjectContextDigest(project),
         dialogue: buildRecentDialogue(next),
         query: userText
@@ -92,6 +99,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
       const episode = project.chapters.length + 1;
       const payload = await requestDiveCondense({
         character: card,
+        scene,
         context: buildProjectContextDigest(project),
         transcript: buildTranscript(span),
         episode
@@ -107,6 +115,37 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
       setBusy(false);
       setCondensing(false);
     }
+  }
+
+  function setScene(next: string) {
+    onChange({ ...session, scene: next }, project);
+  }
+
+  async function askShowrunner() {
+    if (!srInput.trim() || busy) return;
+    const directive = srInput.trim();
+    setSrInput('');
+    setBusy(true);
+    try {
+      const res = await requestDiveShowrunner({
+        scene,
+        context: buildProjectContextDigest(project),
+        directive
+      });
+      setSrReply(res.reply || '…');
+      setSrSceneUpdate(res.sceneUpdate || '');
+    } catch {
+      setSrReply('쇼러너 호출에 실패했어요. 다시 시도하세요.');
+      setSrSceneUpdate('');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function applySceneUpdate() {
+    setScene(srSceneUpdate);
+    setSrSceneUpdate('');
+    setSrReply(null);
   }
 
   function approve() {
@@ -137,6 +176,43 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
         <span className="dx-title">{card}</span>
       </header>
 
+      <div className="dx-scene">
+        <label className="dx-scene-label">🎬 현재 장면</label>
+        <textarea
+          className="dx-scene-input"
+          value={scene}
+          onChange={(e) => setScene(e.target.value)}
+          placeholder="장소·상황·내 목적을 적어 장면을 깔아보세요 (비우면 일상 대화)"
+          rows={2}
+        />
+        <button className="dx-sr-toggle" onClick={() => setSrOpen((v) => !v)}>🪄 쇼러너</button>
+      </div>
+
+      {srOpen && (
+        <div className="dx-showrunner-sheet">
+          {srReply && <div className="dx-showrunner">{srReply}</div>}
+          {srSceneUpdate && (
+            <div className="dx-sr-update">
+              <p className="dx-sr-update-text">현재 장면을 이렇게 바꿀까요? — {srSceneUpdate}</p>
+              <button onClick={applySceneUpdate}>장면 교체</button>
+              <button onClick={() => setSrSceneUpdate('')}>취소</button>
+            </div>
+          )}
+          <div className="dx-sr-compose">
+            <input
+              className="dx-input"
+              value={srInput}
+              onChange={(e) => setSrInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); askShowrunner(); } }}
+              placeholder="쇼러너에게 지시 (예: 비를 내려줘 · 도윤 엄마를 의심하게)"
+              disabled={busy}
+            />
+            <button className="dx-send" onClick={askShowrunner} disabled={busy}>지시</button>
+            <span className="dx-sr-cost">· 포인트(추후)</span>
+          </div>
+        </div>
+      )}
+
       <div className="dx-chronicle">
         {project.chapters.map((ch) => (
           <article key={ch.id} className="dx-chapter">
@@ -147,9 +223,24 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
       </div>
 
       <div className="dx-chat">
-        {session.chatBuffer.map((m) => (
-          <div key={m.id} className={`dx-bubble dx-${m.role}`}>{renderDialogue(m.text)}</div>
-        ))}
+        {session.chatBuffer.map((m) =>
+          m.role === 'user' ? (
+            <div key={m.id} className="dx-bubble dx-user">{renderDialogue(m.text)}</div>
+          ) : (
+            <div key={m.id} className="dx-turn">
+              {parseSceneSegments(m.text).map((seg, i) =>
+                seg.kind === 'narration' ? (
+                  <div key={i} className="dx-narration">{renderDialogue(seg.text)}</div>
+                ) : (
+                  <div key={i} className="dx-bubble dx-character">
+                    <span className="dx-speaker">{seg.speaker}</span>
+                    {renderDialogue(seg.text)}
+                  </div>
+                )
+              )}
+            </div>
+          )
+        )}
       </div>
 
       {suggest && !pending && (

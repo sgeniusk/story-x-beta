@@ -46,4 +46,21 @@ describe('DiveDesk', () => {
     expect(html).toContain('그래. ');
     expect(html).not.toContain('*');
   });
+
+  it('캐릭터 응답의 서술/화자 줄을 내레이션 블록과 화자 말풍선으로 분리 렌더한다', () => {
+    const project = createEmptyProject({ title: 't' });
+    let session = createDiveSession('seed-childhood', project.id);
+    session = {
+      ...session,
+      chatBuffer: [{ id: 'm1', role: 'character', text: '현관이 열려 있다.\n도윤 母: 누구세요?', turn: 1 }]
+    };
+    const html = renderToStaticMarkup(
+      createElement(DiveDesk, { session, project, onChange: () => {}, onBack: () => {} })
+    );
+    expect(html).toContain('class="dx-narration"');
+    expect(html).toContain('현관이 열려 있다.');
+    expect(html).toContain('class="dx-speaker"');
+    expect(html).toContain('도윤 母');
+    expect(html).toContain('누구세요?');
+  });
 });
