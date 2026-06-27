@@ -11,6 +11,7 @@ export interface DiveChatRequest {
 export interface DiveChatResponse {
   status: string;
   reply: string;
+  choices?: string[];
   warning?: string;
 }
 
