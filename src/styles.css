@@ -11446,3 +11446,35 @@ body {
 /* B4 — 버전 기록 복원 영향범위. */
 .sx-snapshot-impact { margin: 4px 0 0; font-size: 12px; color: var(--ink-dim, #9a9aa2); }
 .sx-snapshot-impact.is-rollback { color: var(--coral, #fb7185); }
+/* Dive X — 캐릭터 대화 연대기 데스크. .dx-* 다크 토큰 스타일. */
+.dx-desk { display: flex; flex-direction: column; gap: 12px; padding: 24px max(24px, calc((100% - 720px) / 2)); color: #eceef3; background: #0b0c0e; min-height: 100vh; box-sizing: border-box; }
+.dx-head { display: flex; align-items: center; gap: 12px; }
+.dx-title { color: #c9cdd6; font-size: 13px; line-height: 1.5; }
+.dx-back { background: #1c1d21; color: #eceef3; border: 1px solid #34363d; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+.dx-chronicle { display: flex; flex-direction: column; gap: 8px; }
+.dx-chapter { border: 1px solid #34363d; border-radius: 10px; padding: 12px 14px; background: rgba(124,92,255,0.12); }
+.dx-chapter h4 { margin: 0 0 6px; color: #c4b6ff; font-size: 14px; }
+.dx-chapter p { margin: 0; color: #d7dae1; line-height: 1.6; }
+.dx-chat { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; }
+.dx-bubble { max-width: 78%; padding: 9px 13px; border-radius: 14px; font-size: 14px; line-height: 1.5; color: #f2f3f7; }
+.dx-user { align-self: flex-end; background: #1f6f78; }
+.dx-character { align-self: flex-start; background: #2a2b30; }
+.dx-action { font-style: italic; color: #aeb3bd; }
+.dx-user .dx-action { color: #cfe7ea; }
+.dx-condense-chip { align-self: center; padding: 9px 16px; border-radius: 20px; background: #1f3d1f; color: #8dff7b; border: 1px solid #2f5f2f; cursor: pointer; font-size: 13px; }
+.dx-leak { color: #ff8a7a; font-size: 13px; }
+.dx-approve { border: 1px solid #7c5cff66; border-radius: 12px; padding: 14px; background: rgba(124,92,255,0.14); }
+.dx-approve h4 { margin: 0 0 8px; color: #c4b6ff; }
+.dx-approve-prose { color: #e6e8ee; line-height: 1.7; margin: 0; }
+.dx-approve-canon { color: #b7e3b0; font-size: 13px; margin: 10px 0 0; padding-left: 18px; }
+.dx-approve-actions { display: flex; gap: 8px; margin-top: 12px; }
+.dx-approve-actions button { padding: 8px 14px; border-radius: 8px; border: 1px solid #44464d; background: #1c1d21; color: #eceef3; cursor: pointer; }
+.dx-approve-actions button:first-child { background: #7CFF6B; color: #0b0c0e; border-color: #7CFF6B; font-weight: 600; }
+.dx-status { color: #9aa0aa; font-size: 13px; padding: 2px 4px 6px; }
+.dx-composer { display: flex; gap: 8px; align-items: flex-end; position: sticky; bottom: 0; padding: 10px 0; background: #0b0c0e; }
+.dx-input { flex: 1; padding: 11px 13px; border-radius: 8px; border: 1px solid #3a3c43; background: #16171a; color: #f2f3f7; font-size: 14px; font-family: inherit; line-height: 1.5; resize: none; field-sizing: content; min-height: 46px; max-height: 160px; }
+.dx-input::placeholder { color: #8a8f98; }
+.dx-send, .dx-condense-manual { padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; }
+.dx-send { background: #f2f3f7; color: #0b0c0e; font-weight: 600; }
+.dx-condense-manual { background: #1c1d21; color: #eceef3; border: 1px solid #3a3c43; }
+.dx-send:disabled, .dx-condense-manual:disabled { opacity: 0.4; cursor: not-allowed; }

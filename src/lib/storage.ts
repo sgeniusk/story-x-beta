@@ -15,6 +15,7 @@ import { getProjectLocalization } from './localization';
 import { normalizeWritingLog } from './retentionStats';
 import { loadEvolutionHistory, replaceEvolutionHistory, type EvolutionHistory } from './evolutionMemory';
 import type { CreativeFormat, CreativeMedium, HomeFlowStep } from './projectBlueprint';
+import type { DiveSession } from './diveSession';
 import type { ProjectIntakeQuestion } from './projectIntake';
 
 const storageKey = 'serial-story-studio/project';
@@ -418,6 +419,52 @@ export function hasMeaningfulOnboardingInput(draft: OnboardingDraft): boolean {
     draft.contractSpine.obstacle.trim().length > 0 ||
     draft.contractSpine.resolution.trim().length > 0
   );
+}
+
+// Dive X 활성 연대기(채팅 세션 + 작품)를 작업 중에도 영속한다.
+// 순수 함수(serialize/parse)는 window 에 접근하지 않는다.
+const diveKey = 'serial-story-studio/dive';
+
+export interface DiveState {
+  schema: 'storyx/dive/v1';
+  session: DiveSession;
+  project: SeriesProject;
+}
+
+export function serializeDiveState(state: DiveState): string {
+  return JSON.stringify(state);
+}
+
+export function parseDiveState(raw: string | null): DiveState | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<DiveState>;
+    if (!value || value.schema !== 'storyx/dive/v1' || !value.session || !value.project) {
+      return null;
+    }
+    return {
+      schema: 'storyx/dive/v1',
+      session: value.session as DiveSession,
+      project: normalizeProject(value.project as SeriesProject)
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function saveDiveState(state: DiveState): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(diveKey, serializeDiveState(state));
+}
+
+export function loadDiveState(): DiveState | null {
+  if (typeof window === 'undefined') return null;
+  return parseDiveState(window.localStorage.getItem(diveKey));
+}
+
+export function clearDiveState(): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(diveKey);
 }
 
 function isStringRecord(value: unknown): value is Record<string, string> {

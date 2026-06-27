@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-23 · Branch: `main` (**B 트랙(B1~B4) 전부 완주·main 머지 완료(origin 미푸시). B1=AI 누수 게이트·B2=target/habit 리텐션·B3=캐논 인라인 멘션+AI주입 토글·B4=자동 버전 히스토리(영향범위·rollback confirm). 다음은 새 트랙 — 품질·비용 로드맵 잔여(Phase B/C/E/F)·A-6 장편 기억 등.**)
+> Last Updated: 2026-06-27 · Branch: `feat/dive-x-prototype` (**신규 트랙 — Dive X 가벼운 로컬 프로토타입 구현 완료(미머지·미푸시). 관계형 캐릭터 챗 → 대화 응결 → 캐논·기억 고정 → 다음 대화 회수. Story X 엔진 직접 재사용. 별개로 B 트랙(B1~B4) 전부 완주·main 머지 완료(origin 미푸시). 다음은 Dive X 머지 결정 + 품질·비용 로드맵 잔여(Phase B/C/E/F)·A-6 장편 기억 등.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
@@ -129,6 +129,15 @@ rank 5~7 은 사용자 우선순위 결정 후 개별 착수한다.
 | 5 | **검증 데스크 P2/P3 6건** — F-001 인터뷰 대기 안내·F-003 카드 접근성·F-004 잔여(단독 원고 행동 구분)·F-005 만화 컷 수 hard constraint·F-008 literary 축 온보딩 노출·F-010 매체별 원클릭 검토 | UX/품질 | `docs/reviews/2026-06-11-codex-validation-desk/MERGE-NOTE.md` §4 |
 | 6 | **academic 라이브 검토 배선** | 1.0 실험 플래그 전제 | 미완 시 1.1 자동 이연(결정 문서) — 핵심 루프 밖이라 후순위 |
 | 6 | 결정 부채 보드(별도 스펙) · (push) origin | 낮음 | push 는 사용자 요청 시 |
+
+## 신규 트랙 — Dive X 가벼운 로컬 프로토타입 (`done` · 2026-06-27 · feat/dive-x-prototype, 미머지)
+
+제타(Zeta)류 AI 캐릭터 챗 딥리서치 + 외부 3종 리서치(GPT-5·Claude·Gemini) 삼각측량 → 브레인스토밍 합의로 수립. 정본 — 스펙 `docs/superpowers/specs/2026-06-27-dive-x-light-prototype-design.md`, 계획 `docs/superpowers/plans/2026-06-27-dive-x-light-prototype.md`.
+- **결정** — ① Story X와 별도 제품 + 공유 엔진 + 단방향 다리(검증 단계는 in-repo `/dive` surface) ② 관계/몰입 우선, 작품화=관계 영속·기억 장치 ③ 자동 연대기 루프 + 하이브리드 응결 트리거 ④ 승인형 캐논(자동 박제 금지) ⑤ 검증 먼저 — 외부 모집·A/B 없이 사용자 본인 dogfooding으로 품질 만족까지. **차별점은 비용이 아니라 일관성·영속(리서치 교정).** white space는 좁음(제타가 프레임 점유·바이어스/크랙이 인접 구현, 단 장편 연속성+오리지널+폐루프 교집합은 미점유).
+- **구현 (서브에이전트 주도 TDD, 7그룹·전부 2단 검토)** — `diveSession.ts`(순수: 버퍼·응결분기·압축·포매터) · `diveSeedCharacters.ts`(도윤·하란·세하 3종) · `storage.ts` DiveState 영속(키 `serial-story-studio/dive`) · `storyx.mjs` dive-chat(경량 모델)·dive-condense(고급 모델) + vite 브리지 2라우트 · `diveClient.ts` · `DiveDesk.tsx`(채팅·응결·승인·연대기) · `App.tsx` `?stage=dive` 배선 + `.dx-*` 다크 스타일. **연대기=SeriesProject 재사용** — 응결 회차는 `chapterFromDraftPayload`(내부 commitChapter)로 캐논 승격, 다음 대화는 `buildProjectContextDigest` 주입으로 회수. 회차 품질 바닥은 `inspectLeak` 게이트.
+- **검증** — init.sh tsc·vitest 665·build 녹색. **라이브(preview, 실 codex)** — `?stage=dive` 도윤 카드·다크 렌더·콘솔 0 · `/api/dive-chat` 왕복 성공(도윤 말투 그대로 "나야 뭐, 그냥 지내. 너는 왜 이제 와…"). dive-condense는 codex 고급 생성이 30s eval 한도 초과(mock 형상은 검증·동일 브리지 경로라 dogfooding서 눈으로). 자동화 클릭이 React onClick 미발화라 UI 한 바퀴는 네트워크 직접 호출로 갈음.
+- **최종 홀리스틱 리뷰 반영(`785091f`)** — 승인 중 입력 잠금(메시지 유실 방지)·응결 실패 배너·빈 응결 가드·세션 projectId 정합.
+- **다음** — 사용자 dogfooding으로 응결 회차 품질 만족까지 반복(막히면 Story X 품질 로드맵 Phase B/헌장 정보비대칭으로 분기). 머지 결정 대기. 후속(검증 통과 후) — 캐릭터 생성 UI·공개 연재·Story X 졸업 다리·B2C vs B2B 포크·법적 아키텍처.
 
 ## 최근 검증 (2026-06-23 · B4 자동 버전 히스토리 · feat/auto-version-history)
 

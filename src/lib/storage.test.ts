@@ -5,11 +5,15 @@ import {
   hasMeaningfulOnboardingInput,
   normalizeProject,
   parseOnboardingDraft,
+  parseDiveState,
   serializeOnboardingDraft,
+  serializeDiveState,
   type OnboardingDraft,
-  type ProjectSnapshot
+  type ProjectSnapshot,
+  type DiveState
 } from './storage';
-import { createSeedProject } from './storyEngine';
+import { createSeedProject, createEmptyProject } from './storyEngine';
+import { createDiveSession } from './diveSession';
 
 describe('project snapshots', () => {
   it('builds a snapshot capturing episode, counts, and the project', () => {
@@ -87,6 +91,25 @@ describe('AI주입 토글 영속 (canonFact.alwaysInclude · B3)', () => {
     };
     const normalized = normalizeProject(legacy);
     expect(normalized.canonFacts[0].alwaysInclude).toBe(false);
+  });
+});
+
+describe('DiveState 영속 (Dive X)', () => {
+  it('DiveState는 라운드트립으로 보존된다', () => {
+    const state: DiveState = {
+      schema: 'storyx/dive/v1',
+      session: createDiveSession('seed-childhood', 'proj-x'),
+      project: createEmptyProject({ title: '도윤과의 연대기' })
+    };
+    const parsed = parseDiveState(serializeDiveState(state));
+    expect(parsed?.session.characterId).toBe('seed-childhood');
+    expect(parsed?.project.title).toBe('도윤과의 연대기');
+  });
+
+  it('parseDiveState는 무효/구버전 입력에 null을 반환', () => {
+    expect(parseDiveState(null)).toBeNull();
+    expect(parseDiveState('{not json')).toBeNull();
+    expect(parseDiveState(JSON.stringify({ schema: 'wrong' }))).toBeNull();
   });
 });
 
