@@ -87,6 +87,10 @@ describe('diveSession', () => {
     expect(createDiveSession('c', 'p').scene).toBeUndefined();
   });
 
+  it('createDiveSession은 arc를 비워 둔다', () => {
+    expect(createDiveSession('c', 'p').arc).toBeUndefined();
+  });
+
   it('parseSceneSegments는 평문 줄을 내레이션으로', () => {
     const segs = parseSceneSegments('도윤네 집은 불이 꺼져 있다.');
     expect(segs).toEqual([{ kind: 'narration', text: '도윤네 집은 불이 꺼져 있다.' }]);

@@ -8,6 +8,12 @@ export interface DiveMessage {
   turn: number;
 }
 
+export interface StoryArc {
+  dramaticQuestion: string;
+  tension: number;
+  nextBeat: string;
+}
+
 export interface DiveSession {
   characterId: string;
   projectId: string;
@@ -15,6 +21,7 @@ export interface DiveSession {
   lastCondensedTurn: number;
   pendingCondenseSuggested: boolean;
   scene?: string;
+  arc?: StoryArc;
 }
 
 export const CONDENSE_SUGGEST_TURNS = 12;
