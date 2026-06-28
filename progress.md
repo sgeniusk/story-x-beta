@@ -3,6 +3,14 @@
 > Last Updated: 2026-06-27 · Branch: `feat/dive-x-arc`(미머지) (**Dive X 진전 엔진(묶음 C-1) 구현 완료. 쇼러너가 StoryArc(극적질문·긴장·다음전개)를 들고 매 턴 진전·🎯 표시·⏭전개 버튼·dive-condense arc 페이오프. dogfooding "진전 없음(큰 흠)" 직접 해소. 가벼운 LLM-유지 arc(추가 호출 0). 이전 — 1차(PR #4·main)·2차 장면+쇼러너(PR #5·local main)·3차 선택지+계속+자유응결(묶음 A·local main). 묶음 C-2(능동 멀티캐릭터)·묶음 B(되돌리기·캐논 god-편집·과금) 후속 대기. 다음 — Dive X arc 머지 결정 + dogfooding + C-2/B + 품질·비용 로드맵·A-6 장편 기억.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
+## 활성 트랙 — Dive X 제안 엔진 (`done` · 2026-06-28, 브랜치 `feat/dive-x-proposal-engine`)
+
+Dive 진입을 "고정 시드 캐릭터 자동선택"에서 **"소재 한 줄 → 비틈 벡터로 분산된 장면 전제 후보 추천 → 선택 시 scene-showrunner 시딩"**으로 교체. 큰 그림 재설계(글로벌 딥리서치 `docs/research/2026-06-28-dive-x-market-direction.md` — 폐루프 상용 선례 없음·최대 리스크="남의 플레이 재미없다"→응결 품질이 해법·규제가 전연령 포지션을 해자로) 위에서 첫 조각. 스펙 `docs/superpowers/specs/2026-06-28-dive-x-proposal-engine-design.md`, 계획 `docs/superpowers/plans/2026-06-28-dive-x-proposal-engine.md`. 전체 비전(취향#1·제안#2·스티어링#3·전개#4) 중 **제안#2만**.
+- **구현 (TDD·6 태스크·전부 녹색)** — `diveProposal.ts`(순수 — 비틈 벡터 5종·`seedFromProposal`·`isValidProposal`) · `requestDiveProposals`(견고 정규화) · `tools/storyx.mjs dive-propose` + `/api/dive-propose` 브리지 · `DiveStart.tsx`(소재·신기성 다이얼·후보 카드) · App.tsx 진입 교체. 신규 테스트 6(diveProposal 3·diveClient 2·diveStart 1).
+- **융합 토대** — 후보를 공유 모델(`scene`→session.scene·`cast`→project.characters)로 떨어뜨려 "Dive 진입→Story X 에디팅"이 같은 프로젝트의 두 표면이 되도록 설계(north-star).
+- **검증** — `npm test` 685 녹색·`npm run build`(tsc+vite) 성공·mock CLI 3후보 형태 확인·**실 codex 경로 4후보(정체전복/시간구조/관계역전/장르전환, hook0 "십 년 만에 돌아온 소꿉친구는 내 이름을 부르지 않고…" = 전형성 편향 격파 실증)**·DiveStart 라이브 렌더+다크 표면 수정(흰 글자 묻힘 버그 잡아 `.dx-start` 다크 배경화). 라이브 카드→DiveDesk 전이는 codex ~90초 지연으로 브라우저 E2E 타이밍 노이즈(코드 경로는 tsc+단위테스트로 검증).
+- **다음 조각** — 취향 프로필(#1 명시 온보딩+누적 학습) 또는 스티어링(#3 내취향대로/일부러 다르게/인기). 비목표였던 것들.
+
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
 
 30화 A/B(76.5 vs 91.8) + **사용자 실독 판정**(제목 반복·정체된 중후반·온건한 문체·의외성 부재·토큰 비용)으로 수립. 정본 — 로드맵 `docs/superpowers/plans/2026-06-12-quality-cost-roadmap.md` · 헌장 spec `docs/superpowers/specs/2026-06-12-story-contract-design.md`.

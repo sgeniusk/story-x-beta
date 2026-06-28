@@ -11501,3 +11501,20 @@ body {
 .dx-turn { display: flex; flex-direction: column; gap: 6px; }
 .dx-narration { align-self: center; max-width: 90%; color: #aeb3bd; font-style: italic; line-height: 1.6; text-align: center; padding: 2px 8px; }
 .dx-speaker { display: block; font-size: 11px; color: #9aa0aa; margin-bottom: 3px; }
+.dx-start { display: flex; flex-direction: column; gap: 12px; padding: 24px max(24px, calc((100% - 640px) / 2)); color: #eceef3; background: #0b0c0e; min-height: 100vh; box-sizing: border-box; }
+.dx-start-title { color: #f2f3f7; font-size: 20px; margin: 4px 0; }
+.dx-start-label { color: #aeb3bd; font-size: 13px; }
+.dx-start-input { background: #16171a; color: #f2f3f7; border: 1px solid #3a3c43; border-radius: 8px; padding: 10px; min-height: 56px; resize: vertical; font-family: inherit; font-size: 13px; line-height: 1.5; }
+.dx-novelty-dial { display: flex; gap: 6px; }
+.dx-novelty-on { background: #7c5cff; color: #fff; border: 1px solid #7c5cff; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.dx-novelty-off { background: #2a2350; color: #c4b6ff; border: 1px solid #7c5cff55; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.dx-propose { background: #7c5cff; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; cursor: pointer; align-self: flex-start; }
+.dx-propose:disabled { opacity: 0.6; cursor: default; }
+.dx-start-error { color: #aeb3bd; font-size: 13px; }
+.dx-proposal-list { display: flex; flex-direction: column; gap: 10px; }
+.dx-proposal-card { display: flex; flex-direction: column; gap: 6px; text-align: left; background: #16171a; border: 1px solid #34363d; border-radius: 10px; padding: 14px; cursor: pointer; }
+.dx-proposal-card:hover { border-color: #7c5cff; }
+.dx-twist-tag { align-self: flex-start; font-size: 11px; color: #c4b6ff; border: 1px solid #7c5cff55; border-radius: 999px; padding: 2px 8px; }
+.dx-proposal-hook { color: #f2f3f7; font-size: 15px; }
+.dx-proposal-scene { color: #aeb3bd; font-size: 13px; }
+.dx-proposal-cast { color: #9aa0aa; font-size: 12px; }

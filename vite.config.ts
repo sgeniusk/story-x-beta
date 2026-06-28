@@ -282,6 +282,13 @@ export default defineConfig({
       '--scene', String(input.scene ?? ''),
       '--context', String(input.context ?? ''),
       '--directive', String(input.directive ?? '')
+    ]),
+    storyxBridge('/api/dive-propose', (input) => [
+      'tools/storyx.mjs',
+      'dive-propose',
+      '--provider', 'codex',
+      '--topic', String(input.topic ?? ''),
+      '--novelty', String(input.novelty ?? 'tilt')
     ])
   ]
 });

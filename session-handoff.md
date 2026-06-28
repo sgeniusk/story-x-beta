@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-06-28 — Dive X 제안 엔진 v1 완료 + 큰 그림 재설계
+
+> 브랜치 `feat/dive-x-proposal-engine`(origin 미푸시). 이번 세션 = 딥리서치로 방향 재설계 → 제안 엔진 첫 조각 TDD 구현·라이브 검증.
+
+### 한 것
+1. **글로벌 딥리서치** — `docs/research/2026-06-28-dive-x-market-direction.md`. 결론 — 폐루프(대화→영속 회차→읽히는 연재) 상용 선례 없음·최대 리스크 "남의 플레이 재미없다"→**응결 품질이 해법**·규제(character.ai 18금 차단·소송)가 전연령·오리지널 포지션을 해자로. 방향 = "컴패니언 챗"이 아니라 "개인 맞춤 연재 스튜디오", 2단 로켓, Story X와 융합(데이터 모델 동일).
+2. **제안 엔진 v1 (TDD 6태스크 done)** — 소재 한 줄 + 신기성 다이얼 → 비틈 벡터 5종으로 분산된 장면 전제 후보 추천 → 선택 시 scene-showrunner 시딩. 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-28-dive-x-proposal-engine*`. 진입을 고정 시드 자동선택에서 `DiveStart`로 교체.
+3. **라이브 검증** — npm test 685 녹색·build 성공·**실 codex 4후보(정체전복/시간구조/관계역전/장르전환, 전부 비전형 hook)**·카드→DiveDesk scene+cast 시딩·콘솔 0. `.dx-start` 다크 배경 버그(흰 글자 묻힘) 잡음.
+
+### 손대지 말 것
+- scene-showrunner·arc·응결 루프 **무변경**(제안 엔진은 진입 한 단계만 추가). DiveDesk 소비 경로 그대로.
+- `feat/dive-x-proposal-engine`는 `main`에서 분기(이전 Dive 작업은 local main에 있음 — 이 브랜치엔 미포함). 머지·푸시 결정 대기.
+
+### 다음 한 가지
+전체 비전 4조각 중 #2(제안)만 했다. 다음 = **#1 취향 프로필**(명시 온보딩 + 누적 학습) 또는 **#3 스티어링**(내 취향대로/일부러 다르게/인기). 제안 엔진 출력에 취향을 주입하는 형태.
+
+---
+
 ## 2026-06-27 — 세션 마무리: Dive X 1차~C-1 전부 local main (모두 미푸시)
 
 > 한 세션에서 Dive X를 0→네 단계로 키움. 전부 `main`에 머지(로컬), origin 미푸시. 정본 progress.md "Dive X" 절들 + feature_list DX1~DX4.
