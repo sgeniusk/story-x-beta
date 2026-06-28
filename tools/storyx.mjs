@@ -482,6 +482,49 @@ if (command === 'dive-propose') {
   process.exit(isError ? 1 : 0);
 }
 
+if (command === 'dive-setup') {
+  const provider = readFlag(args, '--provider', 'mock');
+  const story = readFlag(args, '--story', '');
+  const prompt = [
+    '당신은 인터랙티브 스토리의 진입 세팅을 설계하는 작가입니다.',
+    '사용자가 자유롭게 쓴 아래 서술에 **충실하게** 주인공·관계인물·첫 장면을 뽑으세요.',
+    '서술에 없는 비틈·반전을 새로 지어내지 마세요. 서술을 존중하되 자연스럽게 구체화만.',
+    '',
+    '## 사용자 서술',
+    story || '(비어 있음 — 잔잔한 일상 만남으로 시작)',
+    '',
+    'myRole = 사용자가 연기할 주인공의 입장. cast = 관계인물 2~3(이름·역할·desire·wound·voiceRules). scene = 장소·상황·내 목적을 담은 첫 현재 장면.',
+    '## 출력 형식 — JSON 객체 하나만. 코드펜스 금지.',
+    '{ "scene": "", "cast": [ { "name": "", "role": "", "desire": "", "wound": "", "voiceRules": [] } ], "myRole": "" }'
+  ].join('\n');
+
+  if (provider === 'mock') {
+    printJson({
+      provider, mode: 'dive-setup', status: 'complete',
+      setup: {
+        scene: story ? `${story.slice(0, 40)} — 그 장면의 한가운데.` : '늦은 밤, 처음 마주친 자리.',
+        cast: [{ name: '상대', role: story ? '서술 속 상대' : '낯선 사람', desire: '가까워지고 싶다', wound: '말 못 한 사정', voiceRules: ['짧게', '망설인다'] }],
+        myRole: '이야기에 들어선 나'
+      }
+    });
+    process.exit(0);
+  }
+  const commandPreview =
+    provider === 'claude'
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', '--model', 'sonnet', prompt]
+      : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
+  const { result: providerResult, raw: rawOutput } = runProviderWithRetry(commandPreview);
+  const isError = looksLikeProviderError(rawOutput, providerResult);
+  const parsed = isError ? null : parseProviderJson(rawOutput);
+  printJson({
+    provider, mode: 'dive-setup',
+    status: isError ? 'failed' : 'complete',
+    setup: parsed && parsed.scene ? { scene: parsed.scene, cast: Array.isArray(parsed.cast) ? parsed.cast : [], myRole: parsed.myRole || '' } : null,
+    warning: isError ? 'provider 호출 실패' : undefined
+  });
+  process.exit(isError ? 1 : 0);
+}
+
 if (command === 'draft') {
   const provider = readFlag(args, '--provider', 'mock');
   const medium = readFlag(args, '--medium', 'novel');

@@ -289,6 +289,12 @@ export default defineConfig({
       '--provider', 'codex',
       '--topic', String(input.topic ?? ''),
       '--novelty', String(input.novelty ?? 'tilt')
+    ]),
+    storyxBridge('/api/dive-setup', (input) => [
+      'tools/storyx.mjs',
+      'dive-setup',
+      '--provider', 'codex',
+      '--story', String(input.story ?? '')
     ])
   ]
 });
