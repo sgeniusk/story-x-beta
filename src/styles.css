@@ -11501,7 +11501,7 @@ body {
 .dx-turn { display: flex; flex-direction: column; gap: 6px; }
 .dx-narration { align-self: center; max-width: 90%; color: #aeb3bd; font-style: italic; line-height: 1.6; text-align: center; padding: 2px 8px; }
 .dx-speaker { display: block; font-size: 11px; color: #9aa0aa; margin-bottom: 3px; }
-.dx-start { display: flex; flex-direction: column; gap: 12px; max-width: 640px; margin: 0 auto; padding: 24px; }
+.dx-start { display: flex; flex-direction: column; gap: 12px; padding: 24px max(24px, calc((100% - 640px) / 2)); color: #eceef3; background: #0b0c0e; min-height: 100vh; box-sizing: border-box; }
 .dx-start-title { color: #f2f3f7; font-size: 20px; margin: 4px 0; }
 .dx-start-label { color: #aeb3bd; font-size: 13px; }
 .dx-start-input { background: #16171a; color: #f2f3f7; border: 1px solid #3a3c43; border-radius: 8px; padding: 10px; min-height: 56px; resize: vertical; font-family: inherit; font-size: 13px; line-height: 1.5; }
