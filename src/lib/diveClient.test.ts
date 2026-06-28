@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { requestDiveChat, requestDiveCondense, requestDiveShowrunner } from './diveClient';
+import { requestDiveChat, requestDiveCondense, requestDiveShowrunner, requestDiveProposals } from './diveClient';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -52,5 +52,30 @@ describe('diveClient', () => {
     const res = await requestDiveShowrunner({ scene: '도윤네 집 앞', context: '', directive: '비를 내려줘' });
     expect(fetchMock).toHaveBeenCalledWith('/api/dive-showrunner', expect.objectContaining({ method: 'POST' }));
     expect(res.sceneUpdate).toBe('비 오는 도윤네 집 앞');
+  });
+
+  it('requestDiveProposals는 /api/dive-propose에 POST하고 유효 후보만 통과시킨다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 'complete',
+        proposals: [
+          { hook: '쪽지를 받았다', scene: '집 앞', cast: [{ name: '母', role: 'r', desire: 'd', wound: 'w', voiceRules: [] }], myRole: '나', twist: '정체 전복', novelty: 'tilt' },
+          { hook: '', scene: '빈 후보', cast: [] }
+        ]
+      })
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const res = await requestDiveProposals({ topic: '소꿉친구', novelty: 'tilt' });
+    expect(fetchMock).toHaveBeenCalledWith('/api/dive-propose', expect.objectContaining({ method: 'POST' }));
+    expect(res.proposals).toHaveLength(1);
+    expect(res.proposals[0].hook).toBe('쪽지를 받았다');
+  });
+
+  it('requestDiveProposals는 proposals 누락 시 빈 배열로 폴백한다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'failed', warning: 'x' }) }));
+    const res = await requestDiveProposals({ topic: '', novelty: 'safe' });
+    expect(res.proposals).toEqual([]);
+    expect(res.warning).toBe('x');
   });
 });

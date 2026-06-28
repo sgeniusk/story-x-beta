@@ -1,4 +1,5 @@
 // Dive X 로컬 브리지(/api/dive-chat·/api/dive-condense) fetch 래퍼
+import { isValidProposal, type DiveProposal, type NoveltyLevel } from './diveProposal';
 
 export interface DiveChatRequest {
   character: string;
@@ -69,4 +70,13 @@ export interface DiveShowrunnerResponse { status: string; reply: string; sceneUp
 
 export function requestDiveShowrunner(req: DiveShowrunnerRequest): Promise<DiveShowrunnerResponse> {
   return postJson<DiveShowrunnerResponse>('/api/dive-showrunner', req);
+}
+
+export interface DiveProposalRequest { topic: string; novelty: NoveltyLevel; }
+export interface DiveProposalResponse { status: string; proposals: DiveProposal[]; warning?: string; }
+
+export async function requestDiveProposals(req: DiveProposalRequest): Promise<DiveProposalResponse> {
+  const raw = await postJson<Partial<DiveProposalResponse>>('/api/dive-propose', req);
+  const proposals = Array.isArray(raw.proposals) ? raw.proposals.filter(isValidProposal) : [];
+  return { status: typeof raw.status === 'string' ? raw.status : 'complete', proposals, warning: raw.warning };
 }
