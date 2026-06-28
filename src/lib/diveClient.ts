@@ -6,12 +6,14 @@ export interface DiveChatRequest {
   context: string;
   dialogue: string;
   query: string;
+  arc?: string;
 }
 
 export interface DiveChatResponse {
   status: string;
   reply: string;
   choices?: string[];
+  arc?: { dramaticQuestion: string; tension: number; nextBeat: string };
   warning?: string;
 }
 
@@ -21,6 +23,7 @@ export interface DiveCondenseRequest {
   context: string;
   transcript: string;
   episode: number;
+  arc?: string;
 }
 
 export interface DiveCondensePayload {

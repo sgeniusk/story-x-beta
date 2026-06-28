@@ -24,6 +24,15 @@ describe('diveClient', () => {
     expect(res.choices).toEqual(['문 연다', '기다린다']);
   });
 
+  it('requestDiveChat는 arc를 통과시킨다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'complete', reply: '...', arc: { dramaticQuestion: 'Q', tension: 40, nextBeat: 'B' } })
+    }));
+    const res = await requestDiveChat({ character: 'c', scene: '', context: '', dialogue: '', query: '응' });
+    expect(res.arc).toEqual({ dramaticQuestion: 'Q', tension: 40, nextBeat: 'B' });
+  });
+
   it('requestDiveCondense는 회차 페이로드를 반환', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
