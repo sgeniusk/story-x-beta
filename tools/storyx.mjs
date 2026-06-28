@@ -250,6 +250,7 @@ if (command === 'dive-chat') {
   const context = readFlag(args, '--context', '');
   const dialogue = readFlag(args, '--dialogue', '');
   const userTurn = readFlag(args, '--query', '');
+  const arc = readFlag(args, '--arc', '');
   const prompt = [
     '당신은 이 이야기의 쇼러너입니다. 사용자("나")는 주인공이고, 당신은 현재 장면 안에서 세계를 서술하고 그 자리에 있는 인물을 연기합니다.',
     '서술(세계·상황·분위기)은 평문 줄로, 인물의 말은 "이름: 대사" 줄로, 행동·표정은 *별표*로 쓰세요. 한 응답에 여러 줄을 섞어도 됩니다.',
@@ -269,13 +270,18 @@ if (command === 'dive-chat') {
     '',
     `## 나의 말\n${userTurn}`,
     '',
+    '이 이야기의 큰 그림(arc)을 들고 끌고 가세요. 응답을 arc.nextBeat 방향으로 한 걸음 진전시키고, tension이 낮거나 이야기가 정체되면 전개(단서·사건·전환)를 미세요. 이미 잡힌 dramaticQuestion은 웬만하면 유지하세요. arc가 비었으면 장면·기억에서 새로 잡으세요.',
+    '',
+    '## 이야기 아크 (JSON)',
+    arc || '(아직 없음 — 새로 잡으세요)',
+    '',
     '응답 끝에, 주인공("나")이 이 장면에서 자연스럽게 취할 만한 행동·말 2~3개를 choices 배열로 제안하세요(짧은 동사구). 사용자는 이를 탭하거나 무시하고 자유롭게 입력할 수 있습니다.',
     '## 출력 형식 — JSON 객체 하나만. 코드펜스 금지.',
-    '{ "reply": "서술 줄 + 인물 \\"이름: 대사\\" 줄 (행동은 *별표*). 2~5줄.", "choices": ["행동 2~3개"] }'
+    '{ "reply": "서술 줄 + 인물 \\"이름: 대사\\" 줄 (행동은 *별표*). 2~5줄.", "choices": ["행동 2~3개"], "arc": { "dramaticQuestion": "이 이야기의 핵심 질문", "tension": 0, "nextBeat": "다음에 밀어붙일 전개" } }'
   ].join('\n');
 
   if (provider === 'mock') {
-    printJson({ provider, mode: 'dive-chat', status: 'complete', reply: '…그래, 듣고 있어.', choices: ['문 안으로 들어간다', '도윤에게 무슨 일인지 묻는다'] });
+    printJson({ provider, mode: 'dive-chat', status: 'complete', reply: '…그래, 듣고 있어.', choices: ['문 안으로 들어간다', '도윤에게 무슨 일인지 묻는다'], arc: { dramaticQuestion: '도윤의 가족은 정말 외계인인가?', tension: 30, nextBeat: '집 안에서 결정적 단서가 드러난다' } });
     process.exit(0);
   }
   const commandPreview =
@@ -291,6 +297,15 @@ if (command === 'dive-chat') {
     status: isError ? 'failed' : 'complete',
     reply: readString(parsed?.reply) || '…',
     choices: normalizeStringList(parsed?.choices),
+    arc: (() => {
+      const a = parsed?.arc;
+      if (!a || typeof a !== 'object') return undefined;
+      return {
+        dramaticQuestion: readString(a.dramaticQuestion),
+        tension: typeof a.tension === 'number' ? Math.max(0, Math.min(100, Math.round(a.tension))) : 0,
+        nextBeat: readString(a.nextBeat)
+      };
+    })(),
     warning: isError ? 'provider 호출 실패' : undefined
   });
   process.exit(isError ? 1 : 0);
@@ -303,6 +318,7 @@ if (command === 'dive-condense') {
   const context = readFlag(args, '--context', '');
   const transcript = readFlag(args, '--transcript', '');
   const episode = readFlag(args, '--episode', '1');
+  const arc = readFlag(args, '--arc', '');
   const prompt = [
     'Dive X 회차 응결 요청. 아래 실시간 대화를, 나와 캐릭터를 함께 주인공으로 한 3인칭 서사 회차로 압축하세요.',
     '대사를 그대로 옮기지 말고 장면으로 재구성하되, 일어난 사건·감정 변화·약속은 보존하세요.',
@@ -310,6 +326,9 @@ if (command === 'dive-condense') {
     '',
     '## 현재 장면',
     scene || '(장면 미설정)',
+    '',
+    '## 이야기 아크 (JSON — 긴장·다음 전개를 반영해 페이오프 있는 회차로)',
+    arc || '(없음)',
     '',
     '## 캐릭터',
     characterCard || '(미정)',
