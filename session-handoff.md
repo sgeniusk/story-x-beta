@@ -4,6 +4,38 @@
 
 ---
 
+## 2026-06-27 — 세션 마무리: Dive X 1차~C-1 전부 local main (모두 미푸시)
+
+> 한 세션에서 Dive X를 0→네 단계로 키움. 전부 `main`에 머지(로컬), origin 미푸시. 정본 progress.md "Dive X" 절들 + feature_list DX1~DX4.
+
+### 이번 세션에 한 것 (순서대로, 전부 done·local main)
+1. **DX1 1차 프로토타입** — 관계챗→응결→캐논·기억→다음 대화 회수. `/dive` surface. (PR #4 열림: feat/dive-x-prototype→main)
+2. **DX2 2차 장면+쇼러너** — AI=쇼러너(세계 서술+인물 연기)·현재 장면 패널·서술/화자 세그먼트 렌더·쇼러너 메타 채널(승인형 sceneUpdate). (PR #5 열림: feat/dive-x-scene-showrunner→feat/dive-x-prototype, stacked)
+3. **DX3 묶음 A 선택지+계속+자유응결** — dive-chat choices·⏳계속·dive-condense 자유 봉합(캐논 보존). 자연어 우선.
+4. **DX4 묶음 C-1 진전 엔진** — StoryArc(극적질문·tension·nextBeat) 매 턴 진전·🎯 표시·⏭전개. "진전 없음" 해소.
+   + UX 핫픽스 다수(가독성 다크·textarea·연대기 접이식·요청 타임아웃·busy 고착 방지 등).
+
+### 현재 상태
+- 로컬 `main` = a0cce16, **origin/main보다 +43 미푸시**. 별개로 B 트랙(B1~B4)도 진작 main에 있고 미푸시.
+- 열린 PR — #4(1차), #5(2차 stacked). 3차·C-1은 PR 없이 local main에만.
+- dev 서버: `?stage=dive`로 dogfooding. provider=codex(느림). 자동화 클릭 flaky·자동화는 fetch 직접 호출로 검증.
+
+### 손대지 말 것 (Dive X 불변식)
+- **연대기=SeriesProject** — 응결은 `chapterFromDraftPayload`(내부 commitChapter). 별도 commitChapter 금지(이중 커밋).
+- **승인형** — 응결 캐논 고정·쇼러너 sceneUpdate 둘 다 사용자 승인 버튼으로만. 자동 적용 금지.
+- **scene·arc는 DiveSession에** — DiveStage가 세션 전체 영속(App 무변경). 요청 타입의 scene 필수·arc/choices 옵셔널.
+- **가벼운 LLM-유지 arc** — storyHarness 안 돌림. arc는 dive-chat 응답에 묻어옴(추가 호출 0).
+- **자연어 우선** — 칩·⏳계속·⏭전개는 보조. send(textArg)로 같은 한 턴 재사용.
+
+### 다음 세션 할일 (우선순위)
+1. **푸시/PR 정리 결정** — origin/main +43 미푸시 + PR #4·#5 열림 상태. 사용자와 정리 방식 합의(로컬 main 직접 푸시 vs PR 순차 머지). **머지 순서: #4 먼저 → #5.**
+2. **묶음 C-2 — 능동 멀티 캐릭터** — 단톡방처럼 다른 인물이 능동적으로 끼어들기·새 관계. 진전 엔진(arc) 위에 "새 인물 등장 = 다음 전개"로 얹음. SeriesProject.characters·세그먼트 렌더(이름 라벨) 이미 있음. → brainstorming부터.
+3. **묶음 B — 되돌리기 + 쇼러너 캐논 god-편집 + 과금 이음새** — "내가 신" 프리미엄 해방밸브. Story X 스냅샷(B4)·캐논 엔진 재사용. parked.
+4. **dogfooding 품질 판정** — 응결 회차·쇼러너 질감이 막히면 Story X 품질·비용 로드맵(Phase B 긴장·날것·헌장 정보비대칭)으로 분기.
+5. (별개 Story X 본트랙) 품질·비용 로드맵 잔여·A-6 장편 기억.
+
+---
+
 ## 2026-06-27 — Dive X 2차: 장면 연출 + 쇼러너 채널 (feat/dive-x-scene-showrunner)
 
 > 1차 프로토타입 dogfooding → 브레인스토밍 → 스펙 → 계획 → 서브에이전트 주도 TDD(7태스크). 미머지. 정본 progress.md "Dive X 2차" 절.
