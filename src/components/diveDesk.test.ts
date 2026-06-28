@@ -72,4 +72,13 @@ describe('DiveDesk', () => {
     );
     expect(html).toContain('계속');
   });
+
+  it('⏭ 전개 버튼이 렌더된다', () => {
+    const project = createEmptyProject({ title: 't' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const html = renderToStaticMarkup(
+      createElement(DiveDesk, { session, project, onChange: () => {}, onBack: () => {} })
+    );
+    expect(html).toContain('전개');
+  });
 });

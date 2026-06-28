@@ -79,11 +79,13 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
       const res = await requestDiveChat({
         character: card,
         scene,
+        arc: JSON.stringify(session.arc ?? {}),
         context: buildProjectContextDigest(project),
         dialogue: buildRecentDialogue(next),
         query: userText
       });
       next = appendMessage(next, 'character', res.reply || '…');
+      if (res.arc) next = { ...next, arc: res.arc };
       onChange(next, project);
       setChoices(res.choices ?? []);
     } catch {
@@ -106,6 +108,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
       const payload = await requestDiveCondense({
         character: card,
         scene,
+        arc: JSON.stringify(session.arc ?? {}),
         context: buildProjectContextDigest(project),
         transcript: buildTranscript(span),
         episode
@@ -196,6 +199,10 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
         />
         <button className="dx-sr-toggle" onClick={() => setSrOpen((v) => !v)}>🪄 쇼러너</button>
       </div>
+
+      {session.arc?.dramaticQuestion && (
+        <div className="dx-arc">🎯 {session.arc.dramaticQuestion}</div>
+      )}
 
       {srOpen && (
         <div className="dx-showrunner-sheet">
@@ -314,6 +321,9 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
         </button>
         <button className="dx-continue" onClick={() => send('(가만히 지켜본다. 시간이 잠시 흐른다.)')} disabled={busy || pending !== null}>
           ⏳ 계속
+        </button>
+        <button className="dx-escalate" onClick={() => send('(이야기를 다음 국면으로 크게 밀어붙인다.)')} disabled={busy || pending !== null}>
+          ⏭ 전개
         </button>
       </div>
     </div>
