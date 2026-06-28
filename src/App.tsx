@@ -76,7 +76,7 @@ import {
 } from './lib/storage';
 import { DiveDesk } from './components/DiveDesk';
 import { DiveStart } from './components/DiveStart';
-import { seedFromProposal } from './lib/diveProposal';
+import { seedFromProposal, type DiveProposal, type DiveSetup } from './lib/diveProposal';
 import { createDiveSession } from './lib/diveSession';
 import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
@@ -282,20 +282,19 @@ function App() {
     if (diveInit) {
       return <DiveStage initial={diveInit} onBack={() => setStage('editor')} />;
     }
+    const seedAndEnter = (src: Pick<DiveProposal, 'scene' | 'cast'>, title: string) => {
+      const { scene, characters, primaryCharacterId } = seedFromProposal(src);
+      const project = { ...createEmptyProject({ title: title.slice(0, 20) || 'Dive' }), characters };
+      const session = { ...createDiveSession(primaryCharacterId, project.id), scene };
+      const init: DiveState = { schema: 'storyx/dive/v1', session, project };
+      saveDiveState(init);
+      setDiveInit(init);
+    };
     return (
       <DiveStart
         onBack={() => setStage('editor')}
-        onPick={(p) => {
-          const { scene, characters, primaryCharacterId } = seedFromProposal(p);
-          const project = {
-            ...createEmptyProject({ title: p.hook.slice(0, 20) || 'Dive' }),
-            characters
-          };
-          const session = { ...createDiveSession(primaryCharacterId, project.id), scene };
-          const init: DiveState = { schema: 'storyx/dive/v1', session, project };
-          saveDiveState(init);
-          setDiveInit(init);
-        }}
+        onStart={(setup: DiveSetup) => seedAndEnter(setup, setup.myRole || setup.scene)}
+        onPick={(p: DiveProposal) => seedAndEnter(p, p.hook)}
       />
     );
   }
