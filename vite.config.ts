@@ -252,6 +252,8 @@ export default defineConfig({
       String(input.context ?? ''),
       '--dialogue',
       String(input.dialogue ?? ''),
+      '--arc',
+      String(input.arc ?? ''),
       '--query',
       String(input.query ?? '')
     ]),
@@ -268,6 +270,8 @@ export default defineConfig({
       String(input.context ?? ''),
       '--transcript',
       String(input.transcript ?? ''),
+      '--arc',
+      String(input.arc ?? ''),
       '--episode',
       String(input.episode ?? '1')
     ]),
