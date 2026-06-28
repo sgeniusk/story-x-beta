@@ -391,6 +391,15 @@
       "dependencies": ["DX2-dive-x-scene-showrunner"],
       "done_criteria": "dive-chat choices 출력+프롬프트·dive-condense 자유봉합·diveClient DiveChatResponse.choices·DiveDesk send(textArg) 일반화+칩 바+⏳계속 + init.sh 녹색 + 라이브 codex choices 3개·칩 탭 진행·콘솔 0 — 충족.",
       "evidence": "feat/dive-x-choices 4커밋(60cd7e2~e692d69) · vitest 녹색 · build · 라이브 /api/dive-chat choices 3개(맥락형)·칩 라이브 렌더·⏳계속·은색가루 단서 자동 seeding·콘솔 0"
+    },
+    {
+      "id": "DX4-dive-x-arc-engine",
+      "name": "Dive X 진전 엔진 (묶음 C-1)",
+      "description": "dogfooding 피드백 '이야기 진전이 없다(큰 흠)' 해법. 쇼러너가 StoryArc(dramaticQuestion·tension·nextBeat)를 들고 매 턴 nextBeat 방향으로 한 걸음 진전, 정체 시 스스로 전개를 민다. 🎯 극적질문 표시, ⏭전개 버튼으로 강한 진전 당기기, dive-condense도 arc 반영 페이오프. 가벼운 LLM-유지 arc(dive-chat 응답에 묻어옴, 추가 호출 0) — Story X 무거운 storyHarness는 비목표. 정본 스펙 docs/superpowers/specs/2026-06-27-dive-x-arc-engine-design.md · 계획 docs/superpowers/plans/2026-06-27-dive-x-arc-engine.md. 비목표 — 능동 멀티캐릭터(C-2)·되돌리기·캐논 god-편집(B)·arc 수동편집·full storyHarness.",
+      "status": "done",
+      "dependencies": ["DX3-dive-x-choices-freeplay"],
+      "done_criteria": "StoryArc 타입+DiveSession.arc·dive-chat arc 입출력+프롬프트·dive-condense arc·vite --arc·diveClient arc 타입·DiveDesk arc 주입/저장/⏭전개/🎯 + init.sh 녹색 + 라이브 codex arc 산출·🎯 표시·매턴 진전·콘솔 0 — 충족.",
+      "evidence": "feat/dive-x-arc 5커밋 · vitest 녹색 · build · 라이브 /api/dive-chat 빈arc→극적질문·nextBeat·tension 산출·🎯 라이브 표시(슬리퍼 단서로 arc 진전)·⏭전개 금색·콘솔 0"
     }
   ]
 }

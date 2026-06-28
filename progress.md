@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-27 · Branch: `feat/dive-x-choices` (**Dive X 3차(묶음 A) — 진행 선택지 칩 + ⏳계속 + 자유 응결 구현 완료(미머지). dive-chat이 행동 선택지 2~3개 제안→탭 진행·⏳계속으로 시간 흘려보내기·dive-condense 자유 봉합(캐논은 보존). 자연어 우선·칩은 보조. 2차(장면+쇼러너)는 feat/dive-x-scene-showrunner·local main·PR #5. 1차는 main·PR #4. 묶음 B(되돌리기·캐논 god-편집·과금) 후속 스펙 대기. 다음 — Dive X 3차 머지 결정 + dogfooding 품질 판정 + 묶음 B + 품질·비용 로드맵·A-6 장편 기억.**)
+> Last Updated: 2026-06-27 · Branch: `feat/dive-x-arc`(미머지) (**Dive X 진전 엔진(묶음 C-1) 구현 완료. 쇼러너가 StoryArc(극적질문·긴장·다음전개)를 들고 매 턴 진전·🎯 표시·⏭전개 버튼·dive-condense arc 페이오프. dogfooding "진전 없음(큰 흠)" 직접 해소. 가벼운 LLM-유지 arc(추가 호출 0). 이전 — 1차(PR #4·main)·2차 장면+쇼러너(PR #5·local main)·3차 선택지+계속+자유응결(묶음 A·local main). 묶음 C-2(능동 멀티캐릭터)·묶음 B(되돌리기·캐논 god-편집·과금) 후속 대기. 다음 — Dive X arc 머지 결정 + dogfooding + C-2/B + 품질·비용 로드맵·A-6 장편 기억.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 활성 트랙 — 품질·비용 로드맵: 작품 헌장 중심 (`in_progress` · 2026-06-12, main 머지 완료)
