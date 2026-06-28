@@ -425,6 +425,63 @@ if (command === 'dive-showrunner') {
   process.exit(isError ? 1 : 0);
 }
 
+if (command === 'dive-propose') {
+  const provider = readFlag(args, '--provider', 'mock');
+  const topic = readFlag(args, '--topic', '');
+  const novelty = readFlag(args, '--novelty', 'tilt');
+  const vectors = [
+    { label: '정체 전복', instruction: '인물의 진짜 정체나 목적이 표면과 다르게.' },
+    { label: '시간 구조', instruction: '반복·역행·이미 일어난 일 등 시간축을 비튼다.' },
+    { label: '관계 역전', instruction: '기억·권력·앎의 비대칭으로 관계를 뒤집는다.' },
+    { label: '장르 전환', instruction: '평범한 일상이 사실 다른 장르의 입구.' },
+    { label: '톤 반전', instruction: '기대한 정서와 반대로.' }
+  ];
+  const strength = novelty === 'safe' ? '비틈을 옅게, 친숙하고 정통적으로.'
+    : novelty === 'bold' ? '비틈을 과감하게, 고-콘셉트로.'
+    : '한 겹만 비튼다.';
+  const prompt = [
+    '당신은 인터랙티브 스토리의 진입 전제를 설계하는 작가입니다.',
+    `사용자 소재 — ${topic || '(자유)'}`,
+    `신기성 — ${strength}`,
+    '아래 5개 비틈 벡터를 각 후보에 하나씩 배정해, 서로 뚜렷이 다른 장면 전제 후보 4개를 만드세요(클리셰 금지).',
+    ...vectors.map((v) => `- ${v.label}: ${v.instruction}`),
+    '각 후보는 한 문장 훅, 현재 장면(장소·상황·내 목적), 캐스트 2~3명(이름·역할·desire·wound·voiceRules), 내 진입점을 담습니다.',
+    '## 출력 형식 — JSON 객체 하나만. 코드펜스 금지.',
+    '{ "proposals": [ { "hook": "", "scene": "", "cast": [ { "name": "", "role": "", "desire": "", "wound": "", "voiceRules": [] } ], "myRole": "", "twist": "라벨", "novelty": "' + novelty + '" } ] }'
+  ].join('\n');
+
+  if (provider === 'mock') {
+    const mk = (hook, scene, name, twist) => ({
+      hook, scene,
+      cast: [{ name, role: '소재 속 인물', desire: '가까워지고 싶다', wound: '말 못 한 마음', voiceRules: ['짧게'] }],
+      myRole: '이야기에 들어선 나', twist, novelty
+    });
+    printJson({
+      provider, mode: 'dive-propose', status: 'complete',
+      proposals: [
+        mk(`${topic || '그 사람'}이 사실 나를 찾아온 이유가 따로 있다`, `${topic || '그 사람'}과 마주 선 골목. 무언가 숨기는 눈빛.`, topic || '그 사람', '정체 전복'),
+        mk(`오늘이 ${topic || '이 만남'}의 세 번째 반복인 걸 그 사람만 안다`, '같은 장면이 다시 시작된다. 어딘가 익숙하다.', topic || '그 사람', '시간 구조'),
+        mk(`나는 기억 못 하는데 그 사람만 우리 과거를 다 안다`, '처음 보는 얼굴이 내 이름을 부른다.', topic || '그 사람', '관계 역전')
+      ]
+    });
+    process.exit(0);
+  }
+  const commandPreview =
+    provider === 'claude'
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', '--model', 'sonnet', prompt]
+      : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
+  const { result: providerResult, raw: rawOutput } = runProviderWithRetry(commandPreview);
+  const isError = looksLikeProviderError(rawOutput, providerResult);
+  const parsed = isError ? null : parseProviderJson(rawOutput);
+  printJson({
+    provider, mode: 'dive-propose',
+    status: isError ? 'failed' : 'complete',
+    proposals: Array.isArray(parsed?.proposals) ? parsed.proposals : [],
+    warning: isError ? 'provider 호출 실패' : undefined
+  });
+  process.exit(isError ? 1 : 0);
+}
+
 if (command === 'draft') {
   const provider = readFlag(args, '--provider', 'mock');
   const medium = readFlag(args, '--medium', 'novel');
