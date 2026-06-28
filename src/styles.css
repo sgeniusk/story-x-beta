@@ -11505,6 +11505,9 @@ body {
 .dx-start-title { color: #f2f3f7; font-size: 20px; margin: 4px 0; }
 .dx-start-label { color: #aeb3bd; font-size: 13px; }
 .dx-start-input { background: #16171a; color: #f2f3f7; border: 1px solid #3a3c43; border-radius: 8px; padding: 10px; min-height: 56px; resize: vertical; font-family: inherit; font-size: 13px; line-height: 1.5; }
+.dx-start-story { background: #16171a; color: #f2f3f7; border: 1px solid #3a3c43; border-radius: 8px; padding: 12px; min-height: 120px; resize: vertical; font-family: inherit; font-size: 14px; line-height: 1.6; }
+.dx-inspire-toggle { align-self: flex-start; background: #1c1d21; color: #c4b6ff; border: 1px solid #34363d; border-radius: 8px; padding: 8px 12px; font-size: 13px; cursor: pointer; margin-top: 8px; }
+.dx-inspire-panel { display: flex; flex-direction: column; gap: 10px; border: 1px solid #34363d; border-radius: 10px; padding: 14px; background: rgba(124,92,255,0.04); }
 .dx-novelty-dial { display: flex; gap: 6px; }
 .dx-novelty-on { background: #7c5cff; color: #fff; border: 1px solid #7c5cff; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
 .dx-novelty-off { background: #2a2350; color: #c4b6ff; border: 1px solid #7c5cff55; border-radius: 999px; padding: 6px 14px; cursor: pointer; }

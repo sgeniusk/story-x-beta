@@ -1,5 +1,5 @@
 // Dive X 로컬 브리지(/api/dive-chat·/api/dive-condense) fetch 래퍼
-import { isValidProposal, type DiveProposal, type NoveltyLevel } from './diveProposal';
+import { isValidProposal, type DiveProposal, type DiveSetup, type NoveltyLevel } from './diveProposal';
 
 export interface DiveChatRequest {
   character: string;
@@ -79,4 +79,22 @@ export async function requestDiveProposals(req: DiveProposalRequest): Promise<Di
   const raw = await postJson<Partial<DiveProposalResponse>>('/api/dive-propose', req);
   const proposals = Array.isArray(raw.proposals) ? raw.proposals.filter(isValidProposal) : [];
   return { status: typeof raw.status === 'string' ? raw.status : 'complete', proposals, warning: raw.warning };
+}
+
+export interface DiveSetupRequest { story: string; }
+export interface DiveSetupResponse { status: string; setup: DiveSetup | null; warning?: string; }
+
+function isValidSetup(x: unknown): x is DiveSetup {
+  if (!x || typeof x !== 'object') return false;
+  const s = x as Record<string, unknown>;
+  return typeof s.scene === 'string' && s.scene.trim() !== '' && Array.isArray(s.cast) && s.cast.length > 0;
+}
+
+export async function requestDiveSetup(req: DiveSetupRequest): Promise<DiveSetupResponse> {
+  const raw = await postJson<Partial<DiveSetupResponse>>('/api/dive-setup', req);
+  return {
+    status: typeof raw.status === 'string' ? raw.status : 'complete',
+    setup: isValidSetup(raw.setup) ? raw.setup : null,
+    warning: raw.warning
+  };
 }

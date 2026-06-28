@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { requestDiveChat, requestDiveCondense, requestDiveShowrunner, requestDiveProposals } from './diveClient';
+import { requestDiveChat, requestDiveCondense, requestDiveShowrunner, requestDiveProposals, requestDiveSetup } from './diveClient';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -77,5 +77,23 @@ describe('diveClient', () => {
     const res = await requestDiveProposals({ topic: '', novelty: 'safe' });
     expect(res.proposals).toEqual([]);
     expect(res.warning).toBe('x');
+  });
+
+  it('requestDiveSetup은 /api/dive-setup에 POST하고 setup을 반환', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'complete', setup: { scene: '편의점', cast: [{ name: '단골', role: '첫사랑', desire: 'd', wound: 'w', voiceRules: [] }], myRole: '알바' } })
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const res = await requestDiveSetup({ story: '편의점 알바와 첫사랑 단골' });
+    expect(fetchMock).toHaveBeenCalledWith('/api/dive-setup', expect.objectContaining({ method: 'POST' }));
+    expect(res.setup?.scene).toBe('편의점');
+    expect(res.setup?.cast).toHaveLength(1);
+  });
+
+  it('requestDiveSetup은 빈약·누락 추출 시 setup null로 폴백한다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'complete', setup: { scene: '', cast: [] } }) }));
+    const res = await requestDiveSetup({ story: '음' });
+    expect(res.setup).toBeNull();
   });
 });

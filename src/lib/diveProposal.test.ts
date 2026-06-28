@@ -34,6 +34,19 @@ describe('diveProposal', () => {
     expect(new Set(seed.characters.map((c) => c.id)).size).toBe(2);
   });
 
+  it('seedFromProposal은 DiveSetup(twist·novelty 없음)도 받아 시딩한다', () => {
+    const setup = {
+      scene: '비 오는 편의점 야간',
+      cast: [{ name: '단골', role: '첫사랑', desire: '알은척하고 싶다', wound: '먼저 떠난 사람', voiceRules: ['망설인다'] }],
+      myRole: '야간 알바'
+    };
+    const seed = seedFromProposal(setup);
+    expect(seed.scene).toBe('비 오는 편의점 야간');
+    expect(seed.characters).toHaveLength(1);
+    expect(seed.characters[0].name).toBe('단골');
+    expect(seed.primaryCharacterId).toBe(seed.characters[0].id);
+  });
+
   it('isValidProposal은 필수 필드 누락 후보를 거른다', () => {
     expect(isValidProposal(sample)).toBe(true);
     expect(isValidProposal({ ...sample, hook: '' })).toBe(false);
