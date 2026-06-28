@@ -75,7 +75,8 @@ import {
   type OnboardingDraft
 } from './lib/storage';
 import { DiveDesk } from './components/DiveDesk';
-import { DIVE_SEED_CHARACTERS } from './lib/diveSeedCharacters';
+import { DiveStart } from './components/DiveStart';
+import { seedFromProposal } from './lib/diveProposal';
 import { createDiveSession } from './lib/diveSession';
 import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
@@ -199,6 +200,8 @@ function App() {
   const [format, setFormat] = useState<CreativeFormat>(restoredOnboarding?.format ?? 'long-novel');
   // 새 프로젝트 플로우의 빌드 단계에서 만든 첫 회차 초안 — 에디터가 이걸로 시작한다
   const [pendingDraft, setPendingDraft] = useState<DraftChapterPayload | null>(null);
+  // Dive 진입 — DiveStart에서 후보를 고르면 시드된 세션을 담아 DiveStage로 넘긴다
+  const [diveInit, setDiveInit] = useState<DiveState | null>(null);
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [format, medium]);
 
@@ -272,22 +275,28 @@ function App() {
   }
 
   if (stage === 'dive') {
-    const seed = DIVE_SEED_CHARACTERS[0];
     const restored = loadDiveState();
-    let initial = restored;
-    if (!initial) {
-      const seededProject = {
-        ...createEmptyProject({ title: `${seed.character.name}과의 연대기` }),
-        characters: [seed.character]
-      };
-      initial = {
-        schema: 'storyx/dive/v1' as const,
-        session: createDiveSession(seed.character.id, seededProject.id),
-        project: seededProject
-      };
+    if (restored) {
+      return <DiveStage initial={restored} onBack={() => setStage('editor')} />;
+    }
+    if (diveInit) {
+      return <DiveStage initial={diveInit} onBack={() => setStage('editor')} />;
     }
     return (
-      <DiveStage initial={initial} onBack={() => setStage('editor')} />
+      <DiveStart
+        onBack={() => setStage('editor')}
+        onPick={(p) => {
+          const { scene, characters, primaryCharacterId } = seedFromProposal(p);
+          const project = {
+            ...createEmptyProject({ title: p.hook.slice(0, 20) || 'Dive' }),
+            characters
+          };
+          const session = { ...createDiveSession(primaryCharacterId, project.id), scene };
+          const init: DiveState = { schema: 'storyx/dive/v1', session, project };
+          saveDiveState(init);
+          setDiveInit(init);
+        }}
+      />
     );
   }
 
