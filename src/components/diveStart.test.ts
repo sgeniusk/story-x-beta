@@ -4,12 +4,20 @@ import { createElement } from 'react';
 import { DiveStart } from './DiveStart';
 
 describe('DiveStart', () => {
-  it('소재 입력·신기성 다이얼·제안 버튼을 렌더한다', () => {
+  it('자유 서술 칸과 시작하기 버튼을 1차로 렌더한다', () => {
     const html = renderToStaticMarkup(
-      createElement(DiveStart, { onPick: () => {}, onBack: () => {} })
+      createElement(DiveStart, { onStart: () => {}, onPick: () => {}, onBack: () => {} })
     );
-    expect(html).toContain('소재');
-    expect(html).toContain('제안 받기');
-    expect(html).toContain('dx-novelty-dial');
+    expect(html).toContain('어떤 인물과');
+    expect(html).toContain('시작하기');
+    expect(html).toContain('dx-start-story');
+  });
+
+  it('제안 카드 보조 토글을 렌더한다', () => {
+    const html = renderToStaticMarkup(
+      createElement(DiveStart, { onStart: () => {}, onPick: () => {}, onBack: () => {} })
+    );
+    expect(html).toContain('막히면 제안 받기');
+    expect(html).toContain('dx-inspire-toggle');
   });
 });
