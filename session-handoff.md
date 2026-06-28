@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-06-29 — Dive X 자유 서술 진입 완료
+
+> 브랜치 `feat/dive-x-freeform-intake`(main에서 분기, origin 미푸시). 제안 엔진 dogfooding 학습("카드가 자유도·재미를 죽인다")에서 앞문을 대화형으로 교체.
+
+### 한 것
+- **앞문 교체** — 소재+다이얼+카드 → **자유 서술 한 칸 → `dive-setup` 충실 추출 → 바로 DiveDesk 진입**. 제안 카드는 "막히면 제안 받기" 접이식 보조로 강등(보존). 스펙·계획 `docs/superpowers/{specs,plans}/2026-06-29-dive-x-freeform-intake*`.
+- **TDD 6태스크 done** — DiveSetup 타입·seedFromProposal 느슨화·requestDiveSetup·dive-setup 커맨드/라우트·DiveStart 재구성·App onStart. npm test 689 녹색·build 성공.
+- **라이브** — 자유 서술 → ~28초 codex → 충실한 scene+cast(한서윤) 시딩 → DiveDesk, 콘솔 0. 보조 토글 정상.
+
+### 손대지 말 것
+- scene-showrunner·arc·응결·choices 루프 **무변경**. 제안 엔진(`/api/dive-propose`·diveProposal)도 보조로 살아있음 — 삭제 금지.
+- `seedFromProposal` 파라미터는 `Pick<DiveProposal,'scene'|'cast'>`로 느슨 — DiveSetup·DiveProposal 둘 다 시드. 이 계약 유지.
+
+### 다음 한 가지
+- 어드벤처 선택지 강화(명시적 "이동/대화" 액션화 — dive-chat choices는 이미 있음) **또는** 취향 프로필(#1)/스티어링(#3). 자유 서술 진입의 dogfooding 체감(자유도·재미 회복) 판정 후 결정.
+
+---
+
 ## 2026-06-28 — Dive X 제안 엔진 v1 완료 + 큰 그림 재설계
 
 > 브랜치 `feat/dive-x-proposal-engine`(origin 미푸시). 이번 세션 = 딥리서치로 방향 재설계 → 제안 엔진 첫 조각 TDD 구현·라이브 검증.
