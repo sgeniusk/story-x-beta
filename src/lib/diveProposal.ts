@@ -20,6 +20,12 @@ export interface DiveProposal {
   novelty: NoveltyLevel;
 }
 
+export interface DiveSetup {
+  scene: string;
+  cast: CastSeed[];
+  myRole: string;
+}
+
 // 한 소재에서 후보를 뽑을 때 각 후보에 서로 다른 축을 배정해 전형성 편향과 싸운다.
 export const TWIST_VECTORS: Array<{ label: string; instruction: string }> = [
   { label: '정체 전복', instruction: '인물의 진짜 정체나 목적이 표면과 다르게.' },
@@ -33,7 +39,7 @@ function slug(_name: string, i: number): string {
   return `cast-${i}`;
 }
 
-export function seedFromProposal(p: DiveProposal): {
+export function seedFromProposal(p: Pick<DiveProposal, 'scene' | 'cast'>): {
   scene: string;
   characters: CharacterProfile[];
   primaryCharacterId: string;
