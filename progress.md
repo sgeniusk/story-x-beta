@@ -4,9 +4,9 @@
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-01)
-`npm test` **708 통과**(69 파일) · `npm run build`(tsc+vite) 성공. 브랜치 `feat/canon-core-mvp0`(미머지·미푸시).
+`npm test` **708 통과**(69 파일) · `npm run build`(tsc+vite) 성공. `feat/canon-core-mvp0` → **main 머지·푸시 완료**(PR #7, 2026-07-01).
 
-## 활성 트랙 — Canon Core (MVP-0) (`done` · 2026-07-01, 브랜치 `feat/canon-core-mvp0`, 미머지)
+## 활성 트랙 — Canon Core (MVP-0) (`done` · 2026-07-01, **main 머지 완료** PR #7)
 
 캐논 거버넌스 정본(`docs/research/2026-06-30-canon-governance.md`)의 첫 구현 슬라이스. flat `CanonFact` 의 head/tail digest 절단(A-6 — 30화서 중반 캐논 51/91 소실)을 **중요도 가중 + 장면 관련성 + reveal 분리 주입**으로 교체. 스펙 `docs/superpowers/specs/2026-06-30-canon-core-mvp0-design.md`, 계획 `docs/superpowers/plans/2026-06-30-canon-core-mvp0.md`. 서브에이전트 주도 TDD(7태스크·7+커밋) + 최종 코드리뷰 + IMPORTANT 2건 수정.
 - **구현** — `CanonFact` 에 `importance·participants·reveal·evidence` optional 확장(+`CanonEvidence`) · 신규 순수 모듈 `canonImportance.ts`(`importanceBand` 0.82/0.45 · `deriveImportance` 작가핀 우선·비핀 max 0.65 앵커 자동도달 없음 · `selectCanonForContext` **앵커 절단 금지**·관련성 검색) · `buildProjectContextDigest` 캐논 블록 교체(`확정 캐논`/`숨은 캐논` 2절 분리, secret/foreshadowed=모순금지+누설금지) · `normalizeProject` 2-pass 백필(alwaysInclude→importance 0.9 앵커 브리지) · `deriveActiveParticipants`.

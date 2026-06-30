@@ -4,7 +4,7 @@
 
 ---
 
-## 2026-07-01 — Canon Core (MVP-0) 구현 완료 (브랜치 `feat/canon-core-mvp0`, 미머지·미푸시)
+## 2026-07-01 — Canon Core (MVP-0) 구현 완료 + main 머지 (PR #7, 머지·푸시 완료)
 
 > 캐논 거버넌스 첫 슬라이스를 서브에이전트 주도 TDD 로 구현. spec `docs/superpowers/specs/2026-06-30-canon-core-mvp0-design.md` · 계획 `docs/superpowers/plans/2026-06-30-canon-core-mvp0.md` · 정본 `docs/research/2026-06-30-canon-governance.md`. progress.md "Canon Core (MVP-0)" 절이 상세 정본.
 
@@ -20,7 +20,7 @@
 - **비핀 importance 보수적** — deriveImportance 비핀 max 0.65(앵커 자동도달 없음). 작가핀이 유일한 앵커 승격 경로(정본 §13 risk6).
 
 ### 다음 한 가지
-- **머지/푸시 결정 대기**(사용자) — `feat/canon-core-mvp0` → main. 이 세션 산출물(research·spec·plan 문서 4종 + 코드)은 전부 미커밋/미푸시 또는 로컬 커밋만.
+- **머지·푸시 완료** — `feat/canon-core-mvp0` → main (PR #7 merged, 2026-07-01). 이 세션 산출물(research·spec·plan 문서 4종 + 코드) 전부 origin/main 반영. feat 브랜치 삭제됨. (origin = `sgeniusk/story-x-beta`.)
 - 다음 슬라이스 — **MVP-1 PLAY 런타임 거버넌스**(validator·의외전개 배지, player-first Q2) → 그 위에 융합 셸(PLAY/WRITE/PLAN + 싱크 콘솔). 후속 spec — 연속성 자동검사기(ConStory 4단)·번역 투 게이트·크래프트 위험1(내면=living 티어)·위험4(검사기 사실모순 vs 행동전복).
 - MINOR 잔여 — longform 픽스처에 비앵커 최근 캐논 생존 보완 단언(선택).
 
