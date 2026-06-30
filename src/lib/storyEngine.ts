@@ -1546,7 +1546,6 @@ function normalizeCanonOwner(owner: string): CanonFact['owner'] {
 }
 
 const CONTEXT_CANON_LIMIT = 40;
-const CONTEXT_CANON_HEAD = 6;
 const CONTEXT_THREAD_LIMIT = 8;
 
 // 현재 장면 query 의 관계자 — 최근 회차 캐논 참여자 + 등장인물 이름(경량 R1).
