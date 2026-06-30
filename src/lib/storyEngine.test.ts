@@ -1395,8 +1395,9 @@ describe('B3 — digest always-include 절단 면제', () => {
       owner: 'plot' as const,
       statement: `사건 ${i} 가 일어났다.`,
     }));
-    // 중반(절단 구간 facts[6..15], head6 다음·tail 전)에 always-include 마킹된 핵심 캐논 하나
-    facts[10] = { ...facts[10], statement: '한지욱은 진짜 배신자다.', alwaysInclude: true } as typeof facts[10];
+    // 예산(40) 밖 인덱스(45)에 always-include 핀 — 위치가 아니라 앵커 보장으로 살아남는지 검증.
+    // (importance 미설정 = 세션 중 토글 상태. selectCanonForContext 가 alwaysInclude 를 앵커로 직접 인정해야 통과.)
+    facts[45] = { ...facts[45], statement: '한지욱은 진짜 배신자다.', alwaysInclude: true } as typeof facts[45];
     const withFacts = { ...project, canonFacts: facts };
     const digest = buildProjectContextDigest(withFacts);
     expect(digest).toContain('한지욱은 진짜 배신자다.');

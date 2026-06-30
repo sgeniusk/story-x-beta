@@ -93,3 +93,15 @@ describe('selectCanonForContext — 앵커 절단 금지 + 관련성 (정본 §6
     anchors.forEach((a) => expect(ids).toContain(a.id));
   });
 });
+
+describe('selectCanonForContext — alwaysInclude 직접 인정(세션 중 토글, normalize 전)', () => {
+  it('importance 없이 alwaysInclude 만 있어도 앵커로 절단 면제(위치 무관)', () => {
+    const pinned = fact({ id: 'pin', alwaysInclude: true, participants: ['정우'] }); // importance undefined
+    const fillers = Array.from({ length: 50 }, (_, i) =>
+      fact({ id: `f${i}`, importance: 0.1, participants: [`x${i}`] })
+    );
+    const r = selectCanonForContext([...fillers, pinned], { participants: [], openThreads: [] }, 10);
+    expect(r.selected.map((f) => f.id)).toContain('pin');
+    expect(r.anchorCount).toBe(1);
+  });
+});

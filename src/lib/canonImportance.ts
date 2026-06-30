@@ -61,7 +61,8 @@ export function selectCanonForContext(
   query: CanonContextQuery,
   budget: number
 ): SelectedCanon {
-  const scoreOf = (f: CanonFact) => f.importance ?? 0;
+  // alwaysInclude 핀은 importance 미설정(세션 중 토글, normalize 전)이어도 앵커로 직접 인정 — 절단 면제.
+  const scoreOf = (f: CanonFact) => f.importance ?? (f.alwaysInclude ? 0.9 : 0);
   const anchors = facts.filter((f) => importanceBand(scoreOf(f)) === 'anchor');
   const nonAnchors = facts.filter((f) => importanceBand(scoreOf(f)) !== 'anchor');
   const ranked = [...nonAnchors].sort((a, b) => {
