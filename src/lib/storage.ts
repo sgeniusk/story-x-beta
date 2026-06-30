@@ -12,6 +12,7 @@ import {
   type TimelineEntry
 } from './storyEngine';
 import { getProjectLocalization } from './localization';
+import { deriveImportance, deriveParticipants } from './canonImportance';
 import { normalizeWritingLog } from './retentionStats';
 import { loadEvolutionHistory, replaceEvolutionHistory, type EvolutionHistory } from './evolutionMemory';
 import type { CreativeFormat, CreativeMedium, HomeFlowStep } from './projectBlueprint';
@@ -231,6 +232,26 @@ export function normalizeProject(project: SeriesProject): SeriesProject {
   // 표면 약속/심층 질문/무게중심 도입 이전에 저장된 프로젝트를 위한 백필.
   // 회차 구성(beats) 도입 이전 회차에는 beats: []를 채우고, beat에 tension이 없으면 기본값으로 보정한다.
   // 데이터 모드(places·objects·events·timeline·bibleOutline)와 인물 relations 도입 이전 저장본도 함께 백필한다.
+  // MVP-0: CanonFact의 importance·participants·reveal·evidence를 2-pass로 백필한다.
+  const rawFacts = Array.isArray(project.canonFacts) ? project.canonFacts : [];
+  const factsWithMeta = rawFacts.map((fact) => ({
+    ...fact,
+    alwaysInclude: typeof fact.alwaysInclude === 'boolean' ? fact.alwaysInclude : false,
+    participants:
+      Array.isArray(fact.participants) && fact.participants.length > 0
+        ? fact.participants
+        : deriveParticipants(fact.statement),
+    reveal: fact.reveal ?? ('revealed' as const),
+    evidence: fact.evidence ?? { sourceType: 'chapter' as const, sourceId: String(fact.episode) }
+  }));
+  const canonFacts = factsWithMeta.map((fact) => ({
+    ...fact,
+    importance:
+      typeof fact.importance === 'number'
+        ? fact.importance
+        : deriveImportance(fact, factsWithMeta, Array.isArray(project.openThreads) ? project.openThreads : [])
+  }));
+
   const normalizedProject = {
     ...project,
     localization: getProjectLocalization(project),
@@ -239,12 +260,7 @@ export function normalizeProject(project: SeriesProject): SeriesProject {
     formIntent: typeof project.formIntent === 'string' ? project.formIntent : '',
     nextEpisodeIntent: typeof project.nextEpisodeIntent === 'string' ? project.nextEpisodeIntent : '',
     writingLog: normalizeWritingLog(project.writingLog),
-    canonFacts: Array.isArray(project.canonFacts)
-      ? project.canonFacts.map((fact) => ({
-          ...fact,
-          alwaysInclude: typeof fact.alwaysInclude === 'boolean' ? fact.alwaysInclude : false,
-        }))
-      : [],
+    canonFacts,
     characters: Array.isArray(project.characters)
       ? project.characters.map((character): CharacterProfile => ({
           ...character,
