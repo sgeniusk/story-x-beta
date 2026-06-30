@@ -121,6 +121,13 @@ export interface WorldRule {
   }>;
 }
 
+// 캐논의 출처(provenance) — 어느 회차/프리셋/사용자 입력에서 왔는지. 정본 §3 Evidence.
+export interface CanonEvidence {
+  sourceType: 'chapter' | 'preset' | 'user' | 'extracted';
+  sourceId: string;
+  quote?: string;
+}
+
 export interface CanonFact {
   id: string;
   episode: number;
@@ -130,6 +137,14 @@ export interface CanonFact {
   statement: string;
   /** B3 — AI 컨텍스트 항상 포함(always-include). true 면 digest 절단에서 면제·우선 포함. */
   alwaysInclude?: boolean;
+  /** MVP-0 — 중요도 0~1(연속값). 없으면 normalizeProject 가 도출. 정본 §4. */
+  importance?: number;
+  /** MVP-0 — 관계자(엔티티 이름). 없으면 normalize 가 statement 에서 도출. */
+  participants?: string[];
+  /** MVP-0 — 공개 축. revealed=독자 인지 / secret=쇼러너 비밀 / foreshadowed=미회수 복선. 없으면 'revealed'. 정본 §14. */
+  reveal?: 'revealed' | 'secret' | 'foreshadowed';
+  /** MVP-0 — 출처. 없으면 episode 로 최소 구성. */
+  evidence?: CanonEvidence;
 }
 
 // 회차 구성 단위 — 이야기 흐름의 의미 단위 하나. 번호·라벨·요약으로 원고 위에 오버레이된다.
