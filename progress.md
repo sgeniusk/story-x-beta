@@ -3,6 +3,18 @@
 > Last Updated: 2026-06-27 · Branch: `feat/dive-x-arc`(미머지) (**Dive X 진전 엔진(묶음 C-1) 구현 완료. 쇼러너가 StoryArc(극적질문·긴장·다음전개)를 들고 매 턴 진전·🎯 표시·⏭전개 버튼·dive-condense arc 페이오프. dogfooding "진전 없음(큰 흠)" 직접 해소. 가벼운 LLM-유지 arc(추가 호출 0). 이전 — 1차(PR #4·main)·2차 장면+쇼러너(PR #5·local main)·3차 선택지+계속+자유응결(묶음 A·local main). 묶음 C-2(능동 멀티캐릭터)·묶음 B(되돌리기·캐논 god-편집·과금) 후속 대기. 다음 — Dive X arc 머지 결정 + dogfooding + C-2/B + 품질·비용 로드맵·A-6 장편 기억.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
+## 최근 검증 (2026-07-01)
+`npm test` **708 통과**(69 파일) · `npm run build`(tsc+vite) 성공. 브랜치 `feat/canon-core-mvp0`(미머지·미푸시).
+
+## 활성 트랙 — Canon Core (MVP-0) (`done` · 2026-07-01, 브랜치 `feat/canon-core-mvp0`, 미머지)
+
+캐논 거버넌스 정본(`docs/research/2026-06-30-canon-governance.md`)의 첫 구현 슬라이스. flat `CanonFact` 의 head/tail digest 절단(A-6 — 30화서 중반 캐논 51/91 소실)을 **중요도 가중 + 장면 관련성 + reveal 분리 주입**으로 교체. 스펙 `docs/superpowers/specs/2026-06-30-canon-core-mvp0-design.md`, 계획 `docs/superpowers/plans/2026-06-30-canon-core-mvp0.md`. 서브에이전트 주도 TDD(7태스크·7+커밋) + 최종 코드리뷰 + IMPORTANT 2건 수정.
+- **구현** — `CanonFact` 에 `importance·participants·reveal·evidence` optional 확장(+`CanonEvidence`) · 신규 순수 모듈 `canonImportance.ts`(`importanceBand` 0.82/0.45 · `deriveImportance` 작가핀 우선·비핀 max 0.65 앵커 자동도달 없음 · `selectCanonForContext` **앵커 절단 금지**·관련성 검색) · `buildProjectContextDigest` 캐논 블록 교체(`확정 캐논`/`숨은 캐논` 2절 분리, secret/foreshadowed=모순금지+누설금지) · `normalizeProject` 2-pass 백필(alwaysInclude→importance 0.9 앵커 브리지) · `deriveActiveParticipants`.
+- **reveal 공개 축** — `revealed`/`secret`/`foreshadowed`. 정본 §14 위험2(withholding/조기해소) 차단. 미스터리·스릴러(Q1) 직결. (필드명 reveal — 기존 essay disclosureLedger 충돌 회피.)
+- **코드리뷰 수정** — `selectCanonForContext` 의 `scoreOf` 가 importance 미설정 + alwaysInclude 면 0.9 앵커로 직접 인정(세션 중 핀 토글이 normalize 전에도 면제) · B3 테스트 index 45(예산 밖)로 이동해 앵커 보장 실검증.
+- **회귀 교정** — `longformContinuity.test.ts` 의 옛 head/tail "첫+마지막 생존" 단언을 **"중간 앵커 생존(A-6)"** 으로 교정(더 강한 계약). 미사용 `CONTEXT_CANON_HEAD` 제거.
+- **알려진 잔여(MINOR, 후속)** — longform 픽스처가 비앵커 최근 캐논 생존을 직접 검증 안 함(실사용은 관련성 경로로 보호). MVP-1(PLAY 런타임 거버넌스)·연속성 자동검사기(ConStory)·번역 투 게이트는 별도 spec.
+
 ## 활성 트랙 — Dive X 제안 엔진 (`done` · 2026-06-28, 브랜치 `feat/dive-x-proposal-engine`)
 
 Dive 진입을 "고정 시드 캐릭터 자동선택"에서 **"소재 한 줄 → 비틈 벡터로 분산된 장면 전제 후보 추천 → 선택 시 scene-showrunner 시딩"**으로 교체. 큰 그림 재설계(글로벌 딥리서치 `docs/research/2026-06-28-dive-x-market-direction.md` — 폐루프 상용 선례 없음·최대 리스크="남의 플레이 재미없다"→응결 품질이 해법·규제가 전연령 포지션을 해자로) 위에서 첫 조각. 스펙 `docs/superpowers/specs/2026-06-28-dive-x-proposal-engine-design.md`, 계획 `docs/superpowers/plans/2026-06-28-dive-x-proposal-engine.md`. 전체 비전(취향#1·제안#2·스티어링#3·전개#4) 중 **제안#2만**.
