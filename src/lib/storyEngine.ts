@@ -18,6 +18,7 @@ import {
   type ContinuityContract,
   type GrowthLedger
 } from './continuityContract';
+import { selectCanonForContext, type CanonContextQuery } from './canonImportance';
 
 export type AgentId =
   | 'showrunner'
@@ -1548,8 +1549,16 @@ const CONTEXT_CANON_LIMIT = 40;
 const CONTEXT_CANON_HEAD = 6;
 const CONTEXT_THREAD_LIMIT = 8;
 
+// 현재 장면 query 의 관계자 — 최근 회차 캐논 참여자 + 등장인물 이름(경량 R1).
+function deriveActiveParticipants(project: SeriesProject): string[] {
+  const recent = project.chapters[project.chapters.length - 1];
+  const fromRecent = recent ? recent.newCanonFacts.flatMap((f) => f.participants ?? []) : [];
+  const fromChars = project.characters.map((c) => c.name);
+  return Array.from(new Set([...fromRecent, ...fromChars]));
+}
+
 // 2화 이상 생성 시 LLM에 넘길 연속성 컨텍스트를 만든다.
-// 장편에서 캐논이 쌓여도 프롬프트가 무한정 커지지 않도록 초반 정착 캐논 + 최근 캐논으로 예산을 제한한다.
+// 장편에서 캐논이 쌓여도 프롬프트가 무한정 커지지 않도록 중요도 검색 + reveal 분리로 예산을 제한한다.
 export function buildProjectContextDigest(project: SeriesProject): string {
   const lines: string[] = [];
   const continuityContract = buildContinuityContractFromProject(project);
@@ -1610,27 +1619,28 @@ export function buildProjectContextDigest(project: SeriesProject): string {
   }
 
   if (project.canonFacts.length > 0) {
-    lines.push('', '확정 캐논 (절대 위반 금지):');
-    const facts = project.canonFacts;
+    const query: CanonContextQuery = {
+      participants: deriveActiveParticipants(project),
+      openThreads: project.openThreads
+    };
+    const { selected, omittedCount, anchorCount } = selectCanonForContext(
+      project.canonFacts,
+      query,
+      CONTEXT_CANON_LIMIT
+    );
     const printFact = (fact: CanonFact) => lines.push(`- [${fact.owner}] ${fact.statement}`);
-
-    if (facts.length <= CONTEXT_CANON_LIMIT) {
-      facts.forEach(printFact);
-    } else {
-      // B3 — 작가가 'AI 항상 포함'으로 표시한 캐논은 절단 구간에 있어도 우선 포함(A-6 작가 통제).
-      const pinned = facts.filter((fact) => fact.alwaysInclude);
-      const rest = facts.filter((fact) => !fact.alwaysInclude);
-      const restBudget = Math.max(0, CONTEXT_CANON_LIMIT - pinned.length);
-      const head = Math.min(CONTEXT_CANON_HEAD, restBudget);
-      const tailCount = Math.max(0, restBudget - head);
-      pinned.forEach(printFact);
-      if (rest.length <= restBudget) {
-        rest.forEach(printFact);
-      } else {
-        rest.slice(0, head).forEach(printFact);
-        lines.push(`- … 중반 캐논 ${rest.length - restBudget}개 생략(고정 캐논 ${pinned.length}개는 항상 포함), 최근 캐논 우선 …`);
-        rest.slice(rest.length - tailCount).forEach(printFact);
-      }
+    const revealed = selected.filter((fact) => (fact.reveal ?? 'revealed') === 'revealed');
+    const hidden = selected.filter((fact) => (fact.reveal ?? 'revealed') !== 'revealed');
+    if (revealed.length > 0) {
+      lines.push('', '확정 캐논 (절대 위반 금지):');
+      revealed.forEach(printFact);
+    }
+    if (hidden.length > 0) {
+      lines.push('', '숨은 캐논 (모순 금지 · 아직 누설 금지):');
+      hidden.forEach(printFact);
+    }
+    if (omittedCount > 0) {
+      lines.push(`- … 중반 캐논 ${omittedCount}개 생략(앵커 ${anchorCount}개·관련 캐논은 항상 포함) …`);
     }
   }
   if (contextPack.livingState.length > 0) {
