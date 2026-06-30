@@ -1395,10 +1395,46 @@ describe('B3 — digest always-include 절단 면제', () => {
       owner: 'plot' as const,
       statement: `사건 ${i} 가 일어났다.`,
     }));
-    // 중반(절단 구간 facts[6..15], head6 다음·tail 전)에 always-include 마킹된 핵심 캐논 하나
-    facts[10] = { ...facts[10], statement: '한지욱은 진짜 배신자다.', alwaysInclude: true } as typeof facts[10];
+    // 예산(40) 밖 인덱스(45)에 always-include 핀 — 위치가 아니라 앵커 보장으로 살아남는지 검증.
+    // (importance 미설정 = 세션 중 토글 상태. selectCanonForContext 가 alwaysInclude 를 앵커로 직접 인정해야 통과.)
+    facts[45] = { ...facts[45], statement: '한지욱은 진짜 배신자다.', alwaysInclude: true } as typeof facts[45];
     const withFacts = { ...project, canonFacts: facts };
     const digest = buildProjectContextDigest(withFacts);
     expect(digest).toContain('한지욱은 진짜 배신자다.');
+  });
+});
+
+describe('buildProjectContextDigest — 중요도 검색·reveal 분리 (MVP-0)', () => {
+  function makeProjectForDigest(): SeriesProject {
+    return createEmptyProject({ title: '테스트 작품' });
+  }
+
+  it('65캐논 중 앵커 statement 가 digest 에 전부 살아남음(A-6 회귀)', () => {
+    const anchors = Array.from({ length: 5 }, (_, i) => ({
+      id: `anc${i}`, episode: 1, owner: 'plot' as const,
+      statement: `핵심사건${i}`, importance: 0.9, participants: [`핵심${i}`], reveal: 'revealed' as const,
+    }));
+    const fillers = Array.from({ length: 60 }, (_, i) => ({
+      id: `fil${i}`, episode: 2, owner: 'plot' as const,
+      statement: `단역사건${i}`, importance: 0.1, participants: [`단역${i}`], reveal: 'revealed' as const,
+    }));
+    const project = { ...makeProjectForDigest(), canonFacts: [...anchors, ...fillers] };
+    const digest = buildProjectContextDigest(project);
+    anchors.forEach((a) => expect(digest).toContain(a.statement));
+  });
+
+  it('secret/foreshadowed 는 별도 "숨은 캐논" 절로 분리', () => {
+    const project = {
+      ...makeProjectForDigest(),
+      canonFacts: [
+        { id: 'r', episode: 1, owner: 'plot' as const, statement: '공개사실', importance: 0.9, participants: ['정우'], reveal: 'revealed' as const },
+        { id: 's', episode: 1, owner: 'plot' as const, statement: '숨긴진실', importance: 0.9, participants: ['손님'], reveal: 'secret' as const },
+      ],
+    };
+    const digest = buildProjectContextDigest(project);
+    expect(digest).toContain('확정 캐논');
+    expect(digest).toContain('공개사실');
+    expect(digest).toContain('숨은 캐논 (모순 금지 · 아직 누설 금지)');
+    expect(digest).toContain('숨긴진실');
   });
 });

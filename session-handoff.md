@@ -4,6 +4,118 @@
 
 ---
 
+## 2026-07-01 — Canon Core (MVP-0) 구현 완료 (브랜치 `feat/canon-core-mvp0`, 미머지·미푸시)
+
+> 캐논 거버넌스 첫 슬라이스를 서브에이전트 주도 TDD 로 구현. spec `docs/superpowers/specs/2026-06-30-canon-core-mvp0-design.md` · 계획 `docs/superpowers/plans/2026-06-30-canon-core-mvp0.md` · 정본 `docs/research/2026-06-30-canon-governance.md`. progress.md "Canon Core (MVP-0)" 절이 상세 정본.
+
+### 한 것
+- flat `CanonFact` head/tail digest 절단(A-6)을 **중요도 가중 + 장면 관련성 + reveal 분리**로 교체. 신규 `src/lib/canonImportance.ts`(순수) + `CanonFact` 확장 + `buildProjectContextDigest`·`normalizeProject` 수정. 7태스크 TDD, 최종 코드리뷰(CRITICAL 0·IMPORTANT 2 해소).
+- **검증** — `npm test` 708 녹색 · `npm run build` 성공. 런칭 게이트(65캐논서 앵커 소실 0, 중간 앵커 생존) 통과.
+- 커밋 7+: `8132d4e`(타입) `0081cf0·f39ecf1·55ce501`(canonImportance) `1978586`(digest) `208a656`(normalize) `1d7129f`(회귀 교정) `26c88c4`(리뷰 수정).
+
+### 손대지 말 것 (불변식)
+- **앵커는 절대 절단 안 됨** — `selectCanonForContext` 가 anchors 전부 보존(budget 초과해도). `scoreOf = importance ?? (alwaysInclude ? 0.9 : 0)` — alwaysInclude 는 normalize 전에도 앵커.
+- **reveal 기본 `revealed`** — secret/foreshadowed 만 `숨은 캐논` 절(모순금지+누설금지). 구버전 백필=전부 revealed(안전).
+- **digest 한 곳 원칙** — 검색 교체는 `buildProjectContextDigest` 한 곳(PLAY·WRITE 동시 개선). 별도 절단 로직 추가 금지.
+- **비핀 importance 보수적** — deriveImportance 비핀 max 0.65(앵커 자동도달 없음). 작가핀이 유일한 앵커 승격 경로(정본 §13 risk6).
+
+### 다음 한 가지
+- **머지/푸시 결정 대기**(사용자) — `feat/canon-core-mvp0` → main. 이 세션 산출물(research·spec·plan 문서 4종 + 코드)은 전부 미커밋/미푸시 또는 로컬 커밋만.
+- 다음 슬라이스 — **MVP-1 PLAY 런타임 거버넌스**(validator·의외전개 배지, player-first Q2) → 그 위에 융합 셸(PLAY/WRITE/PLAN + 싱크 콘솔). 후속 spec — 연속성 자동검사기(ConStory 4단)·번역 투 게이트·크래프트 위험1(내면=living 티어)·위험4(검사기 사실모순 vs 행동전복).
+- MINOR 잔여 — longform 픽스처에 비앵커 최근 캐논 생존 보완 단언(선택).
+
+---
+
+## 2026-06-30 (3차) — 외부 AI 2종 반영 + 캐논 거버넌스 정본 합본 + 포커스 딥리서치 (코드 0)
+
+> 사용자가 ChatGPT Pro·Claude 외부 리서치 2종을 가져옴(원문 사용자 보관 — ChatGPT는 채팅 본문, Claude는 `~/Downloads/story x research claude.md`). 둘 다 내 §6 foil과 거의 완전 수렴, **foil 6개 입장 전부 confirmed**. 합쳐서 설계 확정.
+
+### 한 것
+- **정본 합본 작성** — `docs/research/2026-06-30-canon-governance.md`(`confirmed`). Canon Governance Stack 6계층 · 사건중심 3-엔티티+Evidence 스키마 · 중요도 0~1+3밴드(Anchor0.82~/Major0.45~/Soft~) · Deviation Candidate 객체 + 게이트 규칙 · 검색 3계층(앵커 원본 KG·소 벡터·아크 다이제스트)+R1/R2/R3 · 이중 검증기(Runtime/Consolidation) · MVP 0~4 · 리스크표.
+- **갭 분류(§10)** — 확정(코드 가능) / empirical(dogfooding 튜닝, 문헌으로 못 닫음 — 가중치·surface빈도·응결주기·자동승격램프) / 미검증 무해(3배·c.ai수치·Campfire) / **★ 진짜 research gap 1건 = 한국 웹소설 캐논 craft**(두 리포트 다 "한국어 1차자료 빈약" 플래그).
+- **포커스 딥리서치 — 갭 closed(§12)** — `deep-research` 워크플로는 StructuredOutput 재시도 한도로 실패(Run `wf_e3d3c731-a11`) → Claude 직접 WebSearch/WebFetch로 닫음. **3소스가 한 원리로 수렴** — 좋은 의외성 vs 나쁜 모순 = "나중에 회수(resolve)되는가". (a) 나무위키 떡밥회수("작가만 알고 독자는 모름, 회수 전엔 설정오류로 오해") (b) 플롯홀 탐지 arXiv 2504.11900(later justification 없으면 플롯홀) (c) ConStory arXiv 2603.05890. → 일탈은 생성 시점 판정 금지, **회수 약속 추적+페이오프 검증**으로 의외성 확정(기존 payoffStatus·openThreads 연결). + **연속성 자동검사기**(ConStory 5범주×19서브·4단 evidence 파이프라인, F1 0.678 vs 인간 0.229 = 3.2배 → "연속성=제품요건" 실증) + **번역 투 게이트**(KatFishNet arXiv 2503.00032 마커 — 콤마>2.0·명사>45%·종결어미<8%·연결어미+콤마>15%).
+
+### 사용자 결정 3건 (확정 · 정본 §13)
+- Q1 장르 = **미스터리·스릴러** · Q2 = **플레이어형(PLAY 먼저)** · Q3 간판 = **몰입 연재(Dive 융합)**. → 첫 spec = Canon Core(MVP-0)+PLAY 거버넌스 슬라이스.
+
+### 크래프트 감사 + disclosure 축 (정본 §14)
+- 사용자가 "좋은/재미있는 글쓰기" 크래프트 보고서로 캐논 거버넌스가 창작을 돕나 누르나 검토 요청. 감사 결론 — **대체로 강화(payoff·갈등·구체성·반전), 단 4 억압위험.** 위험1 성장차단(내면=living 티어) · **★위험2 withholding 무력화 = 코어 구멍** · 위험3 발견 vs 과잉플롯(초기 캐논 희박·steering) · 위험4 검사기 오발(사실모순 vs 행동전복).
+- **★ disclosure 축 신설** — CanonFact에 `disclosure: revealed|secret|foreshadowed` 추가(MVP-0 코어). secret/foreshadowed는 검색이 "모순 금지 + 누설 금지"로 분리 주입 → withholding·조기해소 한 번에 차단. 프리셋 '정보 비대칭'을 캐논이 실어나르는 통로. 미스터리·스릴러(Q1)와 직결.
+
+### 첫 spec 작성됨 (검토 대기)
+- `docs/superpowers/specs/2026-06-30-canon-core-mvp0-design.md`(`draft`) — flat CanonFact head/tail 절단(A-6 버그)을 **중요도 가중+장면 관련성+disclosure 분리 주입**으로 교체. CanonFact에 importance·participants·disclosure·evidence 추가(하위호환 백필) · `selectCanonForContext`(앵커 절단 금지) · 작가핀 우선 도출 · TDD 7+(storyEngine.test 먼저) · 런칭게이트=30화 앵커 소실 0.
+- **다음 한 가지** — 사용자 spec 검토 → writing-plans(TDD 태스크) → 구현. 위험1·4는 후속 spec(티어·검사기), 위험3은 운영 기본값.
+
+### 손대지 말 것 (추가)
+- disclosure 기본값 `revealed`(구버전 전부 공개=안전). CanonFact 확장은 필드 추가만, 기존 보존. 검색 교체는 `buildProjectContextDigest` 한 곳(두 표면 동시 개선).
+
+### 손대지 말 것
+- 캐논 코드 착수는 spec 확정 후. 지금은 설계 단계.
+- 정본 §2~9는 외부 2종+foil 합의라 임의 변경 금지(딥리서치 흡수·사용자 결정만 반영).
+
+### 진입 컨텍스트
+- 정본 `docs/research/2026-06-30-canon-governance.md` 1개로 충분. 입력 사슬 — research-brief·external-ask(같은 날짜 docs/research) + 외부 2종(사용자 보관) + memory `canon-governance-direction`. 융합 셸/프리셋 설계는 아래 (2차) 노트.
+
+---
+
+## 2026-06-30 (2차) — 융합 브레인스토밍 + 캐논 거버넌스 리서치 계획 (코드 변경 0)
+
+> Story X ↔ Dive X 통합 + epilogue 셸을 brainstorming(visual companion)으로 진행. 도중에 **캐논 설계가 Story X를 결정짓는 핵심**임이 드러나 → 딥리서치 계획 수립으로 전환. spec·구현 미착수. 리서치는 **사용자가 외부 AI 답 모은 뒤 launch**하기로(미launch).
+
+### 합의된 설계 (브레인스토밍 결론, 아직 spec 아님)
+- **융합 모델 = "항상 켜진 두 표면"** — 한 작품·한 회차 타임라인. 상단 3모드 토글 **PLAY**(Dive 몰입)/**WRITE**(에디터)/**PLAN**(캐논·바이블·구조 허브). 좌측 레일=각 모드 도구. epilogue 셸과 같은 골격.
+- **회차 = 두 표면 공유 단위** — 아무 회차나 PLAY로도 WRITE로도 열어 완전 왕복. 작품 생성 시 주력 모드 1회 선택.
+- **싱크 콘솔(★ 사용자 발명)** — 수동 전환 버튼 대신, PLAY/PLAN은 변경을 **쌓기만** 하고 우측 상단 `PLAY +N · PLAN +N` 누적 표시 + **⟳최신화** 버튼. 최신화가 본편 반영 + **무거운 캐논 검토 게이트**(충돌 드러냄, 승인형). git working-tree 모델.
+- **2단 캐논 강도** — PLAY 런타임 가볍게(확정 캐논 위에서 안 멈춤) / 최신화·응결에서 무겁게.
+- **리치 프리셋 = 융합 substrate** — 두 시작 경로(A 큐레이트 프리셋에서 인물 빙의→PLAY / B 자유서술+인터뷰=프리셋 빚기)가 같은 리치 프리셋 출력. Dive의 "빈약한 시작"을 Story X급 캐논·줄거리로 해결. **IP — 출하 프리셋은 원형(곡성 X, "시골 무당 미스터리" O), 특정작은 사용자가 인터뷰로.**
+- **프리셋 9요소** — 배경(Bedrock 장소·시대·기간·언어) · 톤/분위기 · 세계규칙 · 인물3~5(★플레이가능) · 캐논시드 · **정보비대칭/숨긴진실(쇼러너전용)** · **극적질문+열린 결말방향** · 여는장면. 예시 「손님」 곡성원형 오리지널 (`preset-example.html`).
+- **캐논 = 사건(Event) 중심** — `사건{관계자·시점·장소·효과·중요도}` + Entity + Relation. flat 사실은 흡수. **중요도가 절단생존+충돌심각도 지배**(alwaysInclude 일반화). **관련성 top-K 검색**(head/tail 절단 아님) = 문서화된 A-6.
+
+### 정본 문서 (이번 세션 생성)
+- `docs/research/2026-06-30-canon-governance-research-brief.md` — 리서치 계획서(6축 A~F · 방법 · §6 Claude 초기입장 foil).
+- `docs/research/2026-06-30-canon-governance-external-ask.md` — 외부 AI용 자기완결 질문지(사용자가 붙여넣을 것).
+- 브레인스토밍 목업 — `.superpowers/brainstorm/60428-1782814983/content/` (shell-skeleton·play-mode·sync-console·preset-pipeline·preset-example·canon-model).
+
+### 다음 한 가지
+- **사용자가 외부 AI들에게 `external-ask.md`를 물어 답을 모아온다** → 그 관점을 6축에 흡수해 딥리서치 launch(`deep-research` 하네스) → 정본 리포트 → 캐논 거버넌스 spec → 단계 구현. **그 전엔 코드 착수 금지**(설계가 캐논에 종속).
+- 캐논 거버넌스 정해진 뒤에야 셸 골격(1단계: 3모드+싱크 콘솔) 구현이 의미. 부품 존재 — PLAY=`DiveDesk`·WRITE=`FloatingEditor`·PLAN=`FloatingDataWorkspace`(재작성 아님, 한 셸로 묶기).
+
+### 손대지 말 것
+- 코드 0 변경. Dive X 루프·기존 floating 구조 무변경 기준 유지.
+- 리서치 launch는 사용자 신호 후. 지금 임의 launch 금지.
+
+---
+
+## 2026-06-30 — dogfooding 구동만, 다음 세션 = Story X ↔ Dive X 통합
+
+> 코드 변경 0. 사용자가 `?stage=dive`로 직접 dogfooding하려고 dev 서버만 띄움. 직전 세션 DiveDesk 상태(한서연 지하철 첫사랑 장면)가 localStorage로 복원돼 그대로 이어짐.
+
+### 한 것
+- `preview_start`(포트 5173)로 구동·`?stage=dive` 진입 확인. 콘솔 0·서버 에러 0. 기능 변경 없음.
+
+### 다음 한 가지 (사용자 지정 — 다음 세션 핵심, 두 갈래를 한 묶음으로)
+사용자 결정 — 아래 **(1) 통합**과 **(2) 미니멀 셸 개편**을 다음 세션에 함께 다룬다(둘 다 네비게이션/표면 동선을 건드려 맞물림). 착수 = brainstorming으로 통합 범위 + 셸 분담부터 좁히고 → spec → 구현.
+
+**(1) Story X ↔ Dive X 유기적 통합**
+- 지금은 둘이 같은 데이터 모델(scene→session.scene·cast→project.characters, 응결=`chapterFromDraftPayload`→SeriesProject)을 공유하도록 토대만 깔린 상태(progress.md "융합 토대"·2026-06-28 딥리서치 "데이터 모델 동일"). 미해결 = **두 표면을 하나의 작품 흐름으로 잇는 UX/네비게이션** — Dive에서 응결한 회차가 Story X 에디터·캐논·바이블에 자연스럽게 나타나고, Story X에서 만든 작품으로 Dive에 진입하는 왕복 동선. 좁힐 질문 — 어느 표면이 진입점인지·프로젝트 전환 모델·중복 캐논 처리.
+
+**(2) epilogue.page 풍 미니멀 셸 개편 (2026-06-30 사용자 제안)**
+- 참조 — `https://epilogue.page/web/`. 좌측 아이콘 사이드바(누르면 상세 펼침)·중앙 상단 모드 토글(WRITING/PLANNING처럼)·중앙은 텍스트 집중·하단 작게 문단/글자수·우측 작게 저장 상태.
+- 사용자 구체안 — **중앙 토글 좌우에 아이콘 배치 + 중앙 텍스트 집중 + 하단 문단·글자수 + 우측 저장 상태.** 이 셸에 기존 기능을 수납.
+- **검토 결론 — 전면 재작성 아님.** 현 FloatingEditor도 이미 `nav.dock left`(좌측 아이콘 독) + `togglePanel`(누르면 패널 펼침) 구조라 골격이 epilogue와 동일. 좌측 독 아이콘 현재 6개 = 회차·곡선·상태·지표·작가실·집중(`FloatingEditor.tsx:695~754`). 메타 줄(문단·글자수 `89 words` 류·저장 상태)도 부분 존재. → **셸 미니멀화 + 메타 재배치** 수준.
+- **쟁점 3 (brainstorming에서 결정할 것)** — ① 기능 밀도 수납: "좌측 아이콘 레일"과 "상단 토글 좌우 아이콘"의 **역할 분담**(겹침 위험). 어떤 기능이 레일, 어떤 게 상단 빠른 액션인지. ② 메타 줄 정리(하단 문단/글자수·우측 저장). ③ **⚠️ 미니멀 vs 연속성 노출** — CLAUDE.md "충돌은 드러낸다" 원칙상, 미니멀 셸에서도 검토 위험·캐논 충돌 배지가 사라지면 안 됨. 미니멀화하면서 위험 가시성 유지가 하드 제약.
+- UI 디자인이라 다음 세션 brainstorming에서 **visual companion(브라우저 목업) 제안** 권장.
+
+### 진입 컨텍스트
+- progress.md "Dive X" 절들 + 본 파일 2026-06-27~29 인계 3건 + memory `dive-x-track`. 셸 개편은 progress.md "편집기 재설계: 방향 C 떠 있는 작업실" 절 + `src/components/FloatingEditor.tsx`.
+
+### 손대지 말 것
+- Dive X 루프(scene-showrunner·arc·응결·choices·제안 엔진 보조) 전부 무변경 기준. 통합은 **잇는 작업**이지 기존 루프 재작성이 아님.
+- 셸 개편도 재작성이 아니라 기존 floating 구조 위 재배치 — `.fc-*` 스코프 CSS·테스트 보존.
+- Dive 작업 브랜치들 origin 미푸시 상태 유지(사용자 요청 시 push). 최신 자유 서술 진입은 PR #6으로 main 머지됨.
+
+---
+
 ## 2026-06-29 — Dive X 자유 서술 진입 완료
 
 > 브랜치 `feat/dive-x-freeform-intake`(main에서 분기, origin 미푸시). 제안 엔진 dogfooding 학습("카드가 자유도·재미를 죽인다")에서 앞문을 대화형으로 교체.

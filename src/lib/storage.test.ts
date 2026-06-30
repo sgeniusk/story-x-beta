@@ -14,6 +14,7 @@ import {
 } from './storage';
 import { createSeedProject, createEmptyProject } from './storyEngine';
 import { createDiveSession } from './diveSession';
+import { importanceBand } from './canonImportance';
 
 describe('project snapshots', () => {
   it('builds a snapshot capturing episode, counts, and the project', () => {
@@ -193,5 +194,45 @@ describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
     expect(hasMeaningfulOnboardingInput({ ...base, freewriteText: '한 줄' })).toBe(true);
     expect(hasMeaningfulOnboardingInput({ ...base, intakeAnswers: { q1: 'a' } })).toBe(true);
     expect(hasMeaningfulOnboardingInput({ ...base, contractEnding: '자백으로 끝난다' })).toBe(true);
+  });
+});
+
+function makeLegacyProject() {
+  return createSeedProject();
+}
+
+describe('normalizeProject — CanonFact MVP-0 백필', () => {
+  const legacyProject = () => ({
+    ...makeLegacyProject(),
+    openThreads: ['정우는 손님의 정체를 알까'],
+    canonFacts: [
+      { id: 'f1', episode: 1, owner: 'plot', statement: '정우는 보건지소 직원이다' },
+      { id: 'f2', episode: 1, owner: 'character', statement: '도아는 정우의 딸이다', alwaysInclude: true },
+    ],
+  });
+
+  it('reveal 없으면 revealed 로 백필', () => {
+    const r = normalizeProject(legacyProject() as any);
+    expect(r.canonFacts.every((f) => f.reveal === 'revealed')).toBe(true);
+  });
+  it('participants 를 statement 에서 도출', () => {
+    const r = normalizeProject(legacyProject() as any);
+    const f1 = r.canonFacts.find((f) => f.id === 'f1')!;
+    expect(f1.participants).toContain('정우');
+  });
+  it('alwaysInclude 핀은 importance 앵커(0.9)로', () => {
+    const r = normalizeProject(legacyProject() as any);
+    const f2 = r.canonFacts.find((f) => f.id === 'f2')!;
+    expect(importanceBand(f2.importance!)).toBe('anchor');
+  });
+  it('evidence 없으면 chapter 출처로 백필', () => {
+    const r = normalizeProject(legacyProject() as any);
+    expect(r.canonFacts[0].evidence?.sourceType).toBe('chapter');
+  });
+  it('기존 importance 가 있으면 보존', () => {
+    const p = legacyProject() as any;
+    p.canonFacts[0].importance = 0.5;
+    const r = normalizeProject(p);
+    expect(r.canonFacts.find((f: any) => f.id === 'f1')!.importance).toBe(0.5);
   });
 });
