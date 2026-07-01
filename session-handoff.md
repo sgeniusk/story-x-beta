@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-07-01 (2차) — MVP-1 PLAY 런타임 거버넌스 구현 완료 (브랜치 미머지)
+
+> Canon Core 위 PLAY(DiveDesk) 런타임 검증 슬라이스. spec `docs/superpowers/specs/2026-07-01-mvp1-play-runtime-governance-design.md` · 계획 `docs/superpowers/plans/2026-07-01-mvp1-play-runtime-governance.md` · 정본 §5·§7·§14. progress.md "MVP-1 PLAY 런타임 거버넌스" 절이 상세.
+
+### 한 것
+- brainstorming(visual companion) 4결정(D1 결정론 판정·D2 앵커=캐논화 차단·D3 여백 거터 배지·D4 PLAY+차단) → spec → writing-plans → executing-plans 인라인 TDD 7태스크.
+- 신규 순수 `playRuntimeValidator.ts`(`validatePlayTurn`). 밴드별 자체 미니 contract + `classifyCanonChange` **재사용**(새 대립 로직 0). `factBand`·`DiveMessage.verdict?`·`appendMessage(…, verdict?)`·`buildCondenseTranscript`·DiveDesk 배선(거터 마커·하단 카운트).
+- **★ reveal형 앵커 위반 보강** — 앞머리 마커("사실 X는 죽었어")가 subject 추출을 흔들어 대립 미탐 → 벗긴 변형도 검사(미스터리 하드 차단 실작동).
+- **검증** — `npm test` 721 녹색·build 성공·라이브 `?stage=dive` 콘솔 0·거터 CSS 실측(#f87171 3px). 6커밋(`5cb57af` spec·`8c88581` plan·factBand·검증기2·세션·배선·거터/CSS).
+
+### 손대지 말 것 (불변식)
+- **앵커 차단 = 캐논화만 막지 화면 안 막음** — `blocksCanonization` 턴은 응결 transcript에서만 제외(`buildCondenseTranscript`). 대화·렌더는 그대로(player-first). 강제 재생성 없음.
+- **의외 후보 = 미탐 선호** — `REVEAL_MARKERS` 화이트리스트 좁게 유지. 잘못된 ✦가 몰입을 깬다. 넓히지 말 것.
+- **재사용 원칙** — 대립 검출은 `continuityContract.classifyCanonChange` 한 곳. 새 opposition 패턴 추가 금지.
+- **거터는 본문 무접촉** — `.dx-has-gutter::before` 여백 세로선만. 본문 세그먼트 렌더 변경 금지.
+
+### 다음 한 가지
+- **머지 결정 대기** — `feat/mvp1-play-runtime-governance`(미머지, origin 미푸시). 사용자 확인 후 PR/머지.
+- 다음 슬라이스 후보 — **MVP-2 Consolidation Studio**(per-item 승격/이번만/수정 + LLM 응결 검증기 ConStory 4단) · 또는 융합 셸(PLAY/WRITE/PLAN + 싱크 콘솔). 후속 spec — 크래프트 위험1(내면=living 티어)·위험4(검사기 사실모순 vs 행동전복)·번역 투 게이트.
+
+---
+
 ## 2026-07-01 — Canon Core (MVP-0) 구현 완료 + main 머지 (PR #7, 머지·푸시 완료)
 
 > 캐논 거버넌스 첫 슬라이스를 서브에이전트 주도 TDD 로 구현. spec `docs/superpowers/specs/2026-06-30-canon-core-mvp0-design.md` · 계획 `docs/superpowers/plans/2026-06-30-canon-core-mvp0.md` · 정본 `docs/research/2026-06-30-canon-governance.md`. progress.md "Canon Core (MVP-0)" 절이 상세 정본.

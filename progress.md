@@ -4,7 +4,17 @@
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-01)
-`npm test` **708 통과**(69 파일) · `npm run build`(tsc+vite) 성공. `feat/canon-core-mvp0` → **main 머지·푸시 완료**(PR #7, 2026-07-01).
+`npm test` **721 통과**(70 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0)는 `feat/canon-core-mvp0` → main 머지·푸시(PR #7). **MVP-1 PLAY 런타임 거버넌스**는 `feat/mvp1-play-runtime-governance`(미머지) 6커밋.
+
+## 활성 트랙 — MVP-1 PLAY 런타임 거버넌스 (`done` · 2026-07-01, 브랜치 `feat/mvp1-play-runtime-governance` 미머지)
+
+Canon Core(중요도 밴드·selectCanonForContext) 위에 PLAY(DiveDesk) 런타임 검증을 얹는 슬라이스. 받은 답을 렌더 직전 **결정론으로 검사** — 앵커 위반=캐논화 차단·중=경고·소프트 일탈="의외 전개 후보" 배지(정본 §5·§7, 크래프트 §14). player-first(Q2) 몰입 무손상이 하드 제약. spec `docs/superpowers/specs/2026-07-01-mvp1-play-runtime-governance-design.md`, 계획 `docs/superpowers/plans/2026-07-01-mvp1-play-runtime-governance.md`. brainstorming(visual companion)으로 4결정(D1 판정엔진=결정론·D2 앵커=캐논화 차단·D3 배지=여백 거터·D4 범위=PLAY+차단) 확정 후 executing-plans 인라인 TDD 7태스크.
+- **구현** — 신규 순수 `playRuntimeValidator.ts`(`validatePlayTurn(reply, canonFacts, openThreads)→verdict{conflicts·surpriseCandidates·blocksCanonization}`). 밴드별 자체 미니 `ContinuityContract`(anchor→hardCanon·major→livingState·soft→softSignals) + `classifyCanonChange` **재사용**(새 대립 로직 0) · `factBand` 헬퍼 신설 · `DiveMessage.verdict?`·`appendMessage` verdict 인자 · `buildCondenseTranscript`(앵커 위반 턴 응결 제외) · DiveDesk 배선(검증 호출·거터 마커·하단 앰비언트 카운트).
+- **★ reveal형 앵커 위반 보강(계획 초과)** — 앞머리 마커("사실 X는 죽었어")가 subject 추출을 흔들어 대립을 놓치는 미탐을 발견(실제 `classifyCanonChange` 반환 로그로 확인). 벗긴 변형도 함께 검사해 미스터리 reveal형 하드 차단을 실작동시킴. 문중 마커는 원문 그대로 이미 잡힘.
+- **의외 후보 = 보수적 휴리스틱(미탐 선호)** — reveal 마커 화이트리스트 + 캐논 엔티티/열린 떡밥 접촉 + 충돌 아님. 잘못된 ✦가 몰입을 깨므로 과탐보다 미탐.
+- **UI** — `.dx-turn` 왼쪽 거터 세로선(anchor red>major amber>surprise lime, 본문 무접촉·탭 title peek) + 작성창 위 앰비언트 카운트(응결 온램프). `.dx-*` 다크 스코프.
+- **검증** — `npm test` 721 녹색·build 성공·신규 테스트(playRuntimeValidator 8·diveSession +2·diveDesk +2·canonImportance +1). 라이브 — `?stage=dive` 콘솔 0, 거터 CSS 실측(`.dx-gutter-anchor::before` = 3px `#f87171`). 런칭 게이트 = 앵커 모순 대사 `blocksCanonization`으로 응결 transcript 제외.
+- **범위 밖(MVP-2)** — per-item 승격/이번만/수정 UX · LLM 응결 검증기(ConStory 4단) · major 반전 cause/cost 게이팅. 선택적 수동 "다시" 버튼은 YAGNI 보류.
 
 ## 활성 트랙 — Canon Core (MVP-0) (`done` · 2026-07-01, **main 머지 완료** PR #7)
 
