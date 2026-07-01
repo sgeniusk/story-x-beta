@@ -173,3 +173,16 @@ export function dedupePromotions(
   }
   return out;
 }
+
+// 승격 결정된 ✦ 후보를 edits 반영·dedup 후 캐논 팩트(owner=plot)로. reveal/importance는 normalize 백필.
+export function buildPromotedFacts(
+  surprises: DeviationCandidate[],
+  decisions: Record<string, 'skip' | 'promote'>,
+  edits: Record<string, string>,
+  existing: Array<{ statement: string }>
+): Array<{ owner: 'plot'; statement: string }> {
+  const chosen = surprises
+    .filter((c) => decisions[c.id] === 'promote')
+    .map((c) => edits[c.id] ?? c.snippet);
+  return dedupePromotions(chosen, existing).map((statement) => ({ owner: 'plot' as const, statement }));
+}

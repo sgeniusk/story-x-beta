@@ -1,6 +1,6 @@
 // PLAY(DiveDesk) 런타임 검증기 단위 테스트. 정본 §5·§7 · spec 2026-07-01.
 import { describe, expect, it } from 'vitest';
-import { validatePlayTurn, deriveDeviationCandidates, dedupePromotions } from './playRuntimeValidator';
+import { validatePlayTurn, deriveDeviationCandidates, dedupePromotions, buildPromotedFacts } from './playRuntimeValidator';
 import { createDiveSession, appendMessage } from './diveSession';
 import type { CanonFact } from './storyEngine';
 
@@ -114,5 +114,36 @@ describe('dedupePromotions — LLM 캐논과 중복 제거(문자열 근접)', (
 
   it('빈 문자열은 버린다', () => {
     expect(dedupePromotions(['   ', '실체'], [])).toEqual(['실체']);
+  });
+});
+
+describe('buildPromotedFacts — 승격 결정 → 캐논 팩트', () => {
+  const surprises = [
+    { id: 's1', snippet: '사실 나도 거기 있었어' },
+    { id: 's2', snippet: '도현은 형사다' }
+  ];
+
+  it('promote된 것만, edits 우선, dedup 적용', () => {
+    const out = buildPromotedFacts(
+      surprises,
+      { s1: 'promote', s2: 'skip' },
+      { s1: '주인공은 창고에 있었다' },
+      []
+    );
+    expect(out).toEqual([{ owner: 'plot', statement: '주인공은 창고에 있었다' }]);
+  });
+
+  it('기존 LLM 캐논과 겹치면 제외', () => {
+    const out = buildPromotedFacts(
+      surprises,
+      { s1: 'promote' },
+      {},
+      [{ statement: '사실 나도 거기 있었어' }]
+    );
+    expect(out).toEqual([]);
+  });
+
+  it('promote 없으면 빈 배열', () => {
+    expect(buildPromotedFacts(surprises, {}, {}, [])).toEqual([]);
   });
 });
