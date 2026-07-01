@@ -8,12 +8,12 @@ import {
   CONDENSE_KEEP_RECENT,
   appendMessage,
   shouldSuggestCondense,
-  buildTranscript,
+  buildCondenseTranscript,
   buildRecentDialogue,
-  selectCondenseSpan,
   applyCondenseResult,
   parseSceneSegments
 } from '../lib/diveSession';
+import { validatePlayTurn, type PlayTurnVerdict } from '../lib/playRuntimeValidator';
 import { requestDiveChat, requestDiveCondense, requestDiveShowrunner, type DiveCondensePayload } from '../lib/diveClient';
 import { DIVE_SEED_CHARACTERS } from '../lib/diveSeedCharacters';
 
@@ -66,6 +66,17 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
     return c?.name ?? '상대';
   }, [project, session.characterId]);
   const suggest = shouldSuggestCondense(session);
+  const turnCounts = useMemo(() => {
+    let surprise = 0, anchor = 0, major = 0;
+    for (const m of session.chatBuffer) {
+      const v = m.verdict;
+      if (!v) continue;
+      surprise += v.surpriseCandidates.length;
+      anchor += v.conflicts.filter((c) => c.band === 'anchor').length;
+      major += v.conflicts.filter((c) => c.band === 'major').length;
+    }
+    return { surprise, anchor, major };
+  }, [session.chatBuffer]);
 
   async function send(textArg?: string) {
     const userText = (textArg ?? input).trim();
@@ -84,7 +95,8 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
         dialogue: buildRecentDialogue(next),
         query: userText
       });
-      next = appendMessage(next, 'character', res.reply || '…');
+      const verdict = validatePlayTurn(res.reply || '', project.canonFacts, project.openThreads);
+      next = appendMessage(next, 'character', res.reply || '…', verdict);
       if (res.arc) next = { ...next, arc: res.arc };
       onChange(next, project);
       setChoices(res.choices ?? []);
@@ -103,14 +115,13 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
     setCondensing(true);
     setChoices([]);
     try {
-      const { condense: span } = selectCondenseSpan(session);
       const episode = project.chapters.length + 1;
       const payload = await requestDiveCondense({
         character: card,
         scene,
         arc: JSON.stringify(session.arc ?? {}),
         context: buildProjectContextDigest(project),
-        transcript: buildTranscript(span),
+        transcript: buildCondenseTranscript(session),
         episode
       });
       const leak = inspectLeak(payload.prose);
@@ -298,6 +309,19 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
         <div className="dx-status">
           {condensing ? '이야기를 한 회차로 응결하는 중… 수십 초 걸릴 수 있어요.' : srBusy ? '쇼러너가 연출 중…' : `${charName} 입력 중…`}
         </div>
+      )}
+
+      {(turnCounts.surprise > 0 || turnCounts.anchor > 0 || turnCounts.major > 0) && (
+        <button
+          className="dx-ambient"
+          onClick={condense}
+          disabled={busy || pending !== null || session.chatBuffer.length <= CONDENSE_KEEP_RECENT}
+        >
+          {turnCounts.surprise > 0 && <span className="dx-amb-surprise">✦ 의외 전개 후보 {turnCounts.surprise}</span>}
+          {turnCounts.major > 0 && <span className="dx-amb-major">🟡 경고 {turnCounts.major}</span>}
+          {turnCounts.anchor > 0 && <span className="dx-amb-anchor">🔴 정본 충돌 {turnCounts.anchor}</span>}
+          <span className="dx-amb-tail">응결 때 정리 →</span>
+        </button>
       )}
 
       <div className="dx-composer">
