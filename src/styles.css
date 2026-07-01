@@ -11489,6 +11489,15 @@ body {
 .dx-devcard-thread { font-size: 11px; color: #8a8f98; }
 .dx-devcard-toggle { background: transparent; color: #a8b0ba; border: 1px solid #3a3d45; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; }
 .dx-devcard-toggle.is-on { background: rgba(163,230,53,0.15); color: #bef264; border-color: rgba(163,230,53,0.5); }
+/* 슬라이스 B — 정밀 검토(LLM) findings 경고 카드 */
+.dx-findings { margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
+.dx-findings-clear { font-size: 12px; color: #7CFF6B; }
+.dx-finding { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; font-size: 12px; border-radius: 8px; padding: 7px 10px; }
+.dx-finding-high { background: rgba(248,113,113,0.1); color: #fca5a5; }
+.dx-finding-low { background: rgba(251,191,36,0.08); color: #fbbf24; }
+.dx-finding-claim { color: #e8e8ee; font-weight: 600; }
+.dx-finding-vs { color: #a8b0ba; }
+.dx-finding-ev { flex-basis: 100%; color: #8a8f98; }
 .dx-status { color: #9aa0aa; font-size: 13px; padding: 2px 4px 6px; }
 .dx-composer { display: flex; gap: 8px; align-items: flex-end; position: sticky; bottom: 0; padding: 10px 0; background: #0b0c0e; }
 .dx-input { flex: 1; padding: 11px 13px; border-radius: 8px; border: 1px solid #3a3c43; background: #16171a; color: #f2f3f7; font-size: 14px; font-family: inherit; line-height: 1.5; resize: none; field-sizing: content; min-height: 46px; max-height: 160px; }
