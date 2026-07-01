@@ -2,7 +2,7 @@
 import type { CanonFact } from './storyEngine';
 import type { ContinuityContract } from './continuityContract';
 import { classifyCanonChange } from './continuityContract';
-import { parseSceneSegments } from './diveSession';
+import { parseSceneSegments, selectCondenseSpan, type DiveSession } from './diveSession';
 import { factBand, deriveParticipants } from './canonImportance';
 
 export interface PlayConflict {
@@ -19,6 +19,16 @@ export interface PlayTurnVerdict {
   conflicts: PlayConflict[];
   surpriseCandidates: PlaySurpriseCandidate[];
   blocksCanonization: boolean;
+}
+
+export interface DeviationCandidate {
+  id: string;
+  snippet: string;
+  relatedThread?: string;
+}
+export interface ConsolidationDeviations {
+  surprises: DeviationCandidate[];
+  conflictCounts: { anchor: number; major: number };
 }
 
 // 밴드별 fact.statement를 담은 미니 contract + statement→factId 역인덱스.
@@ -122,4 +132,24 @@ export function validatePlayTurn(
     surpriseCandidates,
     blocksCanonization: conflicts.some((c) => c.band === 'anchor')
   };
+}
+
+// 응결 대상 span의 메시지 verdict에서 결정 대상(✦)과 충돌 카운트를 모은다.
+export function deriveDeviationCandidates(session: DiveSession): ConsolidationDeviations {
+  const { condense } = selectCondenseSpan(session);
+  const surprises: DeviationCandidate[] = [];
+  let anchor = 0;
+  let major = 0;
+  for (const m of condense) {
+    const v = m.verdict;
+    if (!v) continue;
+    v.surpriseCandidates.forEach((s, i) =>
+      surprises.push({ id: `${m.id}-s${i}`, snippet: s.snippet, relatedThread: s.relatedThread })
+    );
+    for (const c of v.conflicts) {
+      if (c.band === 'anchor') anchor++;
+      else if (c.band === 'major') major++;
+    }
+  }
+  return { surprises, conflictCounts: { anchor, major } };
 }

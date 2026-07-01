@@ -1,6 +1,7 @@
 // PLAY(DiveDesk) 런타임 검증기 단위 테스트. 정본 §5·§7 · spec 2026-07-01.
 import { describe, expect, it } from 'vitest';
-import { validatePlayTurn } from './playRuntimeValidator';
+import { validatePlayTurn, deriveDeviationCandidates } from './playRuntimeValidator';
+import { createDiveSession, appendMessage } from './diveSession';
 import type { CanonFact } from './storyEngine';
 
 const fact = (over: Partial<CanonFact>): CanonFact => ({
@@ -65,5 +66,36 @@ describe('validatePlayTurn — 의외 전개 후보', () => {
     const v = validatePlayTurn('사실 서준은 죽었어.', facts, []);
     expect(v.conflicts.some((c) => c.band === 'anchor')).toBe(true);
     expect(v.surpriseCandidates).toEqual([]);
+  });
+});
+
+describe('deriveDeviationCandidates — 응결 span의 일탈 수집', () => {
+  it('span의 ✦ 후보는 카드로, 🔴/🟡는 카운트로', () => {
+    let s = createDiveSession('c', 'p');
+    s = appendMessage(s, 'user', '무슨 일');
+    s = appendMessage(s, 'character', '사실 나도 거기 있었어.', {
+      conflicts: [{ factId: 'a1', band: 'anchor', factStatement: '서준은 살아 있다', snippet: 'x' }],
+      surpriseCandidates: [{ snippet: '사실 나도 거기 있었어.', relatedThread: '그날 밤' }],
+      blocksCanonization: true
+    });
+    s = appendMessage(s, 'user', '정말?');
+    s = appendMessage(s, 'character', '응.');
+    const d = deriveDeviationCandidates(s);
+    expect(d.surprises).toHaveLength(1);
+    expect(d.surprises[0].snippet).toBe('사실 나도 거기 있었어.');
+    expect(d.surprises[0].relatedThread).toBe('그날 밤');
+    expect(d.conflictCounts.anchor).toBe(1);
+    expect(d.conflictCounts.major).toBe(0);
+  });
+
+  it('verdict 없는(구버전) 메시지가 섞여도 안전', () => {
+    let s = createDiveSession('c', 'p');
+    s = appendMessage(s, 'user', 'a');
+    s = appendMessage(s, 'character', 'b');
+    s = appendMessage(s, 'user', 'c');
+    s = appendMessage(s, 'character', 'd');
+    const d = deriveDeviationCandidates(s);
+    expect(d.surprises).toEqual([]);
+    expect(d.conflictCounts).toEqual({ anchor: 0, major: 0 });
   });
 });
