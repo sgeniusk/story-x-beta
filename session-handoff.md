@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-07-01 (4차) — 슬라이스 B: LLM 응결 검증기 구현 완료 (브랜치 미머지)
+
+> 결정론이 놓친 다중 턴·의미적 모순을 응결 승인 전 opt-in LLM 대조로. spec `docs/superpowers/specs/2026-07-01-mvp2-llm-consolidation-validator-design.md` · 계획 `docs/superpowers/plans/2026-07-01-mvp2-llm-consolidation-validator.md` · 정본 §7·§12.2. progress.md "슬라이스 B" 절이 상세.
+
+### 한 것
+- brainstorming 4결정(D1 opt-in 버튼·D2 모순만·D3 경고 게이트·D4 storyxBridge 재사용) → spec → writing-plans → executing-plans 인라인 TDD 5태스크.
+- `dive-consolidate` LLM 엔드포인트(storyx.mjs + vite 브리지, dive-condense 동형·mock 폴백) · `normalizeFindings`·`requestDiveConsolidate`(diveClient) · 신규 `ConsolidationFindings.tsx` · DiveDesk "🔍 정밀 검토" 버튼·findings/reviewing state.
+- **검증** — `npm test` 737 녹색·build 성공·mock CLI·라이브 콘솔 0·카드 CSS 실측(#fca5a5·#c4b6ff). 7커밋(spec·plan·엔드포인트·client·컴포넌트·배선·docs).
+
+### 손대지 말 것 (불변식)
+- **정밀 검토는 opt-in** — approve 다이얼로그 버튼으로만 LLM 1회. 응결마다 자동 호출로 바꾸면 player-first·비용 훼손.
+- **findings는 경고일 뿐** — 강제 차단 아님. 플레이어가 보고 승인/거절 판단. per-finding 자동수정·retcon은 별도 슬라이스.
+- **프롬프트 "회수 약속 제외"** — 의도적 복선을 모순으로 오탐하지 않도록 정본 §12.1 원리 유지.
+- **엔드포인트는 storyxBridge 패턴** — dive-condense와 동형. mock 폴백 유지(테스트·오프라인 안전).
+
+### 다음 한 가지
+- **머지 결정 대기** — `feat/mvp2-llm-consolidation-validator`(미머지, origin 미푸시). 사용자 확인 후 PR/머지.
+- 다음 슬라이스(차례대로) — **🔴 retcon 경로**(충돌을 캐논으로 되돌리기, 승인형) → **융합 셸**(PLAY/WRITE/PLAN + 싱크 콘솔) → ArcDigest/Growth/Relation Snapshot. 후속 — missed-reveal/의미 dedup·번역 투 게이트·크래프트 위험1(내면=living)·위험4.
+
+---
+
 ## 2026-07-01 (3차) — MVP-2 응결 스튜디오(슬라이스 A-i) 구현 완료 (브랜치 미머지)
 
 > MVP-1 ✦ 의외후보를 응결 순간에 캐논 결정으로 닫는 첫 조각. spec `docs/superpowers/specs/2026-07-01-mvp2-consolidation-studio-design.md` · 계획 `docs/superpowers/plans/2026-07-01-mvp2-consolidation-studio.md` · 정본 §7·§8. progress.md "MVP-2 응결 스튜디오" 절이 상세.
