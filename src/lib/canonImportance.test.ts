@@ -1,6 +1,6 @@
 // 캐논 중요도·관계자·관련성 검색 순수 함수 단위 테스트. 정본 §4·§6·§14.
 import { describe, it, expect } from 'vitest';
-import { importanceBand, deriveParticipants, deriveImportance, selectCanonForContext } from './canonImportance';
+import { importanceBand, factBand, deriveParticipants, deriveImportance, selectCanonForContext } from './canonImportance';
 import type { CanonFact } from './storyEngine';
 
 describe('importanceBand — 중요도 0~1 → 3밴드 (정본 §4)', () => {
@@ -103,5 +103,17 @@ describe('selectCanonForContext — alwaysInclude 직접 인정(세션 중 토�
     const r = selectCanonForContext([...fillers, pinned], { participants: [], openThreads: [] }, 10);
     expect(r.selected.map((f) => f.id)).toContain('pin');
     expect(r.anchorCount).toBe(1);
+  });
+});
+
+describe('factBand — fact 하나를 importance 밴드로 (scoreOf 규칙 공유)', () => {
+  it('importance/alwaysInclude로 밴드를 분류한다', () => {
+    expect(factBand(fact({ importance: 0.9 }))).toBe('anchor');
+    expect(factBand(fact({ importance: 0.6 }))).toBe('major');
+    expect(factBand(fact({ importance: 0.2 }))).toBe('soft');
+    // importance 미설정 + alwaysInclude → 0.9 앵커(scoreOf와 동일 규칙)
+    expect(factBand(fact({ alwaysInclude: true }))).toBe('anchor');
+    // 아무 신호 없으면 soft
+    expect(factBand(fact({}))).toBe('soft');
   });
 });
