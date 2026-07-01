@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-07-01 (5차) — 🔴 retcon 경로 구현 완료 (브랜치 미머지)
+
+> 응결 스튜디오 충돌을 정본 교체로 승격. spec `docs/superpowers/specs/2026-07-01-canon-retcon-path-design.md`. progress.md "🔴 retcon 경로" 절이 상세. **이 세션부터 사용자가 `gh pr merge` 자율 권한 부여(settings.local.json) → 슬라이스 머지 자동.**
+
+### 한 것
+- `DeviationConflict`·conflicts 수집·`buildRetconUpdates`(playRuntimeValidator) · `applyRetcons`(storyEngine, 제자리 교체·불변) · DeviationReview retcon 카드 · DiveDesk approve 배선. 인라인 TDD 5태스크.
+- **검증** — `npm test` 741 녹색·build 성공·라이브 콘솔 0·CSS 실측. 6커밋(spec·충돌수집·applyRetcons·카드·배선·docs).
+
+### 손대지 말 것 (불변식)
+- **retcon = 제자리 교체** — 옛 fact statement만 바꿈(factId/importance/reveal 보존). 모순 두 캐논 공존 금지. 옛 fact 삭제 아님.
+- **기본 = 버리기** — retcon은 명시 액션만(승인형). 실수로 정본 뒤집기 방지. 예산 상한은 후속.
+- **factId 없는 충돌은 retcon 불가** — derive에서 conflicts 목록 제외(교체 대상 없음). 배너 카운트로만.
+
+### 다음 한 가지 (차례대로)
+- **머지** — `feat/canon-retcon-path`. 자율 권한 있으니 바로 머지 가능.
+- 다음 슬라이스 — **융합 셸**(PLAY/WRITE/PLAN + 싱크 콘솔, ★UX 큼 — brainstorming visual companion 권장·사용자 입력 필요) → ArcDigest/Growth/Relation Snapshot. 후속 — retcon 예산·finding retcon·missed-reveal/의미 dedup·번역 투 게이트.
+
+---
+
 ## 2026-07-01 (4차) — 슬라이스 B: LLM 응결 검증기 구현 완료 (브랜치 미머지)
 
 > 결정론이 놓친 다중 턴·의미적 모순을 응결 승인 전 opt-in LLM 대조로. spec `docs/superpowers/specs/2026-07-01-mvp2-llm-consolidation-validator-design.md` · 계획 `docs/superpowers/plans/2026-07-01-mvp2-llm-consolidation-validator.md` · 정본 §7·§12.2. progress.md "슬라이스 B" 절이 상세.
