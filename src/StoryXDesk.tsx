@@ -560,6 +560,8 @@ interface StoryXDeskProps {
   onOpenLanding?: () => void;
   /** 출간 버튼을 누르면 4파트 중 마지막 퍼블리시 stage 로 빠진다. */
   onOpenPublish?: () => void;
+  /** 융합 셸 진입 뷰 — WRITE=editor(원고)·PLAN=data(바이블). 없으면 editor(현행). */
+  initialStudioView?: 'editor' | 'data';
 }
 
 // B2 — 활동일 기록 헬퍼. todayStr 는 작가 로컬 '오늘'(UI 레이어라 Date 허용),
@@ -584,7 +586,8 @@ export function StoryXDesk({
   initialDraftPayload = null,
   onOpenProjects,
   onOpenLanding,
-  onOpenPublish
+  onOpenPublish,
+  initialStudioView = 'editor'
 }: StoryXDeskProps) {
   // 기본 회차 의도는 빈 값 — 의도 메모를 비워두면 produceEpisode 가 캐논 digest 만으로 다음 회차를 만든다.
   // 데모 장르 문구를 박으면 사용자가 안 건드릴 때 다음 회차 intent(freewrite)로 새어 오염된다 (P3, #2 로판 2화 "용사와 외계인" 사고).
@@ -624,7 +627,7 @@ export function StoryXDesk({
   const [latestChapter, setLatestChapter] = useState<Chapter | null>(
     project.chapters.length > 0 ? project.chapters[project.chapters.length - 1] : null
   );
-  const [activeTrack, setActiveTrack] = useState<DeskTrack>('draft');
+  const [activeTrack, setActiveTrack] = useState<DeskTrack>(initialStudioView === 'data' ? 'bible' : 'draft');
   const [isWorkbenchFading, setIsWorkbenchFading] = useState(false);
   const [isIntentOpen, setIsIntentOpen] = useState(true);
   // 데이터 모드 — 가운데 캔버스가 보여줄 것. 기본은 인물 관계도. 바이블 작업장 진입점도 여기로 표현한다.

@@ -3,8 +3,15 @@
 > Last Updated: 2026-06-27 · Branch: `feat/dive-x-arc`(미머지) (**Dive X 진전 엔진(묶음 C-1) 구현 완료. 쇼러너가 StoryArc(극적질문·긴장·다음전개)를 들고 매 턴 진전·🎯 표시·⏭전개 버튼·dive-condense arc 페이오프. dogfooding "진전 없음(큰 흠)" 직접 해소. 가벼운 LLM-유지 arc(추가 호출 0). 이전 — 1차(PR #4·main)·2차 장면+쇼러너(PR #5·local main)·3차 선택지+계속+자유응결(묶음 A·local main). 묶음 C-2(능동 멀티캐릭터)·묶음 B(되돌리기·캐논 god-편집·과금) 후속 대기. 다음 — Dive X arc 머지 결정 + dogfooding + C-2/B + 품질·비용 로드맵·A-6 장편 기억.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 최근 검증 (2026-07-01)
-`npm test` **741 통과**(72 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) main(PR #7). MVP-1 PLAY 거버넌스 main(PR #9). MVP-2 응결 스튜디오(A-i) main(PR #10). 슬라이스 B(LLM 응결 검증기) main(PR #11). **🔴 retcon 경로**는 `feat/canon-retcon-path`(미머지) 4커밋.
+## 최근 검증 (2026-07-02)
+`npm test` **743 통과**(73 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B PR #11 · 🔴 retcon 경로 PR #12 (전부 main). **융합 셸 슬라이스 A**는 `feat/fusion-shell-mode-toggle`(미머지) 5커밋.
+
+## 활성 트랙 — 융합 셸 슬라이스 A: 3모드 토글 (`done` · 2026-07-02, 브랜치 `feat/fusion-shell-mode-toggle` 미머지)
+
+흩어진 `?stage=dive`(PLAY)·`?stage=editor`(WRITE/PLAN) 이동을 상단 **PLAY/WRITE/PLAN 토글**로 통합하고, 세 표면이 `storageKey` 하나를 단일 project 소스로 공유하게 만드는 융합 첫 뼈대. 재작성 아니라 기존 부품(DiveDesk·StoryXDesk)을 한 셸로 감쌈. spec `docs/superpowers/specs/2026-07-02-fusion-shell-mode-toggle-design.md`. brainstorming(visual companion)으로 슬라이스 범위 A 확정(싱크 콘솔은 다음).
+- **구현** — 신규 순수 `WorkspaceModeBar`(3버튼 토글) · StoryXDesk `initialStudioView` 프롭(WRITE=draft·PLAN=bible 착지, `key={studioView}`로 remount 재시드) · App `studioView` state + `selectWorkspaceMode`(stage+studioView 구동) · **storage 브리지**(`hasSavedProject` 헬퍼 · DiveStage onChange·seedAndEnter가 `saveProject`로 storageKey 반영 · 복원 시 loadProject로 교체 = storage 유일 진실).
+- **검증** — `npm test` 743 녹색·build 성공·신규 테스트(workspaceModeBar 2). **라이브 왕복** — 토글로 3표면 전환(WRITE 원고·PLAN 인물 관계도/캐논·PLAY dive), 작품명·토글 상단 sticky 고정, storageKey 공유, 콘솔 0. wm-bar가 StoryXDesk 마운트 스크롤에 밀리던 것 sticky top:0로 수정.
+- **알려진 잔여(다음)** — wm-bar와 StoryXDesk 내부 편집/데이터 pill **이중 헤더**(슬라이스 C 미니멀 재배치에서 통합) · 싱크 콘솔·⟳최신화 게이트(슬라이스 B) · publish 4번째 모드.
 
 ## 활성 트랙 — 🔴 retcon 경로 (`done` · 2026-07-01, 브랜치 `feat/canon-retcon-path` 미머지)
 

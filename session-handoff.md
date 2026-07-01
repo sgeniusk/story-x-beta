@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-07-02 — 융합 셸 슬라이스 A(3모드 토글) 구현 완료 (브랜치 미머지)
+
+> 흩어진 PLAY/WRITE/PLAN 이동을 상단 토글로 통합 + storage 단일 소스. spec `docs/superpowers/specs/2026-07-02-fusion-shell-mode-toggle-design.md`. progress.md "융합 셸 슬라이스 A" 절이 상세.
+
+### 한 것
+- brainstorming(visual companion)으로 슬라이스 A 범위 확정 → spec → 인라인 TDD.
+- `WorkspaceModeBar`(순수 토글) · StoryXDesk `initialStudioView` 프롭(+`key` remount) · App `studioView`·`selectWorkspaceMode` · storage 브리지(`hasSavedProject`·DiveStage/seedAndEnter `saveProject`·복원 시 loadProject).
+- **검증** — `npm test` 743 녹색·build 성공·라이브 3표면 왕복·작품 공유·콘솔 0. sticky top:0로 wm-bar 가림 수정.
+
+### 손대지 말 것 (불변식)
+- **storageKey = 단일 진실** — PLAY도 loadProject/saveProject. diveKey는 세션 전용. Dive 응결이 saveProject로 STUDIO에 반영. 이 브리지 깨지면 두 표면이 다른 작품을 봄.
+- **StoryXDesk 내부 무변경** — 프롭(initialStudioView) 시드만. `key={studioView}` remount로 WRITE↔PLAN 재시드(제거하면 토글이 뷰를 안 바꿈).
+- **wm-bar sticky top:0** — StoryXDesk가 마운트 시 페이지를 바 높이만큼 스크롤시켜 가려짐 → sticky 필수.
+
+### 다음 한 가지 (차례대로)
+- **머지** — `feat/fusion-shell-mode-toggle`. 자율 권한 있음.
+- 다음 슬라이스 — **융합 셸 슬라이스 B(싱크 콘솔 + ⟳최신화 게이트, 사용자 발명·큰 UX)** → **슬라이스 C(epilogue 풍 미니멀 재배치·이중 헤더 통합)** → ArcDigest/Growth/Relation Snapshot. 후속 — retcon 예산·finding retcon·번역 투 게이트·크래프트 위험1/4.
+- ⚠️ 이중 헤더(wm-bar + StoryXDesk 편집/데이터 pill)는 슬라이스 C에서 통합.
+
+---
+
 ## 2026-07-01 (5차) — 🔴 retcon 경로 구현 완료 (브랜치 미머지)
 
 > 응결 스튜디오 충돌을 정본 교체로 승격. spec `docs/superpowers/specs/2026-07-01-canon-retcon-path-design.md`. progress.md "🔴 retcon 경로" 절이 상세. **이 세션부터 사용자가 `gh pr merge` 자율 권한 부여(settings.local.json) → 슬라이스 머지 자동.**

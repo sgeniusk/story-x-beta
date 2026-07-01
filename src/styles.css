@@ -11529,6 +11529,13 @@ body {
 .dx-sr-compose { display: flex; gap: 8px; align-items: center; }
 .dx-sr-cost { color: #6f7480; font-size: 11px; }
 .dx-turn { display: flex; flex-direction: column; gap: 6px; }
+/* 융합 셸 — 상단 3모드 토글(PLAY/WRITE/PLAN) */
+.wm-bar { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid #1c1d21; background: #0b0c0e; position: sticky; top: 0; z-index: 50; }
+.wm-title { font-size: 13px; font-weight: 600; color: #e8e8ee; }
+.wm-toggle { margin: 0 auto; display: flex; gap: 4px; background: #141518; border: 1px solid #24262c; border-radius: 999px; padding: 3px; }
+.wm-btn { padding: 4px 14px; border-radius: 999px; border: none; background: transparent; color: #a8b0ba; font-size: 12px; cursor: pointer; }
+.wm-btn.is-active { background: #7c5cff; color: #fff; font-weight: 600; }
+
 /* MVP-1 PLAY 런타임 거버넌스 — 여백 거터 마커(본문 무접촉) */
 .dx-has-gutter { position: relative; padding-left: 12px; }
 .dx-has-gutter::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 3px; border-radius: 3px; }
