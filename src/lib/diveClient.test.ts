@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { requestDiveChat, requestDiveCondense, requestDiveShowrunner, requestDiveProposals, requestDiveSetup } from './diveClient';
+import { requestDiveChat, requestDiveCondense, requestDiveShowrunner, requestDiveProposals, requestDiveSetup, requestDiveConsolidate, normalizeFindings } from './diveClient';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -95,5 +95,36 @@ describe('diveClient', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'complete', setup: { scene: '', cast: [] } }) }));
     const res = await requestDiveSetup({ story: '음' });
     expect(res.setup).toBeNull();
+  });
+
+  it('normalizeFindings — 배열 아니면 [], 잘린 항목 스킵, severity 화이트리스트', () => {
+    expect(normalizeFindings(null)).toEqual([]);
+    expect(normalizeFindings('x')).toEqual([]);
+    const out = normalizeFindings([
+      { claim: '서준은 죽었다', conflictsWith: '서준은 살아 있다', evidence: '생사 모순', severity: 'high' },
+      { conflictsWith: 'x', evidence: 'y', severity: 'high' },
+      { claim: '약한 것', severity: '이상치' }
+    ]);
+    expect(out).toEqual([
+      { claim: '서준은 죽었다', conflictsWith: '서준은 살아 있다', evidence: '생사 모순', severity: 'high' },
+      { claim: '약한 것', conflictsWith: '', evidence: '', severity: 'low' }
+    ]);
+  });
+
+  it('requestDiveConsolidate는 /api/dive-consolidate에 POST하고 findings를 정규화한다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'complete', findings: [{ claim: 'c', conflictsWith: 'd', evidence: 'e', severity: 'high' }] })
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const res = await requestDiveConsolidate({ prose: 'p', context: 'ctx' });
+    expect(fetchMock).toHaveBeenCalledWith('/api/dive-consolidate', expect.objectContaining({ method: 'POST' }));
+    expect(res.findings).toEqual([{ claim: 'c', conflictsWith: 'd', evidence: 'e', severity: 'high' }]);
+  });
+
+  it('requestDiveConsolidate는 findings 누락 응답에 빈 배열로 안전', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'failed' }) }));
+    const res = await requestDiveConsolidate({ prose: 'p', context: '' });
+    expect(res.findings).toEqual([]);
   });
 });

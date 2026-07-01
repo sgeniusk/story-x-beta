@@ -4,7 +4,16 @@
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-01)
-`npm test` **731 통과**(71 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) main(PR #7). MVP-1 PLAY 거버넌스 main(PR #9). **MVP-2 응결 스튜디오(A-i)**는 `feat/mvp2-consolidation-studio`(미머지) 6커밋.
+`npm test` **737 통과**(72 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) main(PR #7). MVP-1 PLAY 거버넌스 main(PR #9). MVP-2 응결 스튜디오(A-i) main(PR #10). **슬라이스 B(LLM 응결 검증기)**는 `feat/mvp2-llm-consolidation-validator`(미머지) 5커밋.
+
+## 활성 트랙 — 슬라이스 B: LLM 응결 검증기 (`done` · 2026-07-01, 브랜치 `feat/mvp2-llm-consolidation-validator` 미머지)
+
+결정론 런타임 검증기가 놓친 **다중 턴·의미적 모순**을, 응결 승인 전 **opt-in LLM 대조**로 잡는 조각(MVP-2 무거운 절반, 정본 §7·§12.2 ConStory). spec `docs/superpowers/specs/2026-07-01-mvp2-llm-consolidation-validator-design.md`, 계획 `docs/superpowers/plans/2026-07-01-mvp2-llm-consolidation-validator.md`. brainstorming 4결정(D1 opt-in 버튼·D2 모순만·D3 경고 게이트·D4 storyxBridge 재사용) 후 executing-plans 인라인 TDD 5태스크.
+- **구현** — 새 LLM 엔드포인트 `dive-consolidate`(storyx.mjs 커맨드 + `storyxBridge('/api/dive-consolidate')`, dive-condense 동형·mock 폴백) · `normalizeFindings`(견고 파싱, 순수)·`requestDiveConsolidate`(diveClient) · 신규 `ConsolidationFindings.tsx`(high 🔴/low 🟡/없으면 ✓, 순수) · DiveDesk approve 다이얼로그에 "🔍 정밀 검토" 버튼·findings/reviewing state.
+- **실행 시점 = opt-in** — 응결 몽타주는 빠르게 유지, 플레이어가 "이 회차 정밀 검토" 원할 때만 LLM 1회. 매 응결 강제 아님(player-first).
+- **결과 = 경고 게이트** — findings는 승인/거절을 돕는 정보. per-finding 자동수정·retcon은 후속. 프롬프트에 "회수 약속 보이면 제외"(정본 §12.1)로 의도적 복선 위양성 차단.
+- **검증** — `npm test` 737 녹색·build 성공·mock CLI(`dive-consolidate --provider mock`→findings [])·신규 테스트(diveClient +3·consolidationFindings 3). 라이브 — 콘솔 0·카드 CSS 실측(finding-high #fca5a5·검토 버튼 #c4b6ff). 런칭 게이트 — opt-in(자동 0)·mock/실패 크래시 0.
+- **범위 밖(후속)** — per-finding 수정·retcon · missed-reveal/의미 dedup · 자동 실행 · ArcDigest/Growth/Relation Snapshot.
 
 ## 활성 트랙 — MVP-2 응결 스튜디오 (슬라이스 A-i) (`done` · 2026-07-01, 브랜치 `feat/mvp2-consolidation-studio` 미머지)
 

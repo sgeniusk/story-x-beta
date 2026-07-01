@@ -15,7 +15,8 @@ import {
 } from '../lib/diveSession';
 import { validatePlayTurn, deriveDeviationCandidates, buildPromotedFacts, type PlayTurnVerdict } from '../lib/playRuntimeValidator';
 import { DeviationReview } from './DeviationReview';
-import { requestDiveChat, requestDiveCondense, requestDiveShowrunner, type DiveCondensePayload } from '../lib/diveClient';
+import { requestDiveChat, requestDiveCondense, requestDiveShowrunner, requestDiveConsolidate, type DiveCondensePayload, type ConsolidationFinding } from '../lib/diveClient';
+import { ConsolidationFindings } from './ConsolidationFindings';
 import { DIVE_SEED_CHARACTERS } from '../lib/diveSeedCharacters';
 
 interface DiveDeskProps {
@@ -102,6 +103,21 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
   const [decisions, setDecisions] = useState<Record<string, 'skip' | 'promote'>>({});
   const [edits, setEdits] = useState<Record<string, string>>({});
   const deviations = useMemo(() => deriveDeviationCandidates(session), [session]);
+  const [findings, setFindings] = useState<ConsolidationFinding[] | null>(null);
+  const [reviewing, setReviewing] = useState(false);
+
+  async function reviewConsolidation() {
+    if (!pending || reviewing) return;
+    setReviewing(true);
+    try {
+      const res = await requestDiveConsolidate({ prose: pending.prose, context: buildProjectContextDigest(project) });
+      setFindings(res.findings);
+    } catch {
+      setFindings([]);
+    } finally {
+      setReviewing(false);
+    }
+  }
 
   async function send(textArg?: string) {
     const userText = (textArg ?? input).trim();
@@ -217,6 +233,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
     setPending(null);
     setDecisions({});
     setEdits({});
+    setFindings(null);
     onChange(applyCondenseResult(session), updatedProject);
   }
 
@@ -341,12 +358,18 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
             }
             onEdit={(id, text) => setEdits((e) => ({ ...e, [id]: text }))}
           />
+          <div className="dx-review-row">
+            <button className="dx-review-btn" onClick={reviewConsolidation} disabled={reviewing}>
+              {reviewing ? '검토 중…' : '🔍 정밀 검토'}
+            </button>
+          </div>
+          <ConsolidationFindings findings={findings} />
           <ul className="dx-approve-canon">
             {pending.newCanonFacts.map((f, i) => <li key={i}>+ {f.statement}</li>)}
           </ul>
           <div className="dx-approve-actions">
             <button onClick={approve}>승인 — 캐논으로 고정</button>
-            <button onClick={() => { setPending(null); setDecisions({}); setEdits({}); }}>거절</button>
+            <button onClick={() => { setPending(null); setDecisions({}); setEdits({}); setFindings(null); }}>거절</button>
           </div>
         </div>
       )}

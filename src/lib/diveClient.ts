@@ -98,3 +98,40 @@ export async function requestDiveSetup(req: DiveSetupRequest): Promise<DiveSetup
     warning: raw.warning
   };
 }
+
+export interface ConsolidationFinding {
+  claim: string;
+  conflictsWith: string;
+  evidence: string;
+  severity: 'high' | 'low';
+}
+export interface DiveConsolidateRequest { prose: string; context: string; }
+export interface DiveConsolidateResponse { status: string; findings: ConsolidationFinding[]; warning?: string; }
+
+// LLM findings 견고 파싱 — 배열 아니면 [], claim 없으면 스킵, severity는 high|low만.
+export function normalizeFindings(raw: unknown): ConsolidationFinding[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ConsolidationFinding[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const r = item as Record<string, unknown>;
+    const claim = typeof r.claim === 'string' ? r.claim.trim() : '';
+    if (!claim) continue;
+    out.push({
+      claim,
+      conflictsWith: typeof r.conflictsWith === 'string' ? r.conflictsWith.trim() : '',
+      evidence: typeof r.evidence === 'string' ? r.evidence.trim() : '',
+      severity: r.severity === 'high' ? 'high' : 'low'
+    });
+  }
+  return out;
+}
+
+export async function requestDiveConsolidate(req: DiveConsolidateRequest): Promise<DiveConsolidateResponse> {
+  const raw = await postJson<Partial<DiveConsolidateResponse>>('/api/dive-consolidate', req);
+  return {
+    status: typeof raw.status === 'string' ? raw.status : 'complete',
+    findings: normalizeFindings(raw.findings),
+    warning: raw.warning
+  };
+}

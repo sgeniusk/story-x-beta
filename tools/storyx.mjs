@@ -525,6 +525,45 @@ if (command === 'dive-setup') {
   process.exit(isError ? 1 : 0);
 }
 
+if (command === 'dive-consolidate') {
+  const provider = readFlag(args, '--provider', 'mock');
+  const prose = readFlag(args, '--prose', '');
+  const context = readFlag(args, '--context', '');
+  const prompt = [
+    '당신은 연속성 감수자입니다. 아래 [회차 본문]이 [기존 캐논]과, 또는 본문 내부에서 명시적으로 모순되는 곳만 찾으세요.',
+    '의도적 복선·나중에 회수될 반전은 모순이 아닙니다(회수 약속이 보이면 제외). 확정된 사실을 대놓고 뒤집는 것만 모순입니다.',
+    '모순이 없으면 빈 배열을 반환하세요. 억지로 찾지 마세요.',
+    '',
+    '## 회차 본문',
+    prose || '(비어 있음)',
+    '',
+    '## 기존 캐논 (모순 대상)',
+    context || '(아직 없음)',
+    '',
+    '## 출력 형식 — JSON 객체 하나만. 코드펜스 금지.',
+    '{ "findings": [ { "claim": "본문 속 모순 주장", "conflictsWith": "충돌하는 기존 캐논/본문 문장", "evidence": "왜 모순인지 한 줄", "severity": "high|low" } ] }'
+  ].join('\n');
+
+  if (provider === 'mock') {
+    printJson({ provider, mode: 'dive-consolidate', status: 'complete', findings: [] });
+    process.exit(0);
+  }
+  const commandPreview =
+    provider === 'claude'
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', '--model', 'sonnet', prompt]
+      : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
+  const { result: providerResult, raw: rawOutput } = runProviderWithRetry(commandPreview);
+  const isError = looksLikeProviderError(rawOutput, providerResult);
+  const parsed = isError ? null : parseProviderJson(rawOutput);
+  printJson({
+    provider, mode: 'dive-consolidate',
+    status: isError ? 'failed' : 'complete',
+    findings: Array.isArray(parsed?.findings) ? parsed.findings : [],
+    warning: isError ? 'provider 호출 실패' : undefined
+  });
+  process.exit(isError ? 1 : 0);
+}
+
 if (command === 'draft') {
   const provider = readFlag(args, '--provider', 'mock');
   const medium = readFlag(args, '--medium', 'novel');

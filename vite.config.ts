@@ -295,6 +295,13 @@ export default defineConfig({
       'dive-setup',
       '--provider', 'codex',
       '--story', String(input.story ?? '')
+    ]),
+    storyxBridge('/api/dive-consolidate', (input) => [
+      'tools/storyx.mjs',
+      'dive-consolidate',
+      '--provider', 'codex',
+      '--prose', String(input.prose ?? ''),
+      '--context', String(input.context ?? '')
     ])
   ]
 });
