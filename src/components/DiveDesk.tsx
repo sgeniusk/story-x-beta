@@ -45,6 +45,27 @@ function renderDialogue(text: string) {
   });
 }
 
+// verdict의 최악 밴드(anchor > major > surprise) → 거터 클래스. 없으면 null.
+function gutterClass(verdict?: PlayTurnVerdict): string | null {
+  if (!verdict) return null;
+  if (verdict.conflicts.some((c) => c.band === 'anchor')) return 'dx-gutter-anchor';
+  if (verdict.conflicts.some((c) => c.band === 'major')) return 'dx-gutter-major';
+  if (verdict.surpriseCandidates.length > 0) return 'dx-gutter-surprise';
+  return null;
+}
+
+// peek 텍스트 — 어느 캐논/떡밥이 걸렸나 한 줄(마커 title).
+function peekText(verdict: PlayTurnVerdict): string {
+  const parts: string[] = [];
+  for (const c of verdict.conflicts) {
+    parts.push(`${c.band === 'anchor' ? '🔴 정본 충돌' : '🟡 경고'} — ${c.factStatement}`);
+  }
+  for (const s of verdict.surpriseCandidates) {
+    parts.push(`✦ 의외 전개 후보${s.relatedThread ? ` — ${s.relatedThread}` : ''}`);
+  }
+  return parts.join(' · ');
+}
+
 export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) {
   const [input, setInput] = useState('');
   const [choices, setChoices] = useState<string[]>([]);
@@ -260,18 +281,27 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
           m.role === 'user' ? (
             <div key={m.id} className="dx-bubble dx-user">{renderDialogue(m.text)}</div>
           ) : (
-            <div key={m.id} className="dx-turn">
-              {parseSceneSegments(m.text).map((seg, i) =>
-                seg.kind === 'narration' ? (
-                  <div key={i} className="dx-narration">{renderDialogue(seg.text)}</div>
-                ) : (
-                  <div key={i} className="dx-bubble dx-character">
-                    <span className="dx-speaker">{seg.speaker}</span>
-                    {renderDialogue(seg.text)}
-                  </div>
-                )
-              )}
-            </div>
+            (() => {
+              const g = gutterClass(m.verdict);
+              return (
+                <div
+                  key={m.id}
+                  className={`dx-turn${g ? ` dx-has-gutter ${g}` : ''}`}
+                  title={m.verdict && g ? peekText(m.verdict) : undefined}
+                >
+                  {parseSceneSegments(m.text).map((seg, i) =>
+                    seg.kind === 'narration' ? (
+                      <div key={i} className="dx-narration">{renderDialogue(seg.text)}</div>
+                    ) : (
+                      <div key={i} className="dx-bubble dx-character">
+                        <span className="dx-speaker">{seg.speaker}</span>
+                        {renderDialogue(seg.text)}
+                      </div>
+                    )
+                  )}
+                </div>
+              );
+            })()
           )
         )}
       </div>

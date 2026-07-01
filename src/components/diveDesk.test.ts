@@ -82,6 +82,27 @@ describe('DiveDesk', () => {
     expect(html).toContain('전개');
   });
 
+  it('앵커 충돌 턴에 red 거터 마커 클래스를 렌더한다 (MVP-1)', () => {
+    const project = createEmptyProject({ title: 't' });
+    let session = createDiveSession('seed-childhood', project.id);
+    session = {
+      ...session,
+      chatBuffer: [
+        {
+          id: 'm1', role: 'character', text: '사실 서준은 죽었어.', turn: 1,
+          verdict: {
+            conflicts: [{ factId: 'a1', band: 'anchor', factStatement: '서준은 살아 있다', snippet: '사실 서준은 죽었어.' }],
+            surpriseCandidates: [], blocksCanonization: true
+          }
+        }
+      ]
+    };
+    const html = renderToStaticMarkup(
+      createElement(DiveDesk, { session, project, onChange: () => {}, onBack: () => {} })
+    );
+    expect(html).toContain('dx-gutter-anchor');
+  });
+
   it('verdict가 있는 세션이면 하단 앰비언트 카운트를 렌더한다 (MVP-1)', () => {
     const project = createEmptyProject({ title: 't' });
     let session = createDiveSession('seed-childhood', project.id);
