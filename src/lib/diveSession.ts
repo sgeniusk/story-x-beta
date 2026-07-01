@@ -1,4 +1,6 @@
 // Dive X 실시간 채팅 세션의 순수 도메인 — 버퍼 누적·응결 분기·컨텍스트 압축
+import type { PlayTurnVerdict } from './playRuntimeValidator';
+
 export type DiveRole = 'user' | 'character';
 
 export interface DiveMessage {
@@ -6,6 +8,8 @@ export interface DiveMessage {
   role: DiveRole;
   text: string;
   turn: number;
+  /** MVP-1 — PLAY 런타임 검증 결과. 캐릭터 답에만, 구버전/유저 메시지는 undefined. */
+  verdict?: PlayTurnVerdict;
 }
 
 export interface StoryArc {
@@ -37,12 +41,17 @@ export function createDiveSession(characterId: string, projectId: string): DiveS
   };
 }
 
-export function appendMessage(session: DiveSession, role: DiveRole, text: string): DiveSession {
+export function appendMessage(
+  session: DiveSession,
+  role: DiveRole,
+  text: string,
+  verdict?: PlayTurnVerdict
+): DiveSession {
   const lastTurn = session.chatBuffer.length
     ? session.chatBuffer[session.chatBuffer.length - 1].turn
     : session.lastCondensedTurn;
   const turn = lastTurn + 1;
-  const message: DiveMessage = { id: `msg-${turn}`, role, text, turn };
+  const message: DiveMessage = { id: `msg-${turn}`, role, text, turn, verdict };
   return { ...session, chatBuffer: [...session.chatBuffer, message] };
 }
 
@@ -86,6 +95,12 @@ export function buildTranscript(messages: DiveMessage[]): string {
 export function buildRecentDialogue(session: DiveSession, limit = 6): string {
   const recent = session.chatBuffer.slice(-limit);
   return buildTranscript(recent);
+}
+
+// 응결 대상 span에서 캐논화 차단(앵커 위반) 턴을 제외한 transcript. 정본 §7 하드 차단.
+export function buildCondenseTranscript(session: DiveSession): string {
+  const { condense } = selectCondenseSpan(session);
+  return buildTranscript(condense.filter((m) => !m.verdict?.blocksCanonization));
 }
 
 // 한 줄: "이름: 대사" → 화자 대사, 그 외 → 내레이션. 이름은 1~20자·별표 없음.

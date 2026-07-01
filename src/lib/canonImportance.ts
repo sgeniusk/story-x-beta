@@ -13,6 +13,11 @@ export function importanceBand(importance: number): ImportanceBand {
   return 'soft';
 }
 
+// fact 하나의 importance 밴드. selectCanonForContext.scoreOf 와 동일 규칙(핀 미설정 importance=0.9).
+export function factBand(fact: CanonFact): ImportanceBand {
+  return importanceBand(fact.importance ?? (fact.alwaysInclude ? 0.9 : 0));
+}
+
 export function deriveParticipants(statement: string): string[] {
   const names = new Set<string>(extractCharacterNames(statement));
   const entity = extractEntityName(statement);

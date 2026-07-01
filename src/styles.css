@@ -11499,6 +11499,19 @@ body {
 .dx-sr-compose { display: flex; gap: 8px; align-items: center; }
 .dx-sr-cost { color: #6f7480; font-size: 11px; }
 .dx-turn { display: flex; flex-direction: column; gap: 6px; }
+/* MVP-1 PLAY 런타임 거버넌스 — 여백 거터 마커(본문 무접촉) */
+.dx-has-gutter { position: relative; padding-left: 12px; }
+.dx-has-gutter::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 3px; border-radius: 3px; }
+.dx-gutter-anchor::before { background: #f87171; }   /* red — 정본 충돌 */
+.dx-gutter-major::before { background: #fbbf24; }    /* amber — 중 경고 */
+.dx-gutter-surprise::before { background: #bef264; } /* lime — 의외 전개 후보 */
+/* 하단 앰비언트 카운트 — 작성창 위 얇은 한 줄 */
+.dx-ambient { display: flex; gap: 14px; align-items: center; width: 100%; background: rgba(255,255,255,0.04); border: none; border-radius: 8px; padding: 7px 12px; margin: 6px 0; font-size: 12px; color: #a8b0ba; cursor: pointer; text-align: left; }
+.dx-ambient:disabled { cursor: default; opacity: 0.6; }
+.dx-amb-surprise { color: #bef264; }
+.dx-amb-major { color: #fbbf24; }
+.dx-amb-anchor { color: #fca5a5; }
+.dx-amb-tail { margin-left: auto; color: #8a8f98; }
 .dx-narration { align-self: center; max-width: 90%; color: #aeb3bd; font-style: italic; line-height: 1.6; text-align: center; padding: 2px 8px; }
 .dx-speaker { display: block; font-size: 11px; color: #9aa0aa; margin-bottom: 3px; }
 .dx-start { display: flex; flex-direction: column; gap: 12px; padding: 24px max(24px, calc((100% - 640px) / 2)); color: #eceef3; background: #0b0c0e; min-height: 100vh; box-sizing: border-box; }
