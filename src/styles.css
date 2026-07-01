@@ -11479,6 +11479,16 @@ body {
 .dx-approve-actions { display: flex; gap: 8px; margin-top: 12px; }
 .dx-approve-actions button { padding: 8px 14px; border-radius: 8px; border: 1px solid #44464d; background: #1c1d21; color: #eceef3; cursor: pointer; }
 .dx-approve-actions button:first-child { background: #7CFF6B; color: #0b0c0e; border-color: #7CFF6B; font-weight: 600; }
+/* MVP-2 응결 스튜디오 — ✦ 후보 결정 카드 + 🔴 충돌 배너 */
+.dx-devreview { margin: 8px 0; display: flex; flex-direction: column; gap: 8px; }
+.dx-devbanner { font-size: 12px; color: #fca5a5; background: rgba(248,113,113,0.08); border-radius: 8px; padding: 7px 12px; }
+.dx-devlist { display: flex; flex-direction: column; gap: 6px; }
+.dx-devlist-title { font-size: 12px; color: #bef264; margin: 0 0 2px; }
+.dx-devcard { display: flex; gap: 8px; align-items: center; }
+.dx-devcard-input { flex: 1; background: #0e0f12; color: #e8e8ee; border: 1px solid #24262c; border-radius: 6px; padding: 6px 8px; font-size: 13px; }
+.dx-devcard-thread { font-size: 11px; color: #8a8f98; }
+.dx-devcard-toggle { background: transparent; color: #a8b0ba; border: 1px solid #3a3d45; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; }
+.dx-devcard-toggle.is-on { background: rgba(163,230,53,0.15); color: #bef264; border-color: rgba(163,230,53,0.5); }
 .dx-status { color: #9aa0aa; font-size: 13px; padding: 2px 4px 6px; }
 .dx-composer { display: flex; gap: 8px; align-items: flex-end; position: sticky; bottom: 0; padding: 10px 0; background: #0b0c0e; }
 .dx-input { flex: 1; padding: 11px 13px; border-radius: 8px; border: 1px solid #3a3c43; background: #16171a; color: #f2f3f7; font-size: 14px; font-family: inherit; line-height: 1.5; resize: none; field-sizing: content; min-height: 46px; max-height: 160px; }
