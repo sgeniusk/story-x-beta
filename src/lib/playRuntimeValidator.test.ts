@@ -1,6 +1,6 @@
 // PLAY(DiveDesk) 런타임 검증기 단위 테스트. 정본 §5·§7 · spec 2026-07-01.
 import { describe, expect, it } from 'vitest';
-import { validatePlayTurn, deriveDeviationCandidates } from './playRuntimeValidator';
+import { validatePlayTurn, deriveDeviationCandidates, dedupePromotions } from './playRuntimeValidator';
 import { createDiveSession, appendMessage } from './diveSession';
 import type { CanonFact } from './storyEngine';
 
@@ -97,5 +97,22 @@ describe('deriveDeviationCandidates — 응결 span의 일탈 수집', () => {
     const d = deriveDeviationCandidates(s);
     expect(d.surprises).toEqual([]);
     expect(d.conflictCounts).toEqual({ anchor: 0, major: 0 });
+  });
+});
+
+describe('dedupePromotions — LLM 캐논과 중복 제거(문자열 근접)', () => {
+  it('기존 statement에 포함되는 승격은 제외, 무관은 유지', () => {
+    const existing = [{ statement: '주인공은 그날 밤 창고에 있었다' }];
+    const out = dedupePromotions(['그날 밤 창고에 있었다', '도현은 형사다'], existing);
+    expect(out).toEqual(['도현은 형사다']);
+  });
+
+  it('공백 정규화로 매칭 · 자기 중복도 제거', () => {
+    const out = dedupePromotions(['비밀은  하나다', '비밀은 하나다'], []);
+    expect(out).toEqual(['비밀은  하나다']);
+  });
+
+  it('빈 문자열은 버린다', () => {
+    expect(dedupePromotions(['   ', '실체'], [])).toEqual(['실체']);
   });
 });

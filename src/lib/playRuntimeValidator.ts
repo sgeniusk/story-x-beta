@@ -153,3 +153,23 @@ export function deriveDeviationCandidates(session: DiveSession): ConsolidationDe
   }
   return { surprises, conflictCounts: { anchor, major } };
 }
+
+// 승격 statement 중 기존 캐논/서로와 문자열 근접 중복인 것을 제거. 의미 중복은 후속 LLM 검증기.
+export function dedupePromotions(
+  promotedStatements: string[],
+  existing: Array<{ statement: string }>
+): string[] {
+  const norm = (s: string) => s.trim().replace(/\s+/g, ' ');
+  const existingN = existing.map((e) => norm(e.statement)).filter((s) => s.length > 0);
+  const seen: string[] = [];
+  const out: string[] = [];
+  for (const raw of promotedStatements) {
+    const n = norm(raw);
+    if (!n) continue;
+    const dup = [...existingN, ...seen].some((e) => e.includes(n) || n.includes(e));
+    if (dup) continue;
+    seen.push(n);
+    out.push(raw.trim());
+  }
+  return out;
+}
