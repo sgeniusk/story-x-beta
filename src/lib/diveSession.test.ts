@@ -7,6 +7,7 @@ import {
   selectCondenseSpan,
   applyCondenseResult,
   buildTranscript,
+  buildCondenseTranscript,
   buildRecentDialogue,
   parseSceneSegments,
   CONDENSE_SUGGEST_TURNS,
@@ -112,5 +113,30 @@ describe('diveSession', () => {
     const long = '그러니까 내가 하고 싶은 말은 사실 이거였는데: 외계인이야';
     expect(parseSceneSegments(long)[0].kind).toBe('narration');
     expect(parseSceneSegments('*그가 웃는다: 짧게*')[0].kind).toBe('narration');
+  });
+
+  it('appendMessage — verdict를 메시지에 부착한다 (MVP-1)', () => {
+    let s = createDiveSession('c', 'p');
+    s = appendMessage(s, 'user', '안녕');
+    s = appendMessage(s, 'character', '사실 서준은 죽었어.', {
+      conflicts: [{ factId: 'a1', band: 'anchor', factStatement: '서준은 살아 있다', snippet: '사실 서준은 죽었어.' }],
+      surpriseCandidates: [],
+      blocksCanonization: true
+    });
+    expect(s.chatBuffer[1].verdict?.blocksCanonization).toBe(true);
+  });
+
+  it('buildCondenseTranscript — 캐논화 차단 턴을 응결에서 제외한다', () => {
+    let s = createDiveSession('c', 'p');
+    s = appendMessage(s, 'user', '무슨 일이야');
+    s = appendMessage(s, 'character', '사실 서준은 죽었어.', {
+      conflicts: [{ factId: 'a1', band: 'anchor', factStatement: '서준은 살아 있다', snippet: '사실 서준은 죽었어.' }],
+      surpriseCandidates: [], blocksCanonization: true
+    });
+    s = appendMessage(s, 'user', '정말?');
+    s = appendMessage(s, 'character', '응, 오래된 이야기야.');
+    const transcript = buildCondenseTranscript(s);
+    expect(transcript).not.toContain('사실 서준은 죽었어.');
+    expect(transcript).toContain('무슨 일이야');
   });
 });
