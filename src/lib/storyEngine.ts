@@ -1476,6 +1476,21 @@ function recordChapterGrowth(
 }
 
 // LLM 브리지가 만든 회차 초안 payload를 캐논 정규화·에이전트 검토와 함께 정식 Chapter로 커밋한다
+// retcon — 옛 캐논 fact 의 statement 를 새 값으로 제자리 교체(factId·importance·reveal 보존). 불변.
+export function applyRetcons(
+  project: SeriesProject,
+  updates: Array<{ factId: string; statement: string }>
+): SeriesProject {
+  if (updates.length === 0) return project;
+  const byId = new Map(updates.map((u) => [u.factId, u.statement]));
+  return {
+    ...project,
+    canonFacts: project.canonFacts.map((fact) =>
+      byId.has(fact.id) ? { ...fact, statement: byId.get(fact.id)! } : fact
+    )
+  };
+}
+
 export function chapterFromDraftPayload(
   project: SeriesProject,
   payload: DraftChapterPayload,
