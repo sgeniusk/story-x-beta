@@ -41,6 +41,11 @@ export function saveProject(project: SeriesProject) {
   window.localStorage.setItem(storageKey, JSON.stringify(project));
 }
 
+// 융합 셸 브리지 — 진짜 저장된 project 가 있는지(loadProject 는 없으면 seed 를 반환하므로 구분 필요).
+export function hasSavedProject(): boolean {
+  return typeof window !== 'undefined' && window.localStorage.getItem(storageKey) !== null;
+}
+
 export function clearProject() {
   window.localStorage.removeItem(storageKey);
 }

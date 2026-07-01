@@ -69,12 +69,15 @@ import {
   loadDiveState,
   loadOnboardingDraft,
   loadProject,
+  hasSavedProject,
   saveDiveState,
+  saveProject,
   saveOnboardingDraft,
   type DiveState,
   type OnboardingDraft
 } from './lib/storage';
 import { DiveDesk } from './components/DiveDesk';
+import { WorkspaceModeBar, type WorkspaceMode } from './components/WorkspaceModeBar';
 import { DiveStart } from './components/DiveStart';
 import { seedFromProposal, type DiveProposal, type DiveSetup } from './lib/diveProposal';
 import { createDiveSession } from './lib/diveSession';
@@ -164,6 +167,8 @@ function DiveStage({ initial, onBack }: { initial: DiveState; onBack: () => void
         const next: DiveState = { schema: 'storyx/dive/v1', session, project };
         setState(next);
         saveDiveState(next);
+        // 융합 브리지 — project 는 storageKey 가 유일 진실. Dive 응결 커밋을 STUDIO 가 보게 반영.
+        saveProject(project);
       }}
     />
   );
@@ -202,6 +207,17 @@ function App() {
   const [pendingDraft, setPendingDraft] = useState<DraftChapterPayload | null>(null);
   // Dive 진입 — DiveStart에서 후보를 고르면 시드된 세션을 담아 DiveStage로 넘긴다
   const [diveInit, setDiveInit] = useState<DiveState | null>(null);
+  // 융합 셸 — STUDIO(editor) 진입 뷰. WRITE=editor·PLAN=data. 토글이 stage 와 함께 구동.
+  const [studioView, setStudioView] = useState<'editor' | 'data'>('editor');
+  const workspaceMode: WorkspaceMode = stage === 'dive' ? 'play' : studioView === 'data' ? 'plan' : 'write';
+  function selectWorkspaceMode(next: WorkspaceMode) {
+    if (next === 'play') {
+      setStage('dive');
+    } else {
+      setStudioView(next === 'plan' ? 'data' : 'editor');
+      setStage('editor');
+    }
+  }
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [format, medium]);
 
@@ -212,14 +228,19 @@ function App() {
 
   if (stage === 'editor') {
     return (
-      <StoryXDesk
-        initialMedium={medium}
-        initialFormat={format}
-        initialDraftPayload={pendingDraft}
-        onOpenProjects={() => setStage('projects')}
-        onOpenLanding={() => setStage('landing')}
-        onOpenPublish={() => setStage('publish')}
-      />
+      <>
+        <WorkspaceModeBar mode={workspaceMode} onSelect={selectWorkspaceMode} workTitle={loadProject().title} />
+        <StoryXDesk
+          key={studioView}
+          initialMedium={medium}
+          initialFormat={format}
+          initialDraftPayload={pendingDraft}
+          initialStudioView={studioView}
+          onOpenProjects={() => setStage('projects')}
+          onOpenLanding={() => setStage('landing')}
+          onOpenPublish={() => setStage('publish')}
+        />
+      </>
     );
   }
 
@@ -275,12 +296,17 @@ function App() {
   }
 
   if (stage === 'dive') {
+    const bar = (
+      <WorkspaceModeBar mode={workspaceMode} onSelect={selectWorkspaceMode} workTitle={loadProject().title} />
+    );
     const restored = loadDiveState();
     if (restored) {
-      return <DiveStage initial={restored} onBack={() => setStage('editor')} />;
+      // 융합 브리지 — project 는 storage 가 유일 진실(STUDIO 편집 반영). 저장본이 있으면 그걸로 교체.
+      const merged: DiveState = hasSavedProject() ? { ...restored, project: loadProject() } : restored;
+      return <>{bar}<DiveStage initial={merged} onBack={() => setStage('editor')} /></>;
     }
     if (diveInit) {
-      return <DiveStage initial={diveInit} onBack={() => setStage('editor')} />;
+      return <>{bar}<DiveStage initial={diveInit} onBack={() => setStage('editor')} /></>;
     }
     const seedAndEnter = (src: Pick<DiveProposal, 'scene' | 'cast'>, title: string) => {
       const { scene, characters, primaryCharacterId } = seedFromProposal(src);
@@ -288,14 +314,19 @@ function App() {
       const session = { ...createDiveSession(primaryCharacterId, project.id), scene };
       const init: DiveState = { schema: 'storyx/dive/v1', session, project };
       saveDiveState(init);
+      // 융합 브리지 — 새 Dive 작품도 storageKey 에 심어 STUDIO(WRITE/PLAN)가 같은 작품을 본다.
+      saveProject(project);
       setDiveInit(init);
     };
     return (
-      <DiveStart
-        onBack={() => setStage('editor')}
-        onStart={(setup: DiveSetup) => seedAndEnter(setup, setup.myRole || setup.scene)}
-        onPick={(p: DiveProposal) => seedAndEnter(p, p.hook)}
-      />
+      <>
+        {bar}
+        <DiveStart
+          onBack={() => setStage('editor')}
+          onStart={(setup: DiveSetup) => seedAndEnter(setup, setup.myRole || setup.scene)}
+          onPick={(p: DiveProposal) => seedAndEnter(p, p.hook)}
+        />
+      </>
     );
   }
 
