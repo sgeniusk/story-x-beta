@@ -1,6 +1,6 @@
 // PLAY(DiveDesk) 런타임 검증기 단위 테스트. 정본 §5·§7 · spec 2026-07-01.
 import { describe, expect, it } from 'vitest';
-import { validatePlayTurn, deriveDeviationCandidates, dedupePromotions, buildPromotedFacts } from './playRuntimeValidator';
+import { validatePlayTurn, deriveDeviationCandidates, dedupePromotions, buildPromotedFacts, buildRetconUpdates } from './playRuntimeValidator';
 import { createDiveSession, appendMessage } from './diveSession';
 import type { CanonFact } from './storyEngine';
 
@@ -145,5 +145,35 @@ describe('buildPromotedFacts — 승격 결정 → 캐논 팩트', () => {
 
   it('promote 없으면 빈 배열', () => {
     expect(buildPromotedFacts(surprises, {}, {}, [])).toEqual([]);
+  });
+});
+
+describe('retcon 경로 — 충돌 수집 + 교체 업데이트', () => {
+  it('deriveDeviationCandidates가 conflicts 목록을 채운다(factId 있는 것만)', () => {
+    let s = createDiveSession('c', 'p');
+    s = appendMessage(s, 'user', '무슨 일');
+    s = appendMessage(s, 'character', '사실 서준은 죽었어.', {
+      conflicts: [
+        { factId: 'a1', band: 'anchor', factStatement: '서준은 살아 있다', snippet: '사실 서준은 죽었어.' },
+        { factId: '', band: 'major', factStatement: 'x', snippet: 'y' }
+      ],
+      surpriseCandidates: [],
+      blocksCanonization: true
+    });
+    s = appendMessage(s, 'user', '정말?');
+    s = appendMessage(s, 'character', '응.');
+    const d = deriveDeviationCandidates(s);
+    expect(d.conflicts).toHaveLength(1);
+    expect(d.conflicts[0]).toMatchObject({ factId: 'a1', band: 'anchor', newClaim: '사실 서준은 죽었어.', oldCanon: '서준은 살아 있다' });
+    expect(d.conflicts[0].id).toBeTruthy();
+  });
+
+  it('buildRetconUpdates는 retcon 결정된 것만 {factId,statement}로', () => {
+    const conflicts = [
+      { id: 'c1', factId: 'a1', band: 'anchor' as const, newClaim: '서준은 죽었다', oldCanon: '서준은 살아 있다' },
+      { id: 'c2', factId: 'a2', band: 'major' as const, newClaim: '문은 닫혔다', oldCanon: '문은 열렸다' }
+    ];
+    const out = buildRetconUpdates(conflicts, { c1: 'retcon', c2: 'keep' });
+    expect(out).toEqual([{ factId: 'a1', statement: '서준은 죽었다' }]);
   });
 });

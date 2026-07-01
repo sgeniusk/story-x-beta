@@ -4,7 +4,15 @@
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-01)
-`npm test` **737 통과**(72 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) main(PR #7). MVP-1 PLAY 거버넌스 main(PR #9). MVP-2 응결 스튜디오(A-i) main(PR #10). **슬라이스 B(LLM 응결 검증기)**는 `feat/mvp2-llm-consolidation-validator`(미머지) 5커밋.
+`npm test` **741 통과**(72 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) main(PR #7). MVP-1 PLAY 거버넌스 main(PR #9). MVP-2 응결 스튜디오(A-i) main(PR #10). 슬라이스 B(LLM 응결 검증기) main(PR #11). **🔴 retcon 경로**는 `feat/canon-retcon-path`(미머지) 4커밋.
+
+## 활성 트랙 — 🔴 retcon 경로 (`done` · 2026-07-01, 브랜치 `feat/canon-retcon-path` 미머지)
+
+응결 스튜디오에서 카운트 배너로만 보이던 캐논 충돌을, `새 주장 ↔ 옛 정본` retcon 카드로 올려 플레이어가 **정본 교체(retcon)/버리기** 를 고르게 하는 조각(정본 §5·§9). spec `docs/superpowers/specs/2026-07-01-canon-retcon-path-design.md`. 좁은 슬라이스라 spec §5를 태스크 목록으로 인라인 TDD(자율 진행, 브레인스토밍 Q&A 생략·결정 공개).
+- **구현** — `DeviationConflict` 타입 + `deriveDeviationCandidates`가 conflicts 목록 수집(factId 있는 것만, id=`${msgId}-c${i}`) · `buildRetconUpdates`(retcon 결정만 `{factId,statement}`) · `applyRetcons`(storyEngine, 옛 fact statement 제자리 교체·factId/importance/reveal 보존·불변) · DeviationReview retcon 카드(props retconDecisions·onRetconToggle) · DiveDesk approve가 `applyRetcons(project, …)` 결과 위에 커밋.
+- **메커니즘** — 옛 캐논 statement 교체(모순 두 캐논 공존 방지). 기본=버리기(blocksCanonization 유지). retcon은 명시 액션만(승인형).
+- **검증** — `npm test` 741 녹색·build 성공·신규 테스트(playRuntimeValidator +2·storyEngine +1·deviationReview +1). 라이브 콘솔 0·retcon 카드 CSS 실측(활성 red #f87171·교체 버튼 solid). 런칭 게이트 — 버리기면 캐논 불변·retcon만 교체·모순 두 캐논 공존 0.
+- **범위 밖(후속)** — retcon 예산 상한(§9)·옛 fact 삭제(교체만)·이력 로그·LLM finding retcon.
 
 ## 활성 트랙 — 슬라이스 B: LLM 응결 검증기 (`done` · 2026-07-01, 브랜치 `feat/mvp2-llm-consolidation-validator` 미머지)
 

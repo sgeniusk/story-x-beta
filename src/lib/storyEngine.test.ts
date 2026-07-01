@@ -12,6 +12,7 @@ import {
   commitChapter,
   commitChapterProse,
   addCharacter,
+  applyRetcons,
   removeCharacter,
   renameCharacter,
   createEmptyProject,
@@ -1436,5 +1437,22 @@ describe('buildProjectContextDigest — 중요도 검색·reveal 분리 (MVP-0)'
     expect(digest).toContain('공개사실');
     expect(digest).toContain('숨은 캐논 (모순 금지 · 아직 누설 금지)');
     expect(digest).toContain('숨긴진실');
+  });
+
+  it('applyRetcons — factId 일치 fact의 statement만 교체(불변·그 외 보존)', () => {
+    const base = createEmptyProject({ title: 't' });
+    const project: SeriesProject = {
+      ...base,
+      canonFacts: [
+        { id: 'a1', episode: 1, owner: 'plot', statement: '서준은 살아 있다', importance: 0.9 },
+        { id: 'a2', episode: 1, owner: 'world', statement: '문은 열렸다', importance: 0.6 }
+      ]
+    };
+    const out = applyRetcons(project, [{ factId: 'a1', statement: '서준은 죽었다' }, { factId: 'none', statement: 'x' }]);
+    expect(out.canonFacts.find((f) => f.id === 'a1')?.statement).toBe('서준은 죽었다');
+    expect(out.canonFacts.find((f) => f.id === 'a1')?.importance).toBe(0.9);
+    expect(out.canonFacts.find((f) => f.id === 'a2')?.statement).toBe('문은 열렸다');
+    // 원본 불변
+    expect(project.canonFacts.find((f) => f.id === 'a1')?.statement).toBe('서준은 살아 있다');
   });
 });
