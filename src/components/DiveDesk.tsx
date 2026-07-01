@@ -1,7 +1,7 @@
 // Dive X 얇은 표면 — 채팅·응결 제안·승인 다이얼로그·연대기. 엔진은 재사용.
 import { useMemo, useState } from 'react';
 import type { SeriesProject, ProductionRequest } from '../lib/storyEngine';
-import { chapterFromDraftPayload, buildProjectContextDigest } from '../lib/storyEngine';
+import { chapterFromDraftPayload, buildProjectContextDigest, applyRetcons } from '../lib/storyEngine';
 import { inspectLeak } from '../lib/leakGate';
 import {
   type DiveSession,
@@ -13,7 +13,7 @@ import {
   applyCondenseResult,
   parseSceneSegments
 } from '../lib/diveSession';
-import { validatePlayTurn, deriveDeviationCandidates, buildPromotedFacts, type PlayTurnVerdict } from '../lib/playRuntimeValidator';
+import { validatePlayTurn, deriveDeviationCandidates, buildPromotedFacts, buildRetconUpdates, type PlayTurnVerdict } from '../lib/playRuntimeValidator';
 import { DeviationReview } from './DeviationReview';
 import { requestDiveChat, requestDiveCondense, requestDiveShowrunner, requestDiveConsolidate, type DiveCondensePayload, type ConsolidationFinding } from '../lib/diveClient';
 import { ConsolidationFindings } from './ConsolidationFindings';
@@ -102,6 +102,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
   }, [session.chatBuffer]);
   const [decisions, setDecisions] = useState<Record<string, 'skip' | 'promote'>>({});
   const [edits, setEdits] = useState<Record<string, string>>({});
+  const [retconDecisions, setRetconDecisions] = useState<Record<string, 'keep' | 'retcon'>>({});
   const deviations = useMemo(() => deriveDeviationCandidates(session), [session]);
   const [findings, setFindings] = useState<ConsolidationFinding[] | null>(null);
   const [reviewing, setReviewing] = useState(false);
@@ -217,8 +218,10 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
     // intent·pressure 는 의도적으로 빈 값 — 본문은 응결 payload 에서 오지, intent/pressure 로 생성하지 않는다.
     const request: ProductionRequest = { genre: project.genre, intent: '', pressure: '' };
     const promoted = buildPromotedFacts(deviations.surprises, decisions, edits, pending.newCanonFacts);
+    // retcon 결정된 충돌은 옛 fact statement 를 새 전개로 교체한 project 위에 커밋.
+    const base = applyRetcons(project, buildRetconUpdates(deviations.conflicts, retconDecisions));
     const { updatedProject } = chapterFromDraftPayload(
-      project,
+      base,
       {
         title: pending.title,
         hook: pending.hook,
@@ -233,6 +236,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
     setPending(null);
     setDecisions({});
     setEdits({});
+    setRetconDecisions({});
     setFindings(null);
     onChange(applyCondenseResult(session), updatedProject);
   }
@@ -353,10 +357,14 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
             deviations={deviations}
             decisions={decisions}
             edits={edits}
+            retconDecisions={retconDecisions}
             onToggle={(id) =>
               setDecisions((d) => ({ ...d, [id]: d[id] === 'promote' ? 'skip' : 'promote' }))
             }
             onEdit={(id, text) => setEdits((e) => ({ ...e, [id]: text }))}
+            onRetconToggle={(id) =>
+              setRetconDecisions((r) => ({ ...r, [id]: r[id] === 'retcon' ? 'keep' : 'retcon' }))
+            }
           />
           <div className="dx-review-row">
             <button className="dx-review-btn" onClick={reviewConsolidation} disabled={reviewing}>
@@ -369,7 +377,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
           </ul>
           <div className="dx-approve-actions">
             <button onClick={approve}>승인 — 캐논으로 고정</button>
-            <button onClick={() => { setPending(null); setDecisions({}); setEdits({}); setFindings(null); }}>거절</button>
+            <button onClick={() => { setPending(null); setDecisions({}); setEdits({}); setRetconDecisions({}); setFindings(null); }}>거절</button>
           </div>
         </div>
       )}
