@@ -11489,6 +11489,14 @@ body {
 .dx-devcard-thread { font-size: 11px; color: #8a8f98; }
 .dx-devcard-toggle { background: transparent; color: #a8b0ba; border: 1px solid #3a3d45; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; }
 .dx-devcard-toggle.is-on { background: rgba(163,230,53,0.15); color: #bef264; border-color: rgba(163,230,53,0.5); }
+/* retcon 경로 — 정본 교체 카드 */
+.dx-retconlist { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
+.dx-retcard { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; border-radius: 8px; padding: 7px 10px; background: rgba(248,113,113,0.06); border: 1px solid rgba(248,113,113,0.2); }
+.dx-retcard.is-on { background: rgba(248,113,113,0.14); border-color: rgba(248,113,113,0.5); }
+.dx-retcard-new { color: #f2f3f7; font-weight: 600; font-size: 13px; }
+.dx-retcard-old { color: #fca5a5; font-size: 12px; }
+.dx-retcard-toggle { margin-left: auto; background: transparent; color: #fca5a5; border: 1px solid rgba(248,113,113,0.5); border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; }
+.dx-retcard-toggle.is-on { background: rgba(248,113,113,0.9); color: #0b0c0e; border-color: transparent; font-weight: 600; }
 /* 슬라이스 B — 정밀 검토(LLM) findings 경고 카드 */
 .dx-review-row { margin: 8px 0 4px; }
 .dx-review-btn { background: transparent; color: #c4b6ff; border: 1px solid #7c5cff66; border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
