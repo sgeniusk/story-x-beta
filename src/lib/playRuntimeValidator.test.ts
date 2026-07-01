@@ -1,6 +1,7 @@
 // PLAY(DiveDesk) 런타임 검증기 단위 테스트. 정본 §5·§7 · spec 2026-07-01.
 import { describe, expect, it } from 'vitest';
-import { validatePlayTurn } from './playRuntimeValidator';
+import { validatePlayTurn, deriveDeviationCandidates, dedupePromotions, buildPromotedFacts } from './playRuntimeValidator';
+import { createDiveSession, appendMessage } from './diveSession';
 import type { CanonFact } from './storyEngine';
 
 const fact = (over: Partial<CanonFact>): CanonFact => ({
@@ -65,5 +66,84 @@ describe('validatePlayTurn — 의외 전개 후보', () => {
     const v = validatePlayTurn('사실 서준은 죽었어.', facts, []);
     expect(v.conflicts.some((c) => c.band === 'anchor')).toBe(true);
     expect(v.surpriseCandidates).toEqual([]);
+  });
+});
+
+describe('deriveDeviationCandidates — 응결 span의 일탈 수집', () => {
+  it('span의 ✦ 후보는 카드로, 🔴/🟡는 카운트로', () => {
+    let s = createDiveSession('c', 'p');
+    s = appendMessage(s, 'user', '무슨 일');
+    s = appendMessage(s, 'character', '사실 나도 거기 있었어.', {
+      conflicts: [{ factId: 'a1', band: 'anchor', factStatement: '서준은 살아 있다', snippet: 'x' }],
+      surpriseCandidates: [{ snippet: '사실 나도 거기 있었어.', relatedThread: '그날 밤' }],
+      blocksCanonization: true
+    });
+    s = appendMessage(s, 'user', '정말?');
+    s = appendMessage(s, 'character', '응.');
+    const d = deriveDeviationCandidates(s);
+    expect(d.surprises).toHaveLength(1);
+    expect(d.surprises[0].snippet).toBe('사실 나도 거기 있었어.');
+    expect(d.surprises[0].relatedThread).toBe('그날 밤');
+    expect(d.conflictCounts.anchor).toBe(1);
+    expect(d.conflictCounts.major).toBe(0);
+  });
+
+  it('verdict 없는(구버전) 메시지가 섞여도 안전', () => {
+    let s = createDiveSession('c', 'p');
+    s = appendMessage(s, 'user', 'a');
+    s = appendMessage(s, 'character', 'b');
+    s = appendMessage(s, 'user', 'c');
+    s = appendMessage(s, 'character', 'd');
+    const d = deriveDeviationCandidates(s);
+    expect(d.surprises).toEqual([]);
+    expect(d.conflictCounts).toEqual({ anchor: 0, major: 0 });
+  });
+});
+
+describe('dedupePromotions — LLM 캐논과 중복 제거(문자열 근접)', () => {
+  it('기존 statement에 포함되는 승격은 제외, 무관은 유지', () => {
+    const existing = [{ statement: '주인공은 그날 밤 창고에 있었다' }];
+    const out = dedupePromotions(['그날 밤 창고에 있었다', '도현은 형사다'], existing);
+    expect(out).toEqual(['도현은 형사다']);
+  });
+
+  it('공백 정규화로 매칭 · 자기 중복도 제거', () => {
+    const out = dedupePromotions(['비밀은  하나다', '비밀은 하나다'], []);
+    expect(out).toEqual(['비밀은  하나다']);
+  });
+
+  it('빈 문자열은 버린다', () => {
+    expect(dedupePromotions(['   ', '실체'], [])).toEqual(['실체']);
+  });
+});
+
+describe('buildPromotedFacts — 승격 결정 → 캐논 팩트', () => {
+  const surprises = [
+    { id: 's1', snippet: '사실 나도 거기 있었어' },
+    { id: 's2', snippet: '도현은 형사다' }
+  ];
+
+  it('promote된 것만, edits 우선, dedup 적용', () => {
+    const out = buildPromotedFacts(
+      surprises,
+      { s1: 'promote', s2: 'skip' },
+      { s1: '주인공은 창고에 있었다' },
+      []
+    );
+    expect(out).toEqual([{ owner: 'plot', statement: '주인공은 창고에 있었다' }]);
+  });
+
+  it('기존 LLM 캐논과 겹치면 제외', () => {
+    const out = buildPromotedFacts(
+      surprises,
+      { s1: 'promote' },
+      {},
+      [{ statement: '사실 나도 거기 있었어' }]
+    );
+    expect(out).toEqual([]);
+  });
+
+  it('promote 없으면 빈 배열', () => {
+    expect(buildPromotedFacts(surprises, {}, {}, [])).toEqual([]);
   });
 });

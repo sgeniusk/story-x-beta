@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-07-01 (3차) — MVP-2 응결 스튜디오(슬라이스 A-i) 구현 완료 (브랜치 미머지)
+
+> MVP-1 ✦ 의외후보를 응결 순간에 캐논 결정으로 닫는 첫 조각. spec `docs/superpowers/specs/2026-07-01-mvp2-consolidation-studio-design.md` · 계획 `docs/superpowers/plans/2026-07-01-mvp2-consolidation-studio.md` · 정본 §7·§8. progress.md "MVP-2 응결 스튜디오" 절이 상세.
+
+### 한 것
+- brainstorming 4결정(D1 ✦만 결정 대상·D2 승격/수정/넘기기·D3 payload.newCanonFacts 승격 경로·D4 approve 다이얼로그 업그레이드) → spec → writing-plans → executing-plans 인라인 TDD 6태스크.
+- 순수 `deriveDeviationCandidates`·`dedupePromotions`·`buildPromotedFacts`(playRuntimeValidator.ts) + 신규 `DeviationReview.tsx`(✦ 카드+🔴 배너) + DiveDesk 조립(deviations useMemo·decisions/edits state·approve 승격 concat).
+- **검증** — `npm test` 731 녹색·build 성공·라이브 콘솔 0·CSS 실측(배너 #fca5a5·승격 토글 #bef264). 8커밋(spec·plan·derive·dedup·buildPromoted·DeviationReview·조립·docs).
+
+### 손대지 말 것 (불변식)
+- **최소 몽타주** — 기본 결정 skip, 굳힐 것만 탭. LLM newCanonFacts는 리뷰 안 시키고 자동 커밋 유지. 이걸 per-item 리뷰로 바꾸면 player-first 훼손.
+- **🔴/🟡는 정보 표시만** — 응결 스튜디오에서 충돌은 배너 카운트만. 캐논으로 되돌리는 retcon은 후속 슬라이스.
+- **승격 경로** — `payload.newCanonFacts`에 `{owner:'plot',statement}` concat → 기존 `chapterFromDraftPayload` 재사용. reveal=revealed 기본·importance normalize 백필. 이 경로 유지(별도 커밋 로직 추가 금지).
+- **dedup은 문자열 근접만** — 의미 중복(다른 표현 같은 사실)은 후속 LLM 응결 검증기(B)가 처리. 넓히지 말 것.
+
+### 다음 한 가지
+- **머지 결정 대기** — `feat/mvp2-consolidation-studio`(미머지, origin 미푸시). 사용자 확인 후 PR/머지.
+- 다음 슬라이스 후보 — **슬라이스 B(LLM 응결 검증기, ConStory 4단 재추출)** — 결정론이 놓친 미묘한 모순·의미 dedup 보강 · **🔴 retcon 경로** · **융합 셸**(PLAY/WRITE/PLAN) · ArcDigest/Growth/Relation Snapshot.
+
+---
+
 ## 2026-07-01 (2차) — MVP-1 PLAY 런타임 거버넌스 구현 완료 (브랜치 미머지)
 
 > Canon Core 위 PLAY(DiveDesk) 런타임 검증 슬라이스. spec `docs/superpowers/specs/2026-07-01-mvp1-play-runtime-governance-design.md` · 계획 `docs/superpowers/plans/2026-07-01-mvp1-play-runtime-governance.md` · 정본 §5·§7·§14. progress.md "MVP-1 PLAY 런타임 거버넌스" 절이 상세.
