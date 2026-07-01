@@ -4,7 +4,17 @@
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-01)
-`npm test` **721 통과**(70 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0)는 `feat/canon-core-mvp0` → main 머지·푸시(PR #7). **MVP-1 PLAY 런타임 거버넌스**는 `feat/mvp1-play-runtime-governance`(미머지) 6커밋.
+`npm test` **731 통과**(71 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) main(PR #7). MVP-1 PLAY 거버넌스 main(PR #9). **MVP-2 응결 스튜디오(A-i)**는 `feat/mvp2-consolidation-studio`(미머지) 6커밋.
+
+## 활성 트랙 — MVP-2 응결 스튜디오 (슬라이스 A-i) (`done` · 2026-07-01, 브랜치 `feat/mvp2-consolidation-studio` 미머지)
+
+MVP-1이 매 턴 표시한 ✦ 의외 전개 후보가 응결하면 증발하던 것을, **응결 승인 다이얼로그를 스튜디오로 올려** 후보마다 승격/수정/넘기기 결정을 받고 승격만 캐논으로 굳힌다(정본 §7·§8·§13 Q2 최소 몽타주). spec `docs/superpowers/specs/2026-07-01-mvp2-consolidation-studio-design.md`, 계획 `docs/superpowers/plans/2026-07-01-mvp2-consolidation-studio.md`. brainstorming 4결정(D1 ✦만 결정 대상·D2 승격/수정/넘기기·D3 payload.newCanonFacts 승격 경로·D4 approve 다이얼로그 업그레이드) 후 executing-plans 인라인 TDD 6태스크.
+- **구현** — 순수 `deriveDeviationCandidates(session)`(응결 span verdict→✦ 후보·🔴/🟡 카운트) · `dedupePromotions`(LLM 캐논과 문자열 근접 dedup) · `buildPromotedFacts`(승격 결정→`{owner:'plot',statement}`, edits 우선). 신규 `DeviationReview.tsx`(✦ 카드+🔴 배너, 순수 표현). DiveDesk 조립 — deviations useMemo·decisions/edits state·approve가 승격 팩트를 `payload.newCanonFacts`에 concat.
+- **승격 경로** — 기존 `chapterFromDraftPayload` 재사용, reveal=revealed 기본(disclosed 반전에 정확)·importance/participants는 normalize 백필. 시그니처 무변경.
+- **최소 몽타주** — 기본 결정 skip, 굳힐 것만 탭. 🔴/🟡는 정보 배너만("충돌 N건 캐논에서 빠졌습니다", retcon 후속). LLM newCanonFacts는 자동 커밋 유지(리뷰 안 시킴).
+- **테스트 분리** — approve()가 정적 렌더로 테스트 안 되는 문제를 결정 로직=순수 함수(1~3)·카드=프레젠테이션 컴포넌트(4)로 분리해 각각 TDD. DiveDesk 조립은 tsc+라이브.
+- **검증** — `npm test` 731 녹색·build 성공·신규 테스트(playRuntimeValidator +7·deviationReview 2). 라이브 — 콘솔 0, 스튜디오 CSS 실측(배너 #fca5a5·승격 토글 #bef264). 런칭 게이트 — 넘긴 ✦ 캐논 0·승격만 등록·dedup 중복 0.
+- **범위 밖(후속)** — 🔴 retcon 경로 · LLM 응결 검증기(슬라이스 B, ConStory 4단) · ArcDigest/Growth/Relation Snapshot.
 
 ## 활성 트랙 — MVP-1 PLAY 런타임 거버넌스 (`done` · 2026-07-01, 브랜치 `feat/mvp1-play-runtime-governance` 미머지)
 
