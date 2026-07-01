@@ -26,8 +26,16 @@ export interface DeviationCandidate {
   snippet: string;
   relatedThread?: string;
 }
+export interface DeviationConflict {
+  id: string;
+  factId: string;
+  band: 'anchor' | 'major';
+  newClaim: string;
+  oldCanon: string;
+}
 export interface ConsolidationDeviations {
   surprises: DeviationCandidate[];
+  conflicts: DeviationConflict[];
   conflictCounts: { anchor: number; major: number };
 }
 
@@ -138,6 +146,7 @@ export function validatePlayTurn(
 export function deriveDeviationCandidates(session: DiveSession): ConsolidationDeviations {
   const { condense } = selectCondenseSpan(session);
   const surprises: DeviationCandidate[] = [];
+  const conflicts: DeviationConflict[] = [];
   let anchor = 0;
   let major = 0;
   for (const m of condense) {
@@ -146,12 +155,24 @@ export function deriveDeviationCandidates(session: DiveSession): ConsolidationDe
     v.surpriseCandidates.forEach((s, i) =>
       surprises.push({ id: `${m.id}-s${i}`, snippet: s.snippet, relatedThread: s.relatedThread })
     );
-    for (const c of v.conflicts) {
+    v.conflicts.forEach((c, i) => {
       if (c.band === 'anchor') anchor++;
       else if (c.band === 'major') major++;
-    }
+      // factId 없는 충돌은 교체할 fact가 없어 retcon 대상 제외.
+      if (c.factId) conflicts.push({ id: `${m.id}-c${i}`, factId: c.factId, band: c.band, newClaim: c.snippet, oldCanon: c.factStatement });
+    });
   }
-  return { surprises, conflictCounts: { anchor, major } };
+  return { surprises, conflicts, conflictCounts: { anchor, major } };
+}
+
+// retcon 결정된 충돌만 옛 fact statement 교체 업데이트로. 순수.
+export function buildRetconUpdates(
+  conflicts: DeviationConflict[],
+  decisions: Record<string, 'keep' | 'retcon'>
+): Array<{ factId: string; statement: string }> {
+  return conflicts
+    .filter((c) => decisions[c.id] === 'retcon')
+    .map((c) => ({ factId: c.factId, statement: c.newClaim }));
 }
 
 // 승격 statement 중 기존 캐논/서로와 문자열 근접 중복인 것을 제거. 의미 중복은 후속 LLM 검증기.
