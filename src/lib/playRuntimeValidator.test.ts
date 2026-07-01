@@ -35,3 +35,35 @@ describe('validatePlayTurn — 모순 검출', () => {
     expect(v.conflicts).toEqual([]);
   });
 });
+
+describe('validatePlayTurn — 의외 전개 후보', () => {
+  it('reveal 마커 + 열린 떡밥 접촉 → surprise candidate + relatedThread', () => {
+    const v = validatePlayTurn(
+      '사실 나도 그날 밤 거기 있었어.',
+      [],
+      ['그날 밤 창고에 누가 있었나']
+    );
+    expect(v.surpriseCandidates.length).toBeGreaterThan(0);
+    expect(v.surpriseCandidates[0].relatedThread).toBe('그날 밤 창고에 누가 있었나');
+    expect(v.conflicts).toEqual([]);
+  });
+
+  it('reveal 마커 + 캐논 엔티티 접촉(떡밥 없음) → surprise candidate', () => {
+    const facts = [fact({ id: 's1', statement: '도현은 형사다', importance: 0.2, participants: ['도현'] })];
+    const v = validatePlayTurn('알고 보니 도현은 그 사건의 목격자였어.', facts, []);
+    expect(v.surpriseCandidates.length).toBeGreaterThan(0);
+  });
+
+  it('미탐 선호 — 마커 없는 중립 서술은 후보 아님', () => {
+    const facts = [fact({ id: 's1', statement: '도현은 형사다', importance: 0.2, participants: ['도현'] })];
+    const v = validatePlayTurn('도현이 커피를 마신다.', facts, []);
+    expect(v.surpriseCandidates).toEqual([]);
+  });
+
+  it('앵커 충돌 세그먼트는 surprise candidate로 중복 표시 안 함', () => {
+    const facts = [fact({ id: 'a1', statement: '서준은 살아 있다', importance: 0.9, participants: ['서준'] })];
+    const v = validatePlayTurn('사실 서준은 죽었어.', facts, []);
+    expect(v.conflicts.some((c) => c.band === 'anchor')).toBe(true);
+    expect(v.surpriseCandidates).toEqual([]);
+  });
+});
