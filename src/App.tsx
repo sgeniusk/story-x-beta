@@ -69,7 +69,6 @@ import {
   loadDiveState,
   loadOnboardingDraft,
   loadProject,
-  hasSavedProject,
   saveDiveState,
   saveProject,
   saveOnboardingDraft,
@@ -78,6 +77,8 @@ import {
 } from './lib/storage';
 import { DiveDesk } from './components/DiveDesk';
 import { WorkspaceModeBar, type WorkspaceMode } from './components/WorkspaceModeBar';
+import { SyncConsole } from './components/SyncConsole';
+import { countPendingSync, reconcileWorkingIntoCommitted, type PendingSync } from './lib/syncConsole';
 import { DiveStart } from './components/DiveStart';
 import { seedFromProposal, type DiveProposal, type DiveSetup } from './lib/diveProposal';
 import { createDiveSession } from './lib/diveSession';
@@ -156,7 +157,15 @@ const mediaBridgeRoutes = [
 type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor' | 'publish' | 'dive';
 
 // Dive X 세션 상태를 소유하고 변경 시 localStorage에 영속하는 래퍼 컴포넌트.
-function DiveStage({ initial, onBack }: { initial: DiveState; onBack: () => void }) {
+function DiveStage({
+  initial,
+  onBack,
+  onWorkingChange
+}: {
+  initial: DiveState;
+  onBack: () => void;
+  onWorkingChange: (project: SeriesProject) => void;
+}) {
   const [state, setState] = useState<DiveState>(initial);
   return (
     <DiveDesk
@@ -166,9 +175,9 @@ function DiveStage({ initial, onBack }: { initial: DiveState; onBack: () => void
       onChange={(session, project) => {
         const next: DiveState = { schema: 'storyx/dive/v1', session, project };
         setState(next);
+        // 슬라이스 B — PLAY 변경은 diveKey working copy 에만 staged. 본편(storageKey)은 ⟳최신화로만 머지.
         saveDiveState(next);
-        // 융합 브리지 — project 는 storageKey 가 유일 진실. Dive 응결 커밋을 STUDIO 가 보게 반영.
-        saveProject(project);
+        onWorkingChange(project);
       }}
     />
   );
@@ -209,6 +218,14 @@ function App() {
   const [diveInit, setDiveInit] = useState<DiveState | null>(null);
   // 융합 셸 — STUDIO(editor) 진입 뷰. WRITE=editor·PLAN=data. 토글이 stage 와 함께 구동.
   const [studioView, setStudioView] = useState<'editor' | 'data'>('editor');
+  // 슬라이스 B — 싱크 콘솔. PLAY working(diveKey) 이 본편(storageKey) 대비 미반영한 회차/캐논 수.
+  const [pendingSync, setPendingSync] = useState<PendingSync>(() =>
+    typeof window === 'undefined'
+      ? { chapters: 0, canon: 0, total: 0 }
+      : countPendingSync(loadDiveState()?.project, loadProject())
+  );
+  // 최신화가 본편을 바꾸면 이 버전이 오르고 StoryXDesk 가 remount 되어 새 본편을 읽는다.
+  const [syncVersion, setSyncVersion] = useState(0);
   const workspaceMode: WorkspaceMode = stage === 'dive' ? 'play' : studioView === 'data' ? 'plan' : 'write';
   function selectWorkspaceMode(next: WorkspaceMode) {
     if (next === 'play') {
@@ -217,6 +234,14 @@ function App() {
       setStudioView(next === 'plan' ? 'data' : 'editor');
       setStage('editor');
     }
+  }
+  // ⟳최신화 — PLAY working(diveKey) 의 새 회차/캐논만 본편(storageKey)에 append 머지(WRITE 편집 보존).
+  function reconcileSync() {
+    const working = loadDiveState()?.project;
+    if (!working) return;
+    saveProject(reconcileWorkingIntoCommitted(working, loadProject()));
+    setPendingSync({ chapters: 0, canon: 0, total: 0 });
+    setSyncVersion((v) => v + 1);
   }
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [format, medium]);
@@ -229,9 +254,14 @@ function App() {
   if (stage === 'editor') {
     return (
       <>
-        <WorkspaceModeBar mode={workspaceMode} onSelect={selectWorkspaceMode} workTitle={loadProject().title} />
+        <WorkspaceModeBar
+          mode={workspaceMode}
+          onSelect={selectWorkspaceMode}
+          workTitle={loadProject().title}
+          rightSlot={<SyncConsole pending={pendingSync} onReconcile={reconcileSync} />}
+        />
         <StoryXDesk
-          key={studioView}
+          key={`${studioView}-${syncVersion}`}
           initialMedium={medium}
           initialFormat={format}
           initialDraftPayload={pendingDraft}
@@ -296,17 +326,24 @@ function App() {
   }
 
   if (stage === 'dive') {
+    // 슬라이스 B — PLAY 변경(diveKey working)을 본편 대비 미반영 카운트로 반영.
+    const onWorkingChange = (project: SeriesProject) =>
+      setPendingSync(countPendingSync(project, loadProject()));
     const bar = (
-      <WorkspaceModeBar mode={workspaceMode} onSelect={selectWorkspaceMode} workTitle={loadProject().title} />
+      <WorkspaceModeBar
+        mode={workspaceMode}
+        onSelect={selectWorkspaceMode}
+        workTitle={loadProject().title}
+        rightSlot={<SyncConsole pending={pendingSync} onReconcile={reconcileSync} />}
+      />
     );
     const restored = loadDiveState();
     if (restored) {
-      // 융합 브리지 — project 는 storage 가 유일 진실(STUDIO 편집 반영). 저장본이 있으면 그걸로 교체.
-      const merged: DiveState = hasSavedProject() ? { ...restored, project: loadProject() } : restored;
-      return <>{bar}<DiveStage initial={merged} onBack={() => setStage('editor')} /></>;
+      // 슬라이스 B — working(diveKey) 이 진실. 미반영 PLAY 작업을 loadProject 로 덮지 않는다(⟳최신화로만 머지).
+      return <>{bar}<DiveStage initial={restored} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} /></>;
     }
     if (diveInit) {
-      return <>{bar}<DiveStage initial={diveInit} onBack={() => setStage('editor')} /></>;
+      return <>{bar}<DiveStage initial={diveInit} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} /></>;
     }
     const seedAndEnter = (src: Pick<DiveProposal, 'scene' | 'cast'>, title: string) => {
       const { scene, characters, primaryCharacterId } = seedFromProposal(src);

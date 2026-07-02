@@ -1,10 +1,14 @@
 // 융합 셸 상단 3모드 토글 — PLAY/WRITE/PLAN 을 같은 작품 위에서 왕복. 순수 표현(상태는 props).
+import type { ReactNode } from 'react';
+
 export type WorkspaceMode = 'play' | 'write' | 'plan';
 
 interface WorkspaceModeBarProps {
   mode: WorkspaceMode;
   onSelect: (mode: WorkspaceMode) => void;
   workTitle?: string;
+  // 슬라이스 B — 상단 바 우측에 싱크 콘솔 등을 한 줄로 통합(이중 헤더 방지).
+  rightSlot?: ReactNode;
 }
 
 const MODES: Array<{ id: WorkspaceMode; label: string; icon: string }> = [
@@ -13,7 +17,7 @@ const MODES: Array<{ id: WorkspaceMode; label: string; icon: string }> = [
   { id: 'plan', label: 'PLAN', icon: '◈' }
 ];
 
-export function WorkspaceModeBar({ mode, onSelect, workTitle }: WorkspaceModeBarProps) {
+export function WorkspaceModeBar({ mode, onSelect, workTitle, rightSlot }: WorkspaceModeBarProps) {
   return (
     <div className="wm-bar">
       {workTitle && <span className="wm-title">{workTitle}</span>}
@@ -29,6 +33,7 @@ export function WorkspaceModeBar({ mode, onSelect, workTitle }: WorkspaceModeBar
           </button>
         ))}
       </div>
+      {rightSlot}
     </div>
   );
 }

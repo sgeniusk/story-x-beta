@@ -17,6 +17,19 @@ describe('WorkspaceModeBar', () => {
     expect(html.match(/wm-btn is-active/g) ?? []).toHaveLength(1);
   });
 
+  it('rightSlot 을 상단 바 안에 렌더한다(싱크 콘솔 통합)', () => {
+    const html = renderToStaticMarkup(
+      createElement(WorkspaceModeBar, {
+        mode: 'write' as const,
+        onSelect: () => {},
+        workTitle: 't',
+        rightSlot: createElement('span', { 'data-testid': 'slot' }, '⟳ 최신화')
+      })
+    );
+    expect(html).toContain('data-testid="slot"');
+    expect(html).toContain('⟳ 최신화');
+  });
+
   it('버튼 클릭 시 onSelect(mode)를 호출한다', () => {
     const onSelect = vi.fn();
     // 순수 함수 계약 검증 — data-mode 속성으로 매핑 확인(렌더 계약).
