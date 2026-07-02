@@ -1,12 +1,16 @@
 // PLAY(DiveDesk) 런타임 검증기 단위 테스트. 정본 §5·§7 · spec 2026-07-01.
 import { describe, expect, it } from 'vitest';
-import { validatePlayTurn, deriveDeviationCandidates, dedupePromotions, buildPromotedFacts, buildRetconUpdates } from './playRuntimeValidator';
+import { validatePlayTurn, deriveDeviationCandidates, dedupePromotions, buildPromotedFacts, buildRetconUpdates, deriveReconcilePlan } from './playRuntimeValidator';
 import { createDiveSession, appendMessage } from './diveSession';
-import type { CanonFact } from './storyEngine';
+import { createEmptyProject } from './storyEngine';
+import type { CanonFact, Chapter, SeriesProject } from './storyEngine';
 
 const fact = (over: Partial<CanonFact>): CanonFact => ({
   id: 'f', episode: 1, owner: 'plot', statement: '', ...over
 });
+const proj = (over: Partial<SeriesProject>): SeriesProject => ({ ...createEmptyProject(), ...over });
+const chap = (over: Partial<Chapter>): Chapter =>
+  ({ id: 'c', episode: 1, title: 't', hook: '', outline: [], beats: [], prose: '', memoryAnchors: [], newCanonFacts: [], ...over });
 
 describe('validatePlayTurn — 모순 검출', () => {
   it('앵커 fact 모순 답 → anchor conflict + blocksCanonization', () => {
@@ -175,5 +179,34 @@ describe('retcon 경로 — 충돌 수집 + 교체 업데이트', () => {
     ];
     const out = buildRetconUpdates(conflicts, { c1: 'retcon', c2: 'keep' });
     expect(out).toEqual([{ factId: 'a1', statement: '서준은 죽었다' }]);
+  });
+});
+
+describe('deriveReconcilePlan — working↔committed 충돌 감지', () => {
+  it('충돌 없으면 conflicts 빈 배열', () => {
+    const committed = proj({ canonFacts: [fact({ id: 'a1', statement: '서준은 살아 있다', importance: 0.9, participants: ['서준'] })] });
+    const working = proj({ canonFacts: [...committed.canonFacts, fact({ id: 'w1', statement: '민아는 창가에 섰다', importance: 0.3 })] });
+    expect(deriveReconcilePlan(working, committed).conflicts).toEqual([]);
+  });
+
+  it('working 새 캐논이 committed 앵커와 모순 → conflict(옛 factId·oldCanon·newClaim)', () => {
+    const committed = proj({ canonFacts: [fact({ id: 'a1', statement: '서준은 살아 있다', importance: 0.9, participants: ['서준'] })] });
+    const working = proj({ canonFacts: [...committed.canonFacts, fact({ id: 'w1', statement: '서준은 이미 죽었어', importance: 0.5, participants: ['서준'] })] });
+    const conflicts = deriveReconcilePlan(working, committed).conflicts;
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]).toMatchObject({ factId: 'a1', band: 'anchor', oldCanon: '서준은 살아 있다', newClaim: '서준은 이미 죽었어' });
+  });
+
+  it('미반영 회차 prose 의 모순도 감지', () => {
+    const committed = proj({ canonFacts: [fact({ id: 'a1', statement: '서준은 살아 있다', importance: 0.9, participants: ['서준'] })] });
+    const working = proj({ canonFacts: committed.canonFacts, chapters: [chap({ id: 'ch1', prose: '서준은 이미 죽었어.' })] });
+    expect(deriveReconcilePlan(working, committed).conflicts.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('이미 committed 에 있는 캐논은 재검사 안 함(미반영만)', () => {
+    const shared = fact({ id: 'a1', statement: '서준은 살아 있다', importance: 0.9, participants: ['서준'] });
+    const committed = proj({ canonFacts: [shared] });
+    const working = proj({ canonFacts: [shared] });
+    expect(deriveReconcilePlan(working, committed).conflicts).toEqual([]);
   });
 });

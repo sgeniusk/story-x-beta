@@ -1,5 +1,7 @@
 // 융합 셸 싱크 콘솔 — PLAY working copy 와 본편 committed 의 미반영 diff·append 머지(순수).
 import type { SeriesProject } from './storyEngine';
+import { applyRetcons } from './storyEngine';
+import { buildRetconUpdates, type DeviationConflict } from './playRuntimeValidator';
 
 export interface PendingSync {
   chapters: number;
@@ -36,4 +38,23 @@ export function reconcileWorkingIntoCommitted(
     chapters: [...committed.chapters, ...newChapters],
     canonFacts: [...committed.canonFacts, ...newCanon]
   };
+}
+
+// 슬라이스 B-2 — 충돌 결정(retcon/keep)을 반영해 최신화(순수).
+// retcon: committed 옛 캐논 statement 교체 · keep: committed 유지. 두 경우 모두 충돌한 working
+// 새 캐논은 append 제외(retcon 은 제자리 교체로 반영·keep 은 버림 → 모순 두 캐논 공존 방지).
+// 비충돌 회차/캐논은 append. 회차 본문은 안 건드림(작가 원고).
+export function applyReconcile(
+  working: SeriesProject,
+  committed: SeriesProject,
+  conflicts: DeviationConflict[],
+  decisions: Record<string, 'keep' | 'retcon'>
+): SeriesProject {
+  const base = applyRetcons(committed, buildRetconUpdates(conflicts, decisions));
+  const conflictClaims = new Set(conflicts.map((c) => c.newClaim));
+  const workingSansConflictCanon: SeriesProject = {
+    ...working,
+    canonFacts: working.canonFacts.filter((f) => !conflictClaims.has(f.statement))
+  };
+  return reconcileWorkingIntoCommitted(workingSansConflictCanon, base);
 }

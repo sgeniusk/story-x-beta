@@ -11542,6 +11542,21 @@ body {
 .sync-update { display: flex; align-items: center; gap: 5px; background: linear-gradient(180deg, #2a2140, #211934); border: 1px solid #4a3a6e; color: #e9d8ff; border-radius: 8px; padding: 6px 13px; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 0 0 0 rgba(192, 132, 252, 0.4); animation: syncPulse 2.4s infinite; }
 .sync-update:hover { border-color: #6b53a0; }
 @keyframes syncPulse { 0% { box-shadow: 0 0 0 0 rgba(192, 132, 252, 0.4); } 70% { box-shadow: 0 0 0 7px rgba(192, 132, 252, 0); } 100% { box-shadow: 0 0 0 0 rgba(192, 132, 252, 0); } }
+/* 슬라이스 B-2 — reconcile 충돌 게이트 다이얼로그. working 새 주장 ↔ 본편 옛 정본. */
+.rc-overlay { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: rgba(6, 7, 9, 0.72); padding: 24px; }
+.rc-panel { width: min(560px, 94vw); max-height: 84vh; overflow-y: auto; background: #0c0d10; border: 1px solid #2a2330; border-radius: 12px; padding: 20px 22px; color: #e8e8ec; }
+.rc-title { margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #ffb3a6; }
+.rc-sub { margin: 0 0 14px; font-size: 12px; line-height: 1.6; color: #8a8d96; }
+.rc-list { display: flex; flex-direction: column; gap: 8px; }
+.rc-card { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 10px; background: #141518; border: 1px solid #24262c; border-radius: 8px; padding: 10px 12px; }
+.rc-card.is-on { border-color: #f87171; background: #241516; }
+.rc-card-new { font-size: 13px; color: #f3f3f6; grid-column: 1; }
+.rc-card-old { font-size: 11px; color: #8a8d96; grid-column: 1; }
+.rc-card-toggle { grid-column: 2; grid-row: 1 / span 2; align-self: center; border: 1px solid #3a3d45; border-radius: 6px; background: #16181c; color: #cfd2d8; font-size: 11px; padding: 5px 11px; cursor: pointer; }
+.rc-card-toggle.is-on { background: #f87171; border-color: #f87171; color: #1a0f0f; font-weight: 600; }
+.rc-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.rc-cancel { border: 1px solid #2a2c31; border-radius: 7px; background: transparent; color: #a8b0ba; font-size: 12px; padding: 7px 14px; cursor: pointer; }
+.rc-approve { border: 1px solid #4a3a6e; border-radius: 7px; background: linear-gradient(180deg, #2a2140, #211934); color: #e9d8ff; font-size: 12px; font-weight: 600; padding: 7px 16px; cursor: pointer; }
 
 /* MVP-1 PLAY 런타임 거버넌스 — 여백 거터 마커(본문 무접촉) */
 .dx-has-gutter { position: relative; padding-left: 12px; }
