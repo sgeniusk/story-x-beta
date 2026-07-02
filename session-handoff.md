@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-07-02 (2차) — 융합 셸 슬라이스 B(싱크 콘솔) 구현 완료 (브랜치 미머지)
+
+> PLAY 변경을 즉시 반영에서 **git working-tree 모델**(staged→⟳최신화 append 머지)로 전환. 사용자 발명(handoff 2026-06-30 2차 line 172 + 목업 `sync-console.html`). spec `docs/superpowers/specs/2026-07-02-fusion-shell-sync-console-design.md`. progress.md "융합 셸 슬라이스 B" 절이 상세. 사용자 "너 뜻대로 해" 위임 → 데이터 모델까지 확정 후 진행.
+
+### 한 것
+- brainstorming(목업 이미 존재라 텍스트 위주)→spec→TDD. 순수 `syncConsole.ts`(countPendingSync·reconcileWorkingIntoCommitted) · 순수 `SyncConsole.tsx` · `WorkspaceModeBar` rightSlot · App 배선(pendingSync·syncVersion·DiveStage saveProject 제거→onWorkingChange·PLAY 진입 working 우선·reconcileSync·StoryXDesk key remount).
+- **검증** — `npm test` 754 녹색·build 성공·신규 테스트 11. 라이브(preview) 실사용 경로 왕복(배지 PLAY +2·staged·최신화 append·remount 크래시 0). 3커밋(spec·구현·docs).
+
+### 손대지 말 것 (불변식)
+- **두 저장소** — committed=`storageKey`(본편·WRITE 직접 편집) · working=`diveKey.project`(PLAY staged). PLAY `onChange`는 `saveDiveState`만(즉시 `saveProject` 금지 — 이게 staged 모델의 핵심). ⟳최신화로만 본편 머지.
+- **append 머지** — `reconcileWorkingIntoCommitted`는 committed에 **없는 회차/캐논만 append**(통째 덮어쓰기 금지). committed base 유지 = WRITE 본편 편집 보존. 통째 저장으로 바꾸면 WRITE 편집 롤백.
+- **PLAY 진입 working 우선** — 슬라이스 A의 `loadProject 교체`를 되돌림. WRITE→PLAY 리베이스(committed→working)는 슬라이스 B-2 게이트로. loadProject로 다시 덮으면 PLAY 미반영 유실.
+- **diveKey가 진실** — pending·최신화 소스는 `loadDiveState().project`. DiveStage state 리프팅 안 함.
+
+### 다음 한 가지 (차례대로)
+- **머지** — `feat/fusion-shell-sync-console`. 자율 권한 있음.
+- 다음 슬라이스 — **슬라이스 B-2(무거운 reconcile 검토 게이트: 충돌 같음/다름·캐논 등록/보류, 승인형 · playRuntimeValidator·DeviationReview 재사용)** → **슬라이스 C(epilogue 미니멀 재배치·이중 헤더 통합)** · PLAN staged(`PLAN +N`) → ArcDigest/Growth/Relation Snapshot.
+- ⚠️ **잠복 버그 후보(내 슬라이스 무관)** — `createSeedProject`+회차를 committed로 editor fresh mount하면 브라우저 client effect(FloatingEditor useLayoutEffect)에서 크래시(빈 seed·jsdom·server render는 정상). 실사용 base는 createEmptyProject라 현재 무영향. seed+회차 경로가 생기면 조사 필요.
+
+---
+
 ## 2026-07-02 — 융합 셸 슬라이스 A(3모드 토글) 구현 완료 (브랜치 미머지)
 
 > 흩어진 PLAY/WRITE/PLAN 이동을 상단 토글로 통합 + storage 단일 소스. spec `docs/superpowers/specs/2026-07-02-fusion-shell-mode-toggle-design.md`. progress.md "융합 셸 슬라이스 A" 절이 상세.

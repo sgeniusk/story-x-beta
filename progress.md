@@ -4,9 +4,18 @@
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-02)
-`npm test` **743 통과**(73 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B PR #11 · 🔴 retcon 경로 PR #12 (전부 main). **융합 셸 슬라이스 A**는 `feat/fusion-shell-mode-toggle`(미머지) 5커밋.
+`npm test` **754 통과**(75 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · **융합 셸 슬라이스 A(3모드 토글) PR #13** (전부 main). **융합 셸 슬라이스 B(싱크 콘솔)**는 `feat/fusion-shell-sync-console`(미머지) 2커밋.
 
-## 활성 트랙 — 융합 셸 슬라이스 A: 3모드 토글 (`done` · 2026-07-02, 브랜치 `feat/fusion-shell-mode-toggle` 미머지)
+## 활성 트랙 — 융합 셸 슬라이스 B: 싱크 콘솔 (`done` · 2026-07-02, 브랜치 `feat/fusion-shell-sync-console` 미머지)
+
+슬라이스 A가 PLAY 변경을 `onChange`마다 즉시 `saveProject`로 본편 반영하던 것을, **git working-tree 모델**로 전환한 조각(사용자 발명, handoff 2026-06-30 2차 line 172 + 목업 `sync-console.html`). PLAY 변경은 diveKey working copy에만 staged, 상단 **`PLAY +N` 배지 + ⟳최신화** 버튼으로만 본편(storageKey)에 **append 머지**. spec `docs/superpowers/specs/2026-07-02-fusion-shell-sync-console-design.md`. 사용자 위임("너 뜻대로") 후 데이터 모델까지 확정. brainstorming→spec→TDD→라이브.
+- **구현** — 순수 `syncConsole.ts`(`countPendingSync` working vs committed 회차/캐논 id diff · `reconcileWorkingIntoCommitted` committed 없는 것만 append=WRITE 본편 편집 보존) · 순수 `SyncConsole.tsx`(pending.total>0일 때만 배지+⟳최신화) · `WorkspaceModeBar` `rightSlot`(상단 바 한 줄 통합, 이중 헤더 안 늘림) · App 배선(`pendingSync`·`syncVersion` state · DiveStage `saveProject` 제거→`onWorkingChange` · PLAY 진입 working 우선(A의 loadProject 교체 되돌림) · `reconcileSync` · StoryXDesk `key={studioView-syncVersion}` remount).
+- **2단 저장소** — committed=`storageKey`(본편·WRITE 직접 편집) · working=`diveKey.project`(PLAY 작업본). diveKey가 진실이라 DiveStage state 리프팅 없이 콜백으로 pending만 갱신.
+- **검증** — `npm test` 754 녹색·build 성공·신규 테스트(syncConsole 순수 8·SyncConsole 컴포넌트 2·workspaceModeBar rightSlot 1). **라이브(preview)** — 실사용 경로(createEmptyProject base + 응결 회차)로 배지 `PLAY +2`·최신화 전 본편에 회차 없음(staged)·⟳최신화→본편 append+배지 리셋·remount 크래시 0·fcApp 지속. WRITE 편집 보존은 reconcile append 순수 테스트로 단언.
+- **발견(내 슬라이스 무관, 잠복 가능)** — `createSeedProject`(seed)를 committed로 직접 editor 여는 **비현실 경로**는 브라우저 client effect(FloatingEditor useLayoutEffect)에서 크래시(빈 seed는 정상·회차 있으면 크래시·jsdom·server render는 재현 안 됨). 실사용 base는 createEmptyProject라 무관하나, seed+회차 fresh mount 잠복 버그 가능성.
+- **범위 밖(다음)** — 무거운 reconcile 검토 게이트(충돌 같음/다름·캐논 등록/보류, 승인형)=**슬라이스 B-2**(playRuntimeValidator·DeviationReview 재사용) · PLAN staged(`PLAN +N`, StoryXDesk 내부 staged화 필요) · epilogue 풍 미니멀 재배치·이중 헤더 통합=슬라이스 C.
+
+## 활성 트랙 — 융합 셸 슬라이스 A: 3모드 토글 (`done` · 2026-07-02, 브랜치 `feat/fusion-shell-mode-toggle` 미머지 → **PR #13 main 머지**)
 
 흩어진 `?stage=dive`(PLAY)·`?stage=editor`(WRITE/PLAN) 이동을 상단 **PLAY/WRITE/PLAN 토글**로 통합하고, 세 표면이 `storageKey` 하나를 단일 project 소스로 공유하게 만드는 융합 첫 뼈대. 재작성 아니라 기존 부품(DiveDesk·StoryXDesk)을 한 셸로 감쌈. spec `docs/superpowers/specs/2026-07-02-fusion-shell-mode-toggle-design.md`. brainstorming(visual companion)으로 슬라이스 범위 A 확정(싱크 콘솔은 다음).
 - **구현** — 신규 순수 `WorkspaceModeBar`(3버튼 토글) · StoryXDesk `initialStudioView` 프롭(WRITE=draft·PLAN=bible 착지, `key={studioView}`로 remount 재시드) · App `studioView` state + `selectWorkspaceMode`(stage+studioView 구동) · **storage 브리지**(`hasSavedProject` 헬퍼 · DiveStage onChange·seedAndEnter가 `saveProject`로 storageKey 반영 · 복원 시 loadProject로 교체 = storage 유일 진실).

@@ -11535,6 +11535,13 @@ body {
 .wm-toggle { margin: 0 auto; display: flex; gap: 4px; background: #141518; border: 1px solid #24262c; border-radius: 999px; padding: 3px; }
 .wm-btn { padding: 4px 14px; border-radius: 999px; border: none; background: transparent; color: #a8b0ba; font-size: 12px; cursor: pointer; }
 .wm-btn.is-active { background: #7c5cff; color: #fff; font-weight: 600; }
+/* 슬라이스 B — 싱크 콘솔(상단 바 우측). PLAY working 미반영 배지 + ⟳최신화. */
+.sync-console { display: flex; align-items: center; gap: 9px; }
+.sync-pending { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #c4b6ff; background: #17141f; border: 1px solid #2f2745; border-radius: 7px; padding: 4px 9px; }
+.sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #c084fc; }
+.sync-update { display: flex; align-items: center; gap: 5px; background: linear-gradient(180deg, #2a2140, #211934); border: 1px solid #4a3a6e; color: #e9d8ff; border-radius: 8px; padding: 6px 13px; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 0 0 0 rgba(192, 132, 252, 0.4); animation: syncPulse 2.4s infinite; }
+.sync-update:hover { border-color: #6b53a0; }
+@keyframes syncPulse { 0% { box-shadow: 0 0 0 0 rgba(192, 132, 252, 0.4); } 70% { box-shadow: 0 0 0 7px rgba(192, 132, 252, 0); } 100% { box-shadow: 0 0 0 0 rgba(192, 132, 252, 0); } }
 
 /* MVP-1 PLAY 런타임 거버넌스 — 여백 거터 마커(본문 무접촉) */
 .dx-has-gutter { position: relative; padding-left: 12px; }
