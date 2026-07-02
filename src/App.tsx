@@ -78,6 +78,7 @@ import {
 import { DiveDesk } from './components/DiveDesk';
 import { WorkspaceModeBar, type WorkspaceMode } from './components/WorkspaceModeBar';
 import { SyncConsole } from './components/SyncConsole';
+import { SyncFlash } from './components/SyncFlash';
 import { ReconcileReview } from './components/ReconcileReview';
 import { countPendingSync, reconcileWorkingIntoCommitted, applyReconcile, type PendingSync } from './lib/syncConsole';
 import { deriveReconcilePlan, type ReconcilePlan } from './lib/playRuntimeValidator';
@@ -231,6 +232,13 @@ function App() {
   // 슬라이스 B-2 — reconcile 충돌 게이트. 충돌 있으면 다이얼로그(retcon/keep), 없으면 즉시 반영.
   const [reconcilePlan, setReconcilePlan] = useState<ReconcilePlan | null>(null);
   const [reconcileDecisions, setReconcileDecisions] = useState<Record<string, 'keep' | 'retcon'>>({});
+  // ⟳최신화 직후 본편 반영량을 잠깐 알리는 토스트(조용한 즉시 반영에 피드백).
+  const [syncFlash, setSyncFlash] = useState<PendingSync | null>(null);
+  useEffect(() => {
+    if (!syncFlash) return;
+    const t = window.setTimeout(() => setSyncFlash(null), 2600);
+    return () => window.clearTimeout(t);
+  }, [syncFlash]);
   const workspaceMode: WorkspaceMode = stage === 'dive' ? 'play' : studioView === 'data' ? 'plan' : 'write';
   function selectWorkspaceMode(next: WorkspaceMode) {
     if (next === 'play') {
@@ -240,11 +248,13 @@ function App() {
       setStage('editor');
     }
   }
-  // 본편 반영 후 상태 정리 — pending 리셋 + StoryXDesk remount(새 본편 픽업).
-  function commitReconciled(next: SeriesProject) {
+  // 본편 반영 후 상태 정리 — pending 리셋 + StoryXDesk remount(새 본편 픽업) + 반영량 토스트.
+  function commitReconciled(next: SeriesProject, before: SeriesProject) {
+    const added = countPendingSync(next, before);
     saveProject(next);
     setPendingSync({ chapters: 0, canon: 0, total: 0 });
     setSyncVersion((v) => v + 1);
+    setSyncFlash(added.total > 0 ? added : null);
   }
   // ⟳최신화 — 충돌 없으면 즉시 append 머지(player-first), 충돌 있으면 검토 다이얼로그(B-2).
   function reconcileSync() {
@@ -253,7 +263,7 @@ function App() {
     const committed = loadProject();
     const plan = deriveReconcilePlan(working, committed);
     if (plan.conflicts.length === 0) {
-      commitReconciled(reconcileWorkingIntoCommitted(working, committed));
+      commitReconciled(reconcileWorkingIntoCommitted(working, committed), committed);
       return;
     }
     setReconcileDecisions({});
@@ -263,7 +273,8 @@ function App() {
   function confirmReconcile() {
     const working = loadDiveState()?.project;
     if (working && reconcilePlan) {
-      commitReconciled(applyReconcile(working, loadProject(), reconcilePlan.conflicts, reconcileDecisions));
+      const before = loadProject();
+      commitReconciled(applyReconcile(working, before, reconcilePlan.conflicts, reconcileDecisions), before);
     }
     setReconcilePlan(null);
   }
@@ -279,6 +290,7 @@ function App() {
       onCancel={() => setReconcilePlan(null)}
     />
   ) : null;
+  const syncFlashNode = <SyncFlash flash={syncFlash} />;
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [format, medium]);
 
@@ -307,6 +319,7 @@ function App() {
           onOpenPublish={() => setStage('publish')}
         />
         {reconcileDialog}
+        {syncFlashNode}
       </>
     );
   }
@@ -375,6 +388,7 @@ function App() {
           rightSlot={<SyncConsole pending={pendingSync} onReconcile={reconcileSync} />}
         />
         {reconcileDialog}
+        {syncFlashNode}
       </>
     );
     const restored = loadDiveState();
