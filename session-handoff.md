@@ -4,7 +4,24 @@
 
 ---
 
-## 2026-07-02 (3차) — 융합 셸 슬라이스 B-2(reconcile 충돌 게이트) 구현 완료 (브랜치 미머지)
+## 2026-07-02 (4차) — 최신화 반영 피드백 토스트 (작은 후속 조각, 브랜치 미머지)
+
+> 충돌 없는 `⟳최신화`가 조용히 즉시 반영돼 피드백이 0이던 마찰을 `✓ 본편에 반영 — N회차·M캐논` 토스트(2.6초 자동 소멸)로 채움. progress.md "최신화 반영 피드백 토스트" 절 참조.
+
+### 한 것
+- 순수 `SyncFlash.tsx` · App `syncFlash` state + useEffect 타이머 · `commitReconciled(next, before)`에 before 추가 → `countPendingSync(next, before)`로 실제 반영량 산출 · reconcileSync·confirmReconcile 배선. 신규 테스트 3. `npm test` 767 녹색·build·라이브 토스트 확인.
+
+### 손대지 말 것 (불변식)
+- **반영량 = countPendingSync(next, before)** — before=최신화 전 committed, next=반영 후. 충돌 keep 으로 일부 빠져도 실제 append 수만 표시(부풀리지 않음).
+- **토스트는 정보 전용** — 자동 소멸(2.6초), 액션 없음. 최신화 로직에 영향 없음.
+
+### 다음 한 가지 (차례대로)
+- **머지** — `feat/fusion-shell-sync-flash`. 자율 권한 있음.
+- 다음 슬라이스 — **슬라이스 C(epilogue 풍 미니멀 재배치·이중 헤더 통합 — wm-bar + StoryXDesk 내부 편집/데이터 pill)**. ★ StoryXDesk 내부를 처음 건드리는 큰 UX → **신선한 세션 권장**(brainstorming+시각 companion+사용자 입력 필요). PLAN staged(`PLAN +N`)도 StoryXDesk 내부 staged화 필요. 후속 — retcon 예산 상한(정본 §9 "아크당", 아크 경계 미정의라 설계 필요)·finding retcon·의미 dedup·번역 투 게이트.
+
+---
+
+## 2026-07-02 (3차) — 융합 셸 슬라이스 B-2(reconcile 충돌 게이트) 구현 완료 (브랜치 미머지 → PR #15 main 머지)
 
 > `⟳최신화`가 무조건 append 하던 것을, working 새 캐논/회차가 본편과 **모순이면 검토 다이얼로그**(retcon 교체/버리기)를 먼저 띄우는 승인형 게이트로. 충돌 0이면 현행 즉시 반영. spec `docs/superpowers/specs/2026-07-02-fusion-shell-reconcile-gate-design.md`. progress.md "슬라이스 B-2" 절이 상세. 사용자 결정=충돌 게이트 중심.
 

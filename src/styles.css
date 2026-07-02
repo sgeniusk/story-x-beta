@@ -11542,6 +11542,9 @@ body {
 .sync-update { display: flex; align-items: center; gap: 5px; background: linear-gradient(180deg, #2a2140, #211934); border: 1px solid #4a3a6e; color: #e9d8ff; border-radius: 8px; padding: 6px 13px; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 0 0 0 rgba(192, 132, 252, 0.4); animation: syncPulse 2.4s infinite; }
 .sync-update:hover { border-color: #6b53a0; }
 @keyframes syncPulse { 0% { box-shadow: 0 0 0 0 rgba(192, 132, 252, 0.4); } 70% { box-shadow: 0 0 0 7px rgba(192, 132, 252, 0); } 100% { box-shadow: 0 0 0 0 rgba(192, 132, 252, 0); } }
+/* ⟳최신화 반영 피드백 토스트 — 조용한 즉시 반영에 잠깐 확인. */
+.sync-flash { position: fixed; top: 54px; right: 16px; z-index: 150; background: #13211a; border: 1px solid #2f5a3f; color: #bfe9c8; font-size: 12px; font-weight: 600; padding: 8px 14px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); animation: syncFlashIn 0.2s ease-out; }
+@keyframes syncFlashIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 /* 슬라이스 B-2 — reconcile 충돌 게이트 다이얼로그. working 새 주장 ↔ 본편 옛 정본. */
 .rc-overlay { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: rgba(6, 7, 9, 0.72); padding: 24px; }
 .rc-panel { width: min(560px, 94vw); max-height: 84vh; overflow-y: auto; background: #0c0d10; border: 1px solid #2a2330; border-radius: 12px; padding: 20px 22px; color: #e8e8ec; }

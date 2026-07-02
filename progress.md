@@ -4,9 +4,15 @@
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-02)
-`npm test` **764 통과**(76 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A(3모드 토글) PR #13 · **융합 셸 슬라이스 B(싱크 콘솔) PR #14** (전부 main). **융합 셸 슬라이스 B-2(reconcile 충돌 게이트)**는 `feat/fusion-shell-reconcile-gate`(미머지) 4커밋.
+`npm test` **767 통과**(77 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A(3모드 토글) PR #13 · 융합 셸 슬라이스 B(싱크 콘솔) PR #14 · **융합 셸 슬라이스 B-2(reconcile 충돌 게이트) PR #15** (전부 main). **최신화 반영 토스트**는 `feat/fusion-shell-sync-flash`(미머지) 1커밋.
 
-## 활성 트랙 — 융합 셸 슬라이스 B-2: reconcile 충돌 게이트 (`done` · 2026-07-02, 브랜치 `feat/fusion-shell-reconcile-gate` 미머지)
+## 활성 트랙 — 최신화 반영 피드백 토스트 (`done` · 2026-07-02, 브랜치 `feat/fusion-shell-sync-flash` 미머지)
+
+충돌 없는 `⟳최신화`가 조용히 즉시 반영돼 사용자가 무엇이 본편에 들어갔는지 몰랐던 마찰을, `✓ 본편에 반영 — N회차·M캐논` 토스트(2.6초 자동 소멸)로 채운 작은 후속 조각. 반영량은 `countPendingSync(next, before)` 재사용으로 정확 산출(충돌 keep 로 일부 빠져도 실제 append 수 반영).
+- **구현** — 순수 `SyncFlash.tsx`(flash null/total 0이면 null·회차/캐논 0 항목 생략) · App `syncFlash` state + useEffect 타이머 · `commitReconciled(next, before)` 시그니처에 before 추가해 `countPendingSync(next, before)`로 반영량 계산 · reconcileSync·confirmReconcile 두 경로 배선.
+- **검증** — `npm test` 767 녹색·build 성공·신규 테스트(syncFlash 3). 라이브(preview) — 무충돌 최신화 → 토스트 "✓ 본편에 반영 — 1회차 · 1캐논" 표시·자동 소멸·배지 리셋·crash 0.
+
+## 활성 트랙 — 융합 셸 슬라이스 B-2: reconcile 충돌 게이트 (`done` · 2026-07-02, 브랜치 `feat/fusion-shell-reconcile-gate` 미머지 → **PR #15 main 머지**)
 
 슬라이스 B의 `⟳최신화`가 무조건 append 하던 것을, working 새 캐논/회차가 본편(committed)과 **모순이면 검토 다이얼로그**(retcon 교체/버리기)를 먼저 띄우는 승인형 게이트. **충돌 0이면 현행대로 즉시 반영**(player-first). spec `docs/superpowers/specs/2026-07-02-fusion-shell-reconcile-gate-design.md`. 사용자 결정=충돌 게이트 중심(전체 reconcile 패널 아님). brainstorming→spec→TDD→라이브.
 - **구현** — 순수 `deriveReconcilePlan(working, committed)`(playRuntimeValidator, committed 캐논 contract로 working 미반영 캐논/회차 prose 검사 · `buildBandContract`·`firstConflictLayer`·`detectConflicts` 재사용 · factId 없는 대립 제외) · 순수 `applyReconcile`(syncConsole, `buildRetconUpdates`→`applyRetcons` 옛 캐논 교체 + 충돌 newClaim working 캐논 append 제외 + 비충돌 회차/캐논 append) · `ReconcileReview.tsx`(충돌 카드 옛 정본↔새 주장 + retcon/keep 토글 + 승인/취소) · App 배선(reconcilePlan·reconcileDecisions state · reconcileSync 분기 충돌0=commitReconciled 즉시·충돌≥1=다이얼로그 · confirmReconcile · toggleReconcile · 오버레이).
