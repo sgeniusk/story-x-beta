@@ -4,7 +4,28 @@
 
 ---
 
-## 2026-07-02 (2차) — 융합 셸 슬라이스 B(싱크 콘솔) 구현 완료 (브랜치 미머지)
+## 2026-07-02 (3차) — 융합 셸 슬라이스 B-2(reconcile 충돌 게이트) 구현 완료 (브랜치 미머지)
+
+> `⟳최신화`가 무조건 append 하던 것을, working 새 캐논/회차가 본편과 **모순이면 검토 다이얼로그**(retcon 교체/버리기)를 먼저 띄우는 승인형 게이트로. 충돌 0이면 현행 즉시 반영. spec `docs/superpowers/specs/2026-07-02-fusion-shell-reconcile-gate-design.md`. progress.md "슬라이스 B-2" 절이 상세. 사용자 결정=충돌 게이트 중심.
+
+### 한 것
+- 순수 `deriveReconcilePlan`(playRuntimeValidator — committed 캐논 contract로 working 미반영 캐논/회차 검사, buildBandContract·detectConflicts 재사용) · 순수 `applyReconcile`(syncConsole — retcon 교체 + 충돌 캐논 제외 append) · `ReconcileReview.tsx`(충돌 카드+retcon/keep 토글) · App(reconcilePlan·decisions state·reconcileSync 분기·confirmReconcile·오버레이).
+- **검증** — `npm test` 764 녹색·build 성공·신규 테스트 10. 라이브(preview) 실사용 경로 — 충돌→다이얼로그→retcon→옛 앵커 교체·공존 0·crash 0 / 충돌 없으면 즉시 반영. 4커밋(spec·deriveReconcilePlan·applyReconcile·컴포넌트+배선).
+
+### 손대지 말 것 (불변식)
+- **충돌 0 = 즉시 반영** — deriveReconcilePlan.conflicts 비면 다이얼로그 없이 commitReconciled(현행). player-first. 이걸 항상 다이얼로그로 바꾸면 몰입/속도 훼손.
+- **retcon = 제자리 교체, 공존 금지** — applyReconcile 이 충돌 newClaim 에 해당하는 working 캐논을 append 제외(retcon 은 committed 옛 fact 교체·keep 은 버림). 두 경우 모두 모순 두 캐논 공존 0. retcon 경로 불변식 계승.
+- **회차 본문 불변** — reconcile 은 캐논만 retcon/keep. 회차 prose 는 안 건드리고 그대로 append(작가 원고).
+- **기본 keep** — 다이얼로그 토글 기본은 유지(본편 보존). retcon 은 명시 클릭만.
+
+### 다음 한 가지 (차례대로)
+- **머지** — `feat/fusion-shell-reconcile-gate`. 자율 권한 있음.
+- 다음 슬라이스 — **슬라이스 C(epilogue 풍 미니멀 재배치·이중 헤더 통합 — wm-bar + StoryXDesk 내부 편집/데이터 pill)** · PLAN staged(`PLAN +N`, StoryXDesk 내부 staged화) → ArcDigest/Growth/Relation Snapshot. 후속 — retcon 예산 상한·finding retcon·의미 dedup·번역 투 게이트.
+- ⚠️ **잠복 버그 후보(무관)** — `createSeedProject`+회차를 committed 로 editor fresh mount 시 브라우저 client effect 크래시(2차 노트 참조). 실사용(createEmptyProject) 무영향.
+
+---
+
+## 2026-07-02 (2차) — 융합 셸 슬라이스 B(싱크 콘솔) 구현 완료 (브랜치 미머지 → PR #14 main 머지)
 
 > PLAY 변경을 즉시 반영에서 **git working-tree 모델**(staged→⟳최신화 append 머지)로 전환. 사용자 발명(handoff 2026-06-30 2차 line 172 + 목업 `sync-console.html`). spec `docs/superpowers/specs/2026-07-02-fusion-shell-sync-console-design.md`. progress.md "융합 셸 슬라이스 B" 절이 상세. 사용자 "너 뜻대로 해" 위임 → 데이터 모델까지 확정 후 진행.
 

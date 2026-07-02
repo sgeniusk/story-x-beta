@@ -4,9 +4,17 @@
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-02)
-`npm test` **754 통과**(75 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · **융합 셸 슬라이스 A(3모드 토글) PR #13** (전부 main). **융합 셸 슬라이스 B(싱크 콘솔)**는 `feat/fusion-shell-sync-console`(미머지) 2커밋.
+`npm test` **764 통과**(76 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A(3모드 토글) PR #13 · **융합 셸 슬라이스 B(싱크 콘솔) PR #14** (전부 main). **융합 셸 슬라이스 B-2(reconcile 충돌 게이트)**는 `feat/fusion-shell-reconcile-gate`(미머지) 4커밋.
 
-## 활성 트랙 — 융합 셸 슬라이스 B: 싱크 콘솔 (`done` · 2026-07-02, 브랜치 `feat/fusion-shell-sync-console` 미머지)
+## 활성 트랙 — 융합 셸 슬라이스 B-2: reconcile 충돌 게이트 (`done` · 2026-07-02, 브랜치 `feat/fusion-shell-reconcile-gate` 미머지)
+
+슬라이스 B의 `⟳최신화`가 무조건 append 하던 것을, working 새 캐논/회차가 본편(committed)과 **모순이면 검토 다이얼로그**(retcon 교체/버리기)를 먼저 띄우는 승인형 게이트. **충돌 0이면 현행대로 즉시 반영**(player-first). spec `docs/superpowers/specs/2026-07-02-fusion-shell-reconcile-gate-design.md`. 사용자 결정=충돌 게이트 중심(전체 reconcile 패널 아님). brainstorming→spec→TDD→라이브.
+- **구현** — 순수 `deriveReconcilePlan(working, committed)`(playRuntimeValidator, committed 캐논 contract로 working 미반영 캐논/회차 prose 검사 · `buildBandContract`·`firstConflictLayer`·`detectConflicts` 재사용 · factId 없는 대립 제외) · 순수 `applyReconcile`(syncConsole, `buildRetconUpdates`→`applyRetcons` 옛 캐논 교체 + 충돌 newClaim working 캐논 append 제외 + 비충돌 회차/캐논 append) · `ReconcileReview.tsx`(충돌 카드 옛 정본↔새 주장 + retcon/keep 토글 + 승인/취소) · App 배선(reconcilePlan·reconcileDecisions state · reconcileSync 분기 충돌0=commitReconciled 즉시·충돌≥1=다이얼로그 · confirmReconcile · toggleReconcile · 오버레이).
+- **충돌 처리 = retcon 재사용** — 응결 스튜디오 retcon 경로(buildRetconUpdates·applyRetcons) 그대로. 기본 keep(승인형 안전). retcon=committed 제자리 교체(모순 두 캐논 공존 방지, 불변식 계승). keep=committed 유지+working 새 것 버림.
+- **검증** — `npm test` 764 녹색·build 성공·신규 테스트 10(deriveReconcilePlan 4·applyReconcile 4·reconcileReview 2). **라이브(preview)** — 실사용 경로(createEmptyProject base): 충돌 캐논(서준 생사) 심고 ⟳최신화→다이얼로그(승인 전 committed 불변)·retcon 토글→승인→옛 앵커 교체·공존 0(캐논 1)·비충돌 회차 합류·remount 크래시 0·배지 리셋 · **충돌 없는 최신화는 다이얼로그 없이 즉시 반영**(player-first).
+- **범위 밖(다음)** — 회차 항목별 승인(회차는 자동 append=최소 몽타주) · PLAN staged(`PLAN +N`) · 의미 중복 dedup(LLM) · retcon 예산 상한 · epilogue 미니멀 재배치·이중 헤더 통합=슬라이스 C.
+
+## 활성 트랙 — 융합 셸 슬라이스 B: 싱크 콘솔 (`done` · 2026-07-02, 브랜치 `feat/fusion-shell-sync-console` 미머지 → **PR #14 main 머지**)
 
 슬라이스 A가 PLAY 변경을 `onChange`마다 즉시 `saveProject`로 본편 반영하던 것을, **git working-tree 모델**로 전환한 조각(사용자 발명, handoff 2026-06-30 2차 line 172 + 목업 `sync-console.html`). PLAY 변경은 diveKey working copy에만 staged, 상단 **`PLAY +N` 배지 + ⟳최신화** 버튼으로만 본편(storageKey)에 **append 머지**. spec `docs/superpowers/specs/2026-07-02-fusion-shell-sync-console-design.md`. 사용자 위임("너 뜻대로") 후 데이터 모델까지 확정. brainstorming→spec→TDD→라이브.
 - **구현** — 순수 `syncConsole.ts`(`countPendingSync` working vs committed 회차/캐논 id diff · `reconcileWorkingIntoCommitted` committed 없는 것만 append=WRITE 본편 편집 보존) · 순수 `SyncConsole.tsx`(pending.total>0일 때만 배지+⟳최신화) · `WorkspaceModeBar` `rightSlot`(상단 바 한 줄 통합, 이중 헤더 안 늘림) · App 배선(`pendingSync`·`syncVersion` state · DiveStage `saveProject` 제거→`onWorkingChange` · PLAY 진입 working 우선(A의 loadProject 교체 되돌림) · `reconcileSync` · StoryXDesk `key={studioView-syncVersion}` remount).

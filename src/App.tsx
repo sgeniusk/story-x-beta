@@ -78,7 +78,9 @@ import {
 import { DiveDesk } from './components/DiveDesk';
 import { WorkspaceModeBar, type WorkspaceMode } from './components/WorkspaceModeBar';
 import { SyncConsole } from './components/SyncConsole';
-import { countPendingSync, reconcileWorkingIntoCommitted, type PendingSync } from './lib/syncConsole';
+import { ReconcileReview } from './components/ReconcileReview';
+import { countPendingSync, reconcileWorkingIntoCommitted, applyReconcile, type PendingSync } from './lib/syncConsole';
+import { deriveReconcilePlan, type ReconcilePlan } from './lib/playRuntimeValidator';
 import { DiveStart } from './components/DiveStart';
 import { seedFromProposal, type DiveProposal, type DiveSetup } from './lib/diveProposal';
 import { createDiveSession } from './lib/diveSession';
@@ -226,6 +228,9 @@ function App() {
   );
   // 최신화가 본편을 바꾸면 이 버전이 오르고 StoryXDesk 가 remount 되어 새 본편을 읽는다.
   const [syncVersion, setSyncVersion] = useState(0);
+  // 슬라이스 B-2 — reconcile 충돌 게이트. 충돌 있으면 다이얼로그(retcon/keep), 없으면 즉시 반영.
+  const [reconcilePlan, setReconcilePlan] = useState<ReconcilePlan | null>(null);
+  const [reconcileDecisions, setReconcileDecisions] = useState<Record<string, 'keep' | 'retcon'>>({});
   const workspaceMode: WorkspaceMode = stage === 'dive' ? 'play' : studioView === 'data' ? 'plan' : 'write';
   function selectWorkspaceMode(next: WorkspaceMode) {
     if (next === 'play') {
@@ -235,14 +240,45 @@ function App() {
       setStage('editor');
     }
   }
-  // ⟳최신화 — PLAY working(diveKey) 의 새 회차/캐논만 본편(storageKey)에 append 머지(WRITE 편집 보존).
-  function reconcileSync() {
-    const working = loadDiveState()?.project;
-    if (!working) return;
-    saveProject(reconcileWorkingIntoCommitted(working, loadProject()));
+  // 본편 반영 후 상태 정리 — pending 리셋 + StoryXDesk remount(새 본편 픽업).
+  function commitReconciled(next: SeriesProject) {
+    saveProject(next);
     setPendingSync({ chapters: 0, canon: 0, total: 0 });
     setSyncVersion((v) => v + 1);
   }
+  // ⟳최신화 — 충돌 없으면 즉시 append 머지(player-first), 충돌 있으면 검토 다이얼로그(B-2).
+  function reconcileSync() {
+    const working = loadDiveState()?.project;
+    if (!working) return;
+    const committed = loadProject();
+    const plan = deriveReconcilePlan(working, committed);
+    if (plan.conflicts.length === 0) {
+      commitReconciled(reconcileWorkingIntoCommitted(working, committed));
+      return;
+    }
+    setReconcileDecisions({});
+    setReconcilePlan(plan);
+  }
+  // 다이얼로그 승인 — retcon 교체 + 충돌 제외 append. 취소는 staged 유지(최신화 안 함).
+  function confirmReconcile() {
+    const working = loadDiveState()?.project;
+    if (working && reconcilePlan) {
+      commitReconciled(applyReconcile(working, loadProject(), reconcilePlan.conflicts, reconcileDecisions));
+    }
+    setReconcilePlan(null);
+  }
+  function toggleReconcile(id: string) {
+    setReconcileDecisions((d) => ({ ...d, [id]: d[id] === 'retcon' ? 'keep' : 'retcon' }));
+  }
+  const reconcileDialog = reconcilePlan ? (
+    <ReconcileReview
+      conflicts={reconcilePlan.conflicts}
+      decisions={reconcileDecisions}
+      onToggle={toggleReconcile}
+      onApprove={confirmReconcile}
+      onCancel={() => setReconcilePlan(null)}
+    />
+  ) : null;
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [format, medium]);
 
@@ -270,6 +306,7 @@ function App() {
           onOpenLanding={() => setStage('landing')}
           onOpenPublish={() => setStage('publish')}
         />
+        {reconcileDialog}
       </>
     );
   }
@@ -330,12 +367,15 @@ function App() {
     const onWorkingChange = (project: SeriesProject) =>
       setPendingSync(countPendingSync(project, loadProject()));
     const bar = (
-      <WorkspaceModeBar
-        mode={workspaceMode}
-        onSelect={selectWorkspaceMode}
-        workTitle={loadProject().title}
-        rightSlot={<SyncConsole pending={pendingSync} onReconcile={reconcileSync} />}
-      />
+      <>
+        <WorkspaceModeBar
+          mode={workspaceMode}
+          onSelect={selectWorkspaceMode}
+          workTitle={loadProject().title}
+          rightSlot={<SyncConsole pending={pendingSync} onReconcile={reconcileSync} />}
+        />
+        {reconcileDialog}
+      </>
     );
     const restored = loadDiveState();
     if (restored) {

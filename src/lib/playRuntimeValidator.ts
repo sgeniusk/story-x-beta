@@ -1,5 +1,5 @@
 // PLAY(DiveDesk) 런타임 검증기 — 받은 답을 캐논 밴드별로 검사(순수). 정본 §5·§7.
-import type { CanonFact } from './storyEngine';
+import type { CanonFact, SeriesProject } from './storyEngine';
 import type { ContinuityContract } from './continuityContract';
 import { classifyCanonChange } from './continuityContract';
 import { parseSceneSegments, selectCondenseSpan, type DiveSession } from './diveSession';
@@ -140,6 +140,37 @@ export function validatePlayTurn(
     surpriseCandidates,
     blocksCanonization: conflicts.some((c) => c.band === 'anchor')
   };
+}
+
+export interface ReconcilePlan {
+  conflicts: DeviationConflict[];
+}
+
+// 융합 셸 슬라이스 B-2 — ⟳최신화 시 working 의 미반영 캐논/회차가 본편(committed) 캐논과
+// 모순인지 검사(순수). committed 없는 회차/캐논만 검사(미반영). factId 없는 대립은 retcon 불가라 제외.
+export function deriveReconcilePlan(working: SeriesProject, committed: SeriesProject): ReconcilePlan {
+  const committedCanonIds = new Set(committed.canonFacts.map((f) => f.id));
+  const committedChapterIds = new Set(committed.chapters.map((c) => c.id));
+  const segments: string[] = [];
+  for (const f of working.canonFacts) {
+    if (!committedCanonIds.has(f.id) && f.statement.trim()) segments.push(f.statement);
+  }
+  for (const ch of working.chapters) {
+    if (committedChapterIds.has(ch.id)) continue;
+    for (const seg of parseSceneSegments(ch.prose ?? '')) {
+      if (seg.text.trim()) segments.push(seg.text);
+    }
+  }
+  const conflicts = detectConflicts(segments, committed.canonFacts)
+    .filter((c) => c.factId)
+    .map((c, i): DeviationConflict => ({
+      id: `reconcile-c${i}`,
+      factId: c.factId,
+      band: c.band,
+      newClaim: c.snippet,
+      oldCanon: c.factStatement
+    }));
+  return { conflicts };
 }
 
 // 응결 대상 span의 메시지 verdict에서 결정 대상(✦)과 충돌 카운트를 모은다.
