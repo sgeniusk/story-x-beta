@@ -11542,7 +11542,7 @@ body {
 .wm-btn { padding: 4px 14px; border-radius: 999px; border: none; background: transparent; color: #a8b0ba; font-size: 12px; cursor: pointer; }
 .wm-btn.is-active { background: #7c5cff; color: #fff; font-weight: 600; }
 /* 슬라이스 C — 단일 바 슬롯 */
-.wm-title-input{background:transparent;border:none;color:inherit;font:inherit;font-weight:600;min-width:60px;max-width:220px;padding:2px 4px;border-radius:6px}
+.wm-title-input{background:transparent;border:none;color:#e8e8ee;font-size:13px;font-weight:600;font-family:inherit;min-width:60px;max-width:220px;padding:2px 4px;border-radius:6px}
 .wm-title-input:hover,.wm-title-input:focus{background:rgba(255,255,255,.05);outline:none}
 .wm-badge{margin-left:5px;padding:0 6px;border-radius:9px;background:#f87171;color:#17181d;font-size:10px;font-weight:700;line-height:1.5}
 .wm-context-chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border:1px solid rgba(255,255,255,.1);border-radius:6px;font-size:11px;color:rgba(237,237,243,.6);white-space:nowrap}
