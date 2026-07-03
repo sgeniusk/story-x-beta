@@ -4,7 +4,7 @@
 
 ---
 
-## 2026-07-03 (2차) — StoryXDesk legacy 셸 정리 (브랜치 미머지)
+## 2026-07-03 (2차) — StoryXDesk legacy 셸 정리 (PR #18 main 머지)
 
 > 슬라이스 C 후속 부채 정리 — 도달 불가 최종 return(옛 sx-topbar 셸) 삭제·연쇄 사망 심볼 제거·소스 단언 테스트 3분법 교정. **동작 무변경**(적대적 검토 CONFIRMED). StoryXDesk 3651→2255행. progress.md "legacy 셸 정리" 절이 상세. spec `docs/superpowers/specs/2026-07-03-desk-legacy-shell-cleanup-design.md`.
 
@@ -16,7 +16,6 @@
 - **보존한 write-only 잔여** — selectMedium/selectFormat·projectSnapshots·generationNote 등은 live 핸들러/영속에 엮여 있어 의도적으로 보존(추측 삭제 금지 원칙). 다음 정리 때도 tsc 증명 없이 지우지 말 것.
 
 ### 다음 한 가지 (차례대로)
-- **머지** — `feat/desk-legacy-shell-cleanup`. 자율 권한 있음.
 - 후속 결정 대기 — ① 고아 컴포넌트 `BibleAssistantSidebar`·`AgentProfileDialog`(렌더 0, 테스트는 존재 단언만) 삭제 or 재배선 ② 죽은 CSS(sx-topbar·ex-workbar·.fc-app .topbar) 정리 ③ **PLAN staged(`PLAN +N`)** — StoryXDesk 내부 staged화, brainstorming+사용자 입력 필요(큰 설계) ④ 집중 모드 크롬 숨김.
 
 ---

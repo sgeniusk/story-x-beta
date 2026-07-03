@@ -4,9 +4,9 @@
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-03 2차)
-`npm test` **772 통과**(79 파일) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · **슬라이스 C(단일 바 셸) PR #17** (전부 main). **legacy 셸 정리**는 `feat/desk-legacy-shell-cleanup`(미머지) 5커밋.
+`npm test` **772 통과**(79 파일) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · **슬라이스 C(단일 바 셸) PR #17** (전부 main). **legacy 셸 정리 PR #18** (main 머지).
 
-## 활성 트랙 — StoryXDesk legacy 셸 정리 (`done` · 2026-07-03 2차, 브랜치 `feat/desk-legacy-shell-cleanup` 미머지)
+## 완료 트랙 — StoryXDesk legacy 셸 정리 (`done` · 2026-07-03 2차, **PR #18 main 머지**)
 
 슬라이스 C 가 단일 바 셸을 완성하며 도달 불가가 된 StoryXDesk 최종 return(옛 sx-topbar 3-zone 셸)과 연쇄 사망 심볼을 걷어낸 **동작 무변경 부채 정리**. spec `docs/superpowers/specs/2026-07-03-desk-legacy-shell-cleanup-design.md`. 서브에이전트 구현 + 적대적 검토(반박 시도→CONFIRMED).
 - **삭제** — 최종 return 461행 + 헬퍼 5(PublishingStudio·AiCliHarnessCard·CreativeStage·VerticalSliceProofPanel·ContinuitySummaryCard) + state 12(isFocusMode·설정 popover·미디어 패널·버전 다이얼로그 등) + 파생/함수 ~20 + import ~50. **StoryXDesk 3651→2255행(−1396)**. 함수 끝은 `return null;`(3분기 조기 반환이 전 경로 커버, 도달 불가 타입 안전 폴백).
@@ -14,6 +14,7 @@
 - **테스트 3분법 교정** — editorFocusLayout·agentPersona·agentValidationProcess·lib/version 4파일. 교체 10(제목→wm-title-input·회차 픽커→contextSlot·저장 칩→dm-save·출간→FloatingPublishWorkspace 등)·삭제 ⓐ~6·ⓒ~4. 774→772(죽은 UI 테스트 2 삭제).
 - **검증** — 적대적 검토가 8개 공격면(margin review 계열·버전 복원·에이전트 레일·품질 게이트·⌘K diff·테스트 약화·도달 불가 증명) 전부에서 반박 실패 · init.sh 녹색 · 라이브 fresh load 콘솔 0·3모드 렌더·PLAN 품질 게이트 표시.
 - **알려진 잔여(후속)** — `BibleAssistantSidebar`·`AgentProfileDialog` 컴포넌트가 고아화(어디서도 렌더 안 됨, 테스트는 존재 단언만) → 삭제 or 재배선 별도 결정 · 죽은 CSS(sx-topbar·ex-workbar·.fc-app .topbar) 정리는 범위 밖 유지.
+- **머지 시 동반 유입(무해 확인)** — 구현 커밋 `f70c0d8` 이 untracked 였던 `.codex/agents/*.toml`(Codex 호환 에이전트 미러)·`.agents/skills/*`·`.claude/launch.json`(dev 서버 설정)을 함께 커밋. 비밀정보 스캔 통과·기추적 `.claude/agents/` 관례와 일치라 유지. 원치 않으면 revert 가능.
 
 ## 완료 트랙 — 융합 셸 슬라이스 C: 단일 바 셸 (`done` · 2026-07-03, **PR #17 main 머지**)
 
