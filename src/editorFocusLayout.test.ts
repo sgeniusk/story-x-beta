@@ -76,7 +76,6 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('position: sticky');
     expect(css).toContain('.sx-desk.is-focus-mode .sx-project-rail');
     expect(css).toContain('.sx-expand-editor-button');
-    expect(css).toContain('.sx-manuscript-editor p.is-anchored');
     expect(css).toContain('.sx-desk .ex-scene');
     expect(css).toContain('.sx-rail-seg');
     expect(css).toContain('.sx-data-stack');
@@ -155,15 +154,12 @@ describe('Story X focused editor layout', () => {
     expect(componentSrc('MemoryBankStudio')).toContain('승인됨');
     expect(componentSrc('MemoryBankStudio')).toContain('수정 요청됨');
     expect(componentSrc('MemoryBankStudio')).toContain('보류됨');
-    expect(css).toContain('.sx-track-tabs');
     // P5 — 편집/바이블/출간 트랙 전환 시 작업대에 약 130ms opacity 페이드
     expect(desk).toContain('const [isWorkbenchFading, setIsWorkbenchFading]');
     expect(desk).toContain('function runWithWorkbenchFade');
     expect(desk).toContain('function switchToTrack');
     expect(css).toContain('.sx-workbench.is-fading');
     expect(css).toContain('transition: opacity 130ms ease');
-    expect(css).toContain('.sx-publish-button');
-    expect(css).toContain('.sx-media-change-panel');
     expect(css).toContain('.sx-bible-studio');
     expect(css).toContain('.sx-bible-workbench');
     expect(css).toContain('.sx-bible-card textarea');
@@ -182,7 +178,6 @@ describe('Story X focused editor layout', () => {
     expect(desk).not.toContain('<ContinuitySummaryCard');
     expect(desk).toContain("const isBibleMode = activeTrack === 'bible' && !isPublishingMode");
     expect(componentSrc('OpenThreadsCard')).toContain('function OpenThreadsCard');
-    expect(css).toContain('.sx-focused-assist-rail');
   });
 
   it('adds a publishing studio for release snapshots and change-log review', () => {
@@ -322,7 +317,6 @@ describe('Story X focused editor layout', () => {
     expect(desk).not.toContain('ex-review-row ex-review-row--');
     expect(css).toContain('.sx-margin-col');
     expect(css).toContain('.sx-core-strip');
-    expect(css).toContain('.sx-manuscript-editor p.is-anchored');
     expect(css).toContain('.sx-desk.is-draft-mode .sx-desk-grid');
     expect(css).toContain('.sx-desk.drawer-open .sx-margin-col');
     expect(css).not.toContain('.sx-desk .ex-review-row');

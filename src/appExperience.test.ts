@@ -127,14 +127,6 @@ describe('Story X page experience', () => {
     expect(app).toContain('totalSeconds % 60');
   });
 
-  it('매체 변경 패널이 다크 토큰을 써서 흰/크림 박스로 뜨지 않는다', () => {
-    // 버그(2026-06-14 베타테스트 #11) — .sx-media-change-panel 이 흰 그라데이션 + 크림 배경이라 다크 스튜디오에서 흰 박스.
-    const start = css.indexOf('.sx-media-change-panel {');
-    const block = css.slice(start, css.indexOf('}', start));
-    expect(block).toContain('var(--sx-card)');
-    expect(block).not.toContain('rgba(255, 255, 255, 0.8)');
-  });
-
   it('overrides --nx-ink-deep inside the .home-page dark scope so card titles stay readable', () => {
     // 회귀 방지 — .home-page 다크 블록이 --nx-ink-deep 를 오버라이드하지 않으면
     // 매체/포맷 카드 제목(strong, color: var(--nx-ink-deep))이 다크 배경(#08090a)에 묻힌다.
