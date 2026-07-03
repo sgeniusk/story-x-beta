@@ -1,140 +1,31 @@
 import {
-  BookOpen,
-  BrainCircuit,
-  Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
-  Database,
-  Download,
-  FileText,
-  ListChecks,
-  Lock,
-  Maximize2,
-  MessageCircle,
-  Minimize2,
-  PenLine,
-  Plus,
-  RotateCcw,
-  Save,
-  Settings,
-  ShieldAlert,
-  Upload,
-  WandSparkles,
-  X
+  WandSparkles
 } from 'lucide-react';
-import {
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type FormEvent,
-  type ReactElement,
-  type ReactNode,
-  type RefObject
-} from 'react';
+import { useEffect, useCallback, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { getAgentValidationProcess, type ValidationAgentId } from './lib/agentReviewProcess';
-import { fallbackAgentPersona, getAgentPersona, type AgentPersona } from './lib/agentPersonas';
+import { getAgentPersona } from './lib/agentPersonas';
 import { defaultRuns, getMediumReviewAgentIds, visualStoryAgentRuns } from './lib/agentSeedData';
-import { STUDIO_ACCENT_VALUES, STUDIO_CANVAS_VALUES, type StudioAccent, type StudioCanvas } from './lib/studioConstants';
 import { inspectLeak, type LeakReport } from './lib/leakGate';
 import { recordWritingDay, emptyWritingLog, computeRetentionStats } from './lib/retentionStats';
 import { detectCanonMentions } from './lib/canonMentions';
 import storyXSymbol from './assets/brand/story-x-symbol-light.svg';
 import { AiStatusBadge } from './components/AiStatusBadge';
-import { AgentIntentCard } from './components/AgentIntentCard';
-import { AgentProfileDialog } from './components/AgentProfileDialog';
-import { AgentRoom } from './components/AgentRoom';
-import { BibleAssistantSidebar } from './components/BibleAssistantSidebar';
 import { CanonCanvas } from './components/CanonCanvas';
-import { CanonCardGrid } from './components/CanonCardGrid';
-import { CanonNav } from './components/CanonNav';
-import { CharacterDetailPanel } from './components/CharacterDetailPanel';
-import { CharacterGraph } from './components/CharacterGraph';
-import { CoreStrip } from './components/CoreStrip';
-import { DataLeftRail } from './components/DataLeftRail';
-import { DataReviewRail } from './components/DataReviewRail';
-import { DataPanel } from './components/DataPanel';
-import { EvaluatorQualityCard } from './components/EvaluatorQualityCard';
-import { MarginColumn } from './components/MarginColumn';
-import { MentionBar } from './components/MentionBar';
-import { MemoryBankCard } from './components/MemoryBankCard';
 import { MemoryBankStudio } from './components/MemoryBankStudio';
-import { OpenThreadsCard } from './components/OpenThreadsCard';
-import { PixelAvatar } from './components/PixelAvatar';
-import { ProjectStateCard } from './components/ProjectStateCard';
-import { PublishingIndexCard } from './components/PublishingIndexCard';
-import { WorkStateGrid } from './components/WorkStateGrid';
 import { FloatingEditor } from './components/FloatingEditor';
 import { FloatingDataWorkspace } from './components/FloatingDataWorkspace';
 import { FloatingPublishWorkspace } from './components/FloatingPublishWorkspace';
 import { WorkspaceModeBar } from './components/WorkspaceModeBar';
 import { OverflowMenu } from './components/OverflowMenu';
 import { CommandPalette, type DeskCommand } from './components/CommandPalette';
-import { ProjectHistoryDialog } from './components/ProjectHistoryDialog';
-import { VersionLogDialog } from './components/VersionLogDialog';
-import { StoryXStatusBar } from './components/StoryXStatusBar';
-import { ChapterStructureTree } from './components/ChapterStructureTree';
-import { TensionShareChart } from './components/TensionShareChart';
 import { useMarginReview } from './hooks/useMarginReview';
 import { findPersona } from './lib/extendedPersonas';
-import {
-  applyDiff,
-  resolveRunReviewAnchor,
-  splitIntoParagraphs,
-  toMarginReview,
-  type CanonDelta,
-  type InlineDiff,
-  type MarginReview,
-  type Paragraph
-} from './lib/marginReview';
-import {
-  buildCreativeBlueprint,
-  getFormatOptions,
-  getMediumOptions,
-  getWorkUnitNoun,
-  isSerialFormat,
-  type CreativeBlueprint,
-  type CreativeFormat,
-  type CreativeMedium
-} from './lib/projectBlueprint';
-import {
-  applyApprovedMemory,
-  buildDeterministicDataReview,
-  buildProjectContextDigest,
-  buildStoryEditorWorkspace,
-  chapterFromDraftPayload,
-  createEmptyProject,
-  createSeedProject,
-  describeCreativeWeight,
-  evaluateProductionGate,
-  getCanonReviewCategoryLabel,
-  getGenreProfiles,
-  lockChapter,
-  unlockChapter,
-  produceNextChapter,
-  serializeCanonCategory,
-  type AgentRun,
-  type Chapter,
-  type ChapterBeat,
-  commitChapterProse,
-  addCharacter,
-  applyContractAmendment,
-  removeCharacter,
-  renameCharacter,
-  type AgentId,
-  type CanonReviewCategory,
-  type ContractAmendmentPatch,
-  type CreativeWeight,
-  type DraftChapterPayload,
-  type GenreId,
-  type ProductionRequest,
-  type ProductionResult,
-  type SeriesProject
-} from './lib/storyEngine';
+import { applyDiff, resolveRunReviewAnchor, splitIntoParagraphs, toMarginReview, type CanonDelta, type InlineDiff, type MarginReview } from './lib/marginReview';
+import { buildCreativeBlueprint, getFormatOptions, getMediumOptions, getWorkUnitNoun, isSerialFormat, type CreativeFormat, type CreativeMedium } from './lib/projectBlueprint';
+import { applyApprovedMemory, buildDeterministicDataReview, buildProjectContextDigest, buildStoryEditorWorkspace, chapterFromDraftPayload, createEmptyProject, createSeedProject, evaluateProductionGate, getCanonReviewCategoryLabel, getGenreProfiles, lockChapter, unlockChapter, produceNextChapter, serializeCanonCategory, type AgentRun, type Chapter, type ChapterBeat, commitChapterProse, addCharacter, applyContractAmendment, removeCharacter, renameCharacter, type AgentId, type CanonReviewCategory, type ContractAmendmentPatch, type CreativeWeight, type DraftChapterPayload, type ProductionRequest, type ProductionResult, type SeriesProject } from './lib/storyEngine';
 import { requestLlmDraft } from './lib/draftClient';
 import { requestAgentReview } from './lib/reviewClient';
 import { computePayoffLedger } from './lib/payoffLedger';
@@ -144,7 +35,7 @@ import { requestPaceInterview } from './lib/paceInterviewClient';
 import { requestVsCandidates } from './lib/vsCandidatesClient';
 import { requestDataReview } from './lib/dataReviewClient';
 import type { BibleSection, CanonCategory, DataReviewView, DataView } from './lib/canonDataView';
-import { describeKoreanStyleLevel, evaluateKoreanProse } from './lib/koreanStyle';
+import { evaluateKoreanProse } from './lib/koreanStyle';
 import {
   agentReportsToRuns,
   buildAiCliRunPlan,
@@ -157,17 +48,10 @@ import {
   type AiCliReviewResult,
   type AiCliScale
 } from './lib/aiCliHarness';
-import {
-  buildMemoryApprovalQueue,
-  buildStoryMemoryBank,
-  type MemoryApprovalDecision,
-  type MemoryApprovalQueue,
-  type StoryMemoryBank
-} from './lib/memoryBank';
+import { buildMemoryApprovalQueue, buildStoryMemoryBank, type MemoryApprovalDecision, type MemoryApprovalQueue } from './lib/memoryBank';
 import { buildTesterDrivenWorkflow } from './lib/evaluationSynthesis';
-import { buildComicsVisualWorkflow } from './lib/visualProduction';
 import { getCreativeActionLabels } from './lib/projectBlueprint';
-import { buildPublishingPlan, type PublishingPlan } from './lib/publishing';
+import { buildPublishingPlan } from './lib/publishing';
 // M4 UI 통합 1차 컷 — 작가가 스튜디오 안에서 하네스 점수·6 스테이지·readyForProduction 을 본다.
 import { runStoryHarness, type StoryHarnessReport } from './lib/storyHarness';
 // M8 UI 통합 — Layer 0·4·7 결과를 좌레일에 노출.
@@ -183,10 +67,8 @@ import {
   type ResearchEthicsAudit
 } from './lib/academicIntegrity';
 import { toStudioMetrics } from './lib/studioMetrics';
-import { buildAlphaReadinessReport, type AlphaReadinessReport } from './lib/alphaReadiness';
-import { buildOneProjectVerticalSlice, type OneProjectVerticalSlice } from './lib/verticalSlice';
-import { STORYX_VERSION, storyxVersionLog } from './lib/version';
-import type { StoryXVersionInfo, StoryXVersionLogEntry } from './lib/version';
+import { buildAlphaReadinessReport } from './lib/alphaReadiness';
+import { buildOneProjectVerticalSlice } from './lib/verticalSlice';
 import {
   buildCanonRefactorPlan,
   createCanonChangeEntry,
@@ -212,11 +94,6 @@ type ApprovalDecision = MemoryApprovalDecision;
 
 const genreProfiles = getGenreProfiles();
 const mediumOptions = getMediumOptions();
-
-interface AgentDialogSelection {
-  run: AgentRun;
-  persona: AgentPersona;
-}
 
 function getMediumChampionRun(medium: CreativeMedium): AgentRun | null {
   switch (medium) {
@@ -277,17 +154,6 @@ function fallbackRunForAgent(agentId: string, output: string): AgentRun {
     status: 'pass',
     output,
     evidence: process.evidenceTargets.slice(0, 2)
-  };
-}
-
-function marginReviewToRun(review: MarginReview): AgentRun {
-  const persona = findPersona(String(review.persona));
-  return {
-    agentId: review.persona as ValidationAgentId,
-    title: persona.name,
-    status: review.severity === 'block' ? 'block' : review.severity === 'suggest' ? 'revise' : 'pass',
-    output: review.body || review.head,
-    evidence: [review.anchor]
   };
 }
 
@@ -650,15 +516,9 @@ export function StoryXDesk({
   const [reviewScale, setReviewScale] = useState<AiCliScale>('small');
   const [reviewProvider, setReviewProvider] = useState<AiCliProvider>('mock');
   const [latestReviewResult, setLatestReviewResult] = useState<AiCliReviewResult | null>(null);
-  const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(false);
   const [isPublishingMode, setIsPublishingMode] = useState(false);
-  const [isFocusMode, setIsFocusMode] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [isMarginDrawerOpen, setIsMarginDrawerOpen] = useState(false);
-  const [isBinderDrawerOpen, setIsBinderDrawerOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
-  const [isVersionLogOpen, setIsVersionLogOpen] = useState(false);
-  const [selectedAgent, setSelectedAgent] = useState<AgentDialogSelection | null>(null);
   const [canonChanges, setCanonChanges] = useState<CanonChangeEntry[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
@@ -679,42 +539,7 @@ export function StoryXDesk({
   const [dataReviewingCategory, setDataReviewingCategory] = useState<CanonCategory | null>(null);
   const [generationNote, setGenerationNote] = useState<string | null>(null);
   const [projectSnapshots, setProjectSnapshots] = useState<ProjectSnapshot[]>(() => loadProjectSnapshots());
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [activeBeatId, setActiveBeatId] = useState<string | null>(null);
-  // 편집기 설정 — 트윅(강조색) · 캔버스(원고 배경 톤). localStorage 영속.
-  const [isStudioSettingsOpen, setIsStudioSettingsOpen] = useState(false);
-  const [studioAccent, setStudioAccent] = useState<StudioAccent>(() => {
-    if (typeof window === 'undefined') return 'lime';
-    try {
-      const saved = window.localStorage.getItem('storyx.studio.accent');
-      return saved && saved in STUDIO_ACCENT_VALUES ? (saved as StudioAccent) : 'lime';
-    } catch {
-      return 'lime';
-    }
-  });
-  const [studioCanvas, setStudioCanvas] = useState<StudioCanvas>(() => {
-    if (typeof window === 'undefined') return 'pitch';
-    try {
-      const saved = window.localStorage.getItem('storyx.studio.canvas');
-      return saved && saved in STUDIO_CANVAS_VALUES ? (saved as StudioCanvas) : 'pitch';
-    } catch {
-      return 'pitch';
-    }
-  });
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('storyx.studio.accent', studioAccent);
-    } catch {
-      /* silent */
-    }
-  }, [studioAccent]);
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('storyx.studio.canvas', studioCanvas);
-    } catch {
-      /* silent */
-    }
-  }, [studioCanvas]);
   // 프로젝트 데이터 내보내기/가져오기 — 백업·다른 기기 이동·공유에 쓰는 단일 JSON 단위
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handleExportProject = () => {
@@ -750,27 +575,6 @@ export function StoryXDesk({
       window.alert(error instanceof Error ? `파일 읽기 실패 — ${error.message}` : '파일 읽기 실패.');
     }
   };
-  // 편집기 옵션 팝오버 — 바깥 클릭 / Escape 로 닫힌다
-  const studioSettingsWrapRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!isStudioSettingsOpen) return;
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (studioSettingsWrapRef.current && !studioSettingsWrapRef.current.contains(target)) {
-        setIsStudioSettingsOpen(false);
-      }
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsStudioSettingsOpen(false);
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [isStudioSettingsOpen]);
   const draftBootRef = useRef(false);
   const manuscriptRef = useRef<HTMLDivElement>(null);
 
@@ -1006,13 +810,11 @@ export function StoryXDesk({
   const bibleAlertCount = editorWorkspace.continuitySummary.blocked + editorWorkspace.continuitySummary.warnings;
   const isBibleMode = activeTrack === 'bible' && !isPublishingMode;
   const isDraftMode = activeTrack === 'draft' && !isPublishingMode;
-  const activeModeLabel = isPublishingMode ? '출간 준비' : activeTrack === 'bible' ? '작품 바이블' : '원고';
   // 연재형 포맷만 회차(N화) 언어를 쓴다. 단편·단독 완결형은 "원고" 하나로 다룬다.
   const isSerial = isSerialFormat(format);
   const unitNoun = getWorkUnitNoun(format);
   // 회차 라벨 — 연재형은 "N화", 단독 완결형은 진행 표시 없이 "원고".
   const chapterLabel = (chapter: Chapter) => (isSerial ? `${chapter.episode}화` : '원고');
-  const chapterCrumb = latestChapter ? chapterLabel(latestChapter) : '새 초안';
   const saveLabel = editedSinceReview ? '수정 중' : '저장됨';
   // 상단바 회차 선택기 — 좌측 레일에서 회차 카드 목록을 들어낸 자리를 대신한다
   const activeChapterIndex = latestChapter
@@ -1283,15 +1085,6 @@ export function StoryXDesk({
     [latestChapter?.prose, marginReview]
   );
 
-  // Phase 2e — isClassicEditor / ?editor=classic 폴백 제거. 드래프트 모드는 항상 FloatingEditor.
-  const openMarginReviewChat = useCallback(
-    (review: MarginReview) => {
-      const run =
-        displayedAgentRuns.find((item) => item.agentId === review.persona) ?? marginReviewToRun(review);
-      setSelectedAgent({ run, persona: getAgentPersona(run) });
-    },
-    [displayedAgentRuns]
-  );
   const isLatestLocked = latestChapter?.locked === true;
   const actionLabels = getCreativeActionLabels(blueprint.medium);
   const mainActionLabel = !latestChapter
@@ -1557,7 +1350,6 @@ export function StoryXDesk({
         run: () => {
           setActiveTrack('draft');
           setIsPublishingMode(false);
-          setIsMediaPanelOpen(false);
         }
       },
       {
@@ -1569,7 +1361,6 @@ export function StoryXDesk({
           setActiveTrack('bible');
           openBibleSection('overview');
           setIsPublishingMode(false);
-          setIsMediaPanelOpen(false);
         }
       },
       {
@@ -1581,7 +1372,6 @@ export function StoryXDesk({
           setActiveTrack('bible');
           openBibleSection('approval');
           setIsPublishingMode(false);
-          setIsMediaPanelOpen(false);
         }
       },
       {
@@ -1598,23 +1388,7 @@ export function StoryXDesk({
         description: '릴리즈 게이트와 출간 스냅샷 잠금 상태를 확인합니다.',
         run: () => {
           setIsPublishingMode(true);
-          setIsMediaPanelOpen(false);
         }
-      },
-      {
-        id: 'open-media-change',
-        label: '매체 변경',
-        section: '설정',
-        description: `${blueprint.mediumLabel} · ${blueprint.formatLabel}에서 다른 형식으로 전환합니다.`,
-        run: () => setIsMediaPanelOpen(true)
-      },
-      {
-        id: 'toggle-focus',
-        label: '집중 모드 토글',
-        section: '보기',
-        description: isFocusMode ? '좌우 레일을 다시 표시합니다.' : '좌우 레일을 숨기고 원고 영역을 넓힙니다.',
-        shortcut: '⌘.',
-        run: () => setIsFocusMode((current) => !current)
       },
       {
         id: 'release-lock-check',
@@ -1624,22 +1398,7 @@ export function StoryXDesk({
         disabled: false,
         run: () => {
           setIsPublishingMode(true);
-          setIsMediaPanelOpen(false);
         }
-      },
-      {
-        id: 'open-version-log',
-        label: '변경 로그 보기',
-        section: '제품',
-        description: `${STORYX_VERSION.label} · ${STORYX_VERSION.summary}`,
-        run: () => setIsVersionLogOpen(true)
-      },
-      {
-        id: 'open-project-history',
-        label: '작품 버전 기록 / 복원',
-        section: '관리',
-        description: `${projectSnapshots.length}개 저장 시점에서 이전 작품 상태로 되돌립니다.`,
-        run: () => setIsHistoryOpen(true)
       },
       {
         id: 'reset-project',
@@ -1657,7 +1416,6 @@ export function StoryXDesk({
       canonRefactorPlan.summary,
       draftPrompt,
       editorText,
-      isFocusMode,
       latestChapter,
       marginReview,
       publishingPlan.releaseLock.canLock,
@@ -1708,17 +1466,8 @@ export function StoryXDesk({
         return;
       }
 
-      if ((event.metaKey || event.ctrlKey) && event.key === '.') {
-        event.preventDefault();
-        setIsFocusMode((current) => !current);
-        return;
-      }
-
       if (event.key === 'Escape') {
-        setIsMarginDrawerOpen(false);
-        setIsBinderDrawerOpen(false);
         setIsCommandPaletteOpen(false);
-        setIsMediaPanelOpen(false);
       }
     }
 
@@ -1824,7 +1573,6 @@ export function StoryXDesk({
       saveProject(next);
       return next;
     });
-    setIsMediaPanelOpen(false);
   }
 
   function updateDraftPrompt(value: string) {
@@ -2056,25 +1804,6 @@ export function StoryXDesk({
     setProject(updated);
     setProjectSnapshots(pushProjectSnapshot(updated, `캐논 반영 ${approved.length}건`));
     setSyncedCandidateIds((current) => [...current, ...syncable.map((item) => item.id)]);
-  }
-
-  // 저장된 버전 스냅샷으로 작품 상태를 되돌린다
-  function restoreProjectVersion(snapshot: ProjectSnapshot) {
-    if (
-      !window.confirm(
-        `"${snapshot.label}" 시점으로 되돌릴까요? 현재 작품 상태가 이 버전으로 교체됩니다.`
-      )
-    ) {
-      return;
-    }
-
-    const chapters = snapshot.project.chapters;
-    setProject(snapshot.project);
-    setLatestChapter(chapters.length > 0 ? chapters[chapters.length - 1] : null);
-    setLatestReviewResult(null);
-    setAgentRuns(defaultRuns);
-    setEditedSinceReview(false);
-    setIsHistoryOpen(false);
   }
 
   function applyProductionResult(result: ProductionResult) {
@@ -2363,9 +2092,7 @@ export function StoryXDesk({
     setSyncedCandidateIds([]);
     clearProjectSnapshots();
     setProjectSnapshots([]);
-    setIsHistoryOpen(false);
     setLatestReviewResult(null);
-    setIsMediaPanelOpen(false);
     setIsPublishingMode(false);
     setCanonChanges([]);
   }
@@ -2386,7 +2113,6 @@ export function StoryXDesk({
     runWithWorkbenchFade(() => {
       setActiveTrack(nextTrack);
       setIsPublishingMode(false);
-      setIsMediaPanelOpen(false);
       if (nextTrack === 'bible') {
         setDataView({ kind: 'board' });
       }
@@ -2399,7 +2125,6 @@ export function StoryXDesk({
     }
     runWithWorkbenchFade(() => {
       setIsPublishingMode(true);
-      setIsMediaPanelOpen(false);
     });
   }
 
