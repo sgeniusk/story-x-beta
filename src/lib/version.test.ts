@@ -40,13 +40,11 @@ describe('Story X version log', () => {
     expect(storyxVersionLog[3].title).toContain('레이아웃 핫픽스');
   });
 
-  it('exposes the version and changelog in the app shell', () => {
-    expect(desk).toContain("import { STORYX_VERSION, storyxVersionLog } from './lib/version'");
-    expect(desk).toContain('const [isVersionLogOpen, setIsVersionLogOpen]');
+  it('keeps the version constant and changelog available as a reusable product module', () => {
+    // 변경 로그 뷰어(VersionLogDialog) 렌더·⌘K 명령은 legacy desk 셸과 함께 제거됐다.
+    // 버전 상수/로그 자체는 재사용 가능한 제품 모듈로 유지된다(위 두 it 이 값 계약을 검사).
     expect(versionLogDialog).toContain('function VersionLogDialog');
-    expect(desk).toContain('변경 로그 보기');
-    expect(desk).toContain('version={STORYX_VERSION}');
-    expect(desk).toContain('entries={storyxVersionLog}');
+    expect(desk).not.toContain('<VersionLogDialog');
   });
 
   it('documents the current roadmap baseline for future releases', () => {

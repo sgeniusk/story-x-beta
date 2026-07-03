@@ -64,7 +64,8 @@ describe('persona validation process', () => {
   });
 
   it('surfaces the protocol in the editor and project skill', () => {
-    expect(desk).toContain('<AgentProfileDialog');
+    // AgentProfileDialog 렌더는 legacy desk 셸과 함께 제거됐다. 프로토콜 정의는 컴포넌트 파일에서 검사한다.
+    expect(componentSrc('AgentProfileDialog')).toContain('function AgentProfileDialog');
     expect(componentSrc('AgentProfileDialog')).toContain('검증 프로세스');
     expect(componentSrc('AgentProfileDialog')).toContain('성장 메모리');
     // 검토 규모 상태는 StoryXDesk 에서 관리되고 floatingEditorProps 로 전달된다
