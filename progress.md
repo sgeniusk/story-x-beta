@@ -3,8 +3,16 @@
 > Last Updated: 2026-06-27 · Branch: `feat/dive-x-arc`(미머지) (**Dive X 진전 엔진(묶음 C-1) 구현 완료. 쇼러너가 StoryArc(극적질문·긴장·다음전개)를 들고 매 턴 진전·🎯 표시·⏭전개 버튼·dive-condense arc 페이오프. dogfooding "진전 없음(큰 흠)" 직접 해소. 가벼운 LLM-유지 arc(추가 호출 0). 이전 — 1차(PR #4·main)·2차 장면+쇼러너(PR #5·local main)·3차 선택지+계속+자유응결(묶음 A·local main). 묶음 C-2(능동 멀티캐릭터)·묶음 B(되돌리기·캐논 god-편집·과금) 후속 대기. 다음 — Dive X arc 머지 결정 + dogfooding + C-2/B + 품질·비용 로드맵·A-6 장편 기억.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 최근 검증 (2026-07-03 2차)
-`npm test` **772 통과**(79 파일) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · **슬라이스 C(단일 바 셸) PR #17** (전부 main). **legacy 셸 정리 PR #18** (main 머지).
+## 최근 검증 (2026-07-03 3차)
+`npm test` **759 통과**(76 파일) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · **슬라이스 C(단일 바 셸) PR #17** (전부 main). **legacy 셸 정리 PR #18** (main 머지). **고아·CSS 정리**는 `feat/desk-orphan-css-cleanup`(미머지).
+
+## 완료 트랙 — 고아 컴포넌트·죽은 CSS 정리 (`done` · 2026-07-03 3차, 브랜치 `feat/desk-orphan-css-cleanup` 미머지)
+
+PR #18 "알려진 잔여" 마무리 — 렌더 0 고아 컴포넌트와 어떤 live TSX 도 참조 안 하는 셸 CSS 를 걷어낸 **렌더 무변경 정리**. spec `docs/superpowers/specs/2026-07-03-desk-orphan-css-cleanup-design.md`. 서브에이전트 구현 + 적대적 검토(RENDER-PRESERVING CONFIRMED).
+- **삭제** — 고아 컴포넌트 15파일(1차 11 — BibleAssistantSidebar·AgentProfileDialog·StoryXStatusBar·EvaluatorQualityCard·AgentRoom·AgentIntentCard·MentionBar·CoreStrip·MarginColumn·VersionLogDialog·ProjectHistoryDialog · 2~3차 — AgentPixelPortrait·AnnotationCard·CanonSummaryCard·lib/agentPersonas·lib/snapshotImpact) + 죽은 테스트 3파일 · **CSS 2197줄**(styles.css 11621→9424, 클래스 단위 grep 증명) · 검토 발견 후속 — 미호출 `renderParagraphText`+`--sx-diff-*` 토큰 동반 삭제(잠재 함정 해소).
+- **함정 회피 실증** — `.fc-app .topbar` 는 FloatingPublishWorkspace 가 live 렌더라 보존(spec 후보 목록의 오류를 구현이 교정) · `.fc-app.focus .docks` 콤마 셀렉터 분리 보존 · PixelAvatar/extendedPersonas 등 유사 이름 live 심볼 보존.
+- **검증** — `npm test` 759 통과(76 파일)·build·init.sh · 적대적 검토 6공격면(도달성·CSS 표본 25+·동적 클래스·테스트 약화·publish 스타일) 반박 실패 · 라이브 fresh load 콘솔 0·computed style 실측(wm-bar/fc-sheet-cta/dock) 무손실.
+- **보류(별도 조각)** — 옛 인라인 편집기 desk-grid CSS(sx-workbench·sx-creative-stage 등, TSX=0 이나 테스트 계약에 물려 있고 상호 연결이 큼).
 
 ## 완료 트랙 — StoryXDesk legacy 셸 정리 (`done` · 2026-07-03 2차, **PR #18 main 머지**)
 

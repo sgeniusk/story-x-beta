@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-07-03 (3차) — 고아 컴포넌트·죽은 CSS 정리 (브랜치 미머지)
+
+> PR #18 잔여 마무리 — 고아 컴포넌트 15파일 + CSS 2197줄 삭제, 렌더 무변경(적대적 검토 CONFIRMED). progress.md "고아 컴포넌트·죽은 CSS 정리" 절이 상세.
+
+### 손대지 말 것 (불변식)
+- **`.fc-app .topbar` 는 live** — FloatingPublishWorkspace 가 렌더. legacy 라고 지우면 출간 워크스페이스 스타일 소실.
+- **CSS 삭제는 클래스 단위 grep 증명** — 접두사 일괄 삭제 금지. `sx-desk`·`ex-chapter-picker-step`·`.mnote`·`pixel-agent*` 등 이름이 legacy 스러운 live 클래스가 많다.
+- **소스-스타일시트 일관성** — 클래스를 방출하는 코드가 남아 있으면 CSS 도 남기거나 코드까지 지운다(renderParagraphText 선례).
+
+### 다음 한 가지 (차례대로)
+- **머지** — `feat/desk-orphan-css-cleanup`. 자율 권한 있음.
+- 다음 후보 — **PLAN staged(`PLAN +N`)** (brainstorming+사용자 입력 필요, 큰 설계) · 옛 인라인 편집기 desk-grid CSS 정리(보류분) · 집중 모드 크롬 숨김 · publish 4번째 모드.
+
+---
+
 ## 2026-07-03 (2차) — StoryXDesk legacy 셸 정리 (PR #18 main 머지)
 
 > 슬라이스 C 후속 부채 정리 — 도달 불가 최종 return(옛 sx-topbar 셸) 삭제·연쇄 사망 심볼 제거·소스 단언 테스트 3분법 교정. **동작 무변경**(적대적 검토 CONFIRMED). StoryXDesk 3651→2255행. progress.md "legacy 셸 정리" 절이 상세. spec `docs/superpowers/specs/2026-07-03-desk-legacy-shell-cleanup-design.md`.
