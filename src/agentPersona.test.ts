@@ -14,7 +14,8 @@ describe('agent personas', () => {
     expect(personas).toContain('const agentPersonas');
     expect(portrait).toContain('function AgentPixelPortrait');
     expect(componentSrc('AgentProfileDialog')).toContain('function AgentProfileDialog');
-    expect(desk).toContain('onSelectAgent');
+    // 에이전트 선택 배선(onSelectAgent)은 BibleAssistantSidebar 로 이동했다 — 옛 desk 셸에서 제거됨
+    expect(componentSrc('BibleAssistantSidebar')).toContain('onSelectAgent');
     expect(componentSrc('AgentProfileDialog')).toContain('자세한 지시사항');
     expect(personas).toContain('말풍선 연출가');
     expect(personas).toContain('원화/키프레임 감독');

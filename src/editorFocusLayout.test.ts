@@ -10,16 +10,6 @@ const componentSrc = (name: string) =>
   readFileSync(resolve(__dirname, `components/${name}.tsx`), 'utf8');
 
 describe('Story X focused editor layout', () => {
-  it('routes the center workspace by creative medium', () => {
-    expect(desk).toContain('function CreativeStage');
-    expect(desk).toContain('initialMedium');
-    expect(desk).toContain("blueprint.medium === 'comics'");
-    expect(desk).toContain("blueprint.medium === 'audiobook'");
-    expect(desk).toContain('className="sx-canvas-surface"');
-    expect(desk).toContain('className="sx-storyboard-surface"');
-    expect(desk).toContain('className={`sx-writing-surface');
-  });
-
   it('keeps the creative artifact as the 70 percent center of the editor', () => {
     expect(css).toContain('grid-template-columns: clamp(200px, 15vw, 260px) minmax(0, 1fr) clamp(220px, 18vw, 320px)');
     // P5 — 3컬럼 그리드는 1280px·1440px에서 유지, 약 1080px 미만에서만 에이전트 레일을 접는다
@@ -36,29 +26,16 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-workbench {\n    order: 1;');
   });
 
-  it('keeps evaluator quality gates visible inside the focused editor rail', () => {
-    expect(desk).toContain('buildTesterDrivenWorkflow');
-    expect(desk).toContain('EvaluatorQualityCard');
-    expect(desk).toContain('품질 게이트');
-    expect(css).toContain('.sx-evaluator-card');
-  });
-
   it('uses a compact app shell instead of the marketing banner inside the editor', () => {
-    expect(desk).toContain('sx-topbar-actions');
-    expect(desk).toContain('className="sx-app-breadcrumb"');
+    // 슬라이스 C — 컴팩트 셸은 단일 WorkspaceModeBar 다(옛 sx-topbar 셸은 제거됨).
+    expect(desk).toContain('<WorkspaceModeBar');
     // P2 — 명령 팔레트는 ⌘K 단축키로 연다 (시각 버튼 제거)
     expect(desk).toContain("event.key.toLowerCase() === 'k'");
-    // 일하는 바 — 저장 상태 칩은 좌측 존에 있다
-    expect(desk).toContain('sx-save-chip ex-workbar-save');
-    expect(componentSrc('StoryXStatusBar')).toContain('function StoryXStatusBar');
-    expect(desk).toContain('<StoryXStatusBar');
-    expect(desk).toContain('alphaReport={alphaReport}');
+    // 저장 상태 칩은 metaRightSlot 의 dm-save 로 이동했다
+    expect(desk).toContain('className="dm-save"');
     expect(desk).not.toContain('AI 작가진과 함께, 흔들림 없는 세계관을 만듭니다.');
     expect(desk).not.toContain('<AlphaSelfCheckCard alphaReport={alphaReport} />');
-    expect(css).toContain('.sx-statusbar');
-    expect(css).toContain('height: 32px');
     expect(css).toContain('--sx-ink-2: rgba(247, 248, 248, 0.82)');
-    expect(css).toContain('.sx-writing-surface .sx-writing-page h2');
     // 원고칸은 산문만 — beat 한줄 요약은 좌측 구조 트리에서만 본다
     expect(desk).not.toContain('sx-outline-strip');
     expect(desk).not.toContain('sx-writing-hook');
@@ -74,15 +51,12 @@ describe('Story X focused editor layout', () => {
     expect(componentSrc('AgentIntentCard')).toContain('ex-intent-card');
     expect(componentSrc('AgentIntentCard')).toContain('function AgentIntentCard');
     expect(componentSrc('AgentIntentCard')).toContain('className="ex-intent-textarea"');
-    expect(desk).toContain('aria-label="원고 편집기"');
-    expect(desk).toContain('const [isFocusMode, setIsFocusMode]');
-    expect(desk).toContain('className="sx-expand-editor-button"');
-    expect(desk).toContain('편집기 확대');
+    // 편집기는 FloatingEditor 로 이동했다 — 원고 표면·확대/집중 UI는 그 컴포넌트에 있다.
+    expect(desk).toContain('<FloatingEditor');
     expect(desk).toContain('const mainActionLabel = !latestChapter');
     expect(desk).toContain('? actionLabels.draft');
     expect(desk).toContain(': actionLabels.review');
-    expect(desk).toContain('수정됨');
-    // 회차 이동은 상단바 회차 선택기로 일원화했다
+    // 회차 이동은 wm-bar 회차 선택기로 일원화했다
     expect(desk).toContain('aria-label="회차 이동"');
     // P2-B — 좌측 레일은 평탄한 beat 목록 대신 기승전결 구조 트리를 보여준다
     expect(componentSrc('ChapterStructureTree')).toContain('function ChapterStructureTree');
@@ -91,7 +65,9 @@ describe('Story X focused editor layout', () => {
     expect(componentSrc('ChapterStructureTree')).toContain('function resolveActTitle');
     expect(desk).toContain("const [studioRailTab, setStudioRailTab]");
     expect(desk).toContain("window.localStorage.getItem('storyx.studio.railTab')");
-    expect(desk).toContain('<DataPanel metrics={studioMetrics} onMediaAxisChange={updateStoryModeAxis} />');
+    // DataPanel 배선(지표·매체 축)은 floatingEditorProps 로 이동했다
+    expect(desk).toContain('metrics: studioMetrics');
+    expect(desk).toContain('onMediaAxisChange: updateStoryModeAxis');
     expect(desk).toContain('toStudioMetrics({');
     expect(desk).not.toContain('function HarnessReportCard');
     expect(desk).not.toContain('function QualityGatesCard');
@@ -112,7 +88,6 @@ describe('Story X focused editor layout', () => {
   });
 
   it('P1 — keeps the manuscript as the protagonist with a thin toolstrip above it', () => {
-    expect(desk).toContain("className={`sx-workbench ${isPublishingMode ? 'is-publishing' : activeTrack === 'bible' ? 'is-bible' : 'is-draft'}");
     expect(css).toContain('.sx-workbench.is-draft');
     // 편집 트랙: 툴스트립 1행 + 원고가 나머지 공간을 채우는 1행
     expect(css).toContain('grid-template-rows: auto minmax(0, 1fr)');
@@ -134,31 +109,28 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('setIsCommandPaletteOpen((current) => !current)');
     expect(componentSrc('CommandPalette')).toContain('명령 또는 화면 검색');
     expect(desk).toContain('승인 대기 열기');
-    expect(desk).toContain('집중 모드 토글');
-    // 매체 변경도 팔레트 명령으로 유지된다
-    expect(desk).toContain("id: 'open-media-change'");
+    // 아무 것도 하지 않던 inert 명령(집중 모드 토글·매체 변경)은 legacy 셸과 함께 제거됐다
     expect(css).toContain('.sx-command-palette-backdrop');
     expect(css).toContain('.sx-command-palette');
     expect(css).toContain('.sx-command-list');
   });
 
-  it('P2 — restructures the editor topbar into a dense 3-zone working bar', () => {
-    // 일하는 바 — 좌/중앙/우 3존 구조 (design3 working bar)
-    expect(desk).toContain('sx-topbar sx-app-shell-topbar ex-workbar');
-    expect(desk).toContain('sx-brand ex-workbar-left');
-    expect(desk).toContain('sx-track-tabs ex-workbar-modes');
-    expect(desk).toContain('sx-topbar-actions ex-workbar-right');
-    // 저장 상태 칩과 출간 버튼은 유지되지만 working bar 존으로 재배치됐다
-    expect(desk).toContain('sx-save-chip ex-workbar-save');
-    expect(desk).toContain('sx-publish-button');
-    // 홈 버튼/아바타/매체 칩/⌘K 버튼은 상단에서 제거했다
+  it('P2 — 슬라이스 C 단일 WorkspaceModeBar 가 옛 3존 작업바를 대체한다', () => {
+    // 옛 sx-topbar 3존 작업바(design3 working bar)는 제거됐다 — 단일 바가 소유권을 갖는다
+    expect(desk).not.toContain('sx-topbar sx-app-shell-topbar ex-workbar');
+    expect(desk).toContain('<WorkspaceModeBar');
+    // 제목 인라인 편집 = wm-title-input, 회차/캐논 컨텍스트 = contextSlot, ⋯ 메뉴 = overflowItems
+    expect(desk).toContain('className="wm-title-input"');
+    expect(desk).toContain('contextSlot={');
+    expect(desk).toContain('const overflowItems =');
+    // 저장 칩은 metaRightSlot 의 dm-save 로 유지된다
+    expect(desk).toContain('className="dm-save"');
+    // 홈 버튼/아바타/매체 칩/⌘K 버튼 등 옛 상단 클러터는 제거됐다
     expect(desk).not.toContain('className="sx-command-k"');
     expect(desk).not.toContain('className="sx-user-avatar"');
     expect(desk).not.toContain('className="sx-media-change-button"');
     expect(desk).not.toContain('className="sx-app-nav-links"');
-    // 브랜드 영역은 홈 버튼 + 인라인 편집 가능한 제목을 포함한다
-    expect(desk).toContain('className="sx-brand-mark sx-brand-home"');
-    expect(desk).toContain('className="sx-crumb-title-input"');
+    expect(desk).not.toContain('className="sx-crumb-title-input"');
   });
 
   it('uses a two-track editor with publishing moved to a separate action', () => {
@@ -169,15 +141,12 @@ describe('Story X focused editor layout', () => {
     // P3 — 데이터 모드는 단일 dataView 상태로 캐논 분야/바이블 작업장 진입점을 함께 표현한다
     expect(desk).toContain('const [dataView, setDataView]');
     expect(desk).toContain('const [approvalDecisions, setApprovalDecisions]');
-    expect(desk).toContain('const [isMediaPanelOpen, setIsMediaPanelOpen]');
     expect(desk).toContain('원고 편집');
     expect(desk).toContain('작품 바이블');
     expect(desk).toContain('출간 준비');
-    expect(desk).toContain('sx-publish-button');
-    expect(desk).toContain('매체 변경');
-    expect(desk).toContain('sx-track-tabs ex-workbar-modes');
-    expect(desk).toContain('className="sx-bible-alert-badge"');
-    expect(desk).toContain('className="sx-media-change-panel"');
+    // 출간 접근은 WorkspaceModeBar 의 overflowItems(publish)로, 트랙 전환은 onSelect→switchToTrack 로 이동했다
+    expect(desk).toContain("id: 'publish'");
+    expect(desk).toContain('openPublishingMode');
     expect(componentSrc('MemoryBankStudio')).toContain('function MemoryBankStudio');
     expect(desk).toContain('function updateCharacterMemory');
     expect(desk).toContain('function updateWorldMemory');
@@ -209,24 +178,19 @@ describe('Story X focused editor layout', () => {
   });
 
   it('keeps editor rails focused and moves memory, quality, and harness work into the bible flow', () => {
-    expect(desk).toContain('buildAlphaReadinessReport');
-    expect(desk).toContain('const alphaReport = useMemo');
     expect(componentSrc('StoryXStatusBar')).toContain('function StoryXStatusBar');
-    expect(desk).toContain('alphaReport={alphaReport}');
     expect(componentSrc('StoryXStatusBar')).toContain('알파 셀프체크');
     expect(componentSrc('StoryXStatusBar')).toContain('report.nextActions[0]');
+    // 편집 셸에서 걷어낸 카드들은 desk 에서 렌더되지 않는다(bible 흐름·FloatingDataWorkspace 로 이동)
     expect(desk).not.toContain('<CurrentBlueprintCard');
     expect(desk).not.toContain('<MemoryBankCard bank={memoryBank} />');
     expect(desk).not.toContain('<AiCliHarnessCard');
-    expect(desk).not.toContain('<EvaluatorQualityCard workflow={evaluatorWorkflow} />');
+    expect(desk).not.toContain('<EvaluatorQualityCard');
     expect(desk).not.toContain('<ContinuitySummaryCard');
     expect(desk).toContain("const isBibleMode = activeTrack === 'bible' && !isPublishingMode");
     expect(componentSrc('OpenThreadsCard')).toContain('function OpenThreadsCard');
-    expect(desk).toContain('<OpenThreadsCard threads={project.openThreads} />');
     expect(componentSrc('BibleAssistantSidebar')).toContain('function BibleAssistantSidebar');
     expect(componentSrc('BibleAssistantSidebar')).toContain('조수진');
-    expect(desk).toContain('<BibleAssistantSidebar');
-    expect(desk).toContain('sx-focused-assist-rail');
     expect(css).toContain('.sx-focused-assist-rail');
     expect(css).toContain('.sx-bible-assistant-sidebar');
     expect(css).toContain('.sx-statusbar');
@@ -234,21 +198,20 @@ describe('Story X focused editor layout', () => {
   });
 
   it('adds a publishing studio for release snapshots and change-log review', () => {
+    // 출간 UI 는 FloatingPublishWorkspace 로 추출됐다 — desk 는 plan 계산·배선만 남는다
     expect(desk).toContain('buildPublishingPlan');
     expect(desk).toContain('const publishingPlan = useMemo');
     expect(desk).toContain('{ approvalQueue }');
-    expect(desk).toContain('PublishingStudio');
-    expect(desk).toContain('PublishingIndexCard');
+    expect(desk).toContain('<FloatingPublishWorkspace');
     expect(desk).toContain('onBackToEditor');
-    expect(desk).toContain('출간 스냅샷');
-    expect(desk).toContain('변경 로그 검토');
-    expect(desk).toContain('plan.releaseLock');
-    expect(desk).toContain('출간 스냅샷 잠그기');
-    expect(desk).toContain('첫 300자');
-    expect(desk).toContain('게시 위치');
-    expect(desk).toContain('memory-approval');
-    expect(desk).toContain('만화는 스토리보드 패키지');
-    expect(css).toContain('.sx-publishing-studio');
+    expect(desk).toContain('plan={publishingPlan}');
+    const publish = componentSrc('FloatingPublishWorkspace');
+    expect(publish).toContain('변경 로그 검토');
+    expect(publish).toContain('plan.releaseLock');
+    expect(publish).toContain('출간 스냅샷 잠그기');
+    expect(publish).toContain('첫 300자');
+    expect(publish).toContain('게시 위치');
+    expect(publish).toContain('만화는 스토리보드 패키지');
     expect(css).toContain('.sx-release-checklist');
     expect(css).toContain('.sx-release-gate-state');
     expect(css).toContain('.sx-release-lock-panel');
@@ -300,15 +263,13 @@ describe('Story X focused editor layout', () => {
   });
 
   it('connects the flow validation button to the AI review contract and pending memory candidates', () => {
-    expect(desk).toContain('buildAiCliRunPlan');
     expect(desk).toContain('buildMockAiCliReviewResult');
     expect(desk).toContain('agentReportsToRuns');
     expect(desk).toContain('const [reviewScale, setReviewScale]');
-    expect(desk).toContain('const [reviewProvider, setReviewProvider]');
     expect(desk).toContain('const [latestReviewResult, setLatestReviewResult]');
-    expect(desk).toContain('function AiCliHarnessCard');
+    // AiCliHarnessCard(legacy 셸 카드)는 제거됐다 — 검토 계약은 reviewDraft·memoryCandidates 로 남는다
     expect(desk).not.toContain('<AiCliHarnessCard');
-    expect(desk).toContain('흐름 검증');
+    expect(desk).not.toContain('function AiCliHarnessCard');
     expect(desk).toContain('memoryCandidates');
     expect(desk).toContain('setLatestReviewResult(result)');
     expect(css).toContain('.sx-memory-candidate-list');
@@ -324,22 +285,25 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('onUpdateApprovalStatement={updateApprovalStatement}');
     expect(componentSrc('MemoryBankStudio')).toContain('approvalQueue.items.map');
     expect(componentSrc('MemoryBankStudio')).toContain('value={item.editableStatement}');
-    expect(desk).toContain('승인 대기함 열기');
+    // 승인 대기함 진입은 ⌘K '승인 대기 열기' 명령·onOpenApprovalQueue 배선으로 유지된다
+    expect(desk).toContain('승인 대기 열기');
+    expect(desk).toContain('onOpenApprovalQueue');
     expect(componentSrc('MemoryBankStudio')).toContain('동기화 가능');
     expect(css).toContain('.sx-approval-summary');
     expect(css).toContain('.sx-approval-source-pill');
     expect(css).toContain('.sx-approval-impact-tags');
   });
 
-  it('P2 — uses 편집/데이터 primary tabs and keeps 출간 reachable as a secondary action', () => {
-    // 편집/데이터 두 PRIMARY 모드 탭 (디자인의 Workbar 편집/데이터)
-    expect(desk).toContain('className="sx-track-tabs ex-workbar-modes ex-mode-pair"');
-    expect(desk).toContain('aria-label="작업 모드"');
-    expect(desk).toContain('데이터');
-    // 출간은 탭에서 빠지고 우측 존의 secondary 버튼으로 유지된다
-    expect(desk).toContain('ex-workbar-publish');
+  it('P2 — WRITE/PLAN 모드 전환은 WorkspaceModeBar 로, 출간은 secondary 로 유지된다', () => {
+    // 슬라이스 C — 편집/데이터(write/plan) 모드 탭은 WorkspaceModeBar 로 이동했다
+    expect(desk).toContain("mode={activeTrack === 'bible' ? 'plan' : 'write'}");
+    expect(desk).toContain('switchToTrack');
+    // WorkspaceModeBar 는 WRITE/PLAN/PLAY 모드 탭을 렌더한다
+    expect(componentSrc('WorkspaceModeBar')).toContain('WRITE');
+    expect(componentSrc('WorkspaceModeBar')).toContain('PLAN');
+    // 출간은 탭에서 빠지고 overflowItems(publish)의 secondary 액션으로 유지된다
+    expect(desk).toContain("id: 'publish'");
     expect(desk).toContain('openPublishingMode');
-    expect(css).toContain('.sx-topbar .ex-workbar-publish');
   });
 
   it('P2-B — rebuilds the edit-mode left rail with work state, agent intent, structure tree and tension chart', () => {
@@ -366,10 +330,9 @@ describe('Story X focused editor layout', () => {
 
   it('P2-C — replaces the right review rail with margin annotations and a core strip', () => {
     expect(desk).toContain('const marginReview = useMarginReview');
-    // MarginColumn 과 CoreStrip 은 FloatingEditor 로 이동했다.
-    expect(desk).toContain('<MentionBar');
+    // MarginColumn·CoreStrip·MentionBar·원고 표면(data-pid)은 FloatingEditor 로 이동했다.
     expect(desk).toContain('toMarginReview');
-    expect(desk).toContain('data-pid={paragraph.id}');
+    expect(desk).not.toContain('<MentionBar');
     expect(desk).not.toContain('function AgentReviewRow');
     expect(desk).not.toContain('ex-review-row ex-review-row--');
     expect(css).toContain('.sx-margin-col');
@@ -383,14 +346,10 @@ describe('Story X focused editor layout', () => {
   it('surfaces the one-project vertical slice inside the editor approval flow', () => {
     expect(desk).toContain('buildOneProjectVerticalSlice');
     expect(desk).toContain('const verticalSlice = useMemo');
+    // VerticalSliceProofPanel(legacy 셸 카드)은 제거됐지만 슬라이스 데이터는 승인 큐로 계속 흐른다
     expect(desk).toContain('...verticalSlice.memoryCandidates');
-    expect(desk).toContain('VerticalSliceProofPanel');
-    // verticalSlice 는 floatingEditorProps 로 전달된다 — 직접 prop 전달은 FloatingEditor 경로에 있다
+    expect(desk).not.toContain('VerticalSliceProofPanel');
     expect(desk).toContain('onOpenApprovalQueue');
-    expect(desk).toContain('승인 대기함 열기');
-    expect(desk).toContain('웹소설 1화');
-    expect(desk).toContain('인스타툰 4컷');
-    expect(desk).toContain('오디오북 30초');
     expect(css).toContain('.sx-vertical-slice-panel');
     expect(css).toContain('.sx-vertical-slice-artifacts');
     expect(css).toContain('.sx-vertical-slice-ledger');
@@ -422,7 +381,8 @@ describe('Story X focused editor layout', () => {
     expect(componentSrc('DataReviewRail')).toContain('데이터 검토 실행');
     // 옛 바이블 트랙의 기능 보존 — 승인 대기·캐논 원장은 데이터 모드에서 그대로 도달한다
     expect(componentSrc('MemoryBankStudio')).toContain('function MemoryBankStudio');
-    expect(desk).toContain('작품 데이터');
+    // '작품 데이터' 진입점 라벨은 DataLeftRail 로 이동했다
+    expect(componentSrc('DataLeftRail')).toContain('작품 데이터');
     expect(desk).toContain('승인 대기');
     expect(componentSrc('DataLeftRail')).toContain('캐논 원장');
     expect(desk).not.toContain('function BibleIndexCard');
@@ -634,8 +594,9 @@ describe('#10 매체 변경 confirm — 무음 전환 방지', () => {
   });
 
   it('형식(selectFormat) 변경도 confirm 가드 + project 영속', () => {
+    // selectFormat 가드/영속 로직은 유지된다. 매체 변경 패널 UI(onClick 배선)는 legacy 셸과 함께 제거됐다.
     expect(desk).toContain('function selectFormat');
-    expect(desk).toContain('onClick={() => selectFormat(option.id)}');
+    expect(desk).toContain('setProject((current) => {');
   });
 });
 
