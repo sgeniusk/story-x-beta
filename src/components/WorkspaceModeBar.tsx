@@ -7,6 +7,11 @@ interface WorkspaceModeBarProps {
   mode: WorkspaceMode;
   onSelect: (mode: WorkspaceMode) => void;
   workTitle?: string;
+  // 슬라이스 C — 단일 바 슬롯. titleSlot=편집 가능한 제목(있으면 workTitle 대체) ·
+  // contextSlot=모드 컨텍스트(WRITE 회차 픽커/PLAN 캐논 요약) · planBadge=캐논 충돌 수(위험 가시성).
+  titleSlot?: ReactNode;
+  contextSlot?: ReactNode;
+  planBadge?: number;
   // 슬라이스 B — 상단 바 우측에 싱크 콘솔 등을 한 줄로 통합(이중 헤더 방지).
   rightSlot?: ReactNode;
 }
@@ -17,10 +22,19 @@ const MODES: Array<{ id: WorkspaceMode; label: string; icon: string }> = [
   { id: 'plan', label: 'PLAN', icon: '◈' }
 ];
 
-export function WorkspaceModeBar({ mode, onSelect, workTitle, rightSlot }: WorkspaceModeBarProps) {
+export function WorkspaceModeBar({
+  mode,
+  onSelect,
+  workTitle,
+  titleSlot,
+  contextSlot,
+  planBadge,
+  rightSlot
+}: WorkspaceModeBarProps) {
   return (
     <div className="wm-bar">
-      {workTitle && <span className="wm-title">{workTitle}</span>}
+      {titleSlot ?? (workTitle ? <span className="wm-title">{workTitle}</span> : null)}
+      {contextSlot}
       <div className="wm-toggle">
         {MODES.map((m) => (
           <button
@@ -30,6 +44,7 @@ export function WorkspaceModeBar({ mode, onSelect, workTitle, rightSlot }: Works
             onClick={() => onSelect(m.id)}
           >
             {m.icon} {m.label}
+            {m.id === 'plan' && planBadge ? <span className="wm-badge">{planBadge}</span> : null}
           </button>
         ))}
       </div>
