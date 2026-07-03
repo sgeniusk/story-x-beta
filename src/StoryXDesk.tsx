@@ -1,13 +1,7 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  ClipboardCheck,
-  WandSparkles
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useCallback, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { getAgentValidationProcess, type ValidationAgentId } from './lib/agentReviewProcess';
-import { getAgentPersona } from './lib/agentPersonas';
-import { defaultRuns, getMediumReviewAgentIds, visualStoryAgentRuns } from './lib/agentSeedData';
+import { defaultRuns, getMediumReviewAgentIds } from './lib/agentSeedData';
 import { inspectLeak, type LeakReport } from './lib/leakGate';
 import { recordWritingDay, emptyWritingLog, computeRetentionStats } from './lib/retentionStats';
 import { detectCanonMentions } from './lib/canonMentions';
@@ -24,7 +18,7 @@ import { CommandPalette, type DeskCommand } from './components/CommandPalette';
 import { useMarginReview } from './hooks/useMarginReview';
 import { findPersona } from './lib/extendedPersonas';
 import { applyDiff, resolveRunReviewAnchor, splitIntoParagraphs, toMarginReview, type CanonDelta, type InlineDiff, type MarginReview } from './lib/marginReview';
-import { buildCreativeBlueprint, getFormatOptions, getMediumOptions, getWorkUnitNoun, isSerialFormat, type CreativeFormat, type CreativeMedium } from './lib/projectBlueprint';
+import { buildCreativeBlueprint, getFormatOptions, getMediumOptions, isSerialFormat, type CreativeFormat, type CreativeMedium } from './lib/projectBlueprint';
 import { applyApprovedMemory, buildDeterministicDataReview, buildProjectContextDigest, buildStoryEditorWorkspace, chapterFromDraftPayload, createEmptyProject, createSeedProject, evaluateProductionGate, getCanonReviewCategoryLabel, getGenreProfiles, lockChapter, unlockChapter, produceNextChapter, serializeCanonCategory, type AgentRun, type Chapter, type ChapterBeat, commitChapterProse, addCharacter, applyContractAmendment, removeCharacter, renameCharacter, type AgentId, type CanonReviewCategory, type ContractAmendmentPatch, type CreativeWeight, type DraftChapterPayload, type ProductionRequest, type ProductionResult, type SeriesProject } from './lib/storyEngine';
 import { requestLlmDraft } from './lib/draftClient';
 import { requestAgentReview } from './lib/reviewClient';
@@ -35,21 +29,17 @@ import { requestPaceInterview } from './lib/paceInterviewClient';
 import { requestVsCandidates } from './lib/vsCandidatesClient';
 import { requestDataReview } from './lib/dataReviewClient';
 import type { BibleSection, CanonCategory, DataReviewView, DataView } from './lib/canonDataView';
-import { evaluateKoreanProse } from './lib/koreanStyle';
 import {
   agentReportsToRuns,
-  buildAiCliRunPlan,
   buildMockAiCliReviewResult,
   getAgentLabel,
   getReviewAgentIds,
   type AiCliAgentReport,
   type AiCliMemoryCandidate,
-  type AiCliProvider,
   type AiCliReviewResult,
   type AiCliScale
 } from './lib/aiCliHarness';
 import { buildMemoryApprovalQueue, buildStoryMemoryBank, type MemoryApprovalDecision, type MemoryApprovalQueue } from './lib/memoryBank';
-import { buildTesterDrivenWorkflow } from './lib/evaluationSynthesis';
 import { getCreativeActionLabels } from './lib/projectBlueprint';
 import { buildPublishingPlan } from './lib/publishing';
 // M4 UI 통합 1차 컷 — 작가가 스튜디오 안에서 하네스 점수·6 스테이지·readyForProduction 을 본다.
@@ -67,7 +57,6 @@ import {
   type ResearchEthicsAudit
 } from './lib/academicIntegrity';
 import { toStudioMetrics } from './lib/studioMetrics';
-import { buildAlphaReadinessReport } from './lib/alphaReadiness';
 import { buildOneProjectVerticalSlice } from './lib/verticalSlice';
 import {
   buildCanonRefactorPlan,
@@ -94,44 +83,6 @@ type ApprovalDecision = MemoryApprovalDecision;
 
 const genreProfiles = getGenreProfiles();
 const mediumOptions = getMediumOptions();
-
-function getMediumChampionRun(medium: CreativeMedium): AgentRun | null {
-  switch (medium) {
-    case 'essay':
-      return {
-        agentId: 'essay-interviewer',
-        title: '에세이 인터뷰어',
-        status: 'idle',
-        output: '자유 서술에 적은 경험을 기반으로 질문을 만들고, 사실 보호 모드 안에서 AI가 새 디테일을 발명하지 않게 지킵니다.',
-        evidence: ['lived material', 'fact protection']
-      };
-    case 'audiobook':
-      return {
-        agentId: 'audio-narration-director',
-        title: '낭독 연출가',
-        status: 'idle',
-        output: '낭독 톤, 쉼, 호흡, 청취 피로를 책임집니다. 첫 30초 proof와 회차 분당 낭독 시간을 봅니다.',
-        evidence: ['narration tone', 'pause map']
-      };
-    case 'comics':
-      return {
-        agentId: 'storyboard-agent',
-        title: '스토리보드 작가',
-        status: 'idle',
-        output: '컷 리듬, 말풍선 위치, 스크롤 후크, 캐릭터 외관 일관성을 책임집니다.',
-        evidence: ['panel rhythm', 'visual continuity']
-      };
-    case 'novel':
-    default:
-      return null;
-  }
-}
-
-function mergeAgentRuns(primaryRuns: AgentRun[], extraRuns: AgentRun[]) {
-  const seen = new Set(primaryRuns.map((run) => run.agentId));
-
-  return [...primaryRuns, ...extraRuns.filter((run) => !seen.has(run.agentId))];
-}
 
 function agentReportToRun(report: AiCliAgentReport): AgentRun {
   return {
@@ -507,14 +458,12 @@ export function StoryXDesk({
   );
   const [activeTrack, setActiveTrack] = useState<DeskTrack>(initialStudioView === 'data' ? 'bible' : 'draft');
   const [isWorkbenchFading, setIsWorkbenchFading] = useState(false);
-  const [isIntentOpen, setIsIntentOpen] = useState(true);
   // 데이터 모드 — 가운데 캔버스가 보여줄 것. 기본은 인물 관계도. 바이블 작업장 진입점도 여기로 표현한다.
   const [dataView, setDataView] = useState<DataView>({ kind: 'canon', category: 'characters' });
   const [approvalDecisions, setApprovalDecisions] = useState<Record<string, ApprovalDecision>>({});
   const [approvalStatementOverrides, setApprovalStatementOverrides] = useState<Record<string, string>>({});
   const [syncedCandidateIds, setSyncedCandidateIds] = useState<string[]>([]);
   const [reviewScale, setReviewScale] = useState<AiCliScale>('small');
-  const [reviewProvider, setReviewProvider] = useState<AiCliProvider>('mock');
   const [latestReviewResult, setLatestReviewResult] = useState<AiCliReviewResult | null>(null);
   const [isPublishingMode, setIsPublishingMode] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -608,11 +557,6 @@ export function StoryXDesk({
       }),
     [approvalDecisions, approvalStatementOverrides, latestReviewResult, project, syncedCandidateIds, verticalSlice]
   );
-  const styleReport = useMemo(
-    () => evaluateKoreanProse(editorText || latestChapter?.prose || ''),
-    [editorText, latestChapter]
-  );
-  const evaluatorWorkflow = useMemo(() => buildTesterDrivenWorkflow(blueprint), [blueprint]);
   // M4 UI 통합 1차 컷 — project 의 logline/deepQuestion/character 를 storyHarness 입력으로 매핑.
   // 작가가 자기 작품의 6단계 스테이지 점수·readyForProduction 을 한눈에 본다.
   // M8 UI 통합 — StoryMode 슬라이더 state (commercial/literary 가중치). localStorage 영속.
@@ -763,45 +707,6 @@ export function StoryXDesk({
     [approvalQueue, blueprint, project]
   );
   const canonRefactorPlan = useMemo(() => buildCanonRefactorPlan(project, canonChanges), [canonChanges, project]);
-  const alphaReport = useMemo(
-    () =>
-      buildAlphaReadinessReport({
-        project,
-        blueprint,
-        memoryBank,
-        approvalQueue,
-        canonRefactorPlan,
-        latestReviewResult,
-        publishingPlan
-      }),
-    [approvalQueue, blueprint, canonRefactorPlan, latestReviewResult, memoryBank, project, publishingPlan]
-  );
-  const aiCliRunPlan = useMemo(
-    () =>
-      buildAiCliRunPlan({
-        provider: reviewProvider,
-        mode: 'review',
-        scale: reviewScale,
-        project
-      }),
-    [project, reviewProvider, reviewScale]
-  );
-  const displayedAgentRuns = useMemo(
-    () => {
-      const baseRuns = blueprint.nextWorkspace === 'visual-storyboard-studio'
-        ? mergeAgentRuns(agentRuns, visualStoryAgentRuns)
-        : agentRuns;
-      const champion = getMediumChampionRun(blueprint.medium);
-      if (!champion) return baseRuns;
-      if (baseRuns.some((run) => run.agentId === champion.agentId)) return baseRuns;
-      return [...baseRuns, champion];
-    },
-    [agentRuns, blueprint.medium, blueprint.nextWorkspace]
-  );
-  const bibleAssistantRuns = useMemo(
-    () => buildBibleAssistantRuns(project, approvalQueue, canonRefactorPlan, latestReviewResult),
-    [approvalQueue, canonRefactorPlan, latestReviewResult, project]
-  );
   const canonHealth = useMemo(() => {
     const total = project.canonFacts.length + project.worldRules.length + project.characters.length;
     const episodes = Math.max(project.currentEpisode, 1);
@@ -812,7 +717,6 @@ export function StoryXDesk({
   const isDraftMode = activeTrack === 'draft' && !isPublishingMode;
   // 연재형 포맷만 회차(N화) 언어를 쓴다. 단편·단독 완결형은 "원고" 하나로 다룬다.
   const isSerial = isSerialFormat(format);
-  const unitNoun = getWorkUnitNoun(format);
   // 회차 라벨 — 연재형은 "N화", 단독 완결형은 진행 표시 없이 "원고".
   const chapterLabel = (chapter: Chapter) => (isSerial ? `${chapter.episode}화` : '원고');
   const saveLabel = editedSinceReview ? '수정 중' : '저장됨';
@@ -831,33 +735,8 @@ export function StoryXDesk({
       setLatestChapter(next);
     }
   }
-  // 일하는 바 — 회차 분량 미터: 실제 원고 글자 수를 한 회차 목표 5,000자와 비교한다
-  const CHAPTER_CHAR_TARGET = 5000;
+  // 회차 분량 미터 — 실제 원고 글자 수(FloatingEditor 표면에서 사용)
   const chapterCharCount = (editorText || latestChapter?.prose || '').replace(/\s/g, '').length;
-  const chapterCharPct = Math.min(100, Math.round((chapterCharCount / CHAPTER_CHAR_TARGET) * 100));
-  const pendingApprovalCount = approvalQueue.items.filter((item) => item.status !== 'approved').length;
-  // 일하는 바 우측 작가진 진행 스트립 — 실제 검토 에이전트의 상태를 design의 AI-stage로 매핑한다
-  const topbarStageFromStatus = (status: AgentRun['status']): string => {
-    switch (status) {
-      case 'pass':
-      case 'complete':
-        return 'done';
-      case 'revise':
-        return 'mark';
-      case 'block':
-        return 'write';
-      case 'idle':
-      default:
-        return 'queued';
-    }
-  };
-  const crewProgress = displayedAgentRuns.slice(0, 6).map((run) => ({
-    agentId: run.agentId,
-    persona: getAgentPersona(run),
-    stage: topbarStageFromStatus(run.status),
-    isReviewing: run.output.includes('읽고') || run.output.includes('읽는')
-  }));
-  const crewDoneCount = crewProgress.filter((member) => member.stage === 'done').length;
   const currentReviewText = editorText.trim() || latestChapter?.prose.trim() || draftPrompt.trim() || project.logline;
   const marginParagraphs = useMemo(
     () => splitIntoParagraphs(editorText || latestChapter?.prose || ''),
@@ -1093,7 +972,6 @@ export function StoryXDesk({
       ? actionLabels.nextDraft
       : actionLabels.review;
   const mainActionRun = !latestChapter || isLatestLocked ? produceEpisode : reviewDraft;
-  const MainActionIcon = !latestChapter || isLatestLocked ? WandSparkles : ClipboardCheck;
   // 단계적 집필 게이트(A-2) — 미잠금 헌장이면 생성 CTA 만 비활성화하고 사유를 보여준다(검토·다른 동선은 유지).
   const productionGate = evaluateProductionGate(project);
   const productionBlockedReason =
@@ -1314,11 +1192,6 @@ export function StoryXDesk({
       handleToggleCanonInclude,
     ]
   );
-  const draftPromptPlaceholder = isLatestLocked
-    ? isSerial
-      ? `잠긴 ${unitNoun} 다음에 담을 내용을 적어주세요.`
-      : '잠긴 원고 다음에 손볼 내용을 적어주세요.'
-    : '예: 용사랑 외계인이 싸우는 장면으로 시작한다.';
   const commandItems = useMemo<DeskCommand[]>(
     () => [
       {

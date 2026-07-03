@@ -10,16 +10,6 @@ const componentSrc = (name: string) =>
   readFileSync(resolve(__dirname, `components/${name}.tsx`), 'utf8');
 
 describe('Story X focused editor layout', () => {
-  it('routes the center workspace by creative medium', () => {
-    expect(desk).toContain('function CreativeStage');
-    expect(desk).toContain('initialMedium');
-    expect(desk).toContain("blueprint.medium === 'comics'");
-    expect(desk).toContain("blueprint.medium === 'audiobook'");
-    expect(desk).toContain('className="sx-canvas-surface"');
-    expect(desk).toContain('className="sx-storyboard-surface"');
-    expect(desk).toContain('className={`sx-writing-surface');
-  });
-
   it('keeps the creative artifact as the 70 percent center of the editor', () => {
     expect(css).toContain('grid-template-columns: clamp(200px, 15vw, 260px) minmax(0, 1fr) clamp(220px, 18vw, 320px)');
     // P5 — 3컬럼 그리드는 1280px·1440px에서 유지, 약 1080px 미만에서만 에이전트 레일을 접는다
