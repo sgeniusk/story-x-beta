@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-07-03 — 융합 셸 슬라이스 C(단일 바 셸) 구현 완료 (브랜치 미머지)
+
+> WRITE/PLAN 의 floating pill topbar 를 해체해 wm-bar 하나만 남긴 epilogue 풍 미니멀 재배치. brainstorming(visual companion)으로 사용자 결정 4건(A안 단일 바·CTA 시트 끝·내부 트랙 전환·모드별 구성) 확정 → spec → 계획 → 서브에이전트 주도 7태스크(태스크별 spec/품질 2단 검토). progress.md "슬라이스 C" 절이 상세.
+
+### 한 것
+- `WorkspaceModeBar` 슬롯 확장 · 신규 `DeskMetaLine`·`OverflowMenu` · FloatingEditor/FloatingDataWorkspace pill topbar 삭제 + 시트 끝 CTA · StoryXDesk 소유권 역전(syncSlot·onSelectPlayMode·onStudioViewChange) · App key=syncVersion. 10커밋(spec·계획·구현 7·라이브 수정 1).
+- **검증** — `npm test` 774 녹색·build·init.sh·라이브 8게이트(remount 없는 내부 전환 DOM 마커 실증·dock/메타 줄 비충돌 실측·콘솔 0). 라이브 게이트가 wm-title-input inherit 색 회귀를 적발·수정(`b0f347b`).
+
+### 손대지 말 것 (불변식)
+- **wm-bar 소유권** — editor stage 는 StoryXDesk 가 렌더(슬롯을 채울 상태가 거기 있음), dive stage 만 App 이 렌더. App editor 에서 바를 다시 렌더하면 이중 바 복귀.
+- **App key = syncVersion 만** — ⟳최신화 remount 는 불변식(새 본편 픽업). studioView 를 key 에 다시 넣으면 WRITE↔PLAN 이 remount 로 퇴행(깜빡임·편집 상태 소실).
+- **WRITE↔PLAN = switchToTrack 내부 전환 + onStudioViewChange 동기화** — 콜백은 App state 기록 전용(렌더 되먹임 없음). initialStudioView 는 mount 시드 전용.
+- **위험 가시성** — PLAN 배지(bibleAlertCount)·⚠충돌 칩·싱크 콘솔은 미니멀화에서도 항상 보임(충돌은 드러낸다).
+- **StoryXDesk legacy 최종 return 불가침** — editorFocusLayout.test.ts 가 소스 문자열 단언. 삭제는 테스트 교정과 함께 별도 조각으로.
+- **시트 끝 CTA 는 btn-primary/btn-confirm-lock 클래스·문구 유지** — floatingEditor.test.ts·editorFocusLayout.test.ts 가 클래스/텍스트로 단언.
+
+### 다음 한 가지 (차례대로)
+- **머지** — `feat/fusion-shell-slice-c-single-bar`. 자율 권한 있음.
+- 다음 후보 — PLAN staged(`PLAN +N`, StoryXDesk 내부 staged화) · legacy 최종 return 정리(+테스트 교정) · 집중 모드 크롬 숨김 · publish 4번째 모드. 후속 — retcon 예산 상한·finding retcon·의미 dedup·번역 투 게이트.
+
+---
+
 ## 2026-07-02 (4차) — 최신화 반영 피드백 토스트 (작은 후속 조각, 브랜치 미머지)
 
 > 충돌 없는 `⟳최신화`가 조용히 즉시 반영돼 피드백이 0이던 마찰을 `✓ 본편에 반영 — N회차·M캐논` 토스트(2.6초 자동 소멸)로 채움. progress.md "최신화 반영 피드백 토스트" 절 참조.
