@@ -3,10 +3,19 @@
 > Last Updated: 2026-06-27 · Branch: `feat/dive-x-arc`(미머지) (**Dive X 진전 엔진(묶음 C-1) 구현 완료. 쇼러너가 StoryArc(극적질문·긴장·다음전개)를 들고 매 턴 진전·🎯 표시·⏭전개 버튼·dive-condense arc 페이오프. dogfooding "진전 없음(큰 흠)" 직접 해소. 가벼운 LLM-유지 arc(추가 호출 0). 이전 — 1차(PR #4·main)·2차 장면+쇼러너(PR #5·local main)·3차 선택지+계속+자유응결(묶음 A·local main). 묶음 C-2(능동 멀티캐릭터)·묶음 B(되돌리기·캐논 god-편집·과금) 후속 대기. 다음 — Dive X arc 머지 결정 + dogfooding + C-2/B + 품질·비용 로드맵·A-6 장편 기억.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 최근 검증 (2026-07-03)
-`npm test` **774 통과**(79 파일) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A(3모드 토글) PR #13 · 융합 셸 슬라이스 B(싱크 콘솔) PR #14 · 슬라이스 B-2(reconcile 충돌 게이트) PR #15 · 최신화 반영 토스트 PR #16 (전부 main). **융합 셸 슬라이스 C(단일 바 셸)**는 `feat/fusion-shell-slice-c-single-bar`(미머지) 10커밋.
+## 최근 검증 (2026-07-03 2차)
+`npm test` **772 통과**(79 파일) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · **슬라이스 C(단일 바 셸) PR #17** (전부 main). **legacy 셸 정리**는 `feat/desk-legacy-shell-cleanup`(미머지) 5커밋.
 
-## 활성 트랙 — 융합 셸 슬라이스 C: 단일 바 셸 (`done` · 2026-07-03, 브랜치 `feat/fusion-shell-slice-c-single-bar` 미머지)
+## 활성 트랙 — StoryXDesk legacy 셸 정리 (`done` · 2026-07-03 2차, 브랜치 `feat/desk-legacy-shell-cleanup` 미머지)
+
+슬라이스 C 가 단일 바 셸을 완성하며 도달 불가가 된 StoryXDesk 최종 return(옛 sx-topbar 3-zone 셸)과 연쇄 사망 심볼을 걷어낸 **동작 무변경 부채 정리**. spec `docs/superpowers/specs/2026-07-03-desk-legacy-shell-cleanup-design.md`. 서브에이전트 구현 + 적대적 검토(반박 시도→CONFIRMED).
+- **삭제** — 최종 return 461행 + 헬퍼 5(PublishingStudio·AiCliHarnessCard·CreativeStage·VerticalSliceProofPanel·ContinuitySummaryCard) + state 12(isFocusMode·설정 popover·미디어 패널·버전 다이얼로그 등) + 파생/함수 ~20 + import ~50. **StoryXDesk 3651→2255행(−1396)**. 함수 끝은 `return null;`(3분기 조기 반환이 전 경로 커버, 도달 불가 타입 안전 폴백).
+- **live-but-inert ⌘K 명령 4개 동반 삭제** — toggle-focus·open-media-change·open-version-log·open-project-history(효과 대상이 전부 죽은 블록에만 렌더, 출하 앱에서 이미 아무것도 안 하던 명령). ⌘. 전역 단축키도 같은 부류로 제거. run-all-review·open-draft/bible·출간 등 live 명령 전부 보존(F-006 녹색).
+- **테스트 3분법 교정** — editorFocusLayout·agentPersona·agentValidationProcess·lib/version 4파일. 교체 10(제목→wm-title-input·회차 픽커→contextSlot·저장 칩→dm-save·출간→FloatingPublishWorkspace 등)·삭제 ⓐ~6·ⓒ~4. 774→772(죽은 UI 테스트 2 삭제).
+- **검증** — 적대적 검토가 8개 공격면(margin review 계열·버전 복원·에이전트 레일·품질 게이트·⌘K diff·테스트 약화·도달 불가 증명) 전부에서 반박 실패 · init.sh 녹색 · 라이브 fresh load 콘솔 0·3모드 렌더·PLAN 품질 게이트 표시.
+- **알려진 잔여(후속)** — `BibleAssistantSidebar`·`AgentProfileDialog` 컴포넌트가 고아화(어디서도 렌더 안 됨, 테스트는 존재 단언만) → 삭제 or 재배선 별도 결정 · 죽은 CSS(sx-topbar·ex-workbar·.fc-app .topbar) 정리는 범위 밖 유지.
+
+## 완료 트랙 — 융합 셸 슬라이스 C: 단일 바 셸 (`done` · 2026-07-03, **PR #17 main 머지**)
 
 WRITE/PLAN 에서 wm-bar 아래 겹치던 floating pill topbar(제목·편집/데이터 탭·출간·CTA)를 해체해 **wm-bar 하나만** 남긴 epilogue 풍 미니멀 재배치. 사용자 결정 4건(A안 단일 바 · CTA 시트 끝 문서형 · 내부 트랙 전환 · 모드별 구성) — visual companion 목업으로 확정. spec `docs/superpowers/specs/2026-07-03-fusion-shell-slice-c-single-bar-design.md` · 계획 `docs/superpowers/plans/2026-07-03-fusion-shell-slice-c-single-bar.md`. 서브에이전트 주도(구현 7태스크 + 태스크별 spec/품질 2단 검토).
 - **전제 수정(탐색 발견)** — handoff 가 지목한 StoryXDesk `ex-workbar` 는 도달 불가 legacy(조기 반환 뒤, 라이브 DOM 부재 확인). 실제 이중 헤더 = wm-bar + FloatingEditor/FloatingDataWorkspace 자체 pill topbar.
