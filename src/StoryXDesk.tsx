@@ -2629,25 +2629,25 @@ export function StoryXDesk({
       <>
         {workspaceModeBar}
         <FloatingDataWorkspace
-        dataView={dataView}
-        onSelectCategory={(category) => setDataView({ kind: 'canon', category })}
-        onSelectBibleSection={openBibleSection}
-        onShowBoard={() => setDataView({ kind: 'board' })}
-        metrics={studioMetrics}
-        onMediaAxisChange={updateStoryModeAxis}
-        canonHealth={canonHealth}
-        dataReviewResults={dataReviewResults}
-        project={project}
-        latestChapter={latestChapter}
-        isSerial={isSerial}
-        approvalQueue={approvalQueue}
-        dataReviewingCategory={dataReviewingCategory}
-        onRequestReview={runDataReview}
-        onOpenApprovalQueue={() => openBibleSection('approval')}
-        centerSlot={centerSlot}
-        metaLeft={`캐논 ${project.canonFacts.length} · 떡밥 ${project.openThreads.length}`}
-        metaRightSlot={metaRightSlot}
-      />
+          dataView={dataView}
+          onSelectCategory={(category) => setDataView({ kind: 'canon', category })}
+          onSelectBibleSection={openBibleSection}
+          onShowBoard={() => setDataView({ kind: 'board' })}
+          metrics={studioMetrics}
+          onMediaAxisChange={updateStoryModeAxis}
+          canonHealth={canonHealth}
+          dataReviewResults={dataReviewResults}
+          project={project}
+          latestChapter={latestChapter}
+          isSerial={isSerial}
+          approvalQueue={approvalQueue}
+          dataReviewingCategory={dataReviewingCategory}
+          onRequestReview={runDataReview}
+          onOpenApprovalQueue={() => openBibleSection('approval')}
+          centerSlot={centerSlot}
+          metaLeft={`캐논 ${project.canonFacts.length} · 떡밥 ${project.openThreads.length}`}
+          metaRightSlot={metaRightSlot}
+        />
       </>
     );
   }
