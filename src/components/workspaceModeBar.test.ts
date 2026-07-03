@@ -40,4 +40,46 @@ describe('WorkspaceModeBar', () => {
     expect(html).toContain('data-mode="write"');
     expect(html).toContain('data-mode="play"');
   });
+
+  it('titleSlot 이 있으면 workTitle 대신 titleSlot 을 렌더한다 (슬라이스 C)', () => {
+    const html = renderToStaticMarkup(
+      createElement(WorkspaceModeBar, {
+        mode: 'write' as const,
+        onSelect: () => {},
+        workTitle: '폴백 제목',
+        titleSlot: createElement('input', { className: 'wm-title-input', defaultValue: '편집 가능한 제목' })
+      })
+    );
+    expect(html).toContain('wm-title-input');
+    expect(html).not.toContain('폴백 제목');
+  });
+
+  it('contextSlot 을 제목 옆에 렌더한다 (회차 픽커/캐논 요약 자리)', () => {
+    const html = renderToStaticMarkup(
+      createElement(WorkspaceModeBar, {
+        mode: 'write' as const,
+        onSelect: () => {},
+        workTitle: 't',
+        contextSlot: createElement('span', { className: 'wm-context-chip' }, '3화 · 비 오는 밤')
+      })
+    );
+    expect(html).toContain('wm-context-chip');
+    expect(html).toContain('3화 · 비 오는 밤');
+  });
+
+  it('planBadge>0 이면 PLAN 버튼에 배지를, 0/미지정이면 렌더하지 않는다', () => {
+    const withBadge = renderToStaticMarkup(
+      createElement(WorkspaceModeBar, { mode: 'write' as const, onSelect: () => {}, workTitle: 't', planBadge: 3 })
+    );
+    expect(withBadge).toContain('wm-badge');
+    expect(withBadge).toContain('>3<');
+    const zero = renderToStaticMarkup(
+      createElement(WorkspaceModeBar, { mode: 'write' as const, onSelect: () => {}, workTitle: 't', planBadge: 0 })
+    );
+    expect(zero).not.toContain('wm-badge');
+    const none = renderToStaticMarkup(
+      createElement(WorkspaceModeBar, { mode: 'write' as const, onSelect: () => {}, workTitle: 't' })
+    );
+    expect(none).not.toContain('wm-badge');
+  });
 });

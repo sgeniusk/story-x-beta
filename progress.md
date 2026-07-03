@@ -3,10 +3,19 @@
 > Last Updated: 2026-06-27 · Branch: `feat/dive-x-arc`(미머지) (**Dive X 진전 엔진(묶음 C-1) 구현 완료. 쇼러너가 StoryArc(극적질문·긴장·다음전개)를 들고 매 턴 진전·🎯 표시·⏭전개 버튼·dive-condense arc 페이오프. dogfooding "진전 없음(큰 흠)" 직접 해소. 가벼운 LLM-유지 arc(추가 호출 0). 이전 — 1차(PR #4·main)·2차 장면+쇼러너(PR #5·local main)·3차 선택지+계속+자유응결(묶음 A·local main). 묶음 C-2(능동 멀티캐릭터)·묶음 B(되돌리기·캐논 god-편집·과금) 후속 대기. 다음 — Dive X arc 머지 결정 + dogfooding + C-2/B + 품질·비용 로드맵·A-6 장편 기억.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 최근 검증 (2026-07-02)
-`npm test` **767 통과**(77 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A(3모드 토글) PR #13 · 융합 셸 슬라이스 B(싱크 콘솔) PR #14 · **융합 셸 슬라이스 B-2(reconcile 충돌 게이트) PR #15** (전부 main). **최신화 반영 토스트**는 `feat/fusion-shell-sync-flash`(미머지) 1커밋.
+## 최근 검증 (2026-07-03)
+`npm test` **774 통과**(79 파일) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A(3모드 토글) PR #13 · 융합 셸 슬라이스 B(싱크 콘솔) PR #14 · 슬라이스 B-2(reconcile 충돌 게이트) PR #15 · 최신화 반영 토스트 PR #16 (전부 main). **융합 셸 슬라이스 C(단일 바 셸)**는 `feat/fusion-shell-slice-c-single-bar`(미머지) 10커밋.
 
-## 활성 트랙 — 최신화 반영 피드백 토스트 (`done` · 2026-07-02, 브랜치 `feat/fusion-shell-sync-flash` 미머지)
+## 활성 트랙 — 융합 셸 슬라이스 C: 단일 바 셸 (`done` · 2026-07-03, 브랜치 `feat/fusion-shell-slice-c-single-bar` 미머지)
+
+WRITE/PLAN 에서 wm-bar 아래 겹치던 floating pill topbar(제목·편집/데이터 탭·출간·CTA)를 해체해 **wm-bar 하나만** 남긴 epilogue 풍 미니멀 재배치. 사용자 결정 4건(A안 단일 바 · CTA 시트 끝 문서형 · 내부 트랙 전환 · 모드별 구성) — visual companion 목업으로 확정. spec `docs/superpowers/specs/2026-07-03-fusion-shell-slice-c-single-bar-design.md` · 계획 `docs/superpowers/plans/2026-07-03-fusion-shell-slice-c-single-bar.md`. 서브에이전트 주도(구현 7태스크 + 태스크별 spec/품질 2단 검토).
+- **전제 수정(탐색 발견)** — handoff 가 지목한 StoryXDesk `ex-workbar` 는 도달 불가 legacy(조기 반환 뒤, 라이브 DOM 부재 확인). 실제 이중 헤더 = wm-bar + FloatingEditor/FloatingDataWorkspace 자체 pill topbar.
+- **구현** — `WorkspaceModeBar` 슬롯 확장(titleSlot·contextSlot·planBadge) · 신규 순수 `DeskMetaLine`(하단 메타 줄)·`OverflowMenu`(⋯ 수납: 출간·JSON 내보내기/가져오기 — legacy 에 갇혀 죽어 있던 export/import 부활) · FloatingEditor/FloatingDataWorkspace pill topbar 삭제 + 시트 끝 `.fc-sheet-cta`(초안 생성·잠금 확정, 문서형) · StoryXDesk 가 editor 에서 바를 직접 렌더(**소유권 역전** — 새 props syncSlot·onSelectPlayMode·onStudioViewChange) · WRITE↔PLAN 은 `switchToTrack` 내부 전환(remount 제거) · App key `syncVersion` 만(⟳최신화 remount 불변식 보존).
+- **위험 가시성 유지** — PLAN 토글 상시 배지(bibleAlertCount) + PLAN contextSlot `⚠ 충돌 N` 칩(클릭→승인 대기). 싱크 콘솔은 syncSlot 으로 승계.
+- **검증** — `npm test` 774 녹색(79 파일)·build·init.sh 통과. **라이브(preview)** — 상단 크롬 wm-bar 1개(pill 0)·WRITE↔PLAN DOM 마커 생존(remount 없는 내부 전환 실증)·⚠칩→승인 대기·⋯ 메뉴 3항목+Escape·PLAY 왕복·시트 끝 CTA enabled·메타 줄(WRITE 문단/자·PLAN 캐논/떡밥)·좁은 뷰포트(623px)에서 dock pill 과 메타 줄 비충돌 실측·콘솔 0. 라이브 게이트가 **wm-title-input inherit 색 회귀**(다크 배경에서 제목 안 보임)를 적발·수정(`b0f347b`).
+- **범위 밖(다음)** — StoryXDesk legacy 최종 return 삭제(소스 단언 테스트와 함께 별도 정리) · 집중 모드에서 wm-bar/메타 줄 숨김 · PLAY 에서 planBadge · PLAN staged(`PLAN +N`) · deck 상단 88px 여백 재조정(topbar 시절 클리어런스, 시각 확인 결과 어색하지 않아 보류).
+
+## 활성 트랙 — 최신화 반영 피드백 토스트 (`done` · 2026-07-02, **PR #16 main 머지**)
 
 충돌 없는 `⟳최신화`가 조용히 즉시 반영돼 사용자가 무엇이 본편에 들어갔는지 몰랐던 마찰을, `✓ 본편에 반영 — N회차·M캐논` 토스트(2.6초 자동 소멸)로 채운 작은 후속 조각. 반영량은 `countPendingSync(next, before)` 재사용으로 정확 산출(충돌 keep 로 일부 빠져도 실제 append 수 반영).
 - **구현** — 순수 `SyncFlash.tsx`(flash null/total 0이면 null·회차/캐논 0 항목 생략) · App `syncFlash` state + useEffect 타이머 · `commitReconciled(next, before)` 시그니처에 before 추가해 `countPendingSync(next, before)`로 반영량 계산 · reconcileSync·confirmReconcile 두 경로 배선.
