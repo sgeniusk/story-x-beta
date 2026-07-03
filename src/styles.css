@@ -11545,6 +11545,13 @@ body {
 .dm-line{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:space-between;align-items:center;padding:4px 14px;font-size:11px;color:rgba(237,237,243,.5);pointer-events:none}
 .dm-line .dm-right{display:inline-flex;align-items:center;gap:8px;pointer-events:auto}
 .dm-line .dm-save[data-state='dirty']{color:#fbbf24}
+/* 슬라이스 C — ⋯ 수납 메뉴 */
+.om-wrap{position:relative;display:inline-flex}
+.om-toggle{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid rgba(255,255,255,.1);border-radius:7px;background:transparent;color:rgba(237,237,243,.7);font-size:15px;cursor:pointer}
+.om-toggle:hover,.om-toggle.is-open{background:rgba(255,255,255,.06)}
+.om-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:60;min-width:150px;display:flex;flex-direction:column;padding:5px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:#17181d;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.om-menu button{display:block;width:100%;text-align:left;padding:7px 10px;border:none;border-radius:6px;background:transparent;color:rgba(237,237,243,.85);font-size:12px;cursor:pointer}
+.om-menu button:hover{background:rgba(255,255,255,.07)}
 /* 슬라이스 B — 싱크 콘솔(상단 바 우측). PLAY working 미반영 배지 + ⟳최신화. */
 .sync-console { display: flex; align-items: center; gap: 9px; }
 .sync-pending { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #c4b6ff; background: #17141f; border: 1px solid #2f2745; border-radius: 7px; padding: 4px 9px; }
