@@ -33,6 +33,7 @@ import {
   type CSSProperties,
   type FormEvent,
   type ReactElement,
+  type ReactNode,
   type RefObject
 } from 'react';
 import { getAgentValidationProcess, type ValidationAgentId } from './lib/agentReviewProcess';
@@ -70,6 +71,8 @@ import { WorkStateGrid } from './components/WorkStateGrid';
 import { FloatingEditor } from './components/FloatingEditor';
 import { FloatingDataWorkspace } from './components/FloatingDataWorkspace';
 import { FloatingPublishWorkspace } from './components/FloatingPublishWorkspace';
+import { WorkspaceModeBar } from './components/WorkspaceModeBar';
+import { OverflowMenu } from './components/OverflowMenu';
 import { CommandPalette, type DeskCommand } from './components/CommandPalette';
 import { ProjectHistoryDialog } from './components/ProjectHistoryDialog';
 import { VersionLogDialog } from './components/VersionLogDialog';
@@ -562,6 +565,12 @@ interface StoryXDeskProps {
   onOpenPublish?: () => void;
   /** 융합 셸 진입 뷰 — WRITE=editor(원고)·PLAN=data(바이블). 없으면 editor(현행). */
   initialStudioView?: 'editor' | 'data';
+  /** 슬라이스 C — App 이 주는 싱크 콘솔(⟳최신화). 단일 바 우측에 합성. */
+  syncSlot?: ReactNode;
+  /** 슬라이스 C — PLAY 토글 → App stage 전환. */
+  onSelectPlayMode?: () => void;
+  /** 슬라이스 C — WRITE↔PLAN 내부 전환을 App state 에 동기화(⟳최신화 remount 후 복원용). */
+  onStudioViewChange?: (view: 'editor' | 'data') => void;
 }
 
 // B2 — 활동일 기록 헬퍼. todayStr 는 작가 로컬 '오늘'(UI 레이어라 Date 허용),
@@ -587,7 +596,10 @@ export function StoryXDesk({
   onOpenProjects,
   onOpenLanding,
   onOpenPublish,
-  initialStudioView = 'editor'
+  initialStudioView = 'editor',
+  syncSlot,
+  onSelectPlayMode,
+  onStudioViewChange
 }: StoryXDeskProps) {
   // 기본 회차 의도는 빈 값 — 의도 메모를 비워두면 produceEpisode 가 캐논 digest 만으로 다음 회차를 만든다.
   // 데모 장르 문구를 박으면 사용자가 안 건드릴 때 다음 회차 intent(freewrite)로 새어 오염된다 (P3, #2 로판 2화 "용사와 외계인" 사고).
@@ -2446,6 +2458,100 @@ export function StoryXDesk({
     );
   }
 
+  // 슬라이스 C — 단일 바(소유권 역전). WRITE↔PLAN 은 switchToTrack 내부 전환(remount 없음),
+  // PLAY 는 App stage 전환. 슬롯 = 제목 input·회차 픽커/캐논 요약·⚠충돌 칩·싱크 콘솔·⋯ 메뉴.
+  const writeContext =
+    isSerial && project.chapters.length > 0 && latestChapter ? (
+      <span className="wm-context-chip" role="group" aria-label="회차 이동">
+        <button
+          type="button"
+          className="ex-chapter-picker-step"
+          aria-label="이전 회차"
+          disabled={!hasPrevChapter}
+          onClick={() => stepChapter(-1)}
+        >
+          <ChevronLeft size={12} aria-hidden="true" />
+        </button>
+        <span>{latestChapter.episode}화 · {latestChapter.title}</span>
+        <button
+          type="button"
+          className="ex-chapter-picker-step"
+          aria-label="다음 회차"
+          disabled={!hasNextChapter}
+          onClick={() => stepChapter(1)}
+        >
+          <ChevronRight size={12} aria-hidden="true" />
+        </button>
+      </span>
+    ) : null;
+  const planContext = (
+    <>
+      <span className="wm-context-chip">캐논 {project.canonFacts.length}</span>
+      {bibleAlertCount > 0 && (
+        <button type="button" className="wm-conflict-chip" onClick={() => openBibleSection('approval')}>
+          ⚠ 충돌 {bibleAlertCount}
+        </button>
+      )}
+    </>
+  );
+  const overflowItems = [
+    {
+      id: 'publish',
+      label: '출간',
+      onSelect: () => (onOpenPublish ? onOpenPublish() : openPublishingMode())
+    },
+    { id: 'export', label: 'JSON 내보내기', onSelect: handleExportProject },
+    { id: 'import', label: 'JSON 가져오기', onSelect: handleImportClick }
+  ];
+  const workspaceModeBar = (
+    <WorkspaceModeBar
+      mode={activeTrack === 'bible' ? 'plan' : 'write'}
+      onSelect={(next) => {
+        if (next === 'play') {
+          onSelectPlayMode?.();
+          return;
+        }
+        switchToTrack(next === 'plan' ? 'bible' : 'draft');
+        onStudioViewChange?.(next === 'plan' ? 'data' : 'editor');
+      }}
+      titleSlot={
+        <input
+          className="wm-title-input"
+          aria-label="작품 제목"
+          value={project.title}
+          onChange={(event) => updateProject('title', event.target.value)}
+          autoComplete="off"
+          title="클릭해서 제목 편집"
+        />
+      }
+      contextSlot={activeTrack === 'bible' ? planContext : writeContext}
+      planBadge={bibleAlertCount}
+      rightSlot={
+        <>
+          {syncSlot}
+          <OverflowMenu items={overflowItems}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              onChange={handleImportFile}
+              style={{ display: 'none' }}
+              aria-hidden="true"
+            />
+          </OverflowMenu>
+        </>
+      }
+    />
+  );
+  const metaRightSlot = (
+    <>
+      <span className="dm-save" data-state={editedSinceReview ? 'dirty' : 'synced'}>
+        {saveLabel}
+      </span>
+      <AiStatusBadge />
+    </>
+  );
+
   if (isPublishingMode) {
     return (
       <FloatingPublishWorkspace
@@ -2463,7 +2569,8 @@ export function StoryXDesk({
   if (isDraftMode) {
     return (
       <>
-        <FloatingEditor {...floatingEditorProps} />
+        {workspaceModeBar}
+        <FloatingEditor {...floatingEditorProps} metaRightSlot={metaRightSlot} />
         {/* F-006 — floating 모드에서도 ⌘K 명령 팔레트로 전체 검토·다음 회차 생성에 접근한다. */}
         {isCommandPaletteOpen && (
           <CommandPalette
@@ -2519,7 +2626,9 @@ export function StoryXDesk({
         />
       ) : null;
     return (
-      <FloatingDataWorkspace
+      <>
+        {workspaceModeBar}
+        <FloatingDataWorkspace
         dataView={dataView}
         onSelectCategory={(category) => setDataView({ kind: 'canon', category })}
         onSelectBibleSection={openBibleSection}
@@ -2536,7 +2645,10 @@ export function StoryXDesk({
         onRequestReview={runDataReview}
         onOpenApprovalQueue={() => openBibleSection('approval')}
         centerSlot={centerSlot}
+        metaLeft={`캐논 ${project.canonFacts.length} · 떡밥 ${project.openThreads.length}`}
+        metaRightSlot={metaRightSlot}
       />
+      </>
     );
   }
 

@@ -203,7 +203,7 @@ describe('FloatingEditor 실데이터 배선', () => {
   it('StoryXDesk 가 isDraftMode 이면 FloatingEditor 를 early-return 으로 렌더한다', () => {
     const desk = readFileSync(resolve(__dirname, '../StoryXDesk.tsx'), 'utf8');
     // Phase 2e — isClassicEditor/?editor=classic 폴백 제거. 편집은 항상 FloatingEditor.
-    expect(desk).toContain('<FloatingEditor {...floatingEditorProps} />');
+    expect(desk).toContain('<FloatingEditor {...floatingEditorProps}');
     expect(desk).toContain('if (isDraftMode)');
   });
 
