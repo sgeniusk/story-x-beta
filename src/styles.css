@@ -8271,8 +8271,7 @@ body {
  * Story X — M9 Margin patch · styles-additions
  * Append this block to src/styles.css.
  *
- * - 새 토큰: --sx-paper-3, --sx-line-hair, --sx-faintest, --sx-faintest2,
- *           --sx-diff-del, --sx-diff-add
+ * - 새 토큰: --sx-paper-3, --sx-line-hair, --sx-faintest, --sx-faintest2
  * - 새 컴포넌트 셀렉터: .sx-margin-col, .sx-annot, .sx-mention-bar,
  *           .sx-core-strip, .sx-spotlight, .sx-canon-card
  * - 기존 셀렉터(.sx-crew-rail, .ex-review-*) 는 컴포넌트 제거와 함께 정리.
@@ -8295,14 +8294,6 @@ body {
   --sx-faintest:      rgba(247, 248, 248, 0.16);
   --sx-faintest2:     rgba(247, 248, 248, 0.10);
 
-  /* Notion-식 inline diff 색 */
-  --sx-diff-del:      #d96676;
-  --sx-diff-add:      #b9d23a;
-
-  /* severity 매핑 — 기존 토큰 재사용. 새 색 추가 X */
-  /* block   → var(--sx-warn)        호박 */
-  /* suggest → var(--sx-diff-add)    라임 */
-  /* note    → transparent           안 보임 */
 }
 
 /* ---------------------------------------------------------------------------
