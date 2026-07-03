@@ -23,10 +23,6 @@ const project = {
 
 function baseProps(over: Partial<FloatingDataWorkspaceProps> = {}): FloatingDataWorkspaceProps {
   return {
-    title: '샘플 작품',
-    episodeLabel: '데이터 · 캐논 1',
-    onSwitchTrack: vi.fn(),
-    onOpenPublish: vi.fn(),
     dataView: { kind: 'board' },
     onSelectCategory: vi.fn(),
     onSelectBibleSection: vi.fn(),
@@ -69,20 +65,13 @@ describe('FloatingDataWorkspace', () => {
     unmount();
   });
 
-  it('데이터 탭이 활성이고 편집 탭이 onSwitchTrack(draft) 를 호출한다', () => {
-    const onSwitchTrack = vi.fn();
-    const { host, click, unmount } = mount(baseProps({ onSwitchTrack }));
-    const editTab = Array.from(host.querySelectorAll('[role="tab"]')).find((t) => t.textContent?.includes('편집'));
-    click(editTab ?? null);
-    expect(onSwitchTrack).toHaveBeenCalledWith('draft');
-    unmount();
-  });
-
-  it('출간 버튼이 onOpenPublish 를 호출한다', () => {
-    const onOpenPublish = vi.fn();
-    const { host, click, unmount } = mount(baseProps({ onOpenPublish }));
-    click(host.querySelector('.btn-publish'));
-    expect(onOpenPublish).toHaveBeenCalledTimes(1);
+  it('pill topbar 를 렌더하지 않고 하단 메타 줄을 렌더한다 (슬라이스 C)', () => {
+    const { host, unmount } = mount(baseProps({ metaLeft: '캐논 1 · 떡밥 0' }));
+    expect(host.querySelector('.topbar')).toBeNull();
+    expect(host.querySelector('.btn-publish')).toBeNull();
+    const meta = host.querySelector('.dm-line');
+    expect(meta).not.toBeNull();
+    expect(meta?.textContent).toContain('캐논 1 · 떡밥 0');
     unmount();
   });
 

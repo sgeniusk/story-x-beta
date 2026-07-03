@@ -2520,10 +2520,6 @@ export function StoryXDesk({
       ) : null;
     return (
       <FloatingDataWorkspace
-        title={project.title}
-        episodeLabel={`데이터 · 캐논 ${project.canonFacts.length}`}
-        onSwitchTrack={(track) => switchToTrack(track)}
-        onOpenPublish={openPublishingMode}
         dataView={dataView}
         onSelectCategory={(category) => setDataView({ kind: 'canon', category })}
         onSelectBibleSection={openBibleSection}

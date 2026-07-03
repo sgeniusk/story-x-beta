@@ -6,16 +6,13 @@ import type { MetricTone, StudioMetrics } from '../lib/studioMetrics';
 import { CanonNav } from './CanonNav';
 import { WorkStateGrid } from './WorkStateGrid';
 import { DataReviewRail } from './DataReviewRail';
+import { DeskMetaLine } from './DeskMetaLine';
 import {
   canonCategories, type CanonCategory, type DataView,
   type BibleSection, type DataReviewView,
 } from '../lib/canonDataView';
 
 export interface FloatingDataWorkspaceProps {
-  title: string;
-  episodeLabel: string;
-  onSwitchTrack: (track: 'draft' | 'bible') => void;
-  onOpenPublish?: () => void;
   dataView: DataView;
   onSelectCategory: (c: CanonCategory) => void;
   onSelectBibleSection: (s: BibleSection) => void;
@@ -32,6 +29,9 @@ export interface FloatingDataWorkspaceProps {
   onRequestReview: (c: CanonCategory) => void;
   onOpenApprovalQueue: () => void;
   centerSlot: ReactNode;
+  /** 슬라이스 C — 하단 메타 줄. metaLeft=캐논·떡밥 요약, metaRightSlot=저장 상태 등. */
+  metaLeft?: string;
+  metaRightSlot?: ReactNode;
 }
 
 const BIBLE_ENTRIES: Array<{ id: BibleSection; label: string }> = [
@@ -95,28 +95,6 @@ export function FloatingDataWorkspace(props: FloatingDataWorkspaceProps) {
 
   return (
     <div className={`fc-app fc-data${isFocus ? ' focus' : ''}`} id="fc-data-app">
-      {/* topbar — FloatingEditor 333~381 차용, 데이터 탭 활성 */}
-      <header className="topbar">
-        <div className="brand">X</div>
-        <div className="doc-id">
-          <span className="title">{props.title}</span>
-          <span className="sep">›</span>
-          <span className="ep"><b>{props.episodeLabel}</b></span>
-        </div>
-        <div className="saved"><span className="dot" /><span className="word">저장됨</span></div>
-        <div className="vr" />
-        <div className="modes" role="tablist">
-          <button role="tab" aria-selected="false" onClick={() => props.onSwitchTrack('draft')}>편집</button>
-          <button role="tab" aria-selected="true">데이터</button>
-        </div>
-        <div className="vr" />
-        <button className="btn-publish" onClick={() => props.onOpenPublish?.()} title="출간">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="M12 3v13m0-13 4 4m-4-4-4 4M5 21h14" />
-          </svg>
-          <span>출간</span>
-        </button>
-      </header>
       <button className="exitfocus" onClick={() => setIsFocus(false)}>집중 모드 끝내기 · Esc</button>
 
       {/* canvas — board 자체 렌더 / canon·bible 은 centerSlot 주입 */}
@@ -265,6 +243,7 @@ export function FloatingDataWorkspace(props: FloatingDataWorkspaceProps) {
       </div>
 
       <div className={`scrim${scrimShown ? ' show' : ''}`} onClick={closeAll} />
+      <DeskMetaLine left={props.metaLeft ?? ''} rightSlot={props.metaRightSlot} />
     </div>
   );
 }
