@@ -1,7 +1,7 @@
 // 방향 C "떠 있는 작업실" 에디터 — 어두운 캔버스 위 종이 시트 + 좌측 플로팅 독 + 단락 옆 여백 주석.
 // claude.ai design 의 direction-c.html 레이아웃을 React 로 재현한다. 데이터는 전부 props 주입(순수 표현 컴포넌트).
 // 실 원고(paragraphs)·작가진 검토(reviews)·5 페르소나(personas)·검토 콜백은 StoryXDesk 가 단일 원천에서 넘긴다.
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { InlineDiff, MarginReview, Paragraph, PersonaCard, SummonHandler } from '../lib/marginReview';
 import { SEVERITY_LABEL } from '../lib/marginReview';
 import type { StudioMetrics } from '../lib/studioMetrics';
@@ -9,6 +9,7 @@ import { composeIntentWithFork, buildVsIntentSeed, type EpisodeFork, type VsCand
 import { replacePaceSeed, type PaceQuestion } from '../lib/paceInterview';
 import type { LeakReport } from '../lib/leakGate';
 import type { RetentionStats } from '../lib/retentionStats';
+import { DeskMetaLine } from './DeskMetaLine';
 
 interface ChapterBeatLike {
   id: string;
@@ -19,8 +20,6 @@ interface ChapterBeatLike {
 }
 
 export interface FloatingEditorProps {
-  title: string;
-  episodeLabel: string;
   kicker: string;
   charCount: string;
   chapterTitle: string;
@@ -47,8 +46,6 @@ export interface FloatingEditorProps {
   onGenerateDraft?: () => void;
   /** 메인 액션 라벨 — 상태별(첫 회차/다음 회차/검토). 없으면 '초안 생성'. (F-002·F-004) */
   mainActionLabel?: string;
-  onSwitchTrack?: (track: 'draft' | 'bible') => void;
-  onOpenPublish?: () => void;
   isGenerating?: boolean;
   // Phase 2b — 지표 패널 (studioMetrics: 하니스·품질·매체·온톨로지)
   metrics: StudioMetrics;
@@ -90,6 +87,8 @@ export interface FloatingEditorProps {
   /** B3 — 본문 등장 캐논 멘션. 없거나 빈 배열이면 칩 바 미렌더. */
   canonMentions?: Array<{ name: string; facts: Array<{ id: string; statement: string; alwaysInclude?: boolean }> }>;
   onToggleCanonInclude?: (factId: string) => void;
+  /** 슬라이스 C — 하단 메타 줄 우측(저장 상태·AI 배지). StoryXDesk 가 주입. */
+  metaRightSlot?: ReactNode;
 }
 
 const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
@@ -97,8 +96,6 @@ const avatarText = (p: PersonaCard) => p.name.slice(0, 1);
 type PopState = { x: number; y: number; selectedText?: string; anchor?: string } | null;
 
 export function FloatingEditor({
-  title,
-  episodeLabel,
   kicker,
   charCount,
   chapterTitle,
@@ -122,8 +119,6 @@ export function FloatingEditor({
   onIntentChange,
   onGenerateDraft,
   mainActionLabel = '초안 생성',
-  onSwitchTrack,
-  onOpenPublish,
   isGenerating = false,
   metrics,
   onMediaAxisChange,
@@ -150,6 +145,7 @@ export function FloatingEditor({
   retention,
   canonMentions,
   onToggleCanonInclude,
+  metaRightSlot,
 }: FloatingEditorProps) {
   const personaById = useCallback(
     (id: string): PersonaCard =>
@@ -445,70 +441,6 @@ export function FloatingEditor({
 
   return (
     <div ref={appRef} className={`fc-app${isFocus ? ' focus' : ''}`} id="fc-app">
-      {/* floating top chrome */}
-      <header className="topbar">
-        <div className="brand">X</div>
-        <div className="doc-id">
-          <span className="title">{title}</span>
-          <span className="sep">›</span>
-          <span className="ep">
-            <b>{episodeLabel}</b>
-          </span>
-        </div>
-        <div className="saved">
-          <span className="dot" />
-          <span className="word">저장됨</span>
-        </div>
-        <div className="vr" />
-        <div className="modes" role="tablist">
-          <button role="tab" aria-selected="true" onClick={() => onSwitchTrack?.('draft')}>
-            편집
-          </button>
-          <button
-            role="tab"
-            aria-selected="false"
-            onClick={() => (onSwitchTrack ? onSwitchTrack('bible') : toast('데이터 모드 — 인물 관계도·캐논·타임라인 (이번 범위 밖)'))}
-          >
-            데이터
-          </button>
-        </div>
-        <div className="vr" />
-        <button
-          className="btn-publish"
-          onClick={() => (onOpenPublish ? onOpenPublish() : toast('출간 — 회차를 매체로 내보냅니다 (이번 범위 밖)'))}
-          title="출간"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="M12 3v13m0-13 4 4m-4-4-4 4M5 21h14" />
-          </svg>
-          <span>출간</span>
-        </button>
-        {canConfirmLock && (
-          <button
-            className="btn-confirm-lock"
-            onClick={() => onConfirmLock?.()}
-            title="검토 후 확정을 권장합니다 — 확정하면 이 회차가 잠기고 다음 회차로 넘어갑니다."
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <rect x="5" y="11" width="14" height="10" rx="2" />
-              <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-            </svg>
-            <span>{lockLabel}</span>
-          </button>
-        )}
-        <button
-          className={`btn-primary${isGenerating ? ' is-generating' : ''}`}
-          onClick={() => (onGenerateDraft ? onGenerateDraft() : toast('초안 생성 — 데모에서는 본문이 채워져 있습니다'))}
-          disabled={isGenerating || Boolean(productionBlockedReason)}
-          aria-busy={isGenerating}
-          title={productionBlockedReason}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5z" />
-          </svg>
-          <span>{isGenerating ? '생성 중…' : productionBlockedReason ? '헌장 잠금 필요' : mainActionLabel}</span>
-        </button>
-      </header>
       <button className="exitfocus" onClick={() => setIsFocus(false)}>
         집중 모드 끝내기 · Esc
       </button>
@@ -650,6 +582,34 @@ export function FloatingEditor({
                 ))}
               </div>
             )}
+            {/* 슬라이스 C — 메인 CTA 는 원고 흐름 끝(문서형). pill topbar 해체의 대체 동선 */}
+            <div className="fc-sheet-cta">
+              <button
+                className={`btn-primary${isGenerating ? ' is-generating' : ''}`}
+                onClick={() => (onGenerateDraft ? onGenerateDraft() : toast('초안 생성 — 데모에서는 본문이 채워져 있습니다'))}
+                disabled={isGenerating || Boolean(productionBlockedReason)}
+                aria-busy={isGenerating}
+                title={productionBlockedReason}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5z" />
+                </svg>
+                <span>{isGenerating ? '생성 중…' : productionBlockedReason ? '헌장 잠금 필요' : mainActionLabel}</span>
+              </button>
+              {canConfirmLock && (
+                <button
+                  className="btn-confirm-lock"
+                  onClick={() => onConfirmLock?.()}
+                  title="검토 후 확정을 권장합니다 — 확정하면 이 회차가 잠기고 다음 회차로 넘어갑니다."
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <rect x="5" y="11" width="14" height="10" rx="2" />
+                    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                  </svg>
+                  <span>{lockLabel}</span>
+                </button>
+              )}
+            </div>
           </article>
 
           {/* margin notes (wide screens) */}
@@ -1216,6 +1176,7 @@ export function FloatingEditor({
 
       <div className={`scrim${scrimShown ? ' show' : ''}`} onClick={closeAll} />
       {hint && <div className="hint show" dangerouslySetInnerHTML={{ __html: hint }} />}
+      <DeskMetaLine left={`${paragraphs.length}문단 · ${charCount}`} rightSlot={metaRightSlot} />
     </div>
   );
 }

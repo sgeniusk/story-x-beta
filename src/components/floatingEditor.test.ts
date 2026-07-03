@@ -28,7 +28,7 @@ const reviews: MarginReview[] = [
 
 function baseProps(over: Partial<FloatingEditorProps> = {}): FloatingEditorProps {
   return {
-    title: '샘플 작품', episodeLabel: '1화', kicker: '장편소설 · 1화',
+    kicker: '장편소설 · 1화',
     charCount: '1,284자', chapterTitle: '이름을 빌리는 자', chapterSub: '필사관 이야기.',
     paragraphs, reviews, personas: CORE_PERSONAS,
     onSummon: vi.fn(), onRunAll: vi.fn(), onAcceptDiff: vi.fn(), onRejectReview: vi.fn(),
@@ -40,8 +40,6 @@ function baseProps(over: Partial<FloatingEditorProps> = {}): FloatingEditorProps
     onBodyChange: vi.fn(),
     onIntentChange: vi.fn(),
     onGenerateDraft: vi.fn(),
-    onSwitchTrack: vi.fn(),
-    onOpenPublish: vi.fn(),
     isGenerating: false,
     metrics: {
       harness: { lead: '95/100', tone: 'warn', sub: '보강 필요', layers: [
@@ -116,24 +114,30 @@ describe('FloatingEditor 실데이터 배선', () => {
     unmount();
   });
 
-  it('출간 버튼이 onOpenPublish 를 호출한다 (우상단 단일 버튼)', () => {
-    const onOpenPublish = vi.fn();
-    const { host, click, unmount } = mount(baseProps({ onOpenPublish }));
-    const publishButtons = host.querySelectorAll('.btn-publish');
-    expect(publishButtons.length).toBe(1);
-    click(publishButtons[0]);
-    expect(onOpenPublish).toHaveBeenCalledTimes(1);
+  it('pill topbar 를 렌더하지 않는다 — 단일 바 셸 (슬라이스 C)', () => {
+    const { host, unmount } = mount(baseProps());
+    expect(host.querySelector('.topbar')).toBeNull();
+    expect(host.querySelector('.btn-publish')).toBeNull();
+    expect(host.querySelector('[role="tab"]')).toBeNull();
     unmount();
   });
 
-  it('데이터 탭이 onSwitchTrack(bible) 를 호출한다', () => {
-    const onSwitchTrack = vi.fn();
-    const { host, click, unmount } = mount(baseProps({ onSwitchTrack }));
-    const dataTab = Array.from(host.querySelectorAll('[role="tab"]')).find(
-      (t) => t.textContent?.includes('데이터')
-    );
-    click(dataTab ?? null);
-    expect(onSwitchTrack).toHaveBeenCalledWith('bible');
+  it('메인 CTA 가 원고 시트 끝 .fc-sheet-cta 안에 있다 (슬라이스 C)', () => {
+    const onGenerateDraft = vi.fn();
+    const { host, click, unmount } = mount(baseProps({ onGenerateDraft }));
+    const cta = host.querySelector('.sheet .fc-sheet-cta .btn-primary');
+    expect(cta).not.toBeNull();
+    click(cta);
+    expect(onGenerateDraft).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('하단 메타 줄이 문단 수·charCount 를 렌더한다 (슬라이스 C)', () => {
+    const { host, unmount } = mount(baseProps());
+    const meta = host.querySelector('.dm-line');
+    expect(meta).not.toBeNull();
+    expect(meta?.textContent).toContain('2문단');
+    expect(meta?.textContent).toContain('1,284자');
     unmount();
   });
 

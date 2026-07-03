@@ -1412,8 +1412,6 @@ export function StoryXDesk({
 
   const floatingEditorProps = useMemo(
     () => ({
-      title: project.title,
-      episodeLabel: latestChapter ? chapterLabel(latestChapter) : '새 초안',
       kicker: `${blueprint.mediumLabel} · ${latestChapter ? chapterLabel(latestChapter) : '새 초안'}`,
       charCount: `${chapterCharCount.toLocaleString()}자`,
       chapterTitle: latestChapter?.title ?? '제목 없음',
@@ -1442,8 +1440,6 @@ export function StoryXDesk({
       onIntentChange: (text: string) => setDraftPrompt(text),
       onGenerateDraft: mainActionRun,
       mainActionLabel, // F-002 — 상태별 라벨(첫 회차/다음 회차/검토)을 floating CTA 에 반영
-      onSwitchTrack: (track: 'draft' | 'bible') => switchToTrack(track),
-      onOpenPublish: openPublishingMode,
       isGenerating,
       metrics: studioMetrics,
       onMediaAxisChange: updateStoryModeAxis,

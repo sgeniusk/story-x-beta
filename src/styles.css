@@ -11080,6 +11080,12 @@ body {
 .fc-app .btn-confirm-lock{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;white-space:nowrap;flex:none;cursor:pointer;color:var(--accent);border:1px solid color-mix(in oklch,var(--accent) 50%,var(--rule));background:color-mix(in oklch,var(--accent) 10%,transparent)}
 .fc-app .btn-confirm-lock:hover{background:color-mix(in oklch,var(--accent) 18%,transparent);border-color:var(--accent)}
 .fc-app .btn-confirm-lock svg{width:14px;height:14px}
+/* 슬라이스 C — 원고 시트 끝 CTA 행 */
+.fc-sheet-cta{display:flex;align-items:center;gap:10px;margin-top:30px;padding-top:18px;border-top:1px dashed var(--rule-soft,rgba(255,255,255,.1))}
+.fc-sheet-cta .btn-primary{display:inline-flex;align-items:center;gap:7px}
+.fc-sheet-cta .btn-primary svg{width:15px;height:15px}
+.fc-sheet-cta .btn-confirm-lock{display:inline-flex;align-items:center;gap:7px}
+.fc-sheet-cta .btn-confirm-lock svg{width:14px;height:14px}
 /* canvas + sheet */
 .fc-app .canvas{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden}
 .fc-app .canvas::-webkit-scrollbar{width:10px}
