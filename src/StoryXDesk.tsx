@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useCallback, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
+import { useEffect, useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { getAgentValidationProcess, type ValidationAgentId } from './lib/agentReviewProcess';
 import { defaultRuns, getMediumReviewAgentIds } from './lib/agentSeedData';
 import { inspectLeak, type LeakReport } from './lib/leakGate';
@@ -270,47 +270,6 @@ function textFromEditable(root: HTMLDivElement): string {
     .map((node) => node.innerText.trim())
     .filter(Boolean);
   return paragraphs.length > 0 ? paragraphs.join('\n\n') : root.innerText.trim();
-}
-
-function renderParagraphText(text: string, diffs: InlineDiff[]): Array<string | ReactElement> {
-  let segments: Array<string | ReactElement> = [text || '\u00a0'];
-
-  diffs.forEach((diff, diffIndex) => {
-    segments = segments.flatMap((segment, segmentIndex) => {
-      if (typeof segment !== 'string') {
-        return [segment];
-      }
-
-      const fromIndex = segment.indexOf(diff.from);
-      if (fromIndex >= 0) {
-        return [
-          segment.slice(0, fromIndex),
-          <span className="sx-diff-del" key={`del-${diffIndex}-${segmentIndex}`}>
-            {diff.from}
-          </span>,
-          <span className="sx-diff-add" key={`add-${diffIndex}-${segmentIndex}`}>
-            {diff.to}
-          </span>,
-          segment.slice(fromIndex + diff.from.length)
-        ];
-      }
-
-      const toIndex = segment.indexOf(diff.to);
-      if (toIndex >= 0) {
-        return [
-          segment.slice(0, toIndex),
-          <span className="sx-diff-add" key={`accepted-${diffIndex}-${segmentIndex}`}>
-            {diff.to}
-          </span>,
-          segment.slice(toIndex + diff.to.length)
-        ];
-      }
-
-      return [segment];
-    });
-  });
-
-  return segments;
 }
 
 function buildBibleAssistantRuns(

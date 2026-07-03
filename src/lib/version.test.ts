@@ -5,10 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { STORYX_VERSION, storyxVersionLog } from './version';
 
 const desk = readFileSync(resolve(__dirname, '../StoryXDesk.tsx'), 'utf8');
-// rank5 — VersionLogDialog는 components로 추출됨. 정의 단언은 해당 파일에서 검사한다.
-const versionLogDialog = readFileSync(resolve(__dirname, '../components/VersionLogDialog.tsx'), 'utf8');
 const docs = readFileSync(resolve(__dirname, '../../docs/storyx-version-log.md'), 'utf8');
-const projectHistoryDialog = readFileSync(resolve(__dirname, '../components/ProjectHistoryDialog.tsx'), 'utf8');
 
 describe('Story X version log', () => {
   it('publishes the current alpha version as a reusable product constant', () => {
@@ -41,9 +38,8 @@ describe('Story X version log', () => {
   });
 
   it('keeps the version constant and changelog available as a reusable product module', () => {
-    // 변경 로그 뷰어(VersionLogDialog) 렌더·⌘K 명령은 legacy desk 셸과 함께 제거됐다.
+    // 변경 로그 뷰어(VersionLogDialog)는 렌더 0 고아로 삭제됐다.
     // 버전 상수/로그 자체는 재사용 가능한 제품 모듈로 유지된다(위 두 it 이 값 계약을 검사).
-    expect(versionLogDialog).toContain('function VersionLogDialog');
     expect(desk).not.toContain('<VersionLogDialog');
   });
 
@@ -52,20 +48,5 @@ describe('Story X version log', () => {
     expect(docs).toContain('현재 기준 버전: `Alpha v0.10.0`');
     expect(docs).toContain('Quiet Studio');
     expect(docs).toContain('v1.0.0-alpha');
-  });
-});
-
-describe('B4 — ProjectHistoryDialog 영향범위', () => {
-  it('describeSnapshotImpact 로 영향범위를 계산한다', () => {
-    expect(projectHistoryDialog).toContain('describeSnapshotImpact');
-  });
-
-  it('rollback 시 복원 전 confirm 한다', () => {
-    expect(projectHistoryDialog).toContain('window.confirm');
-    expect(projectHistoryDialog).toContain('isRollback');
-  });
-
-  it('current project 를 prop 으로 받는다', () => {
-    expect(projectHistoryDialog).toMatch(/current[?:]/);
   });
 });

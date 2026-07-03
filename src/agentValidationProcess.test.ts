@@ -11,8 +11,6 @@ import {
 
 const desk = readFileSync(resolve(__dirname, 'StoryXDesk.tsx'), 'utf8');
 const skill = readFileSync(resolve(__dirname, '../.claude/skills/storyx-persona-review/SKILL.md'), 'utf8');
-const componentSrc = (name: string) =>
-  readFileSync(resolve(__dirname, `components/${name}.tsx`), 'utf8');
 
 describe('persona validation process', () => {
   it('defines scale-aware review runs before spending tokens', () => {
@@ -64,10 +62,7 @@ describe('persona validation process', () => {
   });
 
   it('surfaces the protocol in the editor and project skill', () => {
-    // AgentProfileDialog 렌더는 legacy desk 셸과 함께 제거됐다. 프로토콜 정의는 컴포넌트 파일에서 검사한다.
-    expect(componentSrc('AgentProfileDialog')).toContain('function AgentProfileDialog');
-    expect(componentSrc('AgentProfileDialog')).toContain('검증 프로세스');
-    expect(componentSrc('AgentProfileDialog')).toContain('성장 메모리');
+    // AgentProfileDialog 는 렌더 0 고아로 삭제됐다. 프로토콜 계약은 위 두 it 과 desk/skill 배선으로 검사한다.
     // 검토 규모 상태는 StoryXDesk 에서 관리되고 floatingEditorProps 로 전달된다
     expect(desk).toContain('reviewScale');
     expect(skill).toContain('검토 규모를 먼저 묻는다');
