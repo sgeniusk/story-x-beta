@@ -302,18 +302,15 @@ function App() {
   if (stage === 'editor') {
     return (
       <>
-        <WorkspaceModeBar
-          mode={workspaceMode}
-          onSelect={selectWorkspaceMode}
-          workTitle={loadProject().title}
-          rightSlot={<SyncConsole pending={pendingSync} onReconcile={reconcileSync} />}
-        />
         <StoryXDesk
-          key={`${studioView}-${syncVersion}`}
+          key={syncVersion}
           initialMedium={medium}
           initialFormat={format}
           initialDraftPayload={pendingDraft}
           initialStudioView={studioView}
+          syncSlot={<SyncConsole pending={pendingSync} onReconcile={reconcileSync} />}
+          onSelectPlayMode={() => selectWorkspaceMode('play')}
+          onStudioViewChange={setStudioView}
           onOpenProjects={() => setStage('projects')}
           onOpenLanding={() => setStage('landing')}
           onOpenPublish={() => setStage('publish')}
