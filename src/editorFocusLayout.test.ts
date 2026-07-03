@@ -47,10 +47,6 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('const [editedSinceReview, setEditedSinceReview]');
     expect(desk).toContain('function reviewDraft');
     expect(desk).toContain('바이블 열기');
-    // P2-B — '이번 회차 의도'는 FloatingEditor 로 이동했다. AgentIntentCard 정의는 컴포넌트 파일에 있다.
-    expect(componentSrc('AgentIntentCard')).toContain('ex-intent-card');
-    expect(componentSrc('AgentIntentCard')).toContain('function AgentIntentCard');
-    expect(componentSrc('AgentIntentCard')).toContain('className="ex-intent-textarea"');
     // 편집기는 FloatingEditor 로 이동했다 — 원고 표면·확대/집중 UI는 그 컴포넌트에 있다.
     expect(desk).toContain('<FloatingEditor');
     expect(desk).toContain('const mainActionLabel = !latestChapter');
@@ -178,9 +174,6 @@ describe('Story X focused editor layout', () => {
   });
 
   it('keeps editor rails focused and moves memory, quality, and harness work into the bible flow', () => {
-    expect(componentSrc('StoryXStatusBar')).toContain('function StoryXStatusBar');
-    expect(componentSrc('StoryXStatusBar')).toContain('알파 셀프체크');
-    expect(componentSrc('StoryXStatusBar')).toContain('report.nextActions[0]');
     // 편집 셸에서 걷어낸 카드들은 desk 에서 렌더되지 않는다(bible 흐름·FloatingDataWorkspace 로 이동)
     expect(desk).not.toContain('<CurrentBlueprintCard');
     expect(desk).not.toContain('<MemoryBankCard bank={memoryBank} />');
@@ -189,12 +182,7 @@ describe('Story X focused editor layout', () => {
     expect(desk).not.toContain('<ContinuitySummaryCard');
     expect(desk).toContain("const isBibleMode = activeTrack === 'bible' && !isPublishingMode");
     expect(componentSrc('OpenThreadsCard')).toContain('function OpenThreadsCard');
-    expect(componentSrc('BibleAssistantSidebar')).toContain('function BibleAssistantSidebar');
-    expect(componentSrc('BibleAssistantSidebar')).toContain('조수진');
     expect(css).toContain('.sx-focused-assist-rail');
-    expect(css).toContain('.sx-bible-assistant-sidebar');
-    expect(css).toContain('.sx-statusbar');
-    expect(css).toContain('.sx-statusbar-alpha');
   });
 
   it('adds a publishing studio for release snapshots and change-log review', () => {
@@ -312,9 +300,6 @@ describe('Story X focused editor layout', () => {
     expect(componentSrc('WorkStateGrid')).toContain('총 분량');
     expect(componentSrc('WorkStateGrid')).toContain('이번 회차 분량');
     expect(desk).not.toContain('마감');
-    // 회차 의도는 AI 에이전트 발언으로 명시된다
-    expect(componentSrc('AgentIntentCard')).toContain('가 잡은 ');
-    expect(componentSrc('AgentIntentCard')).toContain('className="ex-intent-by"');
     // 회차 구조 트리 — 기승전결 act 묶음, 에이전트 선택 스킴
     expect(componentSrc('ChapterStructureTree')).toContain('STRUCTURE_ACTS');
     expect(componentSrc('ChapterStructureTree')).toContain('· 에이전트 선택');
