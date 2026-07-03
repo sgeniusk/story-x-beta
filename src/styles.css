@@ -11541,6 +11541,10 @@ body {
 .wm-badge{margin-left:5px;padding:0 6px;border-radius:9px;background:#f87171;color:#17181d;font-size:10px;font-weight:700;line-height:1.5}
 .wm-context-chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border:1px solid rgba(255,255,255,.1);border-radius:6px;font-size:11px;color:rgba(237,237,243,.6);white-space:nowrap}
 .wm-conflict-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid rgba(248,113,113,.5);border-radius:6px;background:transparent;font-size:11px;color:#fca5a5;cursor:pointer;white-space:nowrap}
+/* 슬라이스 C — 하단 메타 줄. 중앙은 비워 dock pill 과 충돌하지 않는다 */
+.dm-line{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:space-between;align-items:center;padding:4px 14px;font-size:11px;color:rgba(237,237,243,.5);pointer-events:none}
+.dm-line .dm-right{display:inline-flex;align-items:center;gap:8px;pointer-events:auto}
+.dm-line .dm-save[data-state='dirty']{color:#fbbf24}
 /* 슬라이스 B — 싱크 콘솔(상단 바 우측). PLAY working 미반영 배지 + ⟳최신화. */
 .sync-console { display: flex; align-items: center; gap: 9px; }
 .sync-pending { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #c4b6ff; background: #17141f; border: 1px solid #2f2745; border-radius: 7px; padding: 4px 9px; }
