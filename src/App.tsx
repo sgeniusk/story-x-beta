@@ -53,7 +53,6 @@ function mediumDisplayLabel(medium: CreativeMedium): string {
 import {
   buildFallbackDraft,
   buildStoryContractFromOnboarding,
-  createEmptyProject,
   defaultPlannedEpisodes,
   deriveBeatSheet,
   deriveOnboardingSeed,
@@ -86,9 +85,7 @@ import { PlanApplyReview } from './components/PlanApplyReview';
 import { applyPlanPatches, derivePlanConflicts, resolvePlanApply, type PlanConflict } from './lib/planStage';
 import { countPendingSync, reconcileWorkingIntoCommitted, applyReconcile, type PendingSync } from './lib/syncConsole';
 import { deriveReconcilePlan, type ReconcilePlan } from './lib/playRuntimeValidator';
-import { DiveStart } from './components/DiveStart';
-import { seedFromProposal, type DiveProposal, type DiveSetup } from './lib/diveProposal';
-import { createDiveSession } from './lib/diveSession';
+import { seedPlayFromProject } from './lib/playEntry';
 import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
 import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
@@ -221,7 +218,7 @@ function App() {
   const [format, setFormat] = useState<CreativeFormat>(restoredOnboarding?.format ?? 'long-novel');
   // 새 프로젝트 플로우의 빌드 단계에서 만든 첫 회차 초안 — 에디터가 이걸로 시작한다
   const [pendingDraft, setPendingDraft] = useState<DraftChapterPayload | null>(null);
-  // Dive 진입 — DiveStart에서 후보를 고르면 시드된 세션을 담아 DiveStage로 넘긴다
+  // PLAY 진입 — 현 작품에서 이어 플레이할 세션. 아래 useEffect 가 첫 진입 때 시딩한다.
   const [diveInit, setDiveInit] = useState<DiveState | null>(null);
   // 융합 셸 — STUDIO(editor) 진입 뷰. WRITE=editor·PLAN=data. 토글이 stage 와 함께 구동.
   const [studioView, setStudioView] = useState<'editor' | 'data'>('editor');
@@ -249,6 +246,15 @@ function App() {
     const t = window.setTimeout(() => setSyncFlash(null), 2600);
     return () => window.clearTimeout(t);
   }, [syncFlash]);
+  // PLAY 첫 진입 시딩 — 복원본·diveInit 이 모두 없을 때만 현 작품에서 한 번 시딩. 본편(committed)은 읽기만.
+  useEffect(() => {
+    if (stage !== 'dive') return;
+    if (loadDiveState() || diveInit) return;
+    const seed = seedPlayFromProject(loadProject());
+    if (!seed) return;
+    saveDiveState(seed);
+    setDiveInit(seed);
+  }, [stage, diveInit]);
   const workspaceMode: WorkspaceMode = stage === 'dive' ? 'play' : studioView === 'data' ? 'plan' : 'write';
   function selectWorkspaceMode(next: WorkspaceMode) {
     if (next === 'play') {
@@ -464,26 +470,21 @@ function App() {
     if (diveInit) {
       return <>{bar}<DiveStage initial={diveInit} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} /></>;
     }
-    const seedAndEnter = (src: Pick<DiveProposal, 'scene' | 'cast'>, title: string) => {
-      const { scene, characters, primaryCharacterId } = seedFromProposal(src);
-      const project = { ...createEmptyProject({ title: title.slice(0, 20) || 'Dive' }), characters };
-      const session = { ...createDiveSession(primaryCharacterId, project.id), scene };
-      const init: DiveState = { schema: 'storyx/dive/v1', session, project };
-      saveDiveState(init);
-      // 융합 브리지 — 새 Dive 작품도 storageKey 에 심어 STUDIO(WRITE/PLAN)가 같은 작품을 본다.
-      saveProject(project);
-      setDiveInit(init);
-    };
-    return (
-      <>
-        {bar}
-        <DiveStart
-          onBack={() => setStage('editor')}
-          onStart={(setup: DiveSetup) => seedAndEnter(setup, setup.myRole || setup.scene)}
-          onPick={(p: DiveProposal) => seedAndEnter(p, p.hook)}
-        />
-      </>
-    );
+    // PLAY 첫 진입 — 현 작품에 인물이 없으면 안내. 있으면 위 useEffect 가 diveInit 을 채워 다음 렌더에서 진입.
+    if (!seedPlayFromProject(loadProject())) {
+      return (
+        <>
+          {bar}
+          <div className="dx-empty" role="status">
+            <p>이 작품에는 아직 인물이 없어요. PLAN 에서 인물을 먼저 만들어 주세요.</p>
+            <button type="button" className="btn-primary" onClick={() => selectWorkspaceMode('plan')}>
+              PLAN 으로 이동
+            </button>
+          </div>
+        </>
+      );
+    }
+    return <>{bar}</>;
   }
 
   return <MarketingLanding onOpenHome={() => setStage('home')} onOpenProjects={() => setStage('projects')} />;
