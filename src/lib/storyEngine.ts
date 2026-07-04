@@ -648,7 +648,7 @@ export interface FallbackDraftInput {
   chapterNumber?: number;
 }
 
-const FALLBACK_EMPTY_LINE = '작가 입력을 기다리는 임시 초안입니다.';
+export const FALLBACK_EMPTY_LINE = '작가 입력을 기다리는 임시 초안입니다.';
 
 function normalizeAuthorLine(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
