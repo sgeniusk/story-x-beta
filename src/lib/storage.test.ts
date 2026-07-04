@@ -8,10 +8,14 @@ import {
   parseDiveState,
   serializeOnboardingDraft,
   serializeDiveState,
+  loadPlanPatches,
+  savePlanPatches,
+  clearPlanPatches,
   type OnboardingDraft,
   type ProjectSnapshot,
   type DiveState
 } from './storage';
+import type { PlanPatch } from './planStage';
 import { createSeedProject, createEmptyProject } from './storyEngine';
 import { createDiveSession } from './diveSession';
 import { importanceBand } from './canonImportance';
@@ -234,5 +238,24 @@ describe('normalizeProject — CanonFact MVP-0 백필', () => {
     p.canonFacts[0].importance = 0.5;
     const r = normalizeProject(p);
     expect(r.canonFacts.find((f: any) => f.id === 'f1')!.importance).toBe(0.5);
+  });
+});
+
+describe('planStage 영속', () => {
+  it('패치 목록을 저장·로드 왕복한다', () => {
+    const patches: PlanPatch[] = [
+      { kind: 'canon', id: 'c1', label: '캐논 1화', before: '옛 값', after: '새 값' }
+    ];
+    savePlanPatches(patches);
+    expect(loadPlanPatches()).toEqual(patches);
+    clearPlanPatches();
+    expect(loadPlanPatches()).toEqual([]);
+  });
+
+  it('깨진 페이로드는 빈 배열로 폴백한다', () => {
+    window.localStorage.setItem('serial-story-studio/plan-stage', '{broken');
+    expect(loadPlanPatches()).toEqual([]);
+    window.localStorage.setItem('serial-story-studio/plan-stage', JSON.stringify({ not: 'array' }));
+    expect(loadPlanPatches()).toEqual([]);
   });
 });

@@ -71,12 +71,15 @@ import {
   clearProjectSnapshots,
   exportAllData,
   importAllData,
+  loadPlanPatches,
   loadProject,
   loadProjectSnapshots,
   pushProjectSnapshot,
+  savePlanPatches,
   saveProject,
   type ProjectSnapshot
 } from './lib/storage';
+import { applyPlanPatches, patchKey, upsertPlanPatch, type PlanPatch } from './lib/planStage';
 
 type DeskTrack = 'draft' | 'bible';
 type ApprovalDecision = MemoryApprovalDecision;
@@ -347,6 +350,8 @@ interface StoryXDeskProps {
   onSelectPlayMode?: () => void;
   /** 슬라이스 C — WRITE↔PLAN 내부 전환을 App state 에 동기화(⟳최신화 remount 후 복원용). */
   onStudioViewChange?: (view: 'editor' | 'data') => void;
+  /** PLAN staged — 패치 수 변경 보고(App 배지 카운트). */
+  onPlanPatchesChange?: (count: number) => void;
 }
 
 // B2 — 활동일 기록 헬퍼. todayStr 는 작가 로컬 '오늘'(UI 레이어라 Date 허용),
@@ -375,7 +380,8 @@ export function StoryXDesk({
   initialStudioView = 'editor',
   syncSlot,
   onSelectPlayMode,
-  onStudioViewChange
+  onStudioViewChange,
+  onPlanPatchesChange
 }: StoryXDeskProps) {
   // 기본 회차 의도는 빈 값 — 의도 메모를 비워두면 produceEpisode 가 캐논 digest 만으로 다음 회차를 만든다.
   // 데모 장르 문구를 박으면 사용자가 안 건드릴 때 다음 회차 intent(freewrite)로 새어 오염된다 (P3, #2 로판 2화 "용사와 외계인" 사고).
@@ -1273,6 +1279,16 @@ export function StoryXDesk({
     saveProject(project);
   }, [project]);
 
+  // PLAN staged — 설계실 패치. 편집은 본편이 아니라 여기 모이고, 반영/버리기는 App(싱크 콘솔) 소유.
+  const [planPatches, setPlanPatches] = useState<PlanPatch[]>(() => loadPlanPatches());
+  useEffect(() => {
+    savePlanPatches(planPatches);
+    onPlanPatchesChange?.(planPatches.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planPatches]);
+  const overlayProject = useMemo(() => applyPlanPatches(project, planPatches), [project, planPatches]);
+  const planStagedKeys = useMemo(() => new Set(planPatches.map(patchKey)), [planPatches]);
+
   // 본문 자동 저장(베타테스트 #1) — 타이핑이 멈추면 현재 회차 prose 로 commit → 위 saveProject effect 가 영속한다.
   // commitChapterProse 는 prose 가 동일하면 no-op(참조 동일)이라 불필요한 저장을 막는다.
   useEffect(() => {
@@ -1609,6 +1625,66 @@ export function StoryXDesk({
       ...current,
       canonFacts: current.canonFacts.map((fact) => (fact.id === canonId ? { ...fact, statement: value } : fact))
     }));
+  }
+
+  // PLAN staged 핸들러 — setProject 대신 패치 upsert. before 는 본편(project) 값, logCanonChange 없음(패치가 이력).
+  function stageCharacterMemory(characterId: string, field: 'desire' | 'wound' | 'currentState', value: string) {
+    const character = project.characters.find((item) => item.id === characterId);
+    if (!character) return;
+    const labels = { desire: '욕망', wound: '상처', currentState: '현재 상태' } as const;
+    setPlanPatches((prev) =>
+      upsertPlanPatch(prev, {
+        kind: 'character',
+        id: characterId,
+        field,
+        label: `${character.name} · ${labels[field]}`,
+        before: character[field],
+        after: value
+      })
+    );
+  }
+
+  function stageWorldMemory(ruleId: string, value: string) {
+    const rule = project.worldRules.find((item) => item.id === ruleId);
+    if (!rule) return;
+    setPlanPatches((prev) =>
+      upsertPlanPatch(prev, { kind: 'world', id: ruleId, label: rule.title, before: rule.rule, after: value })
+    );
+  }
+
+  function stageCanonMemory(canonId: string, value: string) {
+    const fact = project.canonFacts.find((item) => item.id === canonId);
+    if (!fact) return;
+    setPlanPatches((prev) =>
+      upsertPlanPatch(prev, { kind: 'canon', id: canonId, label: `캐논 ${fact.episode}화`, before: fact.statement, after: value })
+    );
+  }
+
+  function stageStoryCore(
+    field: 'title' | 'logline' | 'audiencePromise' | 'deepQuestion' | 'formIntent' | 'tone',
+    value: string
+  ) {
+    if (field === 'title') {
+      // title 은 wm-bar 소유(직행 유지) — MemoryBankStudio 는 title 을 편집하지 않지만 prop 타입 호환용.
+      updateProject('title', value);
+      return;
+    }
+    const labels = {
+      logline: '로그라인',
+      audiencePromise: '표면 약속',
+      deepQuestion: '심층 질문',
+      formIntent: '형식·구조',
+      tone: '문체 톤'
+    } as const;
+    setPlanPatches((prev) =>
+      upsertPlanPatch(prev, { kind: 'story-core', field, label: labels[field], before: project[field], after: value })
+    );
+  }
+
+  function stageCreativeWeight(weight: CreativeWeight) {
+    setPlanPatches((prev) =>
+      upsertPlanPatch(prev, { kind: 'creative-weight', label: '작품 무게중심', before: project.creativeWeight, after: weight })
+    );
   }
 
   function setApprovalDecision(candidateId: string, decision: ApprovalDecision) {
@@ -2151,8 +2227,9 @@ export function StoryXDesk({
       dataView.kind === 'canon' ? (
         <CanonCanvas
           category={dataView.category}
-          project={project}
-          onUpdateCharacter={updateCharacterMemory}
+          project={overlayProject}
+          onUpdateCharacter={stageCharacterMemory}
+          stagedKeys={planStagedKeys}
           onOpenBibleSection={openBibleSection}
           onAddCharacter={handleAddCharacter}
           onRemoveCharacter={handleRemoveCharacter}
@@ -2161,14 +2238,15 @@ export function StoryXDesk({
         />
       ) : dataView.kind === 'bible' ? (
         <MemoryBankStudio
-          project={project}
+          project={overlayProject}
           bank={memoryBank}
           activeSection={dataView.section}
-          onUpdateCharacter={updateCharacterMemory}
-          onUpdateWorldRule={updateWorldMemory}
-          onUpdateCanon={updateCanonMemory}
-          onUpdateProject={updateProject}
-          onUpdateCreativeWeight={updateCreativeWeight}
+          onUpdateCharacter={stageCharacterMemory}
+          onUpdateWorldRule={stageWorldMemory}
+          onUpdateCanon={stageCanonMemory}
+          onUpdateProject={stageStoryCore}
+          onUpdateCreativeWeight={stageCreativeWeight}
+          stagedKeys={planStagedKeys}
           approvalQueue={approvalQueue}
           approvalDecisions={approvalDecisions}
           onSetApprovalDecision={setApprovalDecision}
@@ -2194,7 +2272,7 @@ export function StoryXDesk({
           onMediaAxisChange={updateStoryModeAxis}
           canonHealth={canonHealth}
           dataReviewResults={dataReviewResults}
-          project={project}
+          project={overlayProject}
           latestChapter={latestChapter}
           isSerial={isSerial}
           approvalQueue={approvalQueue}

@@ -9413,3 +9413,23 @@ body {
 .dx-proposal-hook { color: #f2f3f7; font-size: 15px; }
 .dx-proposal-scene { color: #aeb3bd; font-size: 13px; }
 .dx-proposal-cast { color: #9aa0aa; font-size: 12px; }
+
+/* ---- PLAN staged — 설계실 패치 배지·메뉴·카드 표시 (spec 2026-07-04) ---- */
+.sync-plan-wrap { position: relative; display: inline-flex; }
+.sync-plan-badge {
+  border: 1px solid #a78bfa; color: #c4b5fd; background: transparent;
+  border-radius: 6px; padding: 3px 8px; cursor: pointer; font: inherit; font-size: 12px;
+}
+.sync-plan-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
+  display: flex; flex-direction: column; gap: 2px; min-width: 190px;
+  background: #1c1e26; border: 1px solid #2a2c35; border-radius: 8px; padding: 6px;
+}
+.sync-plan-menu button {
+  text-align: left; background: transparent; border: 0; color: #e5e7eb;
+  padding: 6px 8px; border-radius: 5px; cursor: pointer; font: inherit; font-size: 12px;
+}
+.sync-plan-menu button:hover { background: rgba(167, 139, 250, 0.12); }
+.sync-plan-menu [data-action='plan-discard'] { color: #f87171; }
+.is-plan-staged { border: 1px dashed #a78bfa; border-left: 3px solid #a78bfa; border-radius: 8px; }
+.plan-staged-tag { color: #c4b5fd; font-size: 11px; }

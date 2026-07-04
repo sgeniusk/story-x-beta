@@ -1,10 +1,19 @@
 # Story X — Progress
 
-> Last Updated: 2026-06-27 · Branch: `feat/dive-x-arc`(미머지) (**Dive X 진전 엔진(묶음 C-1) 구현 완료. 쇼러너가 StoryArc(극적질문·긴장·다음전개)를 들고 매 턴 진전·🎯 표시·⏭전개 버튼·dive-condense arc 페이오프. dogfooding "진전 없음(큰 흠)" 직접 해소. 가벼운 LLM-유지 arc(추가 호출 0). 이전 — 1차(PR #4·main)·2차 장면+쇼러너(PR #5·local main)·3차 선택지+계속+자유응결(묶음 A·local main). 묶음 C-2(능동 멀티캐릭터)·묶음 B(되돌리기·캐논 god-편집·과금) 후속 대기. 다음 — Dive X arc 머지 결정 + dogfooding + C-2/B + 품질·비용 로드맵·A-6 장편 기억.**)
+> Last Updated: 2026-07-04 · Branch: `feat/plan-staged-patches` (**PLAN staged(설계실 패치 모델) 구현 완료. PLAN 바이블 필드 편집이 본편 직행 대신 패치 목록(planStageKey)에 모이고, 통합 싱크 콘솔 `✦ PLAN +N` 배지에서 본편 반영(충돌 시 keep/apply 다이얼로그)·전부 버리기로만 확정. 사용자 결정 4건 — PLAN=AI와 같이 짜는 설계실·staged 토대만·패치 모델·통합 콘솔. 라이브 8게이트 전부 통과. 다음 — PLAN 안 AI 설계 대화 채널(설계실 2단계)·죽은 legacy 핸들러 4개 정리.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 최근 검증 (2026-07-03 3차)
-`npm test` **759 통과**(76 파일) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · **슬라이스 C(단일 바 셸) PR #17** (전부 main). **legacy 셸 정리 PR #18** (main 머지). **고아·CSS 정리**는 `feat/desk-orphan-css-cleanup`(미머지).
+## 최근 검증 (2026-07-04)
+`npm test` **778 통과**(78 파일) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 (전부 main). **PLAN staged**는 `feat/plan-staged-patches`.
+
+## 활성 트랙 — PLAN staged: 설계실 패치 모델 (`done` · 2026-07-04, 브랜치 `feat/plan-staged-patches`)
+
+PLAN(바이블) 편집이 `setProject → saveProject` effect로 본편에 즉시 직행하던 것을, **패치(수정 목록) 모델**로 staged화한 조각. 사용자 결정 4건(brainstorming·visual companion) — ① PLAN 역할=**AI와 같이 짜는 설계실**(정비소 역할은 PLAY 전환 에이전트 과정으로) ② 이번 조각=staged 토대만(AI 설계 대화는 후속) ③ 구현=패치 모델(working 사본 아님 — WRITE·PLAN이 한 project 객체를 공유해 사본 모델은 대수술) ④ UI=통합 싱크 콘솔. spec `docs/superpowers/specs/2026-07-04-plan-staged-patches-design.md` · 계획 `docs/superpowers/plans/2026-07-04-plan-staged-patches.md`. 서브에이전트 주도 8태스크 + 태스크별 spec/품질 2단 검토 + 최종 홀리스틱 적대 검토.
+- **구현** — 순수 `planStage.ts`(`PlanPatch` 5종 kind — 인물 desire/wound/currentState·세계 rule·캐논 statement·스토리코어 logline/audiencePromise/deepQuestion/formIntent/tone·무게중심 · `upsertPlanPatch` 같은 key 교체+최초 before 유지+원복 자동 소멸 · `applyPlanPatches` 불변 overlay·소멸 대상 drop · `derivePlanConflicts` before≠현재 본편 값 · `resolvePlanApply` 기본 keep) · storage `planStageKey` 영속 · StoryXDesk staged 핸들러 5종(stage*) + `overlayProject`(본편+패치 겹침 렌더) + `is-plan-staged`/`plan-staged-tag` 설계안 표시 + `onPlanPatchesChange` · SyncConsole `✦ PLAN +N` 배지+반영/버리기 메뉴 · `PlanApplyReview`(rc-* 재사용, 기본 keep) · App 배선(pendingPlan·applyPlanStage 충돌0=즉시·discardPlanStage·syncVersion++ remount) · SyncFlash "N설계".
+- **불변식 계승** — WRITE 즉시 저장 무접촉 · wm-title-input(제목) 직행 유지 · App key=`syncVersion`만(반영·버리기 모두 이 축) · 충돌 0=즉시 반영(player-first) · 기본 keep · staged 편집은 logCanonChange 안 남김(패치 목록이 이력 대체).
+- **검증** — `npm test` 778 녹색(78 파일)·build·init.sh. **라이브(preview, 포트 5175) 8게이트 전부 통과** — ① 캐논 수정→본편 무변·패치·overlay·설계안 태그·배지 ② WRITE/PLAY 전환에도 배지 유지 ③ 버리기→원복·본편 무접촉 ④ 반영→본편 반영·토스트 "1설계" ⑤ 원복→패치 자동 소멸 ⑥ WRITE 타이핑 즉시 저장(회귀 0) ⑦ 충돌 다이얼로그 keep=본편 유지/apply=내 설계 반영 양쪽 ⑧ fresh reload 콘솔 0.
+- **부수 수정** — Node 25 실험적 webstorage 전역이 jsdom localStorage를 가려 실 localStorage 테스트가 깨지는 문제 → vitest 워커 `execArgv: ['--no-experimental-webstorage']` (`0bc7a89`). launch.json 포트 5175+strictPort(5173은 다른 프로젝트 dev 서버 점유).
+- **알려진 잔여(후속)** — ① 옛 핸들러 4개(updateCharacterMemory·updateWorldMemory·updateCanonMemory·updateCreativeWeight)가 콜사이트 0으로 죽은 코드화(의도적 사수 — editorFocusLayout.test 소스 단언이 물고 있음, 별도 정리 조각) ② 인물 추가/삭제/이름변경·작품 헌장은 직행 유지(구조 변경·자체 게이트) ③ PLAN 안 AI 설계 대화 채널=설계실 2단계 ④ SyncConsole 메뉴 click-outside/aria 보강(OverflowMenu 패리티) ⑤ MemoryBankStudio staged 마커 9곳 반복 패턴(헬퍼 추출 후보) ⑥ 최종 검토 MEDIUM — clear+remount 불변식(버리기/반영 후 옛 인스턴스가 스테일 패치 재저장 안 함, React 시맨틱으로 CONFIRMED SAFE)의 자동 회귀 테스트 부재 — 다음 PLAN staged 손대는 조각에서 추가 권장 · PlanApplyReview가 전면 모달이라 안전한 confirmPlanApply의 frozen conflicts 의존(비모달화 시 주의) 주석 후보.
 
 ## 완료 트랙 — 고아 컴포넌트·죽은 CSS 정리 (`done` · 2026-07-03 3차, 브랜치 `feat/desk-orphan-css-cleanup` 미머지)
 
