@@ -25,4 +25,11 @@ describe('SyncFlash', () => {
     expect(html).toContain('2캐논');
     expect(html).not.toContain('회차');
   });
+
+  it('plan 반영량이 있으면 N설계 항목을 렌더한다', () => {
+    const html = renderToStaticMarkup(
+      createElement(SyncFlash, { flash: { chapters: 0, canon: 0, total: 3, plan: 3 } })
+    );
+    expect(html).toContain('3설계');
+  });
 });
