@@ -65,9 +65,11 @@ import {
 } from './lib/storyEngine';
 import {
   clearOnboardingDraft,
+  clearPlanPatches,
   hasMeaningfulOnboardingInput,
   loadDiveState,
   loadOnboardingDraft,
+  loadPlanPatches,
   loadProject,
   saveDiveState,
   saveProject,
@@ -78,8 +80,10 @@ import {
 import { DiveDesk } from './components/DiveDesk';
 import { WorkspaceModeBar, type WorkspaceMode } from './components/WorkspaceModeBar';
 import { SyncConsole } from './components/SyncConsole';
-import { SyncFlash } from './components/SyncFlash';
+import { SyncFlash, type SyncFlashPayload } from './components/SyncFlash';
 import { ReconcileReview } from './components/ReconcileReview';
+import { PlanApplyReview } from './components/PlanApplyReview';
+import { applyPlanPatches, derivePlanConflicts, resolvePlanApply, type PlanConflict } from './lib/planStage';
 import { countPendingSync, reconcileWorkingIntoCommitted, applyReconcile, type PendingSync } from './lib/syncConsole';
 import { deriveReconcilePlan, type ReconcilePlan } from './lib/playRuntimeValidator';
 import { DiveStart } from './components/DiveStart';
@@ -229,11 +233,17 @@ function App() {
   );
   // 최신화가 본편을 바꾸면 이 버전이 오르고 StoryXDesk 가 remount 되어 새 본편을 읽는다.
   const [syncVersion, setSyncVersion] = useState(0);
+  // PLAN staged — 설계실 패치 수(배지)·반영 충돌 다이얼로그.
+  const [pendingPlan, setPendingPlan] = useState<number>(() =>
+    typeof window === 'undefined' ? 0 : loadPlanPatches().length
+  );
+  const [planConflicts, setPlanConflicts] = useState<PlanConflict[] | null>(null);
+  const [planDecisions, setPlanDecisions] = useState<Record<string, 'keep' | 'apply'>>({});
   // 슬라이스 B-2 — reconcile 충돌 게이트. 충돌 있으면 다이얼로그(retcon/keep), 없으면 즉시 반영.
   const [reconcilePlan, setReconcilePlan] = useState<ReconcilePlan | null>(null);
   const [reconcileDecisions, setReconcileDecisions] = useState<Record<string, 'keep' | 'retcon'>>({});
   // ⟳최신화 직후 본편 반영량을 잠깐 알리는 토스트(조용한 즉시 반영에 피드백).
-  const [syncFlash, setSyncFlash] = useState<PendingSync | null>(null);
+  const [syncFlash, setSyncFlash] = useState<SyncFlashPayload | null>(null);
   useEffect(() => {
     if (!syncFlash) return;
     const t = window.setTimeout(() => setSyncFlash(null), 2600);
@@ -291,6 +301,61 @@ function App() {
     />
   ) : null;
   const syncFlashNode = <SyncFlash flash={syncFlash} />;
+  // PLAN staged — 설계 반영. 충돌 0 이면 즉시(현행 player-first 계승), 충돌 있으면 keep/apply 다이얼로그.
+  function commitPlanApplied(next: SeriesProject, appliedCount: number) {
+    saveProject(next);
+    clearPlanPatches();
+    setPendingPlan(0);
+    setSyncVersion((v) => v + 1);
+    setSyncFlash(appliedCount > 0 ? { chapters: 0, canon: 0, total: appliedCount, plan: appliedCount } : null);
+  }
+
+  function applyPlanStage() {
+    const patches = loadPlanPatches();
+    if (patches.length === 0) return;
+    const committed = loadProject();
+    const conflicts = derivePlanConflicts(patches, committed);
+    if (conflicts.length === 0) {
+      commitPlanApplied(applyPlanPatches(committed, patches), patches.length);
+      return;
+    }
+    setPlanDecisions({});
+    setPlanConflicts(conflicts);
+  }
+
+  function confirmPlanApply() {
+    if (planConflicts) {
+      const patches = loadPlanPatches();
+      const committed = loadProject();
+      const dropped = planConflicts.filter((c) => planDecisions[c.key] !== 'apply').length;
+      commitPlanApplied(resolvePlanApply(committed, patches, planConflicts, planDecisions), patches.length - dropped);
+    }
+    setPlanConflicts(null);
+  }
+
+  function discardPlanStage() {
+    clearPlanPatches();
+    setPendingPlan(0);
+    setSyncVersion((v) => v + 1); // remount 로 PLAN 카드가 본편 값으로 복귀. 본편 무접촉.
+  }
+  const planApplyDialog = planConflicts ? (
+    <PlanApplyReview
+      conflicts={planConflicts}
+      decisions={planDecisions}
+      onToggle={(key, decision) => setPlanDecisions((d) => ({ ...d, [key]: decision }))}
+      onApprove={confirmPlanApply}
+      onCancel={() => setPlanConflicts(null)}
+    />
+  ) : null;
+  const syncConsoleNode = (
+    <SyncConsole
+      pending={pendingSync}
+      onReconcile={reconcileSync}
+      planPending={pendingPlan}
+      onPlanApply={applyPlanStage}
+      onPlanDiscard={discardPlanStage}
+    />
+  );
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [format, medium]);
 
@@ -308,14 +373,16 @@ function App() {
           initialFormat={format}
           initialDraftPayload={pendingDraft}
           initialStudioView={studioView}
-          syncSlot={<SyncConsole pending={pendingSync} onReconcile={reconcileSync} />}
+          syncSlot={syncConsoleNode}
           onSelectPlayMode={() => selectWorkspaceMode('play')}
           onStudioViewChange={setStudioView}
           onOpenProjects={() => setStage('projects')}
           onOpenLanding={() => setStage('landing')}
           onOpenPublish={() => setStage('publish')}
+          onPlanPatchesChange={setPendingPlan}
         />
         {reconcileDialog}
+        {planApplyDialog}
         {syncFlashNode}
       </>
     );
@@ -382,9 +449,10 @@ function App() {
           mode={workspaceMode}
           onSelect={selectWorkspaceMode}
           workTitle={loadProject().title}
-          rightSlot={<SyncConsole pending={pendingSync} onReconcile={reconcileSync} />}
+          rightSlot={syncConsoleNode}
         />
         {reconcileDialog}
+        {planApplyDialog}
         {syncFlashNode}
       </>
     );
