@@ -1,10 +1,10 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-04 · Branch: `feat/play-entry-fusion` (**PLAY 진입 융합 파트 1(이어 플레이 시딩) done·미머지. 다음 = 파트 2 wm-bar 공통 셸(Task 5~9). spec `docs/superpowers/specs/2026-07-04-play-entry-fusion-design.md`·계획 `docs/superpowers/plans/2026-07-04-play-entry-fusion.md`.**)
+> Last Updated: 2026-07-05 · Branch: `feat/wm-bar-common-shell` (**PLAY 진입 융합 파트 2(wm-bar 공통 셸) done·미머지. 파트 1 은 PR #21 main 머지 완료. spec `docs/superpowers/specs/2026-07-04-play-entry-fusion-design.md`·계획 `docs/superpowers/plans/2026-07-04-play-entry-fusion.md` Task 5~9.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 최근 검증 (2026-07-04)
-`npm test` **786 통과**(79 파일) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 (전부 main). **PLAY 진입 융합**은 `feat/play-entry-fusion`.
+## 최근 검증 (2026-07-05)
+`npm test` **788 통과**(79 파일, workspaceModeBar planDot 2 신규) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 (전부 main). **파트 2 wm-bar 공통 셸**은 `feat/wm-bar-common-shell`.
 
 ## 활성 트랙 — PLAY 진입 융합 파트 1: 이어 플레이 시딩 (`done` · 2026-07-04, 브랜치 `feat/play-entry-fusion` 미머지)
 
@@ -12,7 +12,16 @@ dogfooding 피드백("PLAY 누르면 너무 다른 얘기부터 한다") 해소 
 - **구현** — 순수 `playEntry.ts`(`seedPlayFromProject` 인물 0→null·주인공=characters[0]·project 동일 참조 보존 · `deriveContinuationScene` 실제 Chapter 필드 기준 우선순위: prose 마지막 문단(placeholder `FALLBACK_EMPTY_LINE` 스킵)>마지막 beat summary>hook, storyEngine 에서 export) · App dive 분기 교체(시딩 useEffect — 복원본·diveInit 없을 때만 1회 · 인물 0 이면 `.dx-empty` 안내+PLAN 이동 · DiveStart·seedAndEnter·죽은 import 4종 제거, DiveStart.tsx 파일은 후속 온보딩용 보존).
 - **불변식** — PLAY 는 committed(storageKey) **읽기 전용**, 쓰기는 diveKey working·⟳최신화만. 시딩 project 는 loadProject() 현재 본편 그대로(빈 프로젝트 생성 금지).
 - **검증** — `npm test` 786 녹색(79 파일, playEntry 8 신규)·build·init.sh·tsc 클린. **라이브(preview 5175)** — ① 회차 2 작품 PLAY→인테이크 0·바로 DiveDesk·🎬 "직전 회차 이후 — …"(ch-2 prose tail)·"📖 지난 이야기 2화"·본편 회차수 불변(덮어쓰기 0) ② 인물 0 작품 PLAY→안내 카드·diveKey 미시딩·본편 무접촉·PLAN 이동 동작(dispatchEvent) ③ 콘솔 0.
-- **파트 2(다음)** — wm-bar 공통 셸(App 소유 지속 프레임+모드 슬롯, activeTrack controlled, 제목 App 단일 소유, planDot 콜백). Task 5~9.
+- **파트 2** — `done`(아래 절). PR #21 로 파트 1 은 main 머지 완료.
+
+## 활성 트랙 — PLAY 진입 융합 파트 2: wm-bar 공통 셸 (`done` · 2026-07-05, 브랜치 `feat/wm-bar-common-shell` 미머지)
+
+dogfooding 피드백("전환할 때 가운데 내비 바가 연결된 느낌이 없다") 해소 — 슬라이스 C 가 editor 에서 StoryXDesk 에 준 wm-bar 소유권을, **App 이 세 모드(PLAY/WRITE/PLAN) 공통으로 소유하는 지속 프레임**으로 되돌려 전환 연속감을 만든 조각. 계획 `docs/superpowers/plans/2026-07-04-play-entry-fusion.md` Task 5~9. executing-plans(편집장 직접 구현·강결합 파일이라 Task 5/6/7 한 묶음 편집 후 일괄 검증).
+- **구현** — `WorkspaceModeBar` `planDot` prop(TDD, PLAN 버튼 점, planBadge 숫자 대체·`.wm-plan-dot` CSS) · StoryXDesk `studioView` controlled(switchToTrack effect 재사용 — fade·dataView·publishing 부수효과 계승, 무리마운트 유지)+내부 track 변경 App 역보고(셸 토글 stale 방지, 양방향 수렴)+`title` prop 동기화(saveProject clobber 방지)+`onBibleAlertChange` 콜백 · StoryXDesk 자체 `WorkspaceModeBar`/`OverflowMenu` 제거→`dx-desk-context` 하위 줄(WRITE 회차 픽커·PLAN 캐논/충돌 칩)만 렌더 · export/import 핸들러·fileInputRef→App 이관 · App `shellBar`(제목 input·토글·planDot·싱크 콘솔·⋯ 오버플로)를 editor·dive 두 stage 위에서 동일 렌더·`workTitle`/`bibleAlert` state·`handleTitleChange` 즉시 저장·syncVersion 후 제목 재동기화.
+- **불변식 계승** — App key=`syncVersion` 만(studioView 는 key 에 넣지 않음 → WRITE↔PLAN 무리마운트) · 제목 App 단일 소유(`title ?? project.title`, StoryXDesk 는 동기화만) · 충돌 dot 은 `bibleAlert>0`(StoryXDesk 콜백 count) · PLAN 하위 줄 `⚠ 충돌 N` 칩은 같은 숫자원 유지.
+- **검증** — `npm test` 788 녹색(79 파일)·build·init.sh·tsc 클린. editorFocusLayout 소스 단언 교정(옛 "StoryXDesk 안 단일 바"→"App 이 바 소유·StoryXDesk 는 dx-desk-context") — 약화 아님, 셸 이관 반영. **라이브(preview 5175, 인물 2·0회차 프로젝트) 7게이트 전부 통과** — ① title{x14,y13}·toggle{x579,y8} PLAY/WRITE/PLAN **세 모드 동일 위치** ② WRITE↔PLAN 전환에 planDot/bibleAlert 지속·콘텐츠만 스왑(무리마운트) ③ dive 제목 편집→WRITE 반영→리로드 지속·clobber 0 ④ 실제 충돌 1건에 planDot 세 모드 표시·planBadge false·하위 줄 "⚠ 충돌 1" ⑤ ⋯ 오버플로 3항목·출간→publish stage ⑥ 620px 가로 오버플로 0·하위 줄 바로 아래 비충돌 ⑦ fresh preview·fresh 로드 콘솔 0.
+- **라이브 발견(내 변경 무관, 기존 잠복 버그)** — 손수-시딩한 2-회차(파생 필드 결여) 프로젝트를 editor 로 열면 FloatingEditor 크래시 재현. **main 코드로 스왑해 동일 시드 → 동일 크래시 확인**(내 셸 변경 무관 실증). handoff 2026-07-02 line 73 의 createSeedProject+회차 잠복 버그와 동일 부류(jsdom·server render 는 재현 안 됨). 실사용(앱 produce 회차)·0회차·정상 회차 경로는 무손상. 후속 별도 조각 후보.
+- **범위 밖(후속)** — 홈 랜딩 원페이저([[landing-onepager-request]]) · 자유 서술 새 작품→PLAY 온보딩 갈래 · PLAN 안 AI 설계 대화 채널 · FloatingEditor 하드-시딩 회차 크래시 방어(정규화 백필 or 에러 바운더리).
 
 ## 완료 트랙 — PLAN staged: 설계실 패치 모델 (`done` · 2026-07-04, **PR #20 main 머지**)
 
