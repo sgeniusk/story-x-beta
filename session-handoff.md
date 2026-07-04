@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-07-04 — PLAN staged: 설계실 패치 모델 (브랜치 `feat/plan-staged-patches`)
+
+> PLAN 바이블 필드 편집을 본편 직행에서 **패치 목록 staged**로 전환 — `✦ PLAN +N` 배지 → 본편에 반영(충돌 시 keep/apply 다이얼로그)/전부 버리기. 사용자 결정 4건(PLAN=AI와 같이 짜는 설계실·staged 토대만·패치 모델·통합 콘솔). progress.md "PLAN staged" 절이 상세. spec `docs/superpowers/specs/2026-07-04-plan-staged-patches-design.md`.
+
+### 한 것
+- 순수 `planStage.ts` + storage `planStageKey` + StoryXDesk stage* 핸들러 5종·overlayProject·설계안 표시 + SyncConsole PLAN 배지·메뉴 + `PlanApplyReview` + App 배선 + SyncFlash "N설계". 서브에이전트 8태스크·태스크별 2단 검토·최종 홀리스틱 적대 검토. 778 테스트·build·init.sh·라이브 8게이트(충돌 keep/apply 양쪽 포함)·fresh reload 콘솔 0.
+- 부수 — vitest 워커 `--no-experimental-webstorage`(Node 25 webstorage가 jsdom localStorage를 가림, `0bc7a89`) · launch.json 포트 5175+strictPort(5173은 다른 프로젝트가 점유).
+
+### 손대지 말 것 (불변식)
+- **PLAN 표면 편집은 패치로만** — MemoryBankStudio·CanonCanvas에 넘기는 핸들러는 stage*(setPlanPatches). setProject로 되돌리면 staged 모델 붕괴. 단 **wm-title-input(제목)은 의도적 직행**(stageStoryCore의 'title' 분기도 직행 — MemoryBankStudio는 title을 안 건드림).
+- **PLAN 표면 렌더는 overlayProject** — CanonCanvas·MemoryBankStudio·FloatingDataWorkspace. `editorWorkspace`·`bibleAlertCount`·`memoryBank`·지표 파생은 committed(project) 기준 유지(섞으면 충돌 배지가 미확정 설계에 반응).
+- **반영/버리기 모두 syncVersion++** — App key는 `syncVersion` 하나. 버리기의 remount가 카드 원복 메커니즘이다(패치만 지우고 remount 안 하면 화면에 유령 값 잔존).
+- **staged 편집은 logCanonChange 안 남김** — 패치 목록이 이력·되돌리기 대체(D6). 반영 시점에 로그를 추가하고 싶으면 별도 설계.
+- **충돌 기본 keep·충돌 0=즉시 반영** — reconcile 게이트(B-2)와 같은 철학. 항상 다이얼로그로 바꾸지 말 것.
+
+### 다음 한 가지 (차례대로)
+- **머지** — `feat/plan-staged-patches` PR. 자율 권한 있음(최종 홀리스틱 검토 통과 확인 후).
+- 다음 후보 — **PLAN 안 AI 설계 대화 채널(설계실 2단계**, 사용자 방향 확정: PLAN=AI와 같이 짜는 설계실. brainstorming 필요) · 죽은 legacy 핸들러 4개 정리(updateCharacterMemory 등, editorFocusLayout.test 소스 단언 교정 동반) · 집중 모드 크롬 숨김 · publish 4번째 모드 · desk-grid CSS 보류분.
+
+---
+
 ## 2026-07-03 (3차) — 고아 컴포넌트·죽은 CSS 정리 (브랜치 미머지)
 
 > PR #18 잔여 마무리 — 고아 컴포넌트 15파일 + CSS 2197줄 삭제, 렌더 무변경(적대적 검토 CONFIRMED). progress.md "고아 컴포넌트·죽은 CSS 정리" 절이 상세.
