@@ -115,8 +115,9 @@ export function seedPlayFromProject(project: SeriesProject): DiveState | null;
 - `activeTrack` controlled 화(`studioView` prop 동기화).
 - 제목 표시 `props.title ?? project.title`.
 - 모드 컨텍스트(회차 픽커·캐논/충돌 칩)는 DeskMetaLine 계열 하위 줄 유지(현행 metaLeft/metaRightSlot 활용).
-- `bibleAlertCount`(충돌 수)는 여전히 StoryXDesk 내부 — 충돌 칩은 하위 줄에 둔다. 셸 planBadge 는 이번엔 **제거**(충돌 가시성은 PLAN 하위 줄 `⚠ 충돌 N` 칩이 담당, 토글 배지는 후속 결정).
-  - ⚠ 위험 가시성 불변식(슬라이스 C): 충돌은 항상 드러낸다 — PLAN 모드 하위 줄 칩으로 보장. PLAY/WRITE 에서 PLAN 충돌 배지를 토글에 띄우던 것을 없애므로, **다른 모드에 있을 때 PLAN 충돌을 못 본다**는 후퇴가 생긴다. 이를 막기 위해 **토글의 PLAN 버튼에 작은 dot 배지(bibleAlertCount>0)** 만 셸에 남긴다(App 이 `loadProject()` 파생으로 계산 — 숫자 아닌 유무 dot). → 셸은 App 소유라 App 이 충돌 수를 알아야 함: `deriveBibleAlertCount(project)` 를 순수 함수로 추출해 공유.
+- `bibleAlertCount`(충돌 수)는 여전히 StoryXDesk 내부(`validateContinuity(project, draftClaims)` 기반) — 충돌 칩은 하위 줄에 둔다. 셸 planBadge 는 숫자에서 **dot 유무로 축소**.
+  - ⚠ 위험 가시성 불변식(슬라이스 C): 충돌은 항상 드러낸다 — PLAN 모드 하위 줄 칩으로 보장. PLAY/WRITE 에서 PLAN 충돌 배지를 토글에 띄우던 것을 없애므로, **다른 모드에 있을 때 PLAN 충돌을 못 본다**는 후퇴가 생긴다. 이를 막기 위해 **토글의 PLAN 버튼에 작은 dot 배지** 만 셸에 남긴다.
+  - **dot 값은 콜백 보고 방식**(App 재파생 아님). StoryXDesk 가 실제 `bibleAlertCount` 를 `onBibleAlertChange(count)` 로 App 에 올리고(effect), App 은 `bibleAlert` state 로 받아 셸 토글 dot(`count>0`)에 먹인다. 토글 dot 과 PLAN 하위 줄 칩이 **같은 숫자원**을 쓰므로 불일치 없음. dive stage 에선 마지막 보고값 유지(경고 dot 이라 stale-safe). App 재파생(draftClaims 없는 validateContinuity)은 PLAN 칩과 값이 어긋날 수 있어 채택 안 함.
 
 ---
 
@@ -140,7 +141,7 @@ App
 
 순수 우선:
 - `playEntry.test.ts` — `seedPlayFromProject`: 인물 0→null · 회차 있음→scene="직전 회차 이후 — …"(summary 우선) · 회차 0→scene 미설정 · characterId=characters[0].id · project 동일 참조 보존(빈 프로젝트 안 만듦). `deriveContinuationScene`: summary 우선·prose tail 폴백·공백.
-- `deriveBibleAlertCount` 추출 시 순수 테스트(기존 계산과 동치).
+- (bibleAlert dot 은 순수 함수 추출 없이 콜백 보고 방식 — 별도 순수 테스트 대상 아님, 조립 라이브 검증.)
 - storage export/import 헬퍼 추출 시 순수 라운드트립 테스트.
 - `workspaceModeBar.test.ts` — 셸이 title input·toggle·rightSlot·PLAN dot 를 렌더(슬롯 계약).
 
