@@ -1,12 +1,12 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-04 · Branch: `feat/plan-staged-patches` (**PLAN staged(설계실 패치 모델) 구현 완료. PLAN 바이블 필드 편집이 본편 직행 대신 패치 목록(planStageKey)에 모이고, 통합 싱크 콘솔 `✦ PLAN +N` 배지에서 본편 반영(충돌 시 keep/apply 다이얼로그)·전부 버리기로만 확정. 사용자 결정 4건 — PLAN=AI와 같이 짜는 설계실·staged 토대만·패치 모델·통합 콘솔. 라이브 8게이트 전부 통과. 다음 — PLAN 안 AI 설계 대화 채널(설계실 2단계)·죽은 legacy 핸들러 4개 정리.**)
+> Last Updated: 2026-07-04 · Branch: `main` (**PLAN staged(설계실 패치 모델) PR #20 main 머지 완료. 다음 세션 1순위 = PLAY 진입 융합(사용자 dogfooding 피드백 — PLAY 토글이 현 작품과 무관한 옛 Dive X 인테이크로 배선 + seedAndEnter 본편 덮어쓰기 데이터 위험 + wm-bar stage별 소유자 달라 전환 연속감 부재). 상세는 session-handoff.md 맨 위. 그다음 — PLAN 안 AI 설계 대화 채널(설계실 2단계)·죽은 legacy 핸들러 4개 정리.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-04)
 `npm test` **778 통과**(78 파일) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 (전부 main). **PLAN staged**는 `feat/plan-staged-patches`.
 
-## 활성 트랙 — PLAN staged: 설계실 패치 모델 (`done` · 2026-07-04, 브랜치 `feat/plan-staged-patches`)
+## 완료 트랙 — PLAN staged: 설계실 패치 모델 (`done` · 2026-07-04, **PR #20 main 머지**)
 
 PLAN(바이블) 편집이 `setProject → saveProject` effect로 본편에 즉시 직행하던 것을, **패치(수정 목록) 모델**로 staged화한 조각. 사용자 결정 4건(brainstorming·visual companion) — ① PLAN 역할=**AI와 같이 짜는 설계실**(정비소 역할은 PLAY 전환 에이전트 과정으로) ② 이번 조각=staged 토대만(AI 설계 대화는 후속) ③ 구현=패치 모델(working 사본 아님 — WRITE·PLAN이 한 project 객체를 공유해 사본 모델은 대수술) ④ UI=통합 싱크 콘솔. spec `docs/superpowers/specs/2026-07-04-plan-staged-patches-design.md` · 계획 `docs/superpowers/plans/2026-07-04-plan-staged-patches.md`. 서브에이전트 주도 8태스크 + 태스크별 spec/품질 2단 검토 + 최종 홀리스틱 적대 검토.
 - **구현** — 순수 `planStage.ts`(`PlanPatch` 5종 kind — 인물 desire/wound/currentState·세계 rule·캐논 statement·스토리코어 logline/audiencePromise/deepQuestion/formIntent/tone·무게중심 · `upsertPlanPatch` 같은 key 교체+최초 before 유지+원복 자동 소멸 · `applyPlanPatches` 불변 overlay·소멸 대상 drop · `derivePlanConflicts` before≠현재 본편 값 · `resolvePlanApply` 기본 keep) · storage `planStageKey` 영속 · StoryXDesk staged 핸들러 5종(stage*) + `overlayProject`(본편+패치 겹침 렌더) + `is-plan-staged`/`plan-staged-tag` 설계안 표시 + `onPlanPatchesChange` · SyncConsole `✦ PLAN +N` 배지+반영/버리기 메뉴 · `PlanApplyReview`(rc-* 재사용, 기본 keep) · App 배선(pendingPlan·applyPlanStage 충돌0=즉시·discardPlanStage·syncVersion++ remount) · SyncFlash "N설계".

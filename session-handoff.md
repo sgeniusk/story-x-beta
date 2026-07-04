@@ -20,8 +20,13 @@
 - **충돌 기본 keep·충돌 0=즉시 반영** — reconcile 게이트(B-2)와 같은 철학. 항상 다이얼로그로 바꾸지 말 것.
 
 ### 다음 한 가지 (차례대로)
-- **머지** — `feat/plan-staged-patches` PR. 자율 권한 있음(최종 홀리스틱 검토 통과 확인 후).
-- 다음 후보 — **PLAN 안 AI 설계 대화 채널(설계실 2단계**, 사용자 방향 확정: PLAN=AI와 같이 짜는 설계실. brainstorming 필요) · 죽은 legacy 핸들러 4개 정리(updateCharacterMemory 등, editorFocusLayout.test 소스 단언 교정 동반) · 집중 모드 크롬 숨김 · publish 4번째 모드 · desk-grid CSS 보류분.
+- ~~머지~~ — **PR #20 main 머지 완료**(`0efbf5f`, 사용자 승인).
+- **다음 세션 = PLAY 진입 융합 (사용자 지정 1순위·dogfooding 피드백)** — 사용자 실사용 소감 "전환할 때 가운데 내비 바가 연결된 느낌이 없다 · PLAY를 누르면 너무 다른 얘기부터 한다". 원인 확인됨 —
+  ① PLAY 토글이 현 작품과 무관한 옛 Dive X 신규 인테이크(DiveStart 자유 서술)로 배선(App.tsx stage==='dive' 분기, 슬라이스 A 융합 부채). PLAY는 **현재 작품의 인물·캐논·최근 회차에서 이어 플레이**하도록 시딩하고, 자유 서술 신규 시작은 새 작품 흐름으로 분리할 것.
+  ② ⚠️ **데이터 위험** — `seedAndEnter`(App.tsx ~469-474)가 새 빈 프로젝트를 `saveProject`로 **현재 본편에 덮어씀**. 기존 작품 열어둔 채 PLAY→자유 서술 시작하면 본편 교체. 반드시 제거/게이트.
+  ③ 바 연속감 — wm-bar 소유자가 stage마다 달라(editor=StoryXDesk 제목 input·컨텍스트·메타 / dive=App 정적 제목만) 전환마다 구성이 바뀜. 한 소유자/한 구성으로 통일 검토(단, 슬라이스 C 불변식 "wm-bar 소유권" 항목과 함께 재설계 — brainstorming 필요).
+  참고 — 작품 진입 과정(랜딩→새 작품 4step→에디터·작품 목록→에디터)은 그대로 살아 있음(빠진 것 아님).
+- 그다음 후보 — PLAN 안 AI 설계 대화 채널(설계실 2단계, 사용자 방향 확정) · 죽은 legacy 핸들러 4개 정리(updateCharacterMemory 등, editorFocusLayout.test 소스 단언 교정 동반) · 집중 모드 크롬 숨김 · publish 4번째 모드 · desk-grid CSS 보류분.
 - ⚠️ **다음에 PLAN staged 를 손대면** — clear+remount 불변식 자동 테스트부터 추가(최종 검토 MEDIUM — 수동 트레이스로만 안전 확인됨). PlanApplyReview 를 비모달로 바꾸면 confirmPlanApply 의 frozen conflicts 가 구멍이 된다(전면 모달이 안전 전제).
 
 ---
