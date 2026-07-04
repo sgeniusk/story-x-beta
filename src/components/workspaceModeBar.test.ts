@@ -67,6 +67,20 @@ describe('WorkspaceModeBar', () => {
     expect(html).toContain('3화 · 비 오는 밤');
   });
 
+  it('planDot 이 true 면 PLAN 버튼에 dot 마커를 렌더한다 (공통 셸)', () => {
+    const html = renderToStaticMarkup(
+      createElement(WorkspaceModeBar, { mode: 'write' as const, onSelect: () => {}, planDot: true })
+    );
+    expect(html).toContain('wm-plan-dot');
+  });
+
+  it('planDot 이 false/미지정이면 dot 없음', () => {
+    const html = renderToStaticMarkup(
+      createElement(WorkspaceModeBar, { mode: 'write' as const, onSelect: () => {} })
+    );
+    expect(html).not.toContain('wm-plan-dot');
+  });
+
   it('planBadge>0 이면 PLAN 버튼에 배지를, 0/미지정이면 렌더하지 않는다', () => {
     const withBadge = renderToStaticMarkup(
       createElement(WorkspaceModeBar, { mode: 'write' as const, onSelect: () => {}, workTitle: 't', planBadge: 3 })

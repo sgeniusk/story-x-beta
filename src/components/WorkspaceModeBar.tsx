@@ -12,6 +12,8 @@ interface WorkspaceModeBarProps {
   titleSlot?: ReactNode;
   contextSlot?: ReactNode;
   planBadge?: number;
+  // 공통 셸 — PLAN 충돌 유무를 점 하나로. 숫자(planBadge)를 대체하는 축소형 표시(App 이 콜백 count>0 로 준다).
+  planDot?: boolean;
   // 슬라이스 B — 상단 바 우측에 싱크 콘솔 등을 한 줄로 통합(이중 헤더 방지).
   rightSlot?: ReactNode;
 }
@@ -29,6 +31,7 @@ export function WorkspaceModeBar({
   titleSlot,
   contextSlot,
   planBadge,
+  planDot,
   rightSlot
 }: WorkspaceModeBarProps) {
   return (
@@ -45,6 +48,7 @@ export function WorkspaceModeBar({
           >
             {m.icon} {m.label}
             {m.id === 'plan' && planBadge ? <span className="wm-badge">{planBadge}</span> : null}
+            {m.id === 'plan' && planDot ? <span className="wm-plan-dot" aria-hidden="true" /> : null}
           </button>
         ))}
       </div>
