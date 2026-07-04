@@ -11,7 +11,7 @@ import {
   Sparkles,
   Sun
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import {
   buildCreativeBlueprint,
   getFormatOptions,
@@ -65,7 +65,9 @@ import {
 import {
   clearOnboardingDraft,
   clearPlanPatches,
+  exportAllData,
   hasMeaningfulOnboardingInput,
+  importAllData,
   loadDiveState,
   loadOnboardingDraft,
   loadPlanPatches,
@@ -78,6 +80,7 @@ import {
 } from './lib/storage';
 import { DiveDesk } from './components/DiveDesk';
 import { WorkspaceModeBar, type WorkspaceMode } from './components/WorkspaceModeBar';
+import { OverflowMenu } from './components/OverflowMenu';
 import { SyncConsole } from './components/SyncConsole';
 import { SyncFlash, type SyncFlashPayload } from './components/SyncFlash';
 import { ReconcileReview } from './components/ReconcileReview';
@@ -222,6 +225,13 @@ function App() {
   const [diveInit, setDiveInit] = useState<DiveState | null>(null);
   // 융합 셸 — STUDIO(editor) 진입 뷰. WRITE=editor·PLAN=data. 토글이 stage 와 함께 구동.
   const [studioView, setStudioView] = useState<'editor' | 'data'>('editor');
+  // 공통 셸 — 제목 단일 소유(App). 세 모드가 같은 값을 표시하고 편집을 여기로 올린다.
+  const [workTitle, setWorkTitle] = useState<string>(() =>
+    typeof window === 'undefined' ? '' : loadProject().title
+  );
+  // 공통 셸 — PLAN 충돌 유무(dot). StoryXDesk 가 실제 count 를 보고한다.
+  const [bibleAlert, setBibleAlert] = useState<number>(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   // 슬라이스 B — 싱크 콘솔. PLAY working(diveKey) 이 본편(storageKey) 대비 미반영한 회차/캐논 수.
   const [pendingSync, setPendingSync] = useState<PendingSync>(() =>
     typeof window === 'undefined'
@@ -255,6 +265,10 @@ function App() {
     saveDiveState(seed);
     setDiveInit(seed);
   }, [stage, diveInit]);
+  // 공통 셸 — 최신화/설계 반영 후 본편이 바뀌면(syncVersion++) 셸 제목을 새 본편으로 재동기화한다.
+  useEffect(() => {
+    setWorkTitle(loadProject().title);
+  }, [syncVersion]);
   const workspaceMode: WorkspaceMode = stage === 'dive' ? 'play' : studioView === 'data' ? 'plan' : 'write';
   function selectWorkspaceMode(next: WorkspaceMode) {
     if (next === 'play') {
@@ -262,6 +276,45 @@ function App() {
     } else {
       setStudioView(next === 'plan' ? 'data' : 'editor');
       setStage('editor');
+    }
+  }
+  // 공통 셸 — 제목 편집. 셸이 단일 소유이므로 즉시 본편(storageKey)에 반영한다(현행 직행 계승).
+  function handleTitleChange(next: string) {
+    setWorkTitle(next);
+    saveProject({ ...loadProject(), title: next });
+  }
+  // 공통 셸 — ⋯ 오버플로: 전체 데이터 JSON 내보내기/가져오기(StoryXDesk 에서 이관).
+  function handleExportProject() {
+    const payload = exportAllData();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `storyx-export-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  function handleImportClick() {
+    fileInputRef.current?.click();
+  }
+  async function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!window.confirm('현재 작품과 스냅샷·환경설정을 모두 덮어씁니다. 진행 전에 먼저 내보내기를 권장합니다. 계속할까요?')) {
+      return;
+    }
+    try {
+      const text = await file.text();
+      const result = importAllData(text);
+      window.alert(result.message);
+      if (result.ok) {
+        window.location.reload();
+      }
+    } catch (error) {
+      window.alert(error instanceof Error ? `파일 읽기 실패 — ${error.message}` : '파일 읽기 실패.');
     }
   }
   // 본편 반영 후 상태 정리 — pending 리셋 + StoryXDesk remount(새 본편 픽업) + 반영량 토스트.
@@ -362,6 +415,46 @@ function App() {
       onPlanDiscard={discardPlanStage}
     />
   );
+  // 공통 셸 — 세 모드(PLAY/WRITE/PLAN)가 공유하는 상단 프레임. App 이 소유해 전환 시 같은 자리에 고정된다.
+  // 제목 input·3모드 토글·PLAN dot·싱크 콘솔·⋯ 오버플로(출간·JSON 내보내기/가져오기).
+  const shellBar = (
+    <WorkspaceModeBar
+      mode={workspaceMode}
+      onSelect={selectWorkspaceMode}
+      titleSlot={
+        <input
+          className="wm-title-input"
+          aria-label="작품 제목"
+          value={workTitle}
+          onChange={(e) => handleTitleChange(e.target.value)}
+          autoComplete="off"
+          title="클릭해서 제목 편집"
+        />
+      }
+      planDot={bibleAlert > 0}
+      rightSlot={
+        <>
+          {syncConsoleNode}
+          <OverflowMenu
+            items={[
+              { id: 'publish', label: '출간', onSelect: () => setStage('publish') },
+              { id: 'export', label: 'JSON 내보내기', onSelect: handleExportProject },
+              { id: 'import', label: 'JSON 가져오기', onSelect: handleImportClick }
+            ]}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              onChange={handleImportFile}
+              style={{ display: 'none' }}
+              aria-hidden="true"
+            />
+          </OverflowMenu>
+        </>
+      }
+    />
+  );
 
   const blueprint = useMemo(() => buildCreativeBlueprint({ medium, format }), [format, medium]);
 
@@ -373,14 +466,16 @@ function App() {
   if (stage === 'editor') {
     return (
       <>
+        {shellBar}
         <StoryXDesk
           key={syncVersion}
           initialMedium={medium}
           initialFormat={format}
           initialDraftPayload={pendingDraft}
           initialStudioView={studioView}
-          syncSlot={syncConsoleNode}
-          onSelectPlayMode={() => selectWorkspaceMode('play')}
+          studioView={studioView}
+          title={workTitle}
+          onBibleAlertChange={setBibleAlert}
           onStudioViewChange={setStudioView}
           onOpenProjects={() => setStage('projects')}
           onOpenLanding={() => setStage('landing')}
@@ -449,14 +544,10 @@ function App() {
     // 슬라이스 B — PLAY 변경(diveKey working)을 본편 대비 미반영 카운트로 반영.
     const onWorkingChange = (project: SeriesProject) =>
       setPendingSync(countPendingSync(project, loadProject()));
+    // 공통 셸 — PLAY 도 editor 와 동일한 shellBar(제목·토글·싱크·⋯)를 쓴다. 전환 연속감.
     const bar = (
       <>
-        <WorkspaceModeBar
-          mode={workspaceMode}
-          onSelect={selectWorkspaceMode}
-          workTitle={loadProject().title}
-          rightSlot={syncConsoleNode}
-        />
+        {shellBar}
         {reconcileDialog}
         {planApplyDialog}
         {syncFlashNode}
