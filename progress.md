@@ -1,10 +1,18 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-04 · Branch: `main` (**PLAN staged(설계실 패치 모델) PR #20 main 머지 완료. 다음 세션 1순위 = PLAY 진입 융합(사용자 dogfooding 피드백 — PLAY 토글이 현 작품과 무관한 옛 Dive X 인테이크로 배선 + seedAndEnter 본편 덮어쓰기 데이터 위험 + wm-bar stage별 소유자 달라 전환 연속감 부재). 상세는 session-handoff.md 맨 위. 그다음 — PLAN 안 AI 설계 대화 채널(설계실 2단계)·죽은 legacy 핸들러 4개 정리.**)
+> Last Updated: 2026-07-04 · Branch: `feat/play-entry-fusion` (**PLAY 진입 융합 파트 1(이어 플레이 시딩) done·미머지. 다음 = 파트 2 wm-bar 공통 셸(Task 5~9). spec `docs/superpowers/specs/2026-07-04-play-entry-fusion-design.md`·계획 `docs/superpowers/plans/2026-07-04-play-entry-fusion.md`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-04)
-`npm test` **778 통과**(78 파일) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 (전부 main). **PLAN staged**는 `feat/plan-staged-patches`.
+`npm test` **786 통과**(79 파일) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 (전부 main). **PLAY 진입 융합**은 `feat/play-entry-fusion`.
+
+## 활성 트랙 — PLAY 진입 융합 파트 1: 이어 플레이 시딩 (`done` · 2026-07-04, 브랜치 `feat/play-entry-fusion` 미머지)
+
+dogfooding 피드백("PLAY 누르면 너무 다른 얘기부터 한다") 해소 — PLAY 토글이 현 작품과 무관한 옛 Dive X 자유 서술 인테이크(DiveStart)로 배선돼 있던 것을, **현 작품 인물·최근 회차에서 이어 플레이 시딩**으로 교체. `seedAndEnter` 의 `saveProject` **본편 덮어쓰기 데이터 위험 제거**. spec `docs/superpowers/specs/2026-07-04-play-entry-fusion-design.md`·계획 `docs/superpowers/plans/2026-07-04-play-entry-fusion.md`. 서브에이전트 TDD(중간 세션 한도로 Task 3 은 편집장 직접 구현·검증).
+- **구현** — 순수 `playEntry.ts`(`seedPlayFromProject` 인물 0→null·주인공=characters[0]·project 동일 참조 보존 · `deriveContinuationScene` 실제 Chapter 필드 기준 우선순위: prose 마지막 문단(placeholder `FALLBACK_EMPTY_LINE` 스킵)>마지막 beat summary>hook, storyEngine 에서 export) · App dive 분기 교체(시딩 useEffect — 복원본·diveInit 없을 때만 1회 · 인물 0 이면 `.dx-empty` 안내+PLAN 이동 · DiveStart·seedAndEnter·죽은 import 4종 제거, DiveStart.tsx 파일은 후속 온보딩용 보존).
+- **불변식** — PLAY 는 committed(storageKey) **읽기 전용**, 쓰기는 diveKey working·⟳최신화만. 시딩 project 는 loadProject() 현재 본편 그대로(빈 프로젝트 생성 금지).
+- **검증** — `npm test` 786 녹색(79 파일, playEntry 8 신규)·build·init.sh·tsc 클린. **라이브(preview 5175)** — ① 회차 2 작품 PLAY→인테이크 0·바로 DiveDesk·🎬 "직전 회차 이후 — …"(ch-2 prose tail)·"📖 지난 이야기 2화"·본편 회차수 불변(덮어쓰기 0) ② 인물 0 작품 PLAY→안내 카드·diveKey 미시딩·본편 무접촉·PLAN 이동 동작(dispatchEvent) ③ 콘솔 0.
+- **파트 2(다음)** — wm-bar 공통 셸(App 소유 지속 프레임+모드 슬롯, activeTrack controlled, 제목 App 단일 소유, planDot 콜백). Task 5~9.
 
 ## 완료 트랙 — PLAN staged: 설계실 패치 모델 (`done` · 2026-07-04, **PR #20 main 머지**)
 
