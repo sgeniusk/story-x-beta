@@ -18,6 +18,7 @@ import { loadEvolutionHistory, replaceEvolutionHistory, type EvolutionHistory } 
 import type { CreativeFormat, CreativeMedium, HomeFlowStep } from './projectBlueprint';
 import type { DiveSession } from './diveSession';
 import type { ProjectIntakeQuestion } from './projectIntake';
+import type { PlanPatch } from './planStage';
 
 const storageKey = 'serial-story-studio/project';
 const snapshotsKey = 'serial-story-studio/snapshots';
@@ -486,6 +487,31 @@ export function loadDiveState(): DiveState | null {
 export function clearDiveState(): void {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(diveKey);
+}
+
+// PLAN staged — 설계실 패치 목록 영속(spec 2026-07-04). 본편(storageKey)과 분리된 수정 목록.
+const planStageKey = 'serial-story-studio/plan-stage';
+
+export function loadPlanPatches(): PlanPatch[] {
+  if (typeof window === 'undefined') return [];
+  const raw = window.localStorage.getItem(planStageKey);
+  if (!raw) return [];
+  try {
+    const value = JSON.parse(raw);
+    return Array.isArray(value) ? (value as PlanPatch[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function savePlanPatches(patches: PlanPatch[]): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(planStageKey, JSON.stringify(patches));
+}
+
+export function clearPlanPatches(): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(planStageKey);
 }
 
 function isStringRecord(value: unknown): value is Record<string, string> {
