@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-07-04 (2차) — PLAY 진입 융합 파트 1 done·머지 (PR #21 main). 다음 = 파트 2 wm-bar 공통 셸
+
+> dogfooding 피드백 "PLAY 누르면 너무 다른 얘기부터 한다" 해소 — PLAY 토글이 옛 Dive X 자유 서술 인테이크로 배선돼 있던 것을 **현 작품 인물·최근 회차에서 이어 플레이 시딩**으로 교체. `seedAndEnter` 본편 덮어쓰기 위험 제거. progress.md "PLAY 진입 융합 파트 1" 절이 상세. spec/계획 `docs/superpowers/{specs,plans}/2026-07-04-play-entry-fusion*`.
+
+### 한 것 (파트 1)
+- 순수 `playEntry.ts`(`seedPlayFromProject`·`deriveContinuationScene`) + App dive 분기 교체(시딩 useEffect·인물0 안내·죽은 import 정리). 786 테스트·build·init.sh·라이브 3게이트. **PR #21 squash main 머지**(`5e9433e`).
+- 중간에 서브에이전트가 세션 한도(11pm 리셋)로 Task 3 미완 → 편집장(Claude)이 직접 구현·검증.
+
+### 손대지 말 것 (파트 1 불변식)
+- **PLAY 는 committed(storageKey) 읽기 전용** — 쓰기는 diveKey working·⟳최신화만. 시딩 project 는 `loadProject()` 현재 본편 그대로(빈 프로젝트 생성 금지, `saveProject` 재도입 금지 = 데이터 위험).
+- **시딩은 useEffect** — 복원본·diveInit 없을 때만 1회. 렌더 중 setState 금지.
+- **DiveStart.tsx 파일 보존** — PLAY 진입에서 참조는 끊었지만 후속 "자유 서술 새 작품→PLAY 온보딩 갈래"용으로 남김. 삭제 금지.
+- `deriveContinuationScene` 는 실제 Chapter 필드 기준(summary 필드 없음 — prose 마지막 문단[placeholder 스킵]>beat summary>hook). `FALLBACK_EMPTY_LINE` 은 storyEngine export.
+
+### 다음 한 가지 = 파트 2 wm-bar 공통 셸 (★ 새 세션 권장 — 큰 StoryXDesk 소유권 수술)
+brainstorming·spec·계획 이미 완료(사용자 승인). 계획 `docs/superpowers/plans/2026-07-04-play-entry-fusion.md` Task 5~9. 요지 —
+- **소유권 역전을 App 으로** — App 이 세 모드 공통 `WorkspaceModeBar` 를 stage 스위치 위에서 소유(브랜드·제목 input·3모드 토글·싱크·⋯ 오버플로). StoryXDesk 는 자체 바 렌더 제거.
+- **activeTrack controlled** — StoryXDesk `activeTrack` 을 App `studioView` prop 로 controlled 화(effect 동기화). WRITE↔PLAN 무리마운트 유지(App key=`syncVersion` 만, studioView 를 key 에 넣지 말 것).
+- **제목 App 단일 소유** — `title` prop + `onTitleChange`, StoryXDesk 는 `title ?? project.title` 파생.
+- **PLAN 충돌 = planDot 콜백** — StoryXDesk 가 `onBibleAlertChange(count)` 로 실제 count 를 App 에 보고 → 셸 토글 PLAN 버튼 dot. planBadge 숫자→dot 축소(사용자 승인). PLAN 하위 줄 `⚠ 충돌 N` 칩은 유지(같은 숫자원).
+- **오버플로 이동** — `handleExportProject`/`handleImportClick`/`handleImportFile`/`fileInputRef` 를 StoryXDesk→App 이동.
+- ⚠️ 슬라이스 C 불변식 "wm-bar 소유권(editor=StoryXDesk 렌더)" 을 이 파트가 **의도적으로 뒤집는다**. 되돌리는 게 목표. Task 9 라이브 게이트 — 전환 시 브랜드·제목·토글·싱크 같은 자리 고정·WRITE↔PLAN DOM 마커 생존·planDot·오버플로.
+- ⚠️ 기존 테스트 중 옛 바 마크업(제목 input 이 StoryXDesk 안)을 단언하는 것(editorFocusLayout·floatingEditor 등) 교정 필요할 수 있음 — 약화 말고 셸 이동 반영.
+- 후속 — 홈 랜딩 원페이저(작성 흐름·서비스 특성 요약, [[landing-onepager-request]]) · 자유 서술 새 작품→PLAY 온보딩 갈래 · PLAN 안 AI 설계 대화 채널.
+
+### 검증 팁
+- `preview_click` 이 React onClick 을 안 태울 때가 있음 → `preview_eval` 로 `dispatchEvent(new MouseEvent('click',{bubbles:true}))` 우회(이번 세션 실증).
+
+---
+
 ## 2026-07-04 — PLAN staged: 설계실 패치 모델 (브랜치 `feat/plan-staged-patches`)
 
 > PLAN 바이블 필드 편집을 본편 직행에서 **패치 목록 staged**로 전환 — `✦ PLAN +N` 배지 → 본편에 반영(충돌 시 keep/apply 다이얼로그)/전부 버리기. 사용자 결정 4건(PLAN=AI와 같이 짜는 설계실·staged 토대만·패치 모델·통합 콘솔). progress.md "PLAN staged" 절이 상세. spec `docs/superpowers/specs/2026-07-04-plan-staged-patches-design.md`.
