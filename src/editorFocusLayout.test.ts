@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const desk = readFileSync(resolve(__dirname, 'StoryXDesk.tsx'), 'utf8');
+// 공통 셸 — wm-bar(제목·3모드 토글·싱크·⋯)는 App 이 소유하도록 이관됐다(PLAY 진입 융합 파트 2).
+const app = readFileSync(resolve(__dirname, 'App.tsx'), 'utf8');
 const css = readFileSync(resolve(__dirname, 'styles.css'), 'utf8');
 const canonDataView = readFileSync(resolve(__dirname, 'lib/canonDataView.ts'), 'utf8');
 // rank5 — 추출된 서브컴포넌트는 정의-존재를 각 파일에서 검사한다(사용처 단언은 desk 유지).
@@ -27,8 +29,11 @@ describe('Story X focused editor layout', () => {
   });
 
   it('uses a compact app shell instead of the marketing banner inside the editor', () => {
-    // 슬라이스 C — 컴팩트 셸은 단일 WorkspaceModeBar 다(옛 sx-topbar 셸은 제거됨).
-    expect(desk).toContain('<WorkspaceModeBar');
+    // 공통 셸 — 컴팩트 셸(WorkspaceModeBar)은 App 이 세 모드 공통으로 소유한다(StoryXDesk 자체 바 제거).
+    expect(app).toContain('<WorkspaceModeBar');
+    expect(desk).not.toContain('<WorkspaceModeBar');
+    // StoryXDesk 는 상단 바 대신 모드별 하위 컨텍스트 줄만 렌더한다.
+    expect(desk).toContain('dx-desk-context');
     // P2 — 명령 팔레트는 ⌘K 단축키로 연다 (시각 버튼 제거)
     expect(desk).toContain("event.key.toLowerCase() === 'k'");
     // 저장 상태 칩은 metaRightSlot 의 dm-save 로 이동했다
@@ -110,14 +115,17 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-command-list');
   });
 
-  it('P2 — 슬라이스 C 단일 WorkspaceModeBar 가 옛 3존 작업바를 대체한다', () => {
-    // 옛 sx-topbar 3존 작업바(design3 working bar)는 제거됐다 — 단일 바가 소유권을 갖는다
+  it('P2 — 공통 셸 wm-bar 를 App 이 소유하고 StoryXDesk 는 하위 컨텍스트 줄만 렌더한다', () => {
+    // 옛 sx-topbar 3존 작업바(design3 working bar)는 제거됐다 — App 셸이 소유권을 갖는다
     expect(desk).not.toContain('sx-topbar sx-app-shell-topbar ex-workbar');
-    expect(desk).toContain('<WorkspaceModeBar');
-    // 제목 인라인 편집 = wm-title-input, 회차/캐논 컨텍스트 = contextSlot, ⋯ 메뉴 = overflowItems
-    expect(desk).toContain('className="wm-title-input"');
-    expect(desk).toContain('contextSlot={');
-    expect(desk).toContain('const overflowItems =');
+    // 제목 인라인 편집(wm-title-input)·⋯ 메뉴(OverflowMenu)는 App 셸로 이관됐다
+    expect(app).toContain('className="wm-title-input"');
+    expect(app).toContain('<OverflowMenu');
+    expect(desk).not.toContain('className="wm-title-input"');
+    // StoryXDesk 는 회차/캐논 컨텍스트를 dx-desk-context 하위 줄로 렌더한다
+    expect(desk).toContain('const deskContextLine =');
+    expect(desk).toContain('const writeContext =');
+    expect(desk).toContain('const planContext =');
     // 저장 칩은 metaRightSlot 의 dm-save 로 유지된다
     expect(desk).toContain('className="dm-save"');
     // 홈 버튼/아바타/매체 칩/⌘K 버튼 등 옛 상단 클러터는 제거됐다
@@ -139,9 +147,9 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('원고 편집');
     expect(desk).toContain('작품 바이블');
     expect(desk).toContain('출간 준비');
-    // 출간 접근은 WorkspaceModeBar 의 overflowItems(publish)로, 트랙 전환은 onSelect→switchToTrack 로 이동했다
-    expect(desk).toContain("id: 'publish'");
-    expect(desk).toContain('openPublishingMode');
+    // 출간 접근은 App 셸의 ⋯ 오버플로(publish)로 이동했고, 트랙 전환은 studioView prop→switchToTrack effect 로 계승된다
+    expect(app).toContain("id: 'publish'");
+    expect(desk).toContain('function switchToTrack');
     expect(componentSrc('MemoryBankStudio')).toContain('function MemoryBankStudio');
     expect(desk).toContain('function updateCharacterMemory');
     expect(desk).toContain('function updateWorldMemory');
@@ -277,16 +285,18 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-approval-impact-tags');
   });
 
-  it('P2 — WRITE/PLAN 모드 전환은 WorkspaceModeBar 로, 출간은 secondary 로 유지된다', () => {
-    // 슬라이스 C — 편집/데이터(write/plan) 모드 탭은 WorkspaceModeBar 로 이동했다
-    expect(desk).toContain("mode={activeTrack === 'bible' ? 'plan' : 'write'}");
-    expect(desk).toContain('switchToTrack');
+  it('P2 — WRITE/PLAN 토글은 App 셸 WorkspaceModeBar 가, StoryXDesk 는 studioView prop 으로 track 을 따라간다', () => {
+    // 공통 셸 — 토글(mode)은 App 셸이 소유하고 selectWorkspaceMode 로 studioView 를 구동한다
+    expect(app).toContain('mode={workspaceMode}');
+    expect(app).toContain('onSelect={selectWorkspaceMode}');
+    // StoryXDesk 는 studioView prop 을 switchToTrack 으로 내부 track 에 반영한다(무리마운트)
+    expect(desk).toContain('switchToTrack(studioView');
+    expect(desk).toContain('function switchToTrack');
     // WorkspaceModeBar 는 WRITE/PLAN/PLAY 모드 탭을 렌더한다
     expect(componentSrc('WorkspaceModeBar')).toContain('WRITE');
     expect(componentSrc('WorkspaceModeBar')).toContain('PLAN');
-    // 출간은 탭에서 빠지고 overflowItems(publish)의 secondary 액션으로 유지된다
-    expect(desk).toContain("id: 'publish'");
-    expect(desk).toContain('openPublishingMode');
+    // 출간은 탭에서 빠지고 App 셸 ⋯ 오버플로(publish)의 secondary 액션으로 유지된다
+    expect(app).toContain("id: 'publish'");
   });
 
   it('P2-B — rebuilds the edit-mode left rail with work state, agent intent, structure tree and tension chart', () => {
