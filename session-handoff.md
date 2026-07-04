@@ -22,6 +22,7 @@
 ### 다음 한 가지 (차례대로)
 - **머지** — `feat/plan-staged-patches` PR. 자율 권한 있음(최종 홀리스틱 검토 통과 확인 후).
 - 다음 후보 — **PLAN 안 AI 설계 대화 채널(설계실 2단계**, 사용자 방향 확정: PLAN=AI와 같이 짜는 설계실. brainstorming 필요) · 죽은 legacy 핸들러 4개 정리(updateCharacterMemory 등, editorFocusLayout.test 소스 단언 교정 동반) · 집중 모드 크롬 숨김 · publish 4번째 모드 · desk-grid CSS 보류분.
+- ⚠️ **다음에 PLAN staged 를 손대면** — clear+remount 불변식 자동 테스트부터 추가(최종 검토 MEDIUM — 수동 트레이스로만 안전 확인됨). PlanApplyReview 를 비모달로 바꾸면 confirmPlanApply 의 frozen conflicts 가 구멍이 된다(전면 모달이 안전 전제).
 
 ---
 
