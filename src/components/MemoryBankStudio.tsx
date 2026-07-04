@@ -33,6 +33,7 @@ export function MemoryBankStudio({
   onUpdateCanon,
   onUpdateProject,
   onUpdateCreativeWeight,
+  stagedKeys,
   approvalQueue,
   approvalDecisions,
   onSetApprovalDecision,
@@ -56,6 +57,8 @@ export function MemoryBankStudio({
     value: string
   ) => void;
   onUpdateCreativeWeight: (weight: CreativeWeight) => void;
+  /** PLAN staged — 패치가 있는 필드 key(patchKey 형식). 카드에 설계안(미반영) 표시. */
+  stagedKeys?: Set<string>;
   approvalQueue: MemoryApprovalQueue;
   approvalDecisions: Record<string, ApprovalDecision>;
   onSetApprovalDecision: (candidateId: string, decision: ApprovalDecision) => void;
@@ -68,6 +71,7 @@ export function MemoryBankStudio({
   onRevertCanonChange?: (change: CanonChangeEntry) => void;
   onAmendCharter?: (patch: ContractAmendmentPatch, reason: string) => void;
 }) {
+  const isStaged = (key: string) => stagedKeys?.has(key) ?? false;
   const sectionState = buildBibleSectionState({
     activeSection,
     project,
@@ -101,36 +105,36 @@ export function MemoryBankStudio({
           <article className="sx-bible-card is-wide sx-memory-packet-card">
             <span>Story Contract</span>
             <h3>{project.title}</h3>
-            <label>
-              <small>로그라인</small>
+            <label className={isStaged('story-core:logline') ? 'is-plan-staged' : undefined}>
+              <small>로그라인{isStaged('story-core:logline') && <span className="plan-staged-tag">설계안 (미반영)</span>}</small>
               <textarea value={project.logline} onChange={(event) => onUpdateProject('logline', event.target.value)} rows={2} />
             </label>
-            <label>
-              <small>표면 약속 — 독자에게 거는 플롯·사건 차원의 약속</small>
+            <label className={isStaged('story-core:audiencePromise') ? 'is-plan-staged' : undefined}>
+              <small>표면 약속 — 독자에게 거는 플롯·사건 차원의 약속{isStaged('story-core:audiencePromise') && <span className="plan-staged-tag">설계안 (미반영)</span>}</small>
               <textarea
                 value={project.audiencePromise}
                 onChange={(event) => onUpdateProject('audiencePromise', event.target.value)}
                 rows={2}
               />
             </label>
-            <label>
-              <small>심층 질문 — 표면 사건 아래에서 작품이 진짜 묻는 것</small>
+            <label className={isStaged('story-core:deepQuestion') ? 'is-plan-staged' : undefined}>
+              <small>심층 질문 — 표면 사건 아래에서 작품이 진짜 묻는 것{isStaged('story-core:deepQuestion') && <span className="plan-staged-tag">설계안 (미반영)</span>}</small>
               <textarea
                 value={project.deepQuestion}
                 onChange={(event) => onUpdateProject('deepQuestion', event.target.value)}
                 rows={2}
               />
             </label>
-            <label>
-              <small>형식·구조 — 시점·시제·구성이 주제를 어떻게 수행하는가</small>
+            <label className={isStaged('story-core:formIntent') ? 'is-plan-staged' : undefined}>
+              <small>형식·구조 — 시점·시제·구성이 주제를 어떻게 수행하는가{isStaged('story-core:formIntent') && <span className="plan-staged-tag">설계안 (미반영)</span>}</small>
               <textarea
                 value={project.formIntent}
                 onChange={(event) => onUpdateProject('formIntent', event.target.value)}
                 rows={2}
               />
             </label>
-            <div className="sx-creative-weight">
-              <small>작품 무게중심</small>
+            <div className={isStaged('creative-weight') ? 'sx-creative-weight is-plan-staged' : 'sx-creative-weight'}>
+              <small>작품 무게중심{isStaged('creative-weight') && <span className="plan-staged-tag">설계안 (미반영)</span>}</small>
               <div className="sx-creative-weight-options" role="group" aria-label="작품 무게중심">
                 {(['popular', 'balanced', 'literary'] as CreativeWeight[]).map((weight) => (
                   <button
@@ -175,24 +179,24 @@ export function MemoryBankStudio({
             <span>캐릭터</span>
             <h3>{character.name}</h3>
             <p>{character.role}</p>
-            <label>
-              <small>욕망</small>
+            <label className={isStaged(`character:${character.id}:desire`) ? 'is-plan-staged' : undefined}>
+              <small>욕망{isStaged(`character:${character.id}:desire`) && <span className="plan-staged-tag">설계안 (미반영)</span>}</small>
               <textarea
                 value={character.desire}
                 onChange={(event) => onUpdateCharacter(character.id, 'desire', event.target.value)}
                 rows={2}
               />
             </label>
-            <label>
-              <small>상처</small>
+            <label className={isStaged(`character:${character.id}:wound`) ? 'is-plan-staged' : undefined}>
+              <small>상처{isStaged(`character:${character.id}:wound`) && <span className="plan-staged-tag">설계안 (미반영)</span>}</small>
               <textarea
                 value={character.wound}
                 onChange={(event) => onUpdateCharacter(character.id, 'wound', event.target.value)}
                 rows={2}
               />
             </label>
-            <label>
-              <small>현재 상태</small>
+            <label className={isStaged(`character:${character.id}:currentState`) ? 'is-plan-staged' : undefined}>
+              <small>현재 상태{isStaged(`character:${character.id}:currentState`) && <span className="plan-staged-tag">설계안 (미반영)</span>}</small>
               <textarea
                 value={character.currentState}
                 onChange={(event) => onUpdateCharacter(character.id, 'currentState', event.target.value)}
@@ -215,8 +219,8 @@ export function MemoryBankStudio({
           <article className="sx-bible-card is-world" key={rule.id}>
             <span>배경 / 세계관</span>
             <h3>{rule.title}</h3>
-            <label>
-              <small>규칙과 비용</small>
+            <label className={isStaged(`world:${rule.id}`) ? 'is-plan-staged' : undefined}>
+              <small>규칙과 비용{isStaged(`world:${rule.id}`) && <span className="plan-staged-tag">설계안 (미반영)</span>}</small>
               <textarea value={rule.rule} onChange={(event) => onUpdateWorldRule(rule.id, event.target.value)} rows={5} />
             </label>
             <div className="sx-bible-memory-tags">
@@ -237,8 +241,8 @@ export function MemoryBankStudio({
                 <h3>승인된 사실</h3>
                 <div className="sx-canon-editor-list">
                   {project.canonFacts.map((fact) => (
-                    <label key={fact.id}>
-                      <small>EP {fact.episode} · {fact.owner}</small>
+                    <label key={fact.id} className={isStaged(`canon:${fact.id}`) ? 'is-plan-staged' : undefined}>
+                      <small>EP {fact.episode} · {fact.owner}{isStaged(`canon:${fact.id}`) && <span className="plan-staged-tag">설계안 (미반영)</span>}</small>
                       <textarea value={fact.statement} onChange={(event) => onUpdateCanon(fact.id, event.target.value)} rows={2} />
                     </label>
                   ))}
@@ -275,12 +279,12 @@ export function MemoryBankStudio({
           <article className="sx-bible-card is-wide">
           <span>문체 바이블</span>
           <h3>{project.tone}</h3>
-          <label>
-            <small>톤</small>
+          <label className={isStaged('story-core:tone') ? 'is-plan-staged' : undefined}>
+            <small>톤{isStaged('story-core:tone') && <span className="plan-staged-tag">설계안 (미반영)</span>}</small>
             <textarea value={project.tone} onChange={(event) => onUpdateProject('tone', event.target.value)} rows={2} />
           </label>
-          <label>
-            <small>표면 약속 — 개요의 Story Contract와 같이 반영됩니다</small>
+          <label className={isStaged('story-core:audiencePromise') ? 'is-plan-staged' : undefined}>
+            <small>표면 약속 — 개요의 Story Contract와 같이 반영됩니다{isStaged('story-core:audiencePromise') && <span className="plan-staged-tag">설계안 (미반영)</span>}</small>
             <textarea
               value={project.audiencePromise}
               onChange={(event) => onUpdateProject('audiencePromise', event.target.value)}

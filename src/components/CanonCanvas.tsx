@@ -14,6 +14,7 @@ export function CanonCanvas({
   category,
   project,
   onUpdateCharacter,
+  stagedKeys,
   onOpenBibleSection,
   onAddCharacter,
   onRemoveCharacter,
@@ -23,6 +24,8 @@ export function CanonCanvas({
   category: CanonCategory;
   project: SeriesProject;
   onUpdateCharacter: (characterId: string, field: 'desire' | 'wound' | 'currentState', value: string) => void;
+  /** PLAN staged — 패치가 있는 필드 key(patchKey 형식). 카드에 설계안(미반영) 표시. */
+  stagedKeys?: Set<string>;
   onOpenBibleSection: (section: BibleSection) => void;
   onAddCharacter?: () => void;
   onRemoveCharacter?: (characterId: string) => void;
@@ -42,6 +45,12 @@ export function CanonCanvas({
     timeline: '작품 연표. 미확인 시점은 캐논 원장에서 확정합니다.'
   };
 
+  const isStaged = (key: string) => stagedKeys?.has(key) ?? false;
+  // 인물 카드 단위 표시 — 상세 필드는 CharacterDetailPanel 내부라, 선택 인물의 3필드 중 하나라도 패치면 카드에 표시.
+  const pickedCharacterStaged =
+    pickedCharacter !== null &&
+    (['desire', 'wound', 'currentState'] as const).some((field) => isStaged(`character:${pickedCharacter.id}:${field}`));
+
   let body: JSX.Element;
   if (category === 'characters') {
     body = (
@@ -51,7 +60,8 @@ export function CanonCanvas({
           pickedId={pickedCharacterId || (project.characters[0]?.id ?? '')}
           onPick={setPickedCharacterId}
         />
-        <div className="ex-canon-pane-aside">
+        <div className={pickedCharacterStaged ? 'ex-canon-pane-aside is-plan-staged' : 'ex-canon-pane-aside'}>
+          {pickedCharacterStaged && <span className="plan-staged-tag">설계안 (미반영)</span>}
           {pickedCharacter ? (
             <CharacterDetailPanel
               character={pickedCharacter}
