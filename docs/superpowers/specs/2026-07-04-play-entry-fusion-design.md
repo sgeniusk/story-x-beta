@@ -45,12 +45,15 @@ export function seedPlayFromProject(project: SeriesProject): DiveState | null;
 - `project.characters.length === 0` → **`null` 반환**(호출부가 "먼저 인물을 만들어주세요" 안내로 PLAN 유도).
 - 주인공 = `project.characters[0]`(seedFromProposal 과 동일 관례). `characterId = characters[0].id`.
 - `session = createDiveSession(characterId, project.id)`.
-- **장면 파생** — 최근 회차 `project.chapters.at(-1)` 이 있으면 `scene = deriveContinuationScene(latest)`:
-  - `latest.summary` 가 있으면 그것을, 없으면 `latest.prose` 의 마지막 문단(개행 기준 tail)을 취해 앞에 `직전 회차 이후 — ` 를 붙인다.
+- **장면 파생** — 최근 회차 `project.chapters.at(-1)` 이 있으면 `scene = deriveContinuationScene(latest)`, 앞에 `직전 회차 이후 — ` 를 붙인다.
   - 회차가 0개면 `scene` 미설정(빈 채 진입, 작가가 🎬 에 첫 상황 직접 입력 — 현행 안전장치 유지).
 - 반환 `{ schema: 'storyx/dive/v1', session, project }`. **project 는 loadProject() 로 받은 현재 본편 그대로**(빈 새 프로젝트 생성 금지).
 
-`deriveContinuationScene(chapter)` 도 같은 파일의 순수 헬퍼로 분리해 단위 테스트한다(summary 우선·prose tail 폴백·공백 처리).
+`deriveContinuationScene(chapter)` 는 같은 파일의 순수 헬퍼. **실제 `Chapter` 필드 기준**(구현 중 발견 — `Chapter` 에 `summary` 필드 없음, `hook`·`beats: ChapterBeat[]`·`prose` 존재) 우선순위:
+1. `prose` 마지막 문단(개행 기준 tail). 단 빈 초안 placeholder `FALLBACK_EMPTY_LINE`(storyEngine 에서 export)는 건너뛴다.
+2. 없으면 마지막 `beats[].summary`(ChapterBeat 요약).
+3. 없으면 `hook`.
+4. 아무 단서 없으면 빈 문자열.
 
 ### App.tsx `stage==='dive'` 분기 교체
 
