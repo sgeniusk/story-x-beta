@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import { getAgentValidationProcess, type ValidationAgentId } from './lib/agentReviewProcess';
 import { defaultRuns, getMediumReviewAgentIds } from './lib/agentSeedData';
 import { inspectLeak, type LeakReport } from './lib/leakGate';
@@ -12,8 +12,6 @@ import { MemoryBankStudio } from './components/MemoryBankStudio';
 import { FloatingEditor } from './components/FloatingEditor';
 import { FloatingDataWorkspace } from './components/FloatingDataWorkspace';
 import { FloatingPublishWorkspace } from './components/FloatingPublishWorkspace';
-import { WorkspaceModeBar } from './components/WorkspaceModeBar';
-import { OverflowMenu } from './components/OverflowMenu';
 import { CommandPalette, type DeskCommand } from './components/CommandPalette';
 import { useMarginReview } from './hooks/useMarginReview';
 import { findPersona } from './lib/extendedPersonas';
@@ -69,8 +67,6 @@ import {
 import {
   clearProject,
   clearProjectSnapshots,
-  exportAllData,
-  importAllData,
   loadPlanPatches,
   loadProject,
   loadProjectSnapshots,
@@ -344,14 +340,16 @@ interface StoryXDeskProps {
   onOpenPublish?: () => void;
   /** 융합 셸 진입 뷰 — WRITE=editor(원고)·PLAN=data(바이블). 없으면 editor(현행). */
   initialStudioView?: 'editor' | 'data';
-  /** 슬라이스 C — App 이 주는 싱크 콘솔(⟳최신화). 단일 바 우측에 합성. */
-  syncSlot?: ReactNode;
-  /** 슬라이스 C — PLAY 토글 → App stage 전환. */
-  onSelectPlayMode?: () => void;
-  /** 슬라이스 C — WRITE↔PLAN 내부 전환을 App state 에 동기화(⟳최신화 remount 후 복원용). */
+  /** 공통 셸 — 내부 track 전환(⌘K·액션 점프)을 App state 에 동기화(셸 토글·remount 후 복원용). */
   onStudioViewChange?: (view: 'editor' | 'data') => void;
   /** PLAN staged — 패치 수 변경 보고(App 배지 카운트). */
   onPlanPatchesChange?: (count: number) => void;
+  /** 공통 셸 — App 이 소유한 현재 스튜디오 뷰. prop 변경 시 내부 track 을 따라간다(무리마운트). */
+  studioView?: 'editor' | 'data';
+  /** 공통 셸 — 제목 단일 소유는 App. StoryXDesk 는 prop 로 표시·동기화(자체 편집 없음). */
+  title?: string;
+  /** 공통 셸 — PLAN 충돌 dot 용. StoryXDesk 가 실제 count 를 App(셸)에 보고. */
+  onBibleAlertChange?: (count: number) => void;
 }
 
 // B2 — 활동일 기록 헬퍼. todayStr 는 작가 로컬 '오늘'(UI 레이어라 Date 허용),
@@ -378,10 +376,11 @@ export function StoryXDesk({
   onOpenLanding,
   onOpenPublish,
   initialStudioView = 'editor',
-  syncSlot,
-  onSelectPlayMode,
   onStudioViewChange,
-  onPlanPatchesChange
+  onPlanPatchesChange,
+  studioView,
+  title,
+  onBibleAlertChange
 }: StoryXDeskProps) {
   // 기본 회차 의도는 빈 값 — 의도 메모를 비워두면 produceEpisode 가 캐논 digest 만으로 다음 회차를 만든다.
   // 데모 장르 문구를 박으면 사용자가 안 건드릴 때 다음 회차 intent(freewrite)로 새어 오염된다 (P3, #2 로판 2화 "용사와 외계인" 사고).
@@ -425,6 +424,24 @@ export function StoryXDesk({
   const [isWorkbenchFading, setIsWorkbenchFading] = useState(false);
   // 데이터 모드 — 가운데 캔버스가 보여줄 것. 기본은 인물 관계도. 바이블 작업장 진입점도 여기로 표현한다.
   const [dataView, setDataView] = useState<DataView>({ kind: 'canon', category: 'characters' });
+  // 공통 셸 — App(studioView) 이 track 을 소유. prop 이 바뀌면 내부 track 을 따라간다(무리마운트 유지).
+  // switchToTrack 을 재사용해 기존 페이드·dataView 리셋·publishing 해제 부수효과를 그대로 계승한다.
+  useEffect(() => {
+    if (studioView === undefined) return;
+    switchToTrack(studioView === 'data' ? 'bible' : 'draft');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studioView]);
+  // 역방향 — 내부 네비게이션(⌘K·액션 후 점프 등)이 track 을 바꾸면 셸 토글이 stale 하지 않도록 App 에 보고.
+  useEffect(() => {
+    onStudioViewChange?.(activeTrack === 'bible' ? 'data' : 'editor');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTrack]);
+  // 공통 셸 — 제목 단일 소유는 App. prop title 을 내부 project 에 동기화해
+  // 이후 saveProject(부분 갱신)가 옛 제목으로 덮어쓰는 clobber 를 막는다.
+  useEffect(() => {
+    if (title === undefined) return;
+    setProject((prev) => (prev.title === title ? prev : { ...prev, title }));
+  }, [title]);
   const [approvalDecisions, setApprovalDecisions] = useState<Record<string, ApprovalDecision>>({});
   const [approvalStatementOverrides, setApprovalStatementOverrides] = useState<Record<string, string>>({});
   const [syncedCandidateIds, setSyncedCandidateIds] = useState<string[]>([]);
@@ -455,40 +472,7 @@ export function StoryXDesk({
   const [projectSnapshots, setProjectSnapshots] = useState<ProjectSnapshot[]>(() => loadProjectSnapshots());
   const [activeBeatId, setActiveBeatId] = useState<string | null>(null);
   // 프로젝트 데이터 내보내기/가져오기 — 백업·다른 기기 이동·공유에 쓰는 단일 JSON 단위
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const handleExportProject = () => {
-    const payload = exportAllData();
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `storyx-export-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    if (!window.confirm('현재 작품과 스냅샷·환경설정을 모두 덮어씁니다. 진행 전에 먼저 내보내기를 권장합니다. 계속할까요?')) {
-      return;
-    }
-    try {
-      const text = await file.text();
-      const result = importAllData(text);
-      window.alert(result.message);
-      if (result.ok) {
-        window.location.reload();
-      }
-    } catch (error) {
-      window.alert(error instanceof Error ? `파일 읽기 실패 — ${error.message}` : '파일 읽기 실패.');
-    }
-  };
+  // 공통 셸 — JSON 내보내기/가져오기·⋯ 오버플로는 App(셸)이 소유한다(StoryXDesk 에서 이관).
   const draftBootRef = useRef(false);
   const manuscriptRef = useRef<HTMLDivElement>(null);
 
@@ -678,6 +662,10 @@ export function StoryXDesk({
     return Math.min(99, Math.round((total / (episodes + 6)) * 16));
   }, [project]);
   const bibleAlertCount = editorWorkspace.continuitySummary.blocked + editorWorkspace.continuitySummary.warnings;
+  // 공통 셸 — 실제 충돌 count 를 App(셸)에 보고 → 세 모드 토글의 PLAN dot.
+  useEffect(() => {
+    onBibleAlertChange?.(bibleAlertCount);
+  }, [bibleAlertCount, onBibleAlertChange]);
   const isBibleMode = activeTrack === 'bible' && !isPublishingMode;
   const isDraftMode = activeTrack === 'draft' && !isPublishingMode;
   // 연재형 포맷만 회차(N화) 언어를 쓴다. 단편·단독 완결형은 "원고" 하나로 다룬다.
@@ -2127,55 +2115,12 @@ export function StoryXDesk({
       )}
     </>
   );
-  const overflowItems = [
-    {
-      id: 'publish',
-      label: '출간',
-      onSelect: () => (onOpenPublish ? onOpenPublish() : openPublishingMode())
-    },
-    { id: 'export', label: 'JSON 내보내기', onSelect: handleExportProject },
-    { id: 'import', label: 'JSON 가져오기', onSelect: handleImportClick }
-  ];
-  const workspaceModeBar = (
-    <WorkspaceModeBar
-      mode={activeTrack === 'bible' ? 'plan' : 'write'}
-      onSelect={(next) => {
-        if (next === 'play') {
-          onSelectPlayMode?.();
-          return;
-        }
-        switchToTrack(next === 'plan' ? 'bible' : 'draft');
-        onStudioViewChange?.(next === 'plan' ? 'data' : 'editor');
-      }}
-      titleSlot={
-        <input
-          className="wm-title-input"
-          aria-label="작품 제목"
-          value={project.title}
-          onChange={(event) => updateProject('title', event.target.value)}
-          autoComplete="off"
-          title="클릭해서 제목 편집"
-        />
-      }
-      contextSlot={activeTrack === 'bible' ? planContext : writeContext}
-      planBadge={bibleAlertCount}
-      rightSlot={
-        <>
-          {syncSlot}
-          <OverflowMenu items={overflowItems}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/json,.json"
-              onChange={handleImportFile}
-              style={{ display: 'none' }}
-              aria-hidden="true"
-            />
-          </OverflowMenu>
-        </>
-      }
-    />
-  );
+  // 공통 셸 — 상단 wm-bar(제목·3모드 토글·싱크·⋯)는 App 이 세 모드에서 소유한다.
+  // StoryXDesk 는 모드별 하위 컨텍스트 줄만 렌더한다(WRITE 회차 픽커·PLAN 캐논/충돌 칩).
+  const deskContextNode = activeTrack === 'bible' ? planContext : writeContext;
+  const deskContextLine = deskContextNode ? (
+    <div className="dx-desk-context">{deskContextNode}</div>
+  ) : null;
   const metaRightSlot = (
     <>
       <span className="dm-save" data-state={editedSinceReview ? 'dirty' : 'synced'}>
@@ -2202,7 +2147,7 @@ export function StoryXDesk({
   if (isDraftMode) {
     return (
       <>
-        {workspaceModeBar}
+        {deskContextLine}
         <FloatingEditor {...floatingEditorProps} metaRightSlot={metaRightSlot} />
         {/* F-006 — floating 모드에서도 ⌘K 명령 팔레트로 전체 검토·다음 회차 생성에 접근한다. */}
         {isCommandPaletteOpen && (
@@ -2262,7 +2207,7 @@ export function StoryXDesk({
       ) : null;
     return (
       <>
-        {workspaceModeBar}
+        {deskContextLine}
         <FloatingDataWorkspace
           dataView={dataView}
           onSelectCategory={(category) => setDataView({ kind: 'canon', category })}

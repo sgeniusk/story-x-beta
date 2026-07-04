@@ -9342,6 +9342,8 @@ body {
 .wm-plan-dot{margin-left:5px;width:6px;height:6px;border-radius:50%;background:var(--sx-warning,#f59e0b);display:inline-block;flex:none}
 .wm-context-chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border:1px solid rgba(255,255,255,.1);border-radius:6px;font-size:11px;color:rgba(237,237,243,.6);white-space:nowrap}
 .wm-conflict-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid rgba(248,113,113,.5);border-radius:6px;background:transparent;font-size:11px;color:#fca5a5;cursor:pointer;white-space:nowrap}
+/* 공통 셸 — 상단 wm-bar 아래 모드별 하위 컨텍스트 줄(WRITE 회차 픽커·PLAN 캐논/충돌 칩) */
+.dx-desk-context{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:6px 14px;border-bottom:1px solid #16171a;background:#0b0c0e}
 /* 슬라이스 C — 하단 메타 줄. 중앙은 비워 dock pill 과 충돌하지 않는다 */
 .dm-line{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:space-between;align-items:center;padding:4px 14px;font-size:11px;color:rgba(237,237,243,.5);pointer-events:none}
 .dm-line .dm-right{display:inline-flex;align-items:center;gap:8px;pointer-events:auto}
