@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-05 · Branch: `feat/wm-bar-common-shell` (**PLAY 진입 융합 파트 2(wm-bar 공통 셸) done·미머지. 파트 1 은 PR #21 main 머지 완료. spec `docs/superpowers/specs/2026-07-04-play-entry-fusion-design.md`·계획 `docs/superpowers/plans/2026-07-04-play-entry-fusion.md` Task 5~9.**)
+> Last Updated: 2026-07-05 · Branch: `main` (**PLAY 진입 융합 완결 — 파트 1 PR #21·파트 2 PR #23 전부 main 머지. spec `docs/superpowers/specs/2026-07-04-play-entry-fusion-design.md`·계획 `docs/superpowers/plans/2026-07-04-play-entry-fusion.md`. 다음 후보 = 홈 랜딩 원페이저(사용자 요청).**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-05)
@@ -14,7 +14,7 @@ dogfooding 피드백("PLAY 누르면 너무 다른 얘기부터 한다") 해소 
 - **검증** — `npm test` 786 녹색(79 파일, playEntry 8 신규)·build·init.sh·tsc 클린. **라이브(preview 5175)** — ① 회차 2 작품 PLAY→인테이크 0·바로 DiveDesk·🎬 "직전 회차 이후 — …"(ch-2 prose tail)·"📖 지난 이야기 2화"·본편 회차수 불변(덮어쓰기 0) ② 인물 0 작품 PLAY→안내 카드·diveKey 미시딩·본편 무접촉·PLAN 이동 동작(dispatchEvent) ③ 콘솔 0.
 - **파트 2** — `done`(아래 절). PR #21 로 파트 1 은 main 머지 완료.
 
-## 활성 트랙 — PLAY 진입 융합 파트 2: wm-bar 공통 셸 (`done` · 2026-07-05, 브랜치 `feat/wm-bar-common-shell` 미머지)
+## 완료 트랙 — PLAY 진입 융합 파트 2: wm-bar 공통 셸 (`done` · 2026-07-05, **PR #23 main 머지** `84a2d09`)
 
 dogfooding 피드백("전환할 때 가운데 내비 바가 연결된 느낌이 없다") 해소 — 슬라이스 C 가 editor 에서 StoryXDesk 에 준 wm-bar 소유권을, **App 이 세 모드(PLAY/WRITE/PLAN) 공통으로 소유하는 지속 프레임**으로 되돌려 전환 연속감을 만든 조각. 계획 `docs/superpowers/plans/2026-07-04-play-entry-fusion.md` Task 5~9. executing-plans(편집장 직접 구현·강결합 파일이라 Task 5/6/7 한 묶음 편집 후 일괄 검증).
 - **구현** — `WorkspaceModeBar` `planDot` prop(TDD, PLAN 버튼 점, planBadge 숫자 대체·`.wm-plan-dot` CSS) · StoryXDesk `studioView` controlled(switchToTrack effect 재사용 — fade·dataView·publishing 부수효과 계승, 무리마운트 유지)+내부 track 변경 App 역보고(셸 토글 stale 방지, 양방향 수렴)+`title` prop 동기화(saveProject clobber 방지)+`onBibleAlertChange` 콜백 · StoryXDesk 자체 `WorkspaceModeBar`/`OverflowMenu` 제거→`dx-desk-context` 하위 줄(WRITE 회차 픽커·PLAN 캐논/충돌 칩)만 렌더 · export/import 핸들러·fileInputRef→App 이관 · App `shellBar`(제목 input·토글·planDot·싱크 콘솔·⋯ 오버플로)를 editor·dive 두 stage 위에서 동일 렌더·`workTitle`/`bibleAlert` state·`handleTitleChange` 즉시 저장·syncVersion 후 제목 재동기화.

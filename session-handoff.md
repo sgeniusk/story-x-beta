@@ -22,8 +22,9 @@
 - 손수 localStorage 에 파생 필드 없는 회차를 심고 editor 로 열면 FloatingEditor 에서 크래시(흰 화면). **main 코드로 스왑해 동일 시드 → 동일 크래시 확인**(내 셸 변경과 무관 실증). handoff 2026-07-02 line 73 의 createSeedProject+회차 잠복 버그와 동일 부류. 앱이 produce 한 회차·0회차·정상 경로는 무손상. 라이브 검증은 인물 2·0회차 프로젝트로 진행했다(회차 있는 editor 는 앱 produce 흐름이 필요 = LLM 브리지 서버, 순수 vite dev 엔 없음).
 
 ### 다음 한 가지 (차례대로)
-- **머지** — `feat/wm-bar-common-shell`(자율 권한 있음). PLAY 진입 융합 전체(파트 1+2) 완결.
-- 후속 후보 — **홈 랜딩 원페이저**(작성 흐름·서비스 특성 요약, [[landing-onepager-request]], 사용자 요청·별도 조각) · 자유 서술 새 작품→PLAY 온보딩 갈래 · PLAN 안 AI 설계 대화 채널(설계실 2단계) · FloatingEditor 하드-시딩 회차 크래시 방어 · PLAN staged clear+remount 자동 테스트(2026-07-04 MEDIUM 잔여).
+- ~~머지~~ — **PR #23 main 머지 완료**(`84a2d09`, 사용자 승인). PLAY 진입 융합 전체(파트 1+2) 완결.
+- **다음 세션 1순위 = 홈 랜딩 원페이저**(작성 흐름·서비스 특성 요약, [[landing-onepager-request]], 사용자 요청·별도 조각).
+- 그다음 후보 — 자유 서술 새 작품→PLAY 온보딩 갈래 · PLAN 안 AI 설계 대화 채널(설계실 2단계) · FloatingEditor 하드-시딩 회차 크래시 방어 · PLAN staged clear+remount 자동 테스트(2026-07-04 MEDIUM 잔여).
 
 ---
 
