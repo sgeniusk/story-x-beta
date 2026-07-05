@@ -91,6 +91,7 @@ import { deriveReconcilePlan, type ReconcilePlan } from './lib/playRuntimeValida
 import { seedPlayFromProject } from './lib/playEntry';
 import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
+import { flowModes, canonAxes, flowEntryAgents, flowPublishMedia } from './landingFlow';
 import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
 import storyXSymbolLight from './assets/brand/story-x-symbol-light.svg';
 
@@ -636,6 +637,7 @@ function MarketingLanding({
     }
   ];
   const navLinks = [
+    { label: '작성 흐름', target: 'flow' },
     { label: '핵심 원칙', target: 'features' },
     { label: '매체 전환', target: 'media-bridge' }
   ];
@@ -861,6 +863,97 @@ function MarketingLanding({
               <span className="hm-foot-bullet" />
               알파 셀프체크 63%
             </span>
+          </div>
+        </div>
+      </section>
+
+      <section className="lx-flow-section" id="flow" aria-label="작성 여정">
+        <div className="lx-flow-inner">
+          <span className="lx-eyebrow">어떻게 쓰나요</span>
+          <h2 className="section-h2">
+            작가진과 시작해, 세 가지 방식으로
+            <br />
+            하나의 캐논을 조각합니다.
+          </h2>
+          <p className="lx-flow-lead">
+            첫 순간부터 혼자가 아닙니다. AI 작가진과 뼈대를 세우고, 세 개의 작업 표면에서 그 캐논을 서로
+            다른 각도로 다듬습니다. 조각이 향하는 곳은 두 가지 — <b>안 무너지고</b>,{' '}
+            <b className="lx-flow-pull-em">끝까지 끌어당기는</b> 이야기입니다.
+          </p>
+
+          <div className="lx-flow-step">
+            <span className="lx-flow-stepno">① 새 작품 · 설계 착수</span>
+            <div className="lx-flow-entry">
+              <div className="lx-flow-entry-head">작가진과 브레인스토밍하며 뼈대를 세웁니다</div>
+              <p className="lx-flow-entry-body">
+                매체를 고르면 쇼러너가 질문을 던지고, 캐릭터 큐레이터·세계관 지킴이가 인물의 욕망과 세계의
+                첫 규칙을 같이 잡습니다. 결말에서 거꾸로 4줄 척추를 세워{' '}
+                <b className="lx-flow-seed-em">캐논의 씨앗</b>을 심습니다.
+              </p>
+              <div className="lx-flow-agents">
+                {flowEntryAgents.map((agent) => (
+                  <span key={agent} className="lx-flow-agent">
+                    {agent}
+                  </span>
+                ))}
+                <span className="lx-flow-agent is-seed">→ 캐논의 씨앗</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="lx-flow-conn">
+            <span>세 방식으로 이 캐논을 키웁니다</span>
+          </div>
+
+          <span className="lx-flow-stepno lx-flow-stepno-center">② STUDIO · 세 가지 작성 방식</span>
+          <div className="lx-flow-modes">
+            {flowModes.map((mode) => (
+              <article key={mode.key} className={`lx-flow-mode is-${mode.key}`}>
+                <span className="lx-flow-mode-tag">{mode.tag}</span>
+                <div className="lx-flow-mode-kr">{mode.kr}</div>
+                <p className="lx-flow-mode-body">{mode.body}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="lx-flow-merge" aria-hidden="true">
+            ↘ ↓ ↙
+          </div>
+
+          <div className="lx-flow-core">
+            <span className="lx-flow-stepno lx-flow-stepno-center">③ 하나의 캐논 · ⟳ 최신화</span>
+            <div className="lx-flow-core-head">조각은 두 방향으로 단단해집니다</div>
+            <p className="lx-flow-core-sub">
+              세 방식이 만든 변화는 <b>⟳ 최신화</b>로 한 캐논에 합류합니다
+            </p>
+            <div className="lx-flow-axes">
+              {canonAxes.map((axis) => (
+                <div key={axis.key} className={`lx-flow-axis is-${axis.key}`}>
+                  <div className="lx-flow-axis-name">
+                    <span aria-hidden="true">{axis.icon}</span> {axis.name}
+                    <span className="lx-flow-axis-sub">{axis.sub}</span>
+                  </div>
+                  <p className="lx-flow-axis-body">{axis.body}</p>
+                  <div className="lx-flow-axis-bars" aria-hidden="true">
+                    {Array.from({ length: axis.total }, (_, i) => (
+                      <i key={i} className={i < axis.filled ? 'is-on' : ''} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="lx-flow-grow">회차가 쌓일수록 — 흔들리지 않고, 더 끌어당깁니다</div>
+          </div>
+
+          <div className="lx-flow-out">
+            <span className="lx-flow-stepno">④ 출간</span>
+            <span className="lx-flow-out-text">완성된 이야기는</span>
+            {flowPublishMedia.map((medium) => (
+              <span key={medium} className="lx-flow-out-chip">
+                {medium}
+              </span>
+            ))}
+            <span className="lx-flow-out-text">으로 표현됩니다</span>
           </div>
         </div>
       </section>
