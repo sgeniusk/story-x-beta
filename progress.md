@@ -1,10 +1,18 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-05 · Branch: `main` (**PLAY 진입 융합 완결 — 파트 1 PR #21·파트 2 PR #23 전부 main 머지. spec `docs/superpowers/specs/2026-07-04-play-entry-fusion-design.md`·계획 `docs/superpowers/plans/2026-07-04-play-entry-fusion.md`. 다음 후보 = 홈 랜딩 원페이저(사용자 요청).**)
+> Last Updated: 2026-07-05 · Branch: `feat/landing-flow-onepager` (**홈 랜딩 "작성 여정" 원페이저 `done`(미머지) — 히어로 다음 4단계 흐름(작가진 진입→세 방식→하나의 캐논 두 축→출간). 두 축 프레임(안 무너진다=일관성·끌어당긴다=흡인력) 랜딩 언어화. 근거 = 흡인력 딥리서치 `docs/research/2026-07-05-compellingness-human-ai.md`. spec/계획 `docs/superpowers/{specs,plans}/2026-07-05-landing-flow-onepager*`. 다음 = 머지 + 후속 스코핑(흡인력 게이트·VS UX).**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-05)
-`npm test` **788 통과**(79 파일, workspaceModeBar planDot 2 신규) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 (전부 main). **파트 2 wm-bar 공통 셸**은 `feat/wm-bar-common-shell`.
+`npm test` **792 통과**(80 파일, landingFlow 4 신규) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 (전부 main). **파트 2 wm-bar 공통 셸**은 `feat/wm-bar-common-shell`.
+
+## 활성 트랙 — 홈 랜딩 "작성 여정" 원페이저 (`done` · 2026-07-05, 브랜치 `feat/landing-flow-onepager` 미머지)
+
+신규 사용자가 의도된 여정(새 작품 온보딩 → STUDIO 3모드 → ⟳최신화 → 출간)과 서비스 본질을 한눈에 못 잡던 것을, 랜딩 히어로 다음에 **4단계 흐름 섹션**으로 채운 조각([[landing-onepager-request]]). 핵심 = 세 방식(PLAY/WRITE/PLAN)이 **하나의 캐논을 두 방향으로 조각**한다 — **안 무너진다(일관성, 강함)** + **끌어당긴다(흡인력, 자라는 축)**. 흡인력 축은 "AI가 여러 결을 펼치고 사람이 긴장·의외를 고른다"는 인간+AI 협업으로 명시(King 논지 완성). brainstorming(visual companion)→spec→계획→executing-plans 인라인 TDD. 근거 = 흡인력 딥리서치([[two-axis-compellingness]]).
+- **구현** — 순수 콘텐츠 상수 `src/landingFlow.ts`(`flowModes` 3·`canonAxes` 2[solid filled===total·pull filled<total]·`flowEntryAgents` 4·`flowPublishMedia` 4) + `landingFlow.test.ts` 두 축·세 방식 **의미 불변식** 테스트(다음 세션이 축 못 지우게) · `MarketingLanding`(App.tsx) 히어로 다음 `lx-flow-section` 렌더(4단계: 작가진 브레인스토밍 진입→3모드→하나의 캐논 두 축 게이지→출간 매체)+`navLinks` 맨 앞 `작성 흐름` · `styles.css` `.lx-flow-*`(다크 + `.is-light` 오버라이드로 모드색 어두운 변형 + 768px 모드/축 1열 스택).
+- **불변식** — 두 축 프레임이 랜딩 서사 핵심(landingFlow.ts 헤더 주석·테스트가 지킴). 모드색은 앱 3모드 관례(PLAY lime·WRITE blue·PLAN violet)+pull 앰버, 라이트에선 어두운 변형(흰 배경 대비). flow 섹션은 순수 추가(다른 섹션 무변경).
+- **검증** — `npm test` 792 녹색(80 파일, landingFlow 4 신규)·build·init.sh·tsc 클린. **라이브(preview 5175)** — ① 섹션 순서 hero→**flow**→feature→bridge→closing(정위치)·3모드/2축/작가진 5칩/출간 4매체 렌더 ② 게이지 solid 4/4 vs pull 3/4(자라는 축 시각 구분) ③ 내비 `작성 흐름`=`#flow` 앵커 ④ 라이트 강제 실측 — 섹션 bg 흰색·텍스트 rgb(8,9,10)·모드색 어두운 변형(play 진녹 77,124,15·write 파랑·plan 보라·pull 진앰버 180,83,9, 흰 배경서 안 사라짐) ⑤ 모바일(375) 모드 335px·축 285px 단일 컬럼·가로 오버플로 0 ⑥ 콘솔 에러 0.
+- **범위 밖(후속 스코핑, 사용자 승인 3방향 중 2)** — **흡인력 게이트**(critic-reviewer 를 긴장·서프라이즈 기준 게이트로 승격, Re3 재순위 단계) · **서프라이즈 주입 VS UX**(PLAY 이어 굴리기에서 후보 N개+확률 펼쳐 사람이 선별, Verbalized Sampling). 둘 다 brainstorming·새 세션. 근거 `docs/research/2026-07-05-compellingness-human-ai.md`. 참고 — 코드에 이미 `lib/vsCandidatesClient` 존재(연결 검토).
 
 ## 활성 트랙 — PLAY 진입 융합 파트 1: 이어 플레이 시딩 (`done` · 2026-07-04, 브랜치 `feat/play-entry-fusion` 미머지)
 

@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-07-05 (2차) — 홈 랜딩 "작성 여정" 원페이저 done (브랜치 `feat/landing-flow-onepager` 미머지)
+
+> 랜딩 히어로 다음에 4단계 흐름 섹션 추가 — 세 방식(PLAY/WRITE/PLAN)이 **하나의 캐논을 두 방향(안 무너진다·끌어당긴다)으로 조각**한다는 서사. dogfooding 진입 혼란 해소([[landing-onepager-request]]) + 흡인력 축 명시(King 논지). progress.md "작성 여정 원페이저" 절이 상세. spec/계획 `docs/superpowers/{specs,plans}/2026-07-05-landing-flow-onepager*`.
+
+### 한 것
+- `src/landingFlow.ts`(콘텐츠 순수 상수) + `landingFlow.test.ts`(두 축·세 방식 불변식 4) · `MarketingLanding` `lx-flow-section` 렌더+`navLinks` `작성 흐름` · `styles.css` `.lx-flow-*`(다크/라이트/768px). 792 테스트·build·init.sh·tsc 클린. **라이브 6게이트 전부 실측 통과**(섹션 정위치·게이지 solid 4/4 vs pull 3/4·내비 앵커·라이트 대비·모바일 단일 컬럼·콘솔 에러 0).
+- **★큰 맥락 — 흡인력 딥리서치 완료** `docs/research/2026-07-05-compellingness-human-ai.md`(19확정/6기각). 결론 = 사용자 신념("인간+AI로 흡인력 한계 넘는다") **조건부 참** — 모델·프롬프트 아니라 **구조(하네스)로만**. 검증된 방법 = Verbalized Sampling(후보 다발+확률, +25.7%)·Re3 파이프라인(계획→초안→재순위→편집, 재순위에 흡인력 기준=게이트). 표준 품질 점수는 흡인력을 못 잡음 → **별도 흡인력 게이트 필요**.
+
+### 손대지 말 것 (불변식)
+- **두 축 프레임** — `landingFlow.ts` 의 `canonAxes` solid(filled===total)·pull(filled<total)와 헤더 주석·`landingFlow.test.ts` 가 지킨다. "끌어당긴다(흡인력)" 축·"AI가 펼치고 사람이 고른다" 협업 문구를 지우지 말 것(테스트가 물고 있음, 약화 아님).
+- **flow 섹션은 순수 추가** — 히어로↔feature 사이 삽입, 다른 섹션 무변경. 모드색은 앱 3모드 관례(PLAY lime·WRITE blue·PLAN violet)+pull 앰버, **라이트에선 `.is-light .lx-flow-section` 오버라이드로 어두운 변형**(흰 배경 대비 — 슬라이스 C wm-title-input inherit 회귀 선례 주의).
+
+### 다음 한 가지 (차례대로)
+- **머지** — `feat/landing-flow-onepager`(자율 권한 있음, [[slice-cadence-autonomy]]). 머지 전 콘솔 게이트 1회 확인 권장.
+- **후속 스코핑 2건**(사용자 승인, 큰 조각·새 세션 권장) — ① **흡인력 게이트** = `critic-reviewer` 를 긴장·서프라이즈 기준 게이트로 승격(Re3 재순위 단계에 흡인력 기준). ② **서프라이즈 주입 VS UX** = PLAY "이어 굴리기"에서 다음 전개 후보 N개+확률 펼쳐 사람이 선별(Verbalized Sampling). **코드에 이미 `src/lib/vsCandidatesClient` 존재** — VS UX 착수 시 이것부터 확인. 근거 = 흡인력 딥리서치 리포트.
+- 그 외 후속 — 자유 서술 새 작품→PLAY 온보딩 갈래 · PLAN 안 AI 설계 대화 채널 · FloatingEditor 하드-시딩 회차 크래시 방어 · PLAN staged clear+remount 자동 테스트.
+
+### 검증 팁
+- 이 세션 preview classifier(`claude-opus-4-8` 안전성 판정)가 자주 일시 불가 → preview_eval/console 툴이 간헐 실패. computed style 실측은 `preview_inspect`(읽기 전용)로 우회 가능. window 스크롤이 preview 임베딩에서 안 잡힘(문서 4704px인데 scrollY 고정) → 섹션 스크린샷은 위 섹션 임시 display:none 후 캡처 우회.
+
+---
+
 ## 2026-07-05 — PLAY 진입 융합 파트 2 done (wm-bar 공통 셸, 브랜치 `feat/wm-bar-common-shell` 미머지)
 
 > 슬라이스 C 가 editor 에서 StoryXDesk 에 준 wm-bar 소유권을 **App 이 세 모드 공통으로 소유하는 지속 프레임**으로 되돌려 전환 연속감을 만들었다. 계획 `docs/superpowers/plans/2026-07-04-play-entry-fusion.md` Task 5~9. progress.md "파트 2: wm-bar 공통 셸" 절이 상세.
