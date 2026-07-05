@@ -4,7 +4,7 @@
 
 ---
 
-## 2026-07-05 (2차) — 홈 랜딩 "작성 여정" 원페이저 done (브랜치 `feat/landing-flow-onepager` 미머지)
+## 2026-07-05 (2차) — 홈 랜딩 "작성 여정" 원페이저 done·머지 (PR #24 main `c18f878`)
 
 > 랜딩 히어로 다음에 4단계 흐름 섹션 추가 — 세 방식(PLAY/WRITE/PLAN)이 **하나의 캐논을 두 방향(안 무너진다·끌어당긴다)으로 조각**한다는 서사. dogfooding 진입 혼란 해소([[landing-onepager-request]]) + 흡인력 축 명시(King 논지). progress.md "작성 여정 원페이저" 절이 상세. spec/계획 `docs/superpowers/{specs,plans}/2026-07-05-landing-flow-onepager*`.
 
@@ -17,8 +17,8 @@
 - **flow 섹션은 순수 추가** — 히어로↔feature 사이 삽입, 다른 섹션 무변경. 모드색은 앱 3모드 관례(PLAY lime·WRITE blue·PLAN violet)+pull 앰버, **라이트에선 `.is-light .lx-flow-section` 오버라이드로 어두운 변형**(흰 배경 대비 — 슬라이스 C wm-title-input inherit 회귀 선례 주의).
 
 ### 다음 한 가지 (차례대로)
-- **머지** — `feat/landing-flow-onepager`(자율 권한 있음, [[slice-cadence-autonomy]]). 머지 전 콘솔 게이트 1회 확인 권장.
-- **후속 스코핑 2건**(사용자 승인, 큰 조각·새 세션 권장) — ① **흡인력 게이트** = `critic-reviewer` 를 긴장·서프라이즈 기준 게이트로 승격(Re3 재순위 단계에 흡인력 기준). ② **서프라이즈 주입 VS UX** = PLAY "이어 굴리기"에서 다음 전개 후보 N개+확률 펼쳐 사람이 선별(Verbalized Sampling). **코드에 이미 `src/lib/vsCandidatesClient` 존재** — VS UX 착수 시 이것부터 확인. 근거 = 흡인력 딥리서치 리포트.
+- ~~머지~~ — **PR #24 main 머지 완료**(`c18f878`, 사용자 승인 "1하고2" = PR+머지). 머지 후 main init.sh 녹색 재확인.
+- **후속 스코핑 2건**(사용자 승인, 큰 조각·새 세션 권장 · 1순위) — ① **흡인력 게이트** = `critic-reviewer` 를 긴장·서프라이즈 기준 게이트로 승격(Re3 재순위 단계에 흡인력 기준). ② **서프라이즈 주입 VS UX** = PLAY "이어 굴리기"에서 다음 전개 후보 N개+확률 펼쳐 사람이 선별(Verbalized Sampling). **코드에 이미 `src/lib/vsCandidatesClient` 존재** — VS UX 착수 시 이것부터 확인. 근거 = 흡인력 딥리서치 리포트.
 - 그 외 후속 — 자유 서술 새 작품→PLAY 온보딩 갈래 · PLAN 안 AI 설계 대화 채널 · FloatingEditor 하드-시딩 회차 크래시 방어 · PLAN staged clear+remount 자동 테스트.
 
 ### 검증 팁

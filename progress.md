@@ -1,12 +1,12 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-05 · Branch: `feat/landing-flow-onepager` (**홈 랜딩 "작성 여정" 원페이저 `done`(미머지) — 히어로 다음 4단계 흐름(작가진 진입→세 방식→하나의 캐논 두 축→출간). 두 축 프레임(안 무너진다=일관성·끌어당긴다=흡인력) 랜딩 언어화. 근거 = 흡인력 딥리서치 `docs/research/2026-07-05-compellingness-human-ai.md`. spec/계획 `docs/superpowers/{specs,plans}/2026-07-05-landing-flow-onepager*`. 다음 = 머지 + 후속 스코핑(흡인력 게이트·VS UX).**)
+> Last Updated: 2026-07-05 · Branch: `main` (**홈 랜딩 "작성 여정" 원페이저 `done` — PR #24 main 머지 `c18f878`. 히어로 다음 4단계 흐름(작가진 진입→세 방식→하나의 캐논 두 축→출간). 두 축 프레임(안 무너진다=일관성·끌어당긴다=흡인력) 랜딩 언어화. 근거 = 흡인력 딥리서치 `docs/research/2026-07-05-compellingness-human-ai.md`. spec/계획 `docs/superpowers/{specs,plans}/2026-07-05-landing-flow-onepager*`. 다음 = 후속 스코핑(흡인력 게이트·VS UX, 새 세션).**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-05)
 `npm test` **792 통과**(80 파일, landingFlow 4 신규) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 (전부 main). **파트 2 wm-bar 공통 셸**은 `feat/wm-bar-common-shell`.
 
-## 활성 트랙 — 홈 랜딩 "작성 여정" 원페이저 (`done` · 2026-07-05, 브랜치 `feat/landing-flow-onepager` 미머지)
+## 완료 트랙 — 홈 랜딩 "작성 여정" 원페이저 (`done` · 2026-07-05, **PR #24 main 머지** `c18f878`)
 
 신규 사용자가 의도된 여정(새 작품 온보딩 → STUDIO 3모드 → ⟳최신화 → 출간)과 서비스 본질을 한눈에 못 잡던 것을, 랜딩 히어로 다음에 **4단계 흐름 섹션**으로 채운 조각([[landing-onepager-request]]). 핵심 = 세 방식(PLAY/WRITE/PLAN)이 **하나의 캐논을 두 방향으로 조각**한다 — **안 무너진다(일관성, 강함)** + **끌어당긴다(흡인력, 자라는 축)**. 흡인력 축은 "AI가 여러 결을 펼치고 사람이 긴장·의외를 고른다"는 인간+AI 협업으로 명시(King 논지 완성). brainstorming(visual companion)→spec→계획→executing-plans 인라인 TDD. 근거 = 흡인력 딥리서치([[two-axis-compellingness]]).
 - **구현** — 순수 콘텐츠 상수 `src/landingFlow.ts`(`flowModes` 3·`canonAxes` 2[solid filled===total·pull filled<total]·`flowEntryAgents` 4·`flowPublishMedia` 4) + `landingFlow.test.ts` 두 축·세 방식 **의미 불변식** 테스트(다음 세션이 축 못 지우게) · `MarketingLanding`(App.tsx) 히어로 다음 `lx-flow-section` 렌더(4단계: 작가진 브레인스토밍 진입→3모드→하나의 캐논 두 축 게이지→출간 매체)+`navLinks` 맨 앞 `작성 흐름` · `styles.css` `.lx-flow-*`(다크 + `.is-light` 오버라이드로 모드색 어두운 변형 + 768px 모드/축 1열 스택).
