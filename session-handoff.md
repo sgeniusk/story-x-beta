@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-07-05 — PLAY 진입 융합 파트 2 done (wm-bar 공통 셸, 브랜치 `feat/wm-bar-common-shell` 미머지)
+
+> 슬라이스 C 가 editor 에서 StoryXDesk 에 준 wm-bar 소유권을 **App 이 세 모드 공통으로 소유하는 지속 프레임**으로 되돌려 전환 연속감을 만들었다. 계획 `docs/superpowers/plans/2026-07-04-play-entry-fusion.md` Task 5~9. progress.md "파트 2: wm-bar 공통 셸" 절이 상세.
+
+### 한 것
+- `WorkspaceModeBar` planDot prop(TDD) · StoryXDesk studioView controlled(switchToTrack effect 재사용)+양방향 track 동기화+title prop 동기화+onBibleAlertChange 콜백·자체 바 제거→`dx-desk-context` 하위 줄만 · export/import→App 이관 · App `shellBar`(제목·토글·planDot·싱크·⋯) editor·dive 공통 렌더 · editorFocusLayout 소스 단언 교정. 788 테스트·build·init.sh·tsc 클린. **라이브 7게이트 전부 통과**(위치 고정·무리마운트·제목 dive→editor 지속·planDot 3모드·오버플로·620px·콘솔0).
+
+### 손대지 말 것 (파트 2 불변식)
+- **App key=`syncVersion` 만** — studioView 를 key 에 넣지 말 것(WRITE↔PLAN 무리마운트가 깨진다). 반영·버리기·최신화 remount 는 이 축 하나.
+- **제목 App 단일 소유** — App `workTitle` state + `handleTitleChange`(즉시 saveProject). StoryXDesk 는 `title` prop → `useEffect` 로 내부 `project.title` 동기화만(자체 편집 input 없음). 이 동기화를 지우면 StoryXDesk 의 saveProject(부분 갱신)가 옛 제목으로 **clobber** 한다.
+- **track 양방향 동기화** — App `studioView`(prop)→StoryXDesk `switchToTrack` effect, StoryXDesk 내부 `setActiveTrack`(⌘K·액션 점프)→`onStudioViewChange` 역보고 effect. 한쪽만 남기면 내부 네비게이션 시 셸 토글이 stale 해진다. 수렴 검증됨(무한 루프 없음).
+- **planDot = `bibleAlert>0`** — StoryXDesk `onBibleAlertChange(count)` 가 소스. planBadge(숫자)는 셸에서 안 씀(dot 로 축소, 사용자 승인). PLAN 하위 줄 `⚠ 충돌 N` 칩은 같은 숫자원 유지.
+- **StoryXDesk 는 상단 바를 렌더하지 않는다** — `dx-desk-context` 하위 줄(writeContext 회차 픽커·planContext 캐논/충돌 칩)만. wm-bar 는 App 소유(슬라이스 C 불변식을 이 파트가 의도적으로 뒤집음, 되돌린 게 목표).
+
+### ⚠️ 라이브 발견 — FloatingEditor 하드-시딩 회차 크래시 (기존 잠복, 내 변경 무관)
+- 손수 localStorage 에 파생 필드 없는 회차를 심고 editor 로 열면 FloatingEditor 에서 크래시(흰 화면). **main 코드로 스왑해 동일 시드 → 동일 크래시 확인**(내 셸 변경과 무관 실증). handoff 2026-07-02 line 73 의 createSeedProject+회차 잠복 버그와 동일 부류. 앱이 produce 한 회차·0회차·정상 경로는 무손상. 라이브 검증은 인물 2·0회차 프로젝트로 진행했다(회차 있는 editor 는 앱 produce 흐름이 필요 = LLM 브리지 서버, 순수 vite dev 엔 없음).
+
+### 다음 한 가지 (차례대로)
+- **머지** — `feat/wm-bar-common-shell`(자율 권한 있음). PLAY 진입 융합 전체(파트 1+2) 완결.
+- 후속 후보 — **홈 랜딩 원페이저**(작성 흐름·서비스 특성 요약, [[landing-onepager-request]], 사용자 요청·별도 조각) · 자유 서술 새 작품→PLAY 온보딩 갈래 · PLAN 안 AI 설계 대화 채널(설계실 2단계) · FloatingEditor 하드-시딩 회차 크래시 방어 · PLAN staged clear+remount 자동 테스트(2026-07-04 MEDIUM 잔여).
+
+---
+
 ## 2026-07-04 (2차) — PLAY 진입 융합 파트 1 done·머지 (PR #21 main). 다음 = 파트 2 wm-bar 공통 셸
 
 > dogfooding 피드백 "PLAY 누르면 너무 다른 얘기부터 한다" 해소 — PLAY 토글이 옛 Dive X 자유 서술 인테이크로 배선돼 있던 것을 **현 작품 인물·최근 회차에서 이어 플레이 시딩**으로 교체. `seedAndEnter` 본편 덮어쓰기 위험 제거. progress.md "PLAY 진입 융합 파트 1" 절이 상세. spec/계획 `docs/superpowers/{specs,plans}/2026-07-04-play-entry-fusion*`.
