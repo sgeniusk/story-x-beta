@@ -121,4 +121,14 @@ describe('DiveDesk', () => {
     );
     expect(html).toContain('의외 전개 후보');
   });
+
+  it('「✦ 전개 후보」 요청 버튼을 컴포저에 렌더한다 (opt-in)', () => {
+    const project = createEmptyProject({ title: 't' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const html = renderToStaticMarkup(
+      createElement(DiveDesk, { session, project, onChange: () => {}, onBack: () => {} })
+    );
+    expect(html).toContain('dx-vs-request');
+    expect(html).toContain('✦ 전개 후보');
+  });
 });

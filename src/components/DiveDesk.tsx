@@ -11,13 +11,18 @@ import {
   buildCondenseTranscript,
   buildRecentDialogue,
   applyCondenseResult,
-  parseSceneSegments
+  parseSceneSegments,
+  buildVsCandidatesInput,
+  buildPlayDirectionSeed
 } from '../lib/diveSession';
 import { validatePlayTurn, deriveDeviationCandidates, buildPromotedFacts, buildRetconUpdates, type PlayTurnVerdict } from '../lib/playRuntimeValidator';
 import { DeviationReview } from './DeviationReview';
 import { requestDiveChat, requestDiveCondense, requestDiveShowrunner, requestDiveConsolidate, type DiveCondensePayload, type ConsolidationFinding } from '../lib/diveClient';
 import { ConsolidationFindings } from './ConsolidationFindings';
 import { DIVE_SEED_CHARACTERS } from '../lib/diveSeedCharacters';
+import { requestVsCandidates } from '../lib/vsCandidatesClient';
+import { VsCandidatePanel } from './VsCandidatePanel';
+import type { VsCandidate } from '../lib/episodeBriefing';
 
 interface DiveDeskProps {
   session: DiveSession;
@@ -106,6 +111,10 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
   const deviations = useMemo(() => deriveDeviationCandidates(session), [session]);
   const [findings, setFindings] = useState<ConsolidationFinding[] | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  // VS 전개 후보 — opt-in 버튼으로만 생성. 기존 res.choices 가벼운 칩과 공존.
+  const [vsCandidates, setVsCandidates] = useState<VsCandidate[]>([]);
+  const [vsBusy, setVsBusy] = useState(false);
+  const [vsReason, setVsReason] = useState<string | null>(null);
 
   async function reviewConsolidation() {
     if (!pending || reviewing) return;
@@ -149,6 +158,31 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
       // fetch 거절(네트워크 오류·JSON 파싱 실패) 시에도 busy 가 고착돼 입력이 얼지 않게 항상 해제.
       setBusy(false);
     }
+  }
+
+  // ✦ 전개 후보 — 명시 버튼 opt-in. 라이브 상태를 VS 입력으로 조립해 후보 다발을 1회 생성. 실패는 안내로 강등.
+  async function requestCandidates() {
+    if (busy || vsBusy || pending !== null) return;
+    setVsBusy(true);
+    setVsReason(null);
+    try {
+      const result = await requestVsCandidates(buildVsCandidatesInput(session, project));
+      if (result.ok && result.candidates) {
+        setVsCandidates(result.candidates);
+      } else {
+        setVsCandidates([]);
+        setVsReason(result.reason ?? '전개 후보를 가져오지 못했습니다.');
+      }
+    } finally {
+      setVsBusy(false);
+    }
+  }
+
+  // 후보 선택 → 괄호 연출로 굴림(⏭전개과 같은 계열). 패널은 닫는다.
+  function pickCandidate(direction: string) {
+    setVsCandidates([]);
+    setVsReason(null);
+    send(buildPlayDirectionSeed(direction));
   }
 
   async function condense() {
@@ -401,6 +435,14 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
         </button>
       )}
 
+      {vsBusy && <div className="dx-status">전개 후보를 펼치는 중… 잠시만요.</div>}
+      {vsReason && <div className="dx-vs-note">{vsReason}</div>}
+      <VsCandidatePanel
+        candidates={vsCandidates}
+        onPick={pickCandidate}
+        onDismiss={() => { setVsCandidates([]); setVsReason(null); }}
+      />
+
       <div className="dx-composer">
         <textarea
           className="dx-input"
@@ -425,6 +467,9 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
         </button>
         <button className="dx-escalate" onClick={() => send('(이야기를 다음 국면으로 크게 밀어붙인다.)')} disabled={busy || pending !== null}>
           ⏭ 전개
+        </button>
+        <button className="dx-vs-request" onClick={requestCandidates} disabled={busy || vsBusy || pending !== null}>
+          ✦ 전개 후보
         </button>
       </div>
     </div>
