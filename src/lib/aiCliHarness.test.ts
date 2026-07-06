@@ -5,6 +5,7 @@ import {
   buildAiCliRunPlan,
   buildMockAiCliReviewResult,
   buildProviderCommand,
+  getAgentLabel,
   getProviderRuntimeChecks,
   normalizeProviderReviewOutput
 } from './aiCliHarness';
@@ -155,5 +156,10 @@ describe('Story X AI CLI harness', () => {
     expect(normalized.agentReports[0].issues.length).toBeGreaterThan(0);
     expect(normalized.memoryCandidates).toEqual([]);
     expect(normalized.nextActions[0]).toContain('구조화되지 않은 provider 출력');
+  });
+
+  it('검토망 합류 에이전트의 한글 라벨이 등록돼 있다 — raw id UI 노출 방지 (흡인력 게이트 검토 발견)', () => {
+    expect(getAgentLabel('critic-reviewer')).toBe('평론가');
+    expect(getAgentLabel('essay-curator')).toBe('에세이 큐레이터');
   });
 });
