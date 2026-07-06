@@ -171,6 +171,9 @@ export default defineConfig({
       String(input.medium ?? 'novel'),
       '--context',
       String(input.context ?? ''),
+      ...(input.payoffStatus != null
+        ? ['--payoff-status', JSON.stringify(input.payoffStatus)]
+        : []),
       ...(input.contractStatus != null
         ? ['--contract-status', JSON.stringify(input.contractStatus)]
         : [])

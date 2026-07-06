@@ -28,3 +28,20 @@ describe('requestAgentReview — contractStatus 전달 (A-5 헌장 예산 배선
     expect(captured.contractStatus).toBeUndefined();
   });
 });
+
+describe('requestAgentReview — payoffStatus 전달 (흡인력 게이트 2026-07-06)', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('payoffStatus(paidPromises 포함)를 /api/review-agent 요청 body 로 전달한다', async () => {
+    let captured: Record<string, unknown> = {};
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      captured = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ status: 'complete', verdict: 'pass', note: '', evidence: [], strengths: [], issues: [], memoryCandidates: [] }), { status: 200 });
+    }));
+    await requestAgentReview({
+      agentId: 'critic-reviewer', target: '원고', medium: 'novel', context: '',
+      payoffStatus: { isStalled: false, deferredStreak: 0, openPromises: 0, paidPromises: 3 }
+    });
+    expect(captured.payoffStatus).toEqual({ isStalled: false, deferredStreak: 0, openPromises: 0, paidPromises: 3 });
+  });
+});

@@ -183,6 +183,20 @@ if (command === 'review-agent') {
   const medium = readFlag(args, '--medium', 'novel');
   const context = readFlag(args, '--context', '');
   const persona = loadAgentPersona(agentId);
+  // 정체·흡인력 측정 신호 — 있으면 검토 프롬프트에 주입(흡인력 게이트 2026-07-06). 오형식은 무시.
+  const payoffStatusRaw = readFlag(args, '--payoff-status', '');
+  let payoffStatus;
+  try {
+    const parsedPayoff = payoffStatusRaw ? JSON.parse(payoffStatusRaw) : null;
+    if (parsedPayoff && typeof parsedPayoff.deferredStreak === 'number') {
+      payoffStatus = {
+        isStalled: Boolean(parsedPayoff.isStalled),
+        deferredStreak: parsedPayoff.deferredStreak,
+        openPromises: typeof parsedPayoff.openPromises === 'number' ? parsedPayoff.openPromises : 0,
+        paidPromises: typeof parsedPayoff.paidPromises === 'number' ? parsedPayoff.paidPromises : 0
+      };
+    }
+  } catch { /* 오형식 플래그는 무시 */ }
   // 작품 헌장 예산 — 있으면 길 잃음 점검·예산 초과 block 을 검토 프롬프트에 주입(A-5). 오형식은 무시.
   const contractStatusRaw = readFlag(args, '--contract-status', '');
   let contractStatus;
@@ -197,7 +211,7 @@ if (command === 'review-agent') {
       };
     }
   } catch { /* 오형식 플래그는 무시 */ }
-  const prompt = buildAgentReviewPrompt({ agentId, persona, target, medium, context, contractStatus });
+  const prompt = buildAgentReviewPrompt({ agentId, persona, target, medium, context, payoffStatus, contractStatus });
 
   if (provider === 'mock') {
     printJson({
