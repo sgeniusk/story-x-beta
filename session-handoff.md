@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-07-06 — PLAY 전개 후보(VS) done (흡인력 축 첫 구현, 브랜치 `play-vs-candidates` 미머지)
+
+> 흡인력 딥리서치 결론(서프라이즈=모델·프롬프트 아니라 구조로 넘긴다·Verbalized Sampling)을 PLAY 이어 굴리기에 적용한 **첫 조각**([[two-axis-compellingness]]). DiveDesk 「✦ 전개 후보」 opt-in 버튼→다음 전개 후보 3~4개를 의외도 게이지로 펼쳐 사람이 고른다. spec `docs/storyx-play-vs-candidates-plan.md`. progress.md "PLAY 전개 후보(VS)" 절 상세. 커밋 `ca27167`(spec)·`6c5b049`(구현).
+
+### 한 것
+- 데이터 계층(`requestVsCandidates`·`/api/vs-candidates`)은 WRITE와 공유·재사용. `episodeBriefing` `collectUnpaidPromises` export+`rarityToBars` · `diveSession` `buildVsCandidatesInput`+`buildPlayDirectionSeed`(순수) · `VsCandidatePanel.tsx` 신규 · `DiveDesk` 배선 · `.dx-vs-*` CSS. TDD 4단 red→green. 804 테스트·build·init.sh·tsc 클린. **라이브 전체 해피패스 통과** — 버튼→후보 4개→게이지 의외도 정합→radical 선택→`(전개 —…)` 괄호 굴림→dive-chat 이어감·콘솔0.
+
+### 손대지 말 것 (불변식)
+- **opt-in 전용** — VS는 「✦ 전개 후보」 버튼 클릭 시에만 생성. 자동/매 턴 금지(비용·player-first). 기존 `res.choices` 가벼운 칩과 **공존**(대체 아님).
+- **확률 숫자 비노출** — 게이지 3칸 강도만(`rarityToBars`). 색은 WRITE `fc-vs` 언어(회색·라임·로즈) 미러링 — 갈리면 혼란.
+- **선택 = 기존 send 괄호 연출 재사용** — `pickCandidate`→`send(buildPlayDirectionSeed(direction))`=`'(전개 —…)'`. ⏭전개과 같은 계열, 신규 굴림 경로 만들지 말 것.
+- **데이터 계층 무접촉** — `requestVsCandidates`·`/api/vs-candidates`·`normalizeVsCandidates`는 WRITE와 공유. PLAY는 입력 조립(`buildVsCandidatesInput`)만 다름(recentSummary=라이브 대화+장면).
+
+### 다음 한 가지
+- **머지** — 브랜치 `play-vs-candidates`(커밋 `ca27167`·`6c5b049`). 사용자 승인 시 PR/머지. 머지 후 main init.sh 재확인.
+- **후속(사용자 승인된 나머지, 1순위)** — 흡인력 게이트 = `critic-reviewer` 를 긴장·서프라이즈 기준 게이트로 승격(Re3 재순위 흡인력 기준). 큰 조각·새 세션 권장. 근거 = 흡인력 딥리서치 리포트.
+- 그 외 — `canonSuspect` 배지 실사례 확인 · VS 비용/포인트 연동 · 자유 서술 새 작품→PLAY 온보딩 · PLAN AI 설계 채널.
+
+### 검증 팁
+- preview_click 이 React onClick 을 안 태우면 `preview_eval` 로 `dispatchEvent(new MouseEvent('click',{bubbles:true}))` 우회(이 세션 실증) · 브레인스토밍 목업 서버는 30분 유휴 자동 종료(회수 아님) — 필요 시 `.claude/plugins/.../brainstorming/scripts/server.cjs` 를 `BRAINSTORM_DIR` 지정해 `run_in_background` 로 재기동.
+
+---
+
 ## 2026-07-05 (2차) — 홈 랜딩 "작성 여정" 원페이저 done·머지 (PR #24 main `c18f878`)
 
 > 랜딩 히어로 다음에 4단계 흐름 섹션 추가 — 세 방식(PLAY/WRITE/PLAN)이 **하나의 캐논을 두 방향(안 무너진다·끌어당긴다)으로 조각**한다는 서사. dogfooding 진입 혼란 해소([[landing-onepager-request]]) + 흡인력 축 명시(King 논지). progress.md "작성 여정 원페이저" 절이 상세. spec/계획 `docs/superpowers/{specs,plans}/2026-07-05-landing-flow-onepager*`.

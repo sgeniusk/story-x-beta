@@ -1,10 +1,18 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-05 · Branch: `main` (**홈 랜딩 "작성 여정" 원페이저 `done` — PR #24 main 머지 `c18f878`. 히어로 다음 4단계 흐름(작가진 진입→세 방식→하나의 캐논 두 축→출간). 두 축 프레임(안 무너진다=일관성·끌어당긴다=흡인력) 랜딩 언어화. 근거 = 흡인력 딥리서치 `docs/research/2026-07-05-compellingness-human-ai.md`. spec/계획 `docs/superpowers/{specs,plans}/2026-07-05-landing-flow-onepager*`. 다음 = 후속 스코핑(흡인력 게이트·VS UX, 새 세션).**)
+> Last Updated: 2026-07-06 · Branch: `play-vs-candidates` (**PLAY 전개 후보(VS) `done`(흡인력 축 첫 구현, 미머지) — DiveDesk 「✦ 전개 후보」 opt-in 게이지로 서프라이즈 주입(Verbalized Sampling). 커밋 `ca27167`·`6c5b049`. 라이브 해피패스 통과. 다음 = 머지 또는 흡인력 게이트(critic-reviewer 승격, 승인된 나머지 후속). · 이전: 홈 랜딩 "작성 여정" 원페이저 `done` — PR #24 main 머지 `c18f878`. 근거 = 흡인력 딥리서치 `docs/research/2026-07-05-compellingness-human-ai.md`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 최근 검증 (2026-07-05)
-`npm test` **792 통과**(80 파일, landingFlow 4 신규) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 (전부 main). **파트 2 wm-bar 공통 셸**은 `feat/wm-bar-common-shell`.
+## 최근 검증 (2026-07-06)
+`npm test` **804 통과**(81 파일, VS 슬라이스 12 신규) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 (전부 main). **파트 2 wm-bar 공통 셸**은 `feat/wm-bar-common-shell`.
+
+## 완료 트랙 — PLAY 전개 후보(VS): opt-in 게이지 서프라이즈 주입 (`done` · 2026-07-06, 브랜치 `play-vs-candidates` 미머지)
+
+흡인력 축 **첫 구현**([[two-axis-compellingness]]) — 딥리서치 결론(서프라이즈는 모델·프롬프트가 아니라 구조로 넘긴다·Verbalized Sampling)을 PLAY 이어 굴리기에 적용. DiveDesk 컴포저 「✦ 전개 후보」 **opt-in 버튼**으로 다음 전개 후보 3~4개를 의외도 게이지와 함께 펼쳐 사람이 긴장·의외를 고른다. spec `docs/storyx-play-vs-candidates-plan.md`. brainstorming(visual companion 목업)→spec→TDD 4단→라이브. 커밋 `ca27167`(spec)·`6c5b049`(구현).
+- **구현** — 데이터 계층은 WRITE와 공유하는 `requestVsCandidates`·`/api/vs-candidates` 재사용(무접촉). `episodeBriefing` `collectUnpaidPromises` export 승격 + `rarityToBars`(common 1·surprising 2·radical 3) 신규 · `diveSession` `buildVsCandidatesInput`(PLAY 상태→입력, **recentSummary만 라이브 대화(buildRecentDialogue)+장면**)·`buildPlayDirectionSeed`('(전개 — …)' 괄호 연출) 신규 순수 함수 · `VsCandidatePanel.tsx` 신규 프레젠테이션(게이지 3칸·「캐논 확인」 배지) · `DiveDesk` 배선(vs 상태 3개·`requestCandidates`·`pickCandidate`→기존 `send` 괄호 패턴) · `.dx-vs-*` CSS(색은 WRITE `fc-vs` 언어 미러링 — 회색·라임·로즈).
+- **불변식** — VS는 opt-in 버튼으로만 생성(자동/매 턴 아님) · 기존 `res.choices` 가벼운 칩과 **공존**(대체 아님) · 확률 숫자 **비노출**(게이지 강도만) · 선택은 기존 `send()` 괄호 연출 재사용(신규 굴림 경로 금지) · 데이터 계층 무접촉(WRITE와 공유, PLAY는 입력 조립만 다름).
+- **검증** — `npm test` 804 녹색(81 파일, VS 12 신규: rarityToBars 3·collectUnpaidPromises 1·buildPlayDirectionSeed 1·buildVsCandidatesInput 1·VsCandidatePanel 5·DiveDesk 버튼 1)·build·init.sh·tsc 클린. **라이브(preview 5175, "철거 전야의 이름" 프로젝트) 전체 해피패스 통과** — ① PLAY→DiveDesk 컴포저 「✦ 전개 후보」 라임 버튼 렌더(레이아웃 무붕괴) ② 클릭→로딩→`POST /api/vs-candidates`→실제 후보 **4개** 렌더 ③ 게이지 의외도 정확 인코딩(1칸 회색 common·2칸 라임 surprising·3칸 빨강 radical, 실제 후보 텍스트가 의외도와 정합 — radical="죽은 동생을 따라가 신분·이름 버림") ④ radical 후보 선택→패널 닫힘·`(전개 — …)` 괄호 연출 사용자 버블→dive-chat 이어감 ⑤ 콘솔 에러 0.
+- **범위 밖(후속)** — **흡인력 게이트**(critic-reviewer 를 Re3 재순위 흡인력 게이트로 승격, 사용자 승인된 나머지 후속·새 세션 권장) · `canonSuspect` 배지 실사례 확인(이번 후보엔 없었음) · VS 후보 요청 비용/포인트 연동.
 
 ## 완료 트랙 — 홈 랜딩 "작성 여정" 원페이저 (`done` · 2026-07-05, **PR #24 main 머지** `c18f878`)
 
