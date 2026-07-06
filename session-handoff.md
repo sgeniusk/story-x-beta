@@ -19,7 +19,8 @@
 
 ### 다음 한 가지
 - ~~머지~~ — **PR #25 main 머지 완료**(`238dda1`, 사용자 승인 "PR 생성+머지"). 머지 후 main init.sh 녹색 재확인·브랜치 삭제 완료. 이 PR push 에 이전 세션 로컬 전용 커밋 4개(VS 슬라이스 등)도 함께 origin 에 올라감.
-- 후속 후보 — 실작품 dogfooding(연재 전체 검토에서 평론가 판정 체감) · 온보딩 1화 자동 검토(`runAiReview`)에 critic 미포함(검토 INFO) · VS 후보 흡인력 재순위 · canonSuspect 배지 실사례 · PLAN AI 설계 채널.
+- ~~실작품 dogfooding~~ — **완료(머지 직후 같은 세션)**. 헌터물 6화 백업 주입→6인 전체 검토 실 codex(6/6 성공, 병렬 44~60초). 평론가가 실회차에 86점 pass + 두 audit 명시 실행 + 약점 3·대안 해석 2, 타 에이전트와 시선 중복 없음. progress.md 절 상세.
+- 후속 후보 — 온보딩 1화 자동 검토(`runAiReview`)에 critic 미포함(검토 INFO) · VS 후보 흡인력 재순위 · canonSuspect 배지 실사례 · PLAN AI 설계 채널.
 
 ### 검증 팁
 - 이 세션 permission classifier(claude-opus-4-8) 장기 간헐 장애 — **allowlist 단순 명령(`npm test --`·`bash init.sh`·`git add <파일>`·한 줄 `git commit -m`)은 통과, `&&` 체인·여러 줄 커밋 메시지·Agent 디스패치는 거부**. 명령을 쪼개면 대부분 진행 가능.
