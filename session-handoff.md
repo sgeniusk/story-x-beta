@@ -4,7 +4,7 @@
 
 ---
 
-## 2026-07-06 — PLAY 전개 후보(VS) done (흡인력 축 첫 구현, 브랜치 `play-vs-candidates` 미머지)
+## 2026-07-06 — PLAY 전개 후보(VS) done·머지 (흡인력 축 첫 구현, main 머지 `a33768e` fast-forward)
 
 > 흡인력 딥리서치 결론(서프라이즈=모델·프롬프트 아니라 구조로 넘긴다·Verbalized Sampling)을 PLAY 이어 굴리기에 적용한 **첫 조각**([[two-axis-compellingness]]). DiveDesk 「✦ 전개 후보」 opt-in 버튼→다음 전개 후보 3~4개를 의외도 게이지로 펼쳐 사람이 고른다. spec `docs/storyx-play-vs-candidates-plan.md`. progress.md "PLAY 전개 후보(VS)" 절 상세. 커밋 `ca27167`(spec)·`6c5b049`(구현).
 
@@ -18,7 +18,7 @@
 - **데이터 계층 무접촉** — `requestVsCandidates`·`/api/vs-candidates`·`normalizeVsCandidates`는 WRITE와 공유. PLAY는 입력 조립(`buildVsCandidatesInput`)만 다름(recentSummary=라이브 대화+장면).
 
 ### 다음 한 가지
-- **머지** — 브랜치 `play-vs-candidates`(커밋 `ca27167`·`6c5b049`). 사용자 승인 시 PR/머지. 머지 후 main init.sh 재확인.
+- ~~머지~~ — **main 머지 완료**(`a33768e`, fast-forward, 사용자 승인 "main 로컬 머지"). 머지 후 main init.sh 녹색 재확인·브랜치 삭제 완료.
 - **후속(사용자 승인된 나머지, 1순위)** — 흡인력 게이트 = `critic-reviewer` 를 긴장·서프라이즈 기준 게이트로 승격(Re3 재순위 흡인력 기준). 큰 조각·새 세션 권장. 근거 = 흡인력 딥리서치 리포트.
 - 그 외 — `canonSuspect` 배지 실사례 확인 · VS 비용/포인트 연동 · 자유 서술 새 작품→PLAY 온보딩 · PLAN AI 설계 채널.
 

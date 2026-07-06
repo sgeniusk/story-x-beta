@@ -1,12 +1,12 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-06 · Branch: `play-vs-candidates` (**PLAY 전개 후보(VS) `done`(흡인력 축 첫 구현, 미머지) — DiveDesk 「✦ 전개 후보」 opt-in 게이지로 서프라이즈 주입(Verbalized Sampling). 커밋 `ca27167`·`6c5b049`. 라이브 해피패스 통과. 다음 = 머지 또는 흡인력 게이트(critic-reviewer 승격, 승인된 나머지 후속). · 이전: 홈 랜딩 "작성 여정" 원페이저 `done` — PR #24 main 머지 `c18f878`. 근거 = 흡인력 딥리서치 `docs/research/2026-07-05-compellingness-human-ai.md`.**)
+> Last Updated: 2026-07-06 · Branch: `main` (**PLAY 전개 후보(VS) `done` — main 머지 완료 `a33768e`(fast-forward). DiveDesk 「✦ 전개 후보」 opt-in 게이지로 서프라이즈 주입(Verbalized Sampling, 흡인력 축 첫 구현). 커밋 `ca27167`·`6c5b049`. 라이브 해피패스 통과. 다음 = 흡인력 게이트(critic-reviewer 승격, 승인된 나머지 후속·새 세션). · 이전: 홈 랜딩 "작성 여정" 원페이저 `done` — PR #24 main 머지 `c18f878`. 근거 = 흡인력 딥리서치 `docs/research/2026-07-05-compellingness-human-ai.md`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-06)
 `npm test` **804 통과**(81 파일, VS 슬라이스 12 신규) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 (전부 main). **파트 2 wm-bar 공통 셸**은 `feat/wm-bar-common-shell`.
 
-## 완료 트랙 — PLAY 전개 후보(VS): opt-in 게이지 서프라이즈 주입 (`done` · 2026-07-06, 브랜치 `play-vs-candidates` 미머지)
+## 완료 트랙 — PLAY 전개 후보(VS): opt-in 게이지 서프라이즈 주입 (`done` · 2026-07-06, **main 머지 완료** `a33768e` fast-forward)
 
 흡인력 축 **첫 구현**([[two-axis-compellingness]]) — 딥리서치 결론(서프라이즈는 모델·프롬프트가 아니라 구조로 넘긴다·Verbalized Sampling)을 PLAY 이어 굴리기에 적용. DiveDesk 컴포저 「✦ 전개 후보」 **opt-in 버튼**으로 다음 전개 후보 3~4개를 의외도 게이지와 함께 펼쳐 사람이 긴장·의외를 고른다. spec `docs/storyx-play-vs-candidates-plan.md`. brainstorming(visual companion 목업)→spec→TDD 4단→라이브. 커밋 `ca27167`(spec)·`6c5b049`(구현).
 - **구현** — 데이터 계층은 WRITE와 공유하는 `requestVsCandidates`·`/api/vs-candidates` 재사용(무접촉). `episodeBriefing` `collectUnpaidPromises` export 승격 + `rarityToBars`(common 1·surprising 2·radical 3) 신규 · `diveSession` `buildVsCandidatesInput`(PLAY 상태→입력, **recentSummary만 라이브 대화(buildRecentDialogue)+장면**)·`buildPlayDirectionSeed`('(전개 — …)' 괄호 연출) 신규 순수 함수 · `VsCandidatePanel.tsx` 신규 프레젠테이션(게이지 3칸·「캐논 확인」 배지) · `DiveDesk` 배선(vs 상태 3개·`requestCandidates`·`pickCandidate`→기존 `send` 괄호 패턴) · `.dx-vs-*` CSS(색은 WRITE `fc-vs` 언어 미러링 — 회색·라임·로즈).
