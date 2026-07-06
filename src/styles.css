@@ -528,11 +528,10 @@ body {
 }
 
 /* sx 색 토큰 스코프 — .sx-desk 본체 + .sx-desk 밖에서 sx-* 클래스를 렌더하는 표면들
-   (⌘K 팔레트·스포트라이트 fixed 오버레이, fc 플로팅 dock 패널의 DataReviewRail).
+   (⌘K 팔레트 fixed 오버레이, fc 플로팅 dock 패널의 DataReviewRail).
    스코프 밖이면 색 토큰이 미해석돼 투명 배경·상속 색이 된다. */
 .sx-desk,
 .sx-command-palette-backdrop,
-.sx-spotlight-backdrop,
 .fc-app {
   /* 2026-07-07 핀 완화(사용자 결정) — Linear 다크 리터럴을 버리고 스튜디오 공통
      warm 토큰(--st-*)에 매핑해 .fc-app 셸과의 냉온 이음새를 봉합한다.
@@ -852,112 +851,6 @@ body {
   font-style: normal;
 }
 
-.sx-version-log-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 82;
-  display: grid;
-  place-items: center;
-  padding: var(--sx-space-6);
-  background: rgba(22, 20, 17, 0.24);
-  backdrop-filter: blur(12px);
-}
-
-.sx-version-log-dialog {
-  width: min(760px, 100%);
-  max-height: min(78vh, 720px);
-  overflow: hidden;
-  border: 1px solid rgba(32, 32, 30, 0.12);
-  border-radius: var(--sx-radius-lg);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.64)),
-    var(--sx-card);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 34px 90px rgba(22, 20, 17, 0.28);
-}
-
-.sx-version-log-dialog header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--sx-space-5);
-  padding: 22px 24px 16px;
-  border-bottom: 1px solid var(--sx-line);
-}
-
-.sx-version-log-dialog h2 {
-  margin: 2px 0 5px;
-  color: var(--sx-ink);
-  font-size: clamp(1.55rem, 3vw, 2.1rem);
-  line-height: 1.12;
-}
-
-.sx-version-log-dialog header span,
-.sx-version-log-dialog > p {
-  color: var(--sx-muted);
-  line-height: 1.55;
-}
-
-.sx-version-log-dialog header button {
-  display: inline-grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border: 1px solid var(--sx-line);
-  border-radius: var(--sx-radius-md);
-  background: rgba(255, 255, 255, 0.62);
-  color: var(--sx-ink-2);
-}
-
-.sx-version-log-dialog > p {
-  margin: 0;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--sx-line);
-}
-
-.sx-version-log-list {
-  display: grid;
-  max-height: min(52vh, 500px);
-  overflow: auto;
-  gap: var(--sx-space-3);
-  padding: var(--sx-space-4);
-}
-
-.sx-version-log-list article {
-  display: grid;
-  gap: var(--sx-space-2);
-  padding: var(--sx-space-4);
-  border: 1px solid var(--sx-line);
-  border-radius: var(--sx-radius-lg);
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.sx-version-log-list span {
-  color: color-mix(in oklch, var(--sx-accent) 74%, var(--sx-ink));
-  font-size: 0.78rem;
-  font-weight: var(--sx-weight-display);
-}
-
-.sx-version-log-list h3 {
-  margin: 0;
-  color: var(--sx-ink);
-  font-size: 1.08rem;
-}
-
-.sx-version-log-list small,
-.sx-version-log-list em {
-  color: var(--sx-muted);
-  font-style: normal;
-  line-height: 1.45;
-}
-
-.sx-version-log-list ul {
-  margin: 0;
-  padding-left: 18px;
-  color: var(--sx-ink-2);
-  line-height: 1.55;
-}
 
 @media (max-width: 640px) {
   .sx-command-palette-backdrop {
@@ -3136,137 +3029,8 @@ body {
   box-shadow: 0 0 0 4px color-mix(in oklch, var(--sx-accent) 12%, transparent);
 }
 
-.sx-publishing-index-card {
-  display: grid;
-  gap: var(--sx-space-3);
-}
 
-.sx-publishing-index-card > strong {
-  color: var(--sx-ink);
-  font-size: 1.05rem;
-  line-height: 1.25;
-}
-
-.sx-publishing-index-card p,
-.sx-publishing-index-card small {
-  margin: 0;
-  color: var(--sx-muted);
-  line-height: 1.48;
-}
-
-.sx-publishing-index-card > div:not(.sx-panel-heading) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sx-space-2);
-}
-
-.sx-publishing-index-card > div:not(.sx-panel-heading) span {
-  padding: 6px 9px;
-  border-radius: var(--framer-rounded-pill);
-  background: rgba(244, 222, 238, 0.7);
-  color: var(--sx-ink);
-  font-size: 0.72rem;
-  font-weight: var(--sx-weight-bold);
-}
-
-.sx-publishing-studio {
-  display: grid;
-  gap: var(--sx-space-4);
-}
-
-.sx-publishing-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(230px, 0.34fr);
-  gap: var(--sx-space-5);
-  align-items: end;
-  padding: clamp(22px, 4vw, 44px);
-  border: 1px solid var(--sx-line);
-  border-radius: var(--framer-rounded-xxl);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.48)),
-    linear-gradient(155deg, rgba(217, 235, 228, 0.78), rgba(244, 222, 238, 0.56));
-  box-shadow: var(--sx-shadow);
-}
-
-.sx-publishing-hero h2 {
-  margin: 6px 0 0;
-  color: var(--sx-ink);
-  font-size: clamp(2rem, 4vw, 4.3rem);
-  font-weight: var(--sx-weight-semibold);
-  line-height: 1.08;
-  letter-spacing: 0;
-}
-
-.sx-publishing-hero p {
-  max-width: 760px;
-  margin: 12px 0 0;
-  color: var(--sx-ink-2);
-  font-size: 1rem;
-  line-height: 1.62;
-}
-
-.sx-publishing-hero aside {
-  display: grid;
-  gap: var(--sx-space-2);
-  min-width: 0;
-  padding: var(--sx-space-4);
-  border: 1px solid var(--sx-line);
-  border-radius: var(--framer-rounded-xl);
-  background: rgba(255, 255, 255, 0.62);
-}
-
-.sx-publishing-hero aside span {
-  color: var(--sx-muted);
-  font-size: 0.78rem;
-  font-weight: var(--sx-weight-bold);
-}
-
-.sx-publishing-hero aside strong {
-  color: var(--sx-ink);
-  font-size: 1.08rem;
-}
-
-.sx-publishing-hero aside small {
-  color: var(--sx-muted);
-  line-height: 1.4;
-}
-
-.sx-publishing-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--sx-space-4);
-}
-
-.sx-publishing-grid article {
-  display: grid;
-  gap: var(--sx-space-3);
-  min-width: 0;
-  padding: var(--sx-space-5);
-  border: 1px solid var(--sx-line);
-  border-radius: var(--framer-rounded-xl);
-  background: var(--sx-card);
-  box-shadow: var(--sx-shadow);
-}
-
-.sx-publishing-grid article.is-wide {
-  grid-column: 1 / -1;
-}
-
-.sx-publishing-grid article > span {
-  color: var(--sx-accent);
-  font-size: 0.74rem;
-  font-weight: var(--sx-weight-bold);
-}
-
-.sx-publishing-grid h3 {
-  margin: -4px 0 0;
-  color: var(--sx-ink);
-  font-size: 1.34rem;
-  line-height: 1.2;
-}
-
-.sx-publishing-grid p,
-.sx-publishing-grid li,
+/* release 스냅샷 계열 — editorFocusLayout.test 핀 대상(죽은 publishing 세대 정리에서 보존, 4b에서 계약 재협상) */
 .sx-release-checklist small {
   color: var(--sx-muted);
   line-height: 1.55;
@@ -3321,32 +3085,6 @@ body {
 .sx-release-checklist > div.is-review .sx-release-gate-state {
   background: rgba(176, 88, 159, 0.14);
   color: #80316f;
-}
-
-.sx-publishing-grid ul {
-  display: grid;
-  gap: var(--sx-space-2);
-  margin: 0;
-  padding-left: 18px;
-}
-
-.sx-publishing-package-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sx-space-2);
-}
-
-.sx-publishing-package-row em {
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 0 11px;
-  border-radius: var(--framer-rounded-pill);
-  background: rgba(244, 222, 238, 0.72);
-  color: var(--sx-ink);
-  font-size: 0.82rem;
-  font-style: normal;
-  font-weight: var(--sx-weight-bold);
 }
 
 .sx-release-lock-panel {
@@ -5580,8 +5318,6 @@ body {
   .sx-desk-grid,
   .sx-hero-card,
   .sx-brief-grid,
-  .sx-publishing-hero,
-  .sx-publishing-grid,
   .sx-release-checklist > div,
   .sx-bible-workbench-header,
   .sx-bible-impact-strip,
@@ -6122,19 +5858,6 @@ body {
   --lc-lime-hi: #ecfa44;
   --lc-aether: #5e6ad2;
   --lc-page-max: 1200px;
-
-  /* 레거시 호환 */
-  --mx-deep: var(--lc-pitch);
-  --mx-slate: var(--lc-graphite);
-  --mx-graphite: var(--lc-slate);
-  --mx-lead: var(--lc-charcoal);
-  --mx-blue: var(--lc-lime);
-  --mx-blue-hi: var(--lc-lime-hi);
-  --mx-ghost: var(--lc-aether);
-  --mx-starlight: var(--lc-porcelain);
-  --mx-silver: var(--lc-storm);
-  --mx-line: var(--lc-charcoal);
-  --mx-line-soft: rgba(35, 37, 42, 0.45);
 
   min-height: 100vh;
   display: flex;
@@ -8552,7 +8275,7 @@ body {
  *
  * - 새 토큰: --sx-paper-3, --sx-line-hair, --sx-faintest, --sx-faintest2
  * - 새 컴포넌트 셀렉터: .sx-margin-col, .sx-annot, .sx-mention-bar,
- *           .sx-core-strip, .sx-spotlight, .sx-canon-card
+ *           .sx-core-strip, .sx-canon-card (.sx-spotlight 는 2026-07-07 죽은 세대 정리로 삭제)
  * - 기존 셀렉터(.sx-crew-rail, .ex-review-*) 는 컴포넌트 제거와 함께 정리.
  *
  * 모든 셀렉터는 .sx-desk 안에서만 작동. 토큰 hue 보존 — 의미 매핑 그대로.
@@ -8575,140 +8298,6 @@ body {
 
 }
 
-/* ---------------------------------------------------------------------------
- * 7. Spotlight — ⌘K 31명 호출 오버레이
- * --------------------------------------------------------------------------- */
-.sx-spotlight-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(8, 9, 10, 0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  z-index: 1000;
-  display: grid;
-  place-items: start center;
-  padding-top: 14vh;
-  opacity: 1;
-}
-
-.sx-spotlight {
-  width: min(540px, 92vw);
-  background: var(--sx-paper-2);
-  border: 1px solid var(--sx-line);
-  border-radius: var(--sx-radius-lg);
-  box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.8);
-  overflow: hidden;
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.18s ease-out, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.sx-spotlight-backdrop.is-entering .sx-spotlight {
-  opacity: 0;
-  transform: translateY(-8px) scale(0.985);
-}
-
-.sx-spotlight__search {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--sx-line-hair);
-}
-.sx-spotlight__search input {
-  flex: 1;
-  background: transparent;
-  border: 0;
-  font-size: 17px;
-  font-family: var(--font-serif);
-  color: var(--sx-ink);
-  outline: none;
-  letter-spacing: -0.005em;
-}
-.sx-spotlight__search input::placeholder {
-  color: var(--sx-faint);
-  font-style: italic;
-}
-.sx-spotlight__search-kbd {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--sx-faint);
-  padding: 2px 7px;
-  background: var(--sx-paper);
-  border: 1px solid var(--sx-line);
-  border-radius: 4px;
-}
-
-.sx-spotlight__list {
-  max-height: 56vh;
-  overflow-y: auto;
-  padding: 8px 0;
-}
-.sx-spotlight__group-hd {
-  padding: 14px 18px 6px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--sx-faint);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.sx-spotlight__row {
-  display: grid;
-  grid-template-columns: 32px 1fr auto;
-  gap: 12px;
-  align-items: center;
-  padding: 10px 18px;
-  cursor: pointer;
-}
-.sx-spotlight__row:hover,
-.sx-spotlight__row.is-cursor {
-  background: var(--sx-paper-soft);
-}
-.sx-spotlight__row-avatar { width: 28px; height: 28px; border-radius: 7px; }
-.sx-spotlight__row-name {
-  font-size: 13.5px;
-  font-weight: var(--sx-weight-semibold);
-  color: var(--sx-ink);
-  letter-spacing: -0.005em;
-}
-.sx-spotlight__row-role {
-  font-size: 11px;
-  color: var(--sx-muted);
-  font-family: var(--font-mono);
-}
-.sx-spotlight__row-group {
-  font-size: 10px;
-  color: var(--sx-faint);
-  font-family: var(--font-mono);
-  padding: 2px 7px;
-  border-radius: var(--sx-radius-pill);
-  background: var(--sx-paper);
-}
-.sx-spotlight__empty {
-  padding: 32px 18px;
-  text-align: center;
-  color: var(--sx-faint);
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 13px;
-}
-.sx-spotlight__footer {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 10px 18px;
-  border-top: 1px solid var(--sx-line-hair);
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--sx-faint);
-}
-.sx-spotlight__footer-key {
-  padding: 1px 6px;
-  background: var(--sx-paper);
-  border: 1px solid var(--sx-line);
-  border-radius: 3px;
-  margin-right: 4px;
-  color: var(--sx-muted);
-}
 
 /* ---------------------------------------------------------------------------
  * 9. Focus mode — "무대 위" 메타포. 양 옆이 접혀 사라짐.
