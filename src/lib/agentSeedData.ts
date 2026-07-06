@@ -62,6 +62,19 @@ export const MEDIUM_REVIEW_SPECIALISTS: Partial<Record<CreativeMedium, Validatio
 // 흡인력 게이트(2026-07-06 spec) — 긴장 축이 서사와 다른 매체는 제외한다.
 const COMPELLINGNESS_EXCLUDED_MEDIA: readonly CreativeMedium[] = ['essay', 'academic'];
 
+// 흡인력 게이트 합류 규칙의 단일 진실원천 — 연재 서사(에세이·학술 제외)면 critic-reviewer 를 마지막에 합류.
+// 마진 검토(getMediumReviewAgentIds)와 scale 자동 검토(aiCliHarness.getReviewAgentIds)가 함께 쓴다.
+export function withCompellingnessReviewer(
+  ids: ValidationAgentId[],
+  medium: CreativeMedium,
+  format?: CreativeFormat
+): ValidationAgentId[] {
+  if (format && isSerialFormat(format) && !COMPELLINGNESS_EXCLUDED_MEDIA.includes(medium) && !ids.includes('critic-reviewer')) {
+    return [...ids, 'critic-reviewer'];
+  }
+  return ids;
+}
+
 // 한 매체의 라이브 검토 작가진 id 목록 — CORE + 매체 specialist(중복 가드). novel·academic 은 CORE 만.
 // format 이 연재형이고 에세이·학술이 아니면 critic-reviewer 를 흡인력 판정자로 마지막에 합류(격리·발견 순서 보존).
 export function getMediumReviewAgentIds(medium: CreativeMedium, format?: CreativeFormat): ValidationAgentId[] {
@@ -72,10 +85,7 @@ export function getMediumReviewAgentIds(medium: CreativeMedium, format?: Creativ
       merged.push(id);
     }
   }
-  if (format && isSerialFormat(format) && !COMPELLINGNESS_EXCLUDED_MEDIA.includes(medium) && !merged.includes('critic-reviewer')) {
-    merged.push('critic-reviewer');
-  }
-  return merged;
+  return withCompellingnessReviewer(merged, medium, format);
 }
 
 export const visualStoryAgentRuns: AgentRun[] = [

@@ -1,5 +1,7 @@
 import { buildMemoryBankContextPacket } from './memoryBank';
 import { getProjectLocalization } from './localization';
+import { withCompellingnessReviewer } from './agentSeedData';
+import type { CreativeFormat, CreativeMedium } from './projectBlueprint';
 import type { AgentId, AgentRun, SeriesProject } from './storyEngine';
 import type { ValidationAgentId } from './agentReviewProcess';
 
@@ -594,9 +596,11 @@ function getMockEvidence(agentId: string) {
   }
 }
 
-// 검토 규모별 에이전트 목록 — 에이전트별 분리 검토에서 이 순서대로 호출한다
-export function getReviewAgentIds(scale: AiCliScale): ValidationAgentId[] {
-  return [...defaultAgentsByScale[scale]];
+// 검토 규모별 에이전트 목록 — 에이전트별 분리 검토에서 이 순서대로 호출한다.
+// medium/format 이 주어지면 연재 서사에 한해 critic-reviewer 를 흡인력 판정자로 합류(흡인력 게이트 후속, 규칙은 agentSeedData 단일 진실원천).
+export function getReviewAgentIds(scale: AiCliScale, medium?: CreativeMedium, format?: CreativeFormat): ValidationAgentId[] {
+  const ids = [...defaultAgentsByScale[scale]];
+  return medium ? withCompellingnessReviewer(ids, medium, format) : ids;
 }
 
 export function getAgentLabel(agentId: string) {

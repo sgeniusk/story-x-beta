@@ -7,6 +7,7 @@ import {
   buildProviderCommand,
   getAgentLabel,
   getProviderRuntimeChecks,
+  getReviewAgentIds,
   normalizeProviderReviewOutput
 } from './aiCliHarness';
 import { createSeedProject } from './storyEngine';
@@ -161,5 +162,31 @@ describe('Story X AI CLI harness', () => {
   it('검토망 합류 에이전트의 한글 라벨이 등록돼 있다 — raw id UI 노출 방지 (흡인력 게이트 검토 발견)', () => {
     expect(getAgentLabel('critic-reviewer')).toBe('평론가');
     expect(getAgentLabel('essay-curator')).toBe('에세이 큐레이터');
+  });
+
+  // 흡인력 게이트 후속 — scale 기반 자동 검토(온보딩 1화·바이블 검토)도 연재 서사면 critic-reviewer 합류.
+  describe('getReviewAgentIds — 연재 서사 흡인력 판정자 합류 (2026-07-07)', () => {
+    it('연재 novel 이면 scale 라인업 뒤에 critic-reviewer 를 합류시킨다', () => {
+      const ids = getReviewAgentIds('standard', 'novel', 'long-novel');
+      expect(ids[ids.length - 1]).toBe('critic-reviewer');
+      expect(ids.length).toBe(6);
+    });
+
+    it('small scale 도 연재면 합류한다 (연재 서사 전 회차 결정 계승)', () => {
+      const ids = getReviewAgentIds('small', 'novel', 'long-novel');
+      expect(ids).toContain('critic-reviewer');
+      expect(ids.length).toBe(4);
+    });
+
+    it('essay·academic·비연재는 합류하지 않는다', () => {
+      expect(getReviewAgentIds('standard', 'essay', 'essay-series')).not.toContain('critic-reviewer');
+      expect(getReviewAgentIds('standard', 'academic', 'long-novel')).not.toContain('critic-reviewer');
+      expect(getReviewAgentIds('standard', 'novel', 'short-novel')).not.toContain('critic-reviewer');
+    });
+
+    it('medium/format 미전달이면 현행 scale 라인업 그대로 (하위호환)', () => {
+      expect(getReviewAgentIds('standard').length).toBe(5);
+      expect(getReviewAgentIds('standard')).not.toContain('critic-reviewer');
+    });
   });
 });

@@ -1786,7 +1786,7 @@ export function StoryXDesk({
       return;
     }
 
-    const agentIds = getReviewAgentIds(reviewScale);
+    const agentIds = getReviewAgentIds(reviewScale, blueprint.medium, blueprint.format);
     const context = contextOverride ?? buildProjectContextDigest(project);
 
     setIsReviewing(true);
