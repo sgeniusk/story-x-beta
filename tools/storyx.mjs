@@ -1333,6 +1333,16 @@ function buildAgentReviewPrompt({ agentId, persona, target, medium, context, pay
         `- [측정] 전제 진척 정체 신호 — 회수 없이 ${payoffStatus.deferredStreak}회차 연속(열린 약속 ${payoffStatus.openPromises}개). criteriaKey: stakes_progression_audit. 이 회차가 행동·대가·전환으로 약속에 다가가는지 특히 엄격히 본다.`
       ]
     : [];
+  // 흡인력 게이트 조기 소진 신호(2026-07-06) — promptBuilders.ts 미러. critic-reviewer 한정, paidPromises>0 오탐 가드.
+  const compellingnessEvidence =
+    agentId === 'critic-reviewer' &&
+    payoffStatus && !payoffStatus.isStalled &&
+    payoffStatus.openPromises === 0 && (payoffStatus.paidPromises ?? 0) > 0 &&
+    contractStatus && !contractStatus.finalStretch
+      ? [
+          `- [측정] 긴장 조기 소진 신호 — 열린 약속 0개인데 잔여 ${contractStatus.remaining}회차. criteriaKey: tension_decay_audit. 이 회차가 새 질문·새 긴장을 장전하는지 특히 엄격히 본다.`
+        ]
+      : [];
   // 작품 헌장 길 잃음 점검 — promptBuilders.ts 미러(A-4).
   const contractChecks = contractStatus
     ? [
@@ -1365,6 +1375,8 @@ function buildAgentReviewPrompt({ agentId, persona, target, medium, context, pay
     '- 연재 장편이라면, 이 회차가 작품의 중심 질문(전제·독자 약속)을 진척시키는지도 본다 — 발견·추론만 쌓고 같은 질문이 여러 회차 제자리면, 인물의 행동·대가·선택 변화로 약속에 다가가지 못한 점을 지적한다.',
     // 정체 측정값이 있으면 결정론적 evidence 로 추가 주입한다 (아크 페이오프 1단계).
     ...payoffEvidence,
+    // 흡인력 게이트 — 조기 소진 측정값(critic-reviewer 한정).
+    ...compellingnessEvidence,
     // 작품 헌장 길 잃음 점검 (A-4).
     ...contractChecks,
     '',
