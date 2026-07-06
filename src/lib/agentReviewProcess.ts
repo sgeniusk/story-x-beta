@@ -305,13 +305,20 @@ export const validationProcesses: AgentValidationProcess[] = [
   {
     agentId: 'critic-reviewer',
     label: '작품성 평론가',
-    agenda: '결말·핵심 결정 장면에서 양가성, 윤리적 비용, 침묵, 모티프 변주, 상징의 층, 내면 모순을 점검합니다 (대중성을 막지 않고 보조).',
-    independentChecks: ['결말에 대안 해석이 1개 이상 가능한가', '핵심 결정의 대안 비용이 명시되는가', '중심 사건의 묘사 직접성이 1~5 중 적절한가', '3회 이상 등장 모티프가 의미 변주되는가'],
+    agenda: '연재 회차의 긴장·서프라이즈 흡인력을 판정하고, 결말·핵심 결정 장면에서 양가성, 윤리적 비용, 침묵, 모티프 변주, 상징의 층, 내면 모순을 점검합니다 (대중성을 막지 않고 보조).',
+    independentChecks: [
+      '이 회차가 긴장을 소진만 하고 재장전하지 않는가 — 열린 질문이 닫힐 때 새 질문이 열리는가',
+      '다음 회차 전개가 이 회차만 읽고 뻔히 예측되는가 — 예측을 배반하되 캐논 안에서 배반하는가',
+      '결말에 대안 해석이 1개 이상 가능한가',
+      '핵심 결정의 대안 비용이 명시되는가',
+      '중심 사건의 묘사 직접성이 1~5 중 적절한가',
+      '3회 이상 등장 모티프가 의미 변주되는가'
+    ],
     evidenceTargets: ['ending', 'decision scene', 'motif ledger', 'symbol layers', 'narrator card'],
     outputFormat: ['통과', '권고', '대안 해석', '윤리 비용 표', '모티프 변주 리포트', '재작성 권고'],
     evolutionMemory: ['작가가 채택한 양가성 패턴', '효과적이었던 침묵 사례', '실패한 모티프 변주'],
-    blockingSignals: ['결말이 한 줄 요약으로 닫힘', '핵심 결정의 대안 비용이 0'],
-    criteriaKeys: ['ambiguity_audit', 'ethical_pressure_test', 'silence_audit']
+    blockingSignals: ['결말이 한 줄 요약으로 닫힘', '핵심 결정의 대안 비용이 0', '남은 회차가 많은데 열린 긴장이 0'],
+    criteriaKeys: ['ambiguity_audit', 'ethical_pressure_test', 'silence_audit', 'tension_decay_audit', 'predictability_audit']
   },
   {
     agentId: 'essay-curator',
