@@ -22,7 +22,7 @@ A unit of work is done only when all of the following hold.
 - `npm run build` — `tsc --noEmit && vite build` succeeds.
 - The active feature in `progress.md` is updated with evidence (commit SHA, file paths, capture path).
 - New generation behavior was preceded by a test update in `src/lib/storyEngine.test.ts`.
-- Linear "Midnight Command Center" dark tokens are preserved (`--lc-*` / `--nx-*` / `--sx-*` values intact).
+- Design token discipline — landing `--lc-*` (Linear dark) and bridge `--nx-*` (light) stay as-is; the studio (shell·PLAY·WRITE·PLAN) sources values from the global warm `--st-*` tokens, and `--sx-*` maps onto them (2026-07-07 pin relaxation, user decision). New transitions/animations use `--st-dur-*`/`--st-ease` only.
 - `session-handoff.md` gets a fresh entry at the top before the session ends.
 
 ## Stay in Scope · Completion Gate
