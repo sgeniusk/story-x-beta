@@ -17,6 +17,18 @@ describe('WorkspaceModeBar', () => {
     expect(html.match(/wm-btn is-active/g) ?? []).toHaveLength(1);
   });
 
+  it('모드 버튼에 aria-pressed 로 활성 상태를 노출한다 (디자인 정비 슬라이스 1)', () => {
+    const html = renderToStaticMarkup(
+      createElement(WorkspaceModeBar, { mode: 'plan' as const, onSelect: () => {}, workTitle: 't' })
+    );
+    expect(html.match(/aria-pressed="true"/g) ?? []).toHaveLength(1);
+    expect(html.match(/aria-pressed="false"/g) ?? []).toHaveLength(2);
+    expect(html).toMatch(/data-mode="plan"[^>]*aria-pressed="true"|aria-pressed="true"[^>]*data-mode="plan"/);
+    // 상호배타 그룹 시맨틱 — 토글 컨테이너가 그룹으로 노출된다
+    expect(html).toContain('role="group"');
+    expect(html).toContain('aria-label="작업 모드"');
+  });
+
   it('rightSlot 을 상단 바 안에 렌더한다(싱크 콘솔 통합)', () => {
     const html = renderToStaticMarkup(
       createElement(WorkspaceModeBar, {

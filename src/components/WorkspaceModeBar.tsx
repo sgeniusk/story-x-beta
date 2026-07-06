@@ -38,12 +38,13 @@ export function WorkspaceModeBar({
     <div className="wm-bar">
       {titleSlot ?? (workTitle ? <span className="wm-title">{workTitle}</span> : null)}
       {contextSlot}
-      <div className="wm-toggle">
+      <div className="wm-toggle" role="group" aria-label="작업 모드">
         {MODES.map((m) => (
           <button
             key={m.id}
             data-mode={m.id}
             className={`wm-btn${mode === m.id ? ' is-active' : ''}`}
+            aria-pressed={mode === m.id}
             onClick={() => onSelect(m.id)}
           >
             {m.icon} {m.label}
