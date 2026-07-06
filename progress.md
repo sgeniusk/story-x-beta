@@ -1,10 +1,18 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-07 · Branch: `main` (**디자인 정비 슬라이스 3 `done` — PR #27 main 머지 `cf5657f`, 머지 후 main init.sh 녹색 재확인. sx 토큰 핀 완화(사용자 결정 "핀 완화 해")로 PLAN 내용물을 `--st-*` warm에 매핑, 흰 베니어 제거, ⌘K 팔레트 토큰 스코프 잠복 버그 수리. 적대적 검토 3렌즈 발견 15건 중 11건 반영. · 이전: 슬라이스 1+2 PR #26 `eec9023` · 흡인력 게이트 PR #25.**)
+> Last Updated: 2026-07-07 · Branch: `main` (**디자인 정비 슬라이스 4a `done` — PR #28 main 머지 `96cdb9b`, 머지 후 main init.sh 녹색 재확인. 죽은 라이트 세대 정리(고아 4파일·죽은 CSS 651줄, 렌더 무변경) — 적대적 검토 3렌즈 발견 0(전 렌즈 반증 실패). 디자인 정비 1~4a 완결. · 이전: 슬라이스 3 PR #27 `cf5657f` · 1+2 PR #26 `eec9023`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 최근 검증 (2026-07-07 디자인 정비 슬라이스 3 후)
-`bash init.sh` 통과 — `npm test` **830 통과**(82 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 · 파트 2 PR #23 · 랜딩 원페이저 PR #24 · PLAY 전개 후보(VS) `a33768e` · 흡인력 게이트 PR #25 · 디자인 정비 슬라이스 1+2 PR #26 · **슬라이스 3(핀 완화) PR #27** (전부 main).
+## 최근 검증 (2026-07-07 디자인 정비 슬라이스 4a 후)
+`bash init.sh` 통과 — `npm test` **830 통과**(82 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 · 파트 2 PR #23 · 랜딩 원페이저 PR #24 · PLAY 전개 후보(VS) `a33768e` · 흡인력 게이트 PR #25 · 디자인 정비 슬라이스 1+2 PR #26 · 슬라이스 3(핀 완화) PR #27 · **슬라이스 4a(죽은 세대 정리) PR #28** (전부 main).
+
+## 완료 트랙 — 디자인 정비 슬라이스 4a: 죽은 라이트 세대 정리 (`done` · 2026-07-07, **PR #28 main 머지** `96cdb9b`)
+
+슬라이스 1~3 적대적 검토 렌즈들이 식별한 죽은 라이트 세대 잔재를 걷어낸 **렌더 무변경 삭제**(-651줄, 미니파이 CSS -7.6KB). spec `docs/superpowers/specs/2026-07-07-dead-lighterageneration-cleanup-design.md`.
+- **삭제** — 고아 4파일(Spotlight[⌘K는 CommandPalette 담당]·PixelAvatar[유일 소비자 Spotlight]·PublishingIndexCard[PR #18 고아]·**studioConstants**[옛 Linear 팔레트 지뢰 — 되살려 배선 시 sx→st 매핑 무음 우회]) · `.sx-spotlight-*`·`.sx-version-log-*`·`.sx-publishing-*` CSS · sx 토큰 스코프 spotlight 항목 · `--mx-*` 별칭 11줄(소비자 0).
+- **테스트 핀 보존** — editorFocusLayout 핀 대상(`.sx-release-checklist`·`gate-state`·`platform-proof-card`)은 publishing 범위에서 분리 보존(4b 계약 재협상 몫). 작업 중 sed off-by-one 2건(`.sx-brief-grid` media 항목·release 계열) 발생→즉시 복원, 검증 렌즈가 main과 축어 동일 확인.
+- **검증** — init.sh 녹색 · **적대적 검토 3렌즈(도달성·계약·렌더) 발견 0, 전 렌즈 반증 실패** — 동적 참조·tools/스크립트·부분 문자열 전수 0, 미니파이 CSS 룰 단위 diff 순수 삭제 56룰뿐, 중괄호 균형·경고 0 · 라이브 WRITE/PLAN 렌더·콘솔 0.
+- **4b 잔여(별도 조각)** — editorFocusLayout.test 계약에 물린 desk-grid 세대(`.sx-workbench`·`.sx-creative-stage`·`.ex-toolstrip` 등 ex-* 다수) — 테스트 계약 재협상 필요.
 
 ## 완료 트랙 — 디자인 정비 슬라이스 3: PLAN 이음새 봉합·sx 핀 완화 (`done` · 2026-07-07, **PR #27 main 머지** `cf5657f`)
 

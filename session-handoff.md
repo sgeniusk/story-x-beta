@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-07-07 (4차) — 디자인 정비 슬라이스 4a done·머지 (죽은 라이트 세대 정리, PR #28 main `96cdb9b`) — **디자인 정비 1~4a 완결**
+
+> 렌더 무변경 삭제 슬라이스(-651줄). progress.md "슬라이스 4a" 절 상세. 이로써 이 세션의 디자인 정비 아크(검토→슬라이스 1+2 PR #26→3 PR #27→4a PR #28)가 완결.
+
+### 한 것
+- 고아 4파일(Spotlight·PixelAvatar·PublishingIndexCard·studioConstants)·죽은 CSS(spotlight/version-log/publishing/--mx-) 삭제. 테스트 핀 대상(release 계열)은 분리 보존. **적대적 검토 3렌즈 발견 0(전 렌즈 반증 실패)** — 미니파이 CSS 룰 단위 diff까지 순수 삭제 확인. 라이브 스모크·init.sh 녹색.
+
+### 손대지 말 것 (불변식)
+- **release 계열 CSS(`.sx-release-checklist`·`gate-state`·`lock-panel`·`.sx-platform-proof-card`)는 죽었지만 보존** — editorFocusLayout.test 핀. 지우려면 4b에서 테스트 계약 재협상과 함께.
+- **sed 범위 삭제 주의 선례** — 이 슬라이스에서 off-by-one 2건(brief-grid·release 계열)이 실제 발생, 테스트+검증 렌즈가 잡았다. 큰 CSS 범위 삭제는 반드시 접합부 실측 + 핀 테스트 즉시 실행.
+
+### 다음 한 가지
+- **디자인 정비는 완결** — 남은 4b(desk-grid 세대 + editorFocusLayout 계약 재협상)는 급하지 않은 별도 조각.
+- **다음 세션 권장 = 기존 대기열 1순위 "VS 후보 흡인력 재순위"**(`docs/handoff/2026-07-07-next-session-prompt.md` ① — brainstorming 필수·큰 조각·신선한 세션). 그 외 ② canonSuspect 배지 실사례 ③ PLAN AI 설계 채널 대기. ④ 변경 검토 요청 도달성은 이 세션에서 "도달 가능" 확인으로 사실상 해소.
+
+---
+
 ## 2026-07-07 (3차) — 디자인 정비 슬라이스 3 done·머지 (sx 핀 완화·PLAN 이음새 봉합·⌘K 팔레트 수리, PR #27 main `cf5657f`)
 
 > 사용자 결정 "핀 완화 해" → `.sx-desk` Linear 리터럴을 전역 `--st-*` warm에 매핑. progress.md "슬라이스 3" 절 상세.
