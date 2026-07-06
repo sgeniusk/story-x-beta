@@ -23,8 +23,8 @@ describe('Story X focused editor layout', () => {
     // P1 — 편집 트랙은 얇은 툴스트립 1행 + 원고가 채우는 1행
     expect(css).toContain('grid-template-rows: auto minmax(0, 1fr)');
     expect(css).toContain('height: 100%');
-    // Linear 다크 매핑 — pitch black 캔버스 토큰
-    expect(css).toContain('--sx-paper: #08090a');
+    // 핀 완화(2026-07-07) — 캔버스 토큰은 스튜디오 공통 warm --st-* 매핑
+    expect(css).toContain('--sx-paper: var(--st-bg)');
     expect(css).toContain('.sx-workbench {\n    order: 1;');
   });
 
@@ -40,7 +40,7 @@ describe('Story X focused editor layout', () => {
     expect(desk).toContain('className="dm-save"');
     expect(desk).not.toContain('AI 작가진과 함께, 흔들림 없는 세계관을 만듭니다.');
     expect(desk).not.toContain('<AlphaSelfCheckCard alphaReport={alphaReport} />');
-    expect(css).toContain('--sx-ink-2: rgba(247, 248, 248, 0.82)');
+    expect(css).toContain('--sx-ink-2: color-mix(in oklch, var(--st-ink) 82%, transparent)');
     // 원고칸은 산문만 — beat 한줄 요약은 좌측 구조 트리에서만 본다
     expect(desk).not.toContain('sx-outline-strip');
     expect(desk).not.toContain('sx-writing-hook');

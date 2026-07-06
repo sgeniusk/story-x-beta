@@ -20,14 +20,16 @@ describe('Story X Montage design tokens', () => {
     expect(css).toContain('--control-radius: var(--wds-component-button-radius-medium)');
   });
 
-  it('scopes the editor (.sx-desk) to the Linear dark command-center palette', () => {
-    // 편집기는 Linear 다크 — pitch black 캔버스 + graphite/slate 카드 + lime brand
-    expect(css).toContain('--sx-ink: #f7f8f8');
-    expect(css).toContain('--sx-card: #0f1011');
-    expect(css).toContain('--sx-paper: #08090a');
-    expect(css).toContain('--sx-brand: #e4f222');
-    expect(css).toContain('--sx-page: #161718');
-    // AI-stage 파스텔 토큰
+  it('maps the studio detail scope (.sx-desk) onto the shared warm --st-* tokens', () => {
+    // 2026-07-07 핀 완화(사용자 결정) — Linear pitch black 리터럴을 버리고 스튜디오 공통
+    // warm oklch(--st-*)에 매핑해 PLAN 이음새(.fc-app 안 .sx-desk 냉온 충돌)를 봉합한다.
+    expect(css).toContain('--sx-ink: var(--st-ink)');
+    expect(css).toContain('--sx-card: var(--st-sheet)');
+    expect(css).toContain('--sx-paper: var(--st-bg)');
+    expect(css).toContain('--sx-brand: var(--st-accent)');
+    expect(css).toContain('--sx-page: var(--st-sheet)');
+    expect(css).toContain('--sx-line: var(--st-rule-soft)');
+    // AI-stage 파스텔 토큰 — 작가진 단계 의미색은 보존
     expect(css).toContain('--sx-stage-think: #dfa88f');
     expect(css).toContain('--sx-stage-read: #9fbbe0');
     expect(css).toContain('--sx-stage-mark: #9fc9a2');

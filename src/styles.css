@@ -527,34 +527,41 @@ body {
   }
 }
 
-.sx-desk {
-  /* Story X 편집기 — Linear 다크 커맨드센터 토큰 매핑.
-     pitch black 캔버스 + graphite/slate 카드 + lime CTA + AI-stage 파스텔 의미 보존 */
-  --sx-ink: #f7f8f8;
-  --sx-ink-2: rgba(247, 248, 248, 0.82);
-  --sx-muted: rgba(247, 248, 248, 0.58);
-  --sx-faint: rgba(247, 248, 248, 0.28);
-  --sx-line: #23252a;
-  --sx-line-2: #23252a;
-  --sx-line-strong: #323334;
-  --sx-paper: #08090a;
-  --sx-paper-soft: #0f1011;
-  --sx-paper-2: #161718;
-  --sx-surface-strong: #23252a;
-  --sx-card: #0f1011;
-  --sx-brand: #e4f222;
-  --sx-brand-press: #ecfa44;
-  --sx-brand-tint: rgba(228, 242, 34, 0.12);
-  --sx-brand-ink: #08090a;
-  --sx-accent: #5e6ad2;
-  --sx-accent-soft: rgba(94, 106, 210, 0.14);
-  /* manuscript page — Linear slate */
-  --sx-page: #161718;
-  --sx-page-soft: #1a1b1c;
-  --sx-page-line: #23252a;
-  --sx-page-ink: #f7f8f8;
-  --sx-page-ink-soft: #8a8f98;
-  --sx-page-ink-mute: #62666d;
+/* sx 색 토큰 스코프 — .sx-desk 본체 + .sx-desk 밖에서 sx-* 클래스를 렌더하는 표면들
+   (⌘K 팔레트·스포트라이트 fixed 오버레이, fc 플로팅 dock 패널의 DataReviewRail).
+   스코프 밖이면 색 토큰이 미해석돼 투명 배경·상속 색이 된다. */
+.sx-desk,
+.sx-command-palette-backdrop,
+.sx-spotlight-backdrop,
+.fc-app {
+  /* 2026-07-07 핀 완화(사용자 결정) — Linear 다크 리터럴을 버리고 스튜디오 공통
+     warm 토큰(--st-*)에 매핑해 .fc-app 셸과의 냉온 이음새를 봉합한다.
+     AI-stage 파스텔 의미색은 보존 */
+  --sx-ink: var(--st-ink);
+  --sx-ink-2: color-mix(in oklch, var(--st-ink) 82%, transparent);
+  --sx-muted: color-mix(in oklch, var(--st-ink) 58%, transparent);
+  --sx-faint: color-mix(in oklch, var(--st-ink) 40%, transparent);
+  --sx-line: var(--st-rule-soft);
+  --sx-line-2: var(--st-rule-soft);
+  --sx-line-strong: var(--st-rule);
+  --sx-paper: var(--st-bg);
+  --sx-paper-soft: var(--st-sheet);
+  --sx-paper-2: var(--st-bg-2);
+  --sx-surface-strong: var(--st-bg-3);
+  --sx-card: var(--st-sheet);
+  --sx-brand: var(--st-accent);
+  --sx-brand-press: color-mix(in oklch, var(--st-accent) 85%, white);
+  --sx-brand-tint: color-mix(in oklch, var(--st-accent) 12%, transparent);
+  --sx-brand-ink: var(--st-mode-ink);
+  --sx-accent: var(--st-accent);
+  --sx-accent-soft: color-mix(in oklch, var(--st-accent) 14%, transparent);
+  /* manuscript page — warm sheet */
+  --sx-page: var(--st-sheet);
+  --sx-page-soft: var(--st-bg-2);
+  --sx-page-line: var(--st-rule-soft);
+  --sx-page-ink: var(--st-ink);
+  --sx-page-ink-soft: var(--st-ink-dim);
+  --sx-page-ink-mute: var(--st-ink-dim);
   /* AI-stage 파스텔 — 작가진 검토 단계 (의미 보존) */
   --sx-stage-think: #dfa88f;
   --sx-stage-read: #9fbbe0;
@@ -567,12 +574,17 @@ body {
   --sx-err: #eb5757;
   --sx-shadow: rgba(0, 0, 0, 0.4) 0px 2px 4px 0px;
   --button-bg: var(--sx-ink);
-  --button-bg-hover: #d0d6e0;
-  /* .sx-desk 안에서 var(--nx-primary, ...) 폴백을 쓰는 모든 셀렉터가 사용자 트윅 색을 따라오도록 매핑 */
+  --button-bg-hover: var(--st-paper);
+  /* .sx-desk 안에서 var(--nx-primary, ...) 폴백을 쓰는 모든 셀렉터가 사용자 트윅 색을 따라오도록 매핑.
+     on-primary 도 함께 — 골드 CTA 위 흰 글자(:root 값) 판독 불가 방지 */
   --nx-primary: var(--sx-brand);
   --nx-primary-hover: var(--sx-brand-press);
+  --nx-on-primary: var(--sx-brand-ink);
   --font-serif: 'Source Serif Pro', 'Noto Serif KR', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'Menlo', monospace;
+}
+
+.sx-desk {
   min-height: 100vh;
   padding: var(--sx-space-5);
   color: var(--sx-ink);
@@ -594,7 +606,8 @@ body {
 }
 
 .sx-desk :focus-visible {
-  outline: 3px solid color-mix(in oklch, var(--sx-accent) 28%, transparent);
+  /* 핀 완화 — 28% 알파는 warm 표면 위 1.8:1로 비가시(WCAG 3:1 미달). dx/wm 과 같은 60% 언어 */
+  outline: 3px solid color-mix(in oklch, var(--sx-accent) 60%, transparent);
   outline-offset: 3px;
 }
 
@@ -685,9 +698,8 @@ body {
   display: grid;
   place-items: start center;
   padding: min(14vh, 110px) 20px 40px;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.82), transparent 42%),
-    rgba(22, 20, 17, 0.22);
+  /* 핀 완화 — 라이트 시절 흰 글로우 제거, warm 다크 스크림 */
+  background: rgba(12, 10, 8, 0.55);
   backdrop-filter: blur(10px);
 }
 
@@ -697,6 +709,7 @@ body {
   border: 1px solid var(--sx-line);
   border-radius: var(--sx-radius-lg);
   background: var(--sx-card);
+  color: var(--sx-ink);
   box-shadow:
     rgba(0, 0, 0, 0.6) 0 4px 32px,
     inset 0 0 0 1px rgba(255, 255, 255, 0.04);
@@ -794,7 +807,7 @@ body {
 .sx-command-list button:hover,
 .sx-command-list button:focus-visible {
   border-color: var(--sx-line);
-  background: rgba(255, 255, 255, 0.64);
+  background: color-mix(in oklch, var(--st-ink) 8%, transparent);
   outline: none;
 }
 
@@ -832,7 +845,7 @@ body {
   padding: 5px 8px;
   border: 1px solid var(--sx-line);
   border-radius: var(--sx-radius-sm);
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--sx-paper-2);
   color: var(--sx-ink-2);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.72rem;
@@ -2629,9 +2642,8 @@ body {
   padding: var(--sx-space-4);
   border: 1px solid var(--sx-line);
   border-radius: var(--framer-rounded-xl);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.42)),
-    var(--sx-card);
+  /* 핀 완화 — 라이트 시절 흰 베니어 제거 */
+  background: var(--sx-card);
   box-shadow: var(--sx-shadow);
 }
 
@@ -2777,9 +2789,8 @@ body {
   padding: var(--sx-space-5);
   border: 1px solid var(--sx-line);
   border-radius: var(--framer-rounded-xl);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.48)),
-    var(--sx-card);
+  /* 핀 완화 — 라이트 시절 흰 베니어 제거 */
+  background: var(--sx-card);
   box-shadow: var(--sx-shadow);
 }
 
@@ -2839,7 +2850,8 @@ body {
   padding: 9px 10px;
   border: 1px solid var(--sx-line);
   border-radius: var(--sx-radius-sm);
-  background: rgba(255, 255, 255, 0.58);
+  /* 핀 완화 — 라이트 시절 흰 슬랩 제거(warm ink 텍스트 판독 불가 원인) */
+  background: var(--sx-paper-2);
 }
 
 .sx-canon-refactor-grid strong {
@@ -2961,7 +2973,8 @@ body {
   padding: 8px 9px;
   border-left: 3px solid #b0589f;
   border-radius: 0 9px 9px 0;
-  background: rgba(244, 222, 238, 0.55);
+  /* 핀 완화 — 라이트 파스텔 핑크 제거, warm 다크 틴트(충돌 경고 판독성) */
+  background: color-mix(in oklch, #b0589f 14%, var(--sx-card));
   color: var(--sx-ink);
 }
 
@@ -4928,9 +4941,8 @@ body {
   padding: var(--sx-space-4);
   border: 1px solid var(--sx-line);
   border-radius: var(--framer-rounded-xl);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.42)),
-    var(--sx-card);
+  /* 핀 완화 — 라이트 시절 흰 베니어 제거(다크에서 회색 슬랩이 되던 원인) */
+  background: var(--sx-card);
   box-shadow: var(--sx-shadow);
 }
 
@@ -5296,7 +5308,8 @@ body {
 
 .sx-desk .ex-canon-card-conflict p {
   margin: 0;
-  color: #7a3a26;
+  /* 핀 완화 — 라이트 시절 다크 러스트(#7a3a26)는 다크 배경에서 비가시 */
+  color: var(--sx-ink-2);
   font-size: 0.78rem;
   line-height: 1.5;
 }
@@ -5304,10 +5317,10 @@ body {
 .sx-desk .ex-canon-card-resolve {
   justify-self: start;
   padding: 4px 10px;
-  border: 1px solid #c0683f;
+  border: 1px solid color-mix(in oklch, var(--sx-err) 55%, transparent);
   border-radius: var(--sx-radius-pill);
   background: transparent;
-  color: #a8482a;
+  color: var(--sx-err);
   font-size: 0.72rem;
   font-weight: var(--sx-weight-bold);
   cursor: pointer;
@@ -8550,15 +8563,15 @@ body {
  * 1. .sx-desk 추가 토큰 — 기존 .sx-desk 블록 (styles.css :533~568) 안에 삽입
  * --------------------------------------------------------------------------- */
 .sx-desk {
-  /* paper ramp 확장 — 카드 위계 회복을 위한 새 단계 */
-  --sx-paper-3:       #181a1c;   /* manuscript canvas (slate 보다 살짝 따뜻) */
+  /* paper ramp 확장 — 카드 위계 회복을 위한 새 단계 (핀 완화 — warm 매핑) */
+  --sx-paper-3:       var(--st-bg-2);   /* manuscript canvas */
 
-  /* hairline 통일 — 기존 #23252a 보다 부드러움. annot/beat/divider 공통 */
-  --sx-line-hair:     rgba(247, 248, 248, 0.06);
+  /* hairline 통일 — annot/beat/divider 공통 */
+  --sx-line-hair:     color-mix(in oklch, var(--st-ink) 6%, transparent);
 
   /* mute 단계 두 칸 — placeholder / 비활성 텍스트 */
-  --sx-faintest:      rgba(247, 248, 248, 0.16);
-  --sx-faintest2:     rgba(247, 248, 248, 0.10);
+  --sx-faintest:      color-mix(in oklch, var(--st-ink) 16%, transparent);
+  --sx-faintest2:     color-mix(in oklch, var(--st-ink) 10%, transparent);
 
 }
 
@@ -9134,6 +9147,16 @@ body {
 /* 공통 모션 — 표면 진입 페이드 + 요소 등장 라이즈(모드 전환 연속감) */
 @keyframes st-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes st-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* 스튜디오 stage 에서는 페이지 뒤판도 warm 다크 — 라이트 브리지(html·body 흰색)가
+   오버스크롤·로드 순간 흰 띠로 새는 것을 막는다(일체감) */
+:root:has(.wm-bar),
+:root:has(.dx-desk),
+:root:has(.fc-app),
+body:has(.wm-bar),
+body:has(.dx-desk),
+body:has(.fc-app) {
+  background: var(--st-bg);
+}
 
 /* claude.ai design 의 direction-c.html 재현. 로컬 토큰은 --st-* alias(값 원천은 :root 한 곳). */
 .fc-app{
@@ -9737,7 +9760,7 @@ body {
 .dx-amb-surprise { color: #bef264; }
 .dx-amb-major { color: #fbbf24; }
 .dx-amb-anchor { color: #fca5a5; }
-.dx-amb-tail { margin-left: auto; color: #8a8f98; }
+.dx-amb-tail { margin-left: auto; color: var(--st-ink-dim); }
 .dx-narration { align-self: center; max-width: 90%; color: #aeb3bd; font-style: italic; line-height: 1.6; text-align: center; padding: 2px 8px; }
 .dx-speaker { display: block; font-size: 11px; color: #9aa0aa; margin-bottom: 3px; }
 .dx-start { display: flex; flex-direction: column; gap: 12px; padding: 24px max(24px, calc((100% - 640px) / 2)); color: #eceef3; background: #0b0c0e; min-height: 100vh; box-sizing: border-box; }

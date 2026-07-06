@@ -22,7 +22,7 @@
 - `npm run build` — `tsc --noEmit && vite build` 성공.
 - 활성 feature 의 `progress.md` 항목이 증거(커밋 SHA·파일 경로·캡처 경로)와 함께 `done`으로 갱신됨.
 - 새 생성 동작은 `src/lib/storyEngine.test.ts` 테스트를 먼저 수정해 TDD 순서를 따른다.
-- Linear "Midnight Command Center" 다크 토큰을 유지한다(`--lc-*` / `--nx-*` / `--sx-*` 값 매핑).
+- 디자인 토큰 규율 — 랜딩 `--lc-*`(Linear 다크)·브리지 `--nx-*`(라이트)는 유지, 스튜디오(셸·PLAY·WRITE·PLAN)는 전역 `--st-*` warm 토큰이 값 원천이며 `--sx-*`는 여기에 매핑한다(2026-07-07 핀 완화, 사용자 결정). 새 transition/animation 은 `--st-dur-*`/`--st-ease` 만 쓴다.
 - 세션 종료 시 `session-handoff.md` 맨 위에 새 인계 노트를 한 묶음 추가한다.
 
 ## State Artifacts

@@ -118,11 +118,11 @@ const PUBLISH_AGENTS: PublishAgentCard[] = [
   }
 ];
 
-// 분위기 — 스튜디오 다크 톤 + 따뜻한 앰버 액센트로 "출간의 무게" 분리
+// 분위기 — 스튜디오 warm 다크 톤 + 따뜻한 앰버 액센트로 "출간의 무게" 분리 (핀 완화: --st-* 공통 언어)
 const screenStyle: CSSProperties = {
   minHeight: '100vh',
-  background: 'linear-gradient(180deg, #0a0b0d 0%, #08090a 100%)',
-  color: '#ededf3',
+  background: 'linear-gradient(180deg, var(--st-sheet) 0%, var(--st-bg) 100%)',
+  color: 'var(--st-ink)',
   display: 'flex',
   flexDirection: 'column'
 };
