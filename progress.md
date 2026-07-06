@@ -1,10 +1,19 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-06 · Branch: `main` (**PLAY 전개 후보(VS) `done` — main 머지 완료 `a33768e`(fast-forward). DiveDesk 「✦ 전개 후보」 opt-in 게이지로 서프라이즈 주입(Verbalized Sampling, 흡인력 축 첫 구현). 커밋 `ca27167`·`6c5b049`. 라이브 해피패스 통과. 다음 = 흡인력 게이트(critic-reviewer 승격, 승인된 나머지 후속·새 세션). · 이전: 홈 랜딩 "작성 여정" 원페이저 `done` — PR #24 main 머지 `c18f878`. 근거 = 흡인력 딥리서치 `docs/research/2026-07-05-compellingness-human-ai.md`.**)
+> Last Updated: 2026-07-07 · Branch: `feat/compellingness-gate` (**흡인력 게이트 `done` — critic-reviewer를 연재 서사 라이브 검토 6번째 흡인력 판정자로 승격(긴장·서프라이즈 criteriaKeys + 조기 소진 결정론 신호 + review-agent payoffStatus 배관 봉합). 커밋 `7f7ff52`(docs)·`417106d`·`c8f6b0a`·`179b18c`·`521b864`·`468325f`. 적대적 검토 APPROVE·라이브 end-to-end 실증(평론가 revise + tension_decay_audit 명시). 머지 결정 대기. · 이전: PLAY 전개 후보(VS) main 머지 `a33768e`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 최근 검증 (2026-07-06)
-`npm test` **804 통과**(81 파일, VS 슬라이스 12 신규) · `npm run build`(tsc+vite) 성공 · `bash init.sh` 통과. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 (전부 main). **파트 2 wm-bar 공통 셸**은 `feat/wm-bar-common-shell`.
+## 최근 검증 (2026-07-07)
+`bash init.sh` 통과 — `npm test` **821 통과**(81 파일, 흡인력 게이트 17 신규: agentSeedData 5·agentValidationProcess 2·promptBuilders 9·reviewClient 1... +aiCliHarness 라벨 1) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 · 파트 2 PR #23 · 랜딩 원페이저 PR #24 · PLAY 전개 후보(VS) `a33768e` (전부 main). **흡인력 게이트**는 `feat/compellingness-gate`.
+
+## 완료 트랙 — 흡인력 게이트: critic-reviewer 검토망 승격 (`done` · 2026-07-07, 브랜치 `feat/compellingness-gate` 머지 대기)
+
+흡인력 딥리서치 확정 결론("일반 품질 점수는 흡인력 결손을 못 잡는다·Re3 재순위에 흡인력 기준을 넣으면 그게 게이트")의 두 번째 구현([[two-axis-compellingness]], 첫 번째=PLAY VS). critic-reviewer(작품성 평론가)를 **연재 서사 라이브 검토 6번째 흡인력 판정자**로 승격 — Story X는 초안 1개 체제라 재순위의 번역 = 검토 verdict가 게이트. 사용자 결정 4건(brainstorming) — ① 검토망 승격(VS 재순위 아님) ② 연재 서사 전 회차(에세이·학술·비연재 제외) ③ 기존 문학 기준 보존+흡인력 기준 추가 ④ 정보성 유지(하드 차단 없음). spec `docs/superpowers/specs/2026-07-06-compellingness-gate-design.md` · 계획 `docs/superpowers/plans/2026-07-06-compellingness-gate.md`. 인라인 TDD 4태스크(classifier 장애로 서브에이전트 투입 불가 구간은 편집장 직접, 검토는 복구 후 서브에이전트) + 적대적 검토 APPROVE + 발견 2건 반영.
+- **구현** — `getMediumReviewAgentIds(medium, format?)` 확장(연재+비에세이/학술이면 critic 마지막 합류, StoryXDesk 2곳 배선) · agentReviewProcess criteriaKeys `tension_decay_audit`(긴장 재장전)·`predictability_audit`(캐논 안 예측 배반) 추가+agenda·checks·blockingSignals 보강 · `.claude/agents/critic-reviewer.md` Compellingness Gate 섹션(연재 상시 2체크 FIRST·정보성 명시·캐논 위반 서프라이즈는 연속성 관할) · extendedPersonas role "긴장과 흡인력" · `buildAgentReviewPrompt` **조기 소진 신호**(critic 한정: `openPromises===0 && paidPromises>0 && !isStalled && !finalStretch`면 "[측정] 긴장 조기 소진 — 잔여 N회차" 주입, storyx.mjs byte-identical 미러+핀 테스트).
+- **배관 봉합(탐색 발견 잠복 갭)** — dev 브리지 `/api/review-agent`가 `--payoff-status`를 안 넘기고 CLI도 미파싱이라 기존 stakes_progression 정체 신호조차 dev 미발화였음 → 브리지·CLI 파싱·prod whitelist(`paidPromises`)·reviewClient 타입 봉합(prod는 이미 발화 중이라 dev를 prod에 수렴시키는 수리).
+- **불변식** — 검토망 정보성 유지(흡인력 판정이 회차 확정 안 막음) · 기존 문학 기준 3키 보존(추가만) · 에세이·학술·비연재 무접촉 · 조기 소진 신호는 computePayoffLedger·buildContractStatus 산출만(오탐 가드=paidPromises>0, rewardArc 미사용 작품 차단) · 미러 byte-identical.
+- **검증** — init.sh 녹색(821 테스트) · 적대적 검토 6공격면 전부 CONFIRMED·APPROVE(발견 2건 반영: getAgentLabel 평론가/에세이 큐레이터 등록[raw id UI 노출 방지]·하네스 프롬프트 기준 키 동기화+카운트 비표기) · **라이브(preview 5175) end-to-end** — ① 연재 novel 작가실 6명·평론가 "긴장과 흡인력" 6번째 ② essay(연재 essay-series) 평론가 제외 6명 ③ 비연재 short-novel 5명 ④ `/api/review-agent` critic+조기소진 신호 실 codex 호출 → **revise + note가 tension_decay_audit 명시·"남은 12회차 추진력" 인용·issues 3건이 조기 소진/예측 가능성/윤리 비용 정확 타격** ⑤ fresh 로드 에러 0.
+- **범위 밖(후속)** — 온보딩 1화 자동 검토(`runAiReview`, scale 기반 `getReviewAgentIds`)는 critic 미포함(검토 발견 INFO, 별도 조각 후보) · VS 후보 흡인력 재순위 · 프록시 지표↔완독률 보정(딥리서치 열린 질문 1).
 
 ## 완료 트랙 — PLAY 전개 후보(VS): opt-in 게이지 서프라이즈 주입 (`done` · 2026-07-06, **main 머지 완료** `a33768e` fast-forward)
 

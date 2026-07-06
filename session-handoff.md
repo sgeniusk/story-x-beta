@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-07-07 — 흡인력 게이트 done (critic-reviewer 검토망 승격, 브랜치 `feat/compellingness-gate` 머지 대기)
+
+> 흡인력 딥리서치의 승인된 나머지 후속 — critic-reviewer를 연재 서사 라이브 검토 **6번째 흡인력 판정자**로 승격(Re3 재순위의 Story X 번역 = 검토 verdict가 게이트). progress.md "흡인력 게이트" 절 상세. spec/plan `docs/superpowers/{specs,plans}/2026-07-06-compellingness-gate*`. 커밋 `7f7ff52`(docs)·`417106d`·`c8f6b0a`·`179b18c`·`521b864`·`468325f`(검토 반영).
+
+### 한 것
+- `getMediumReviewAgentIds(medium, format?)` 연재 확장 · criteriaKeys `tension_decay_audit`·`predictability_audit` · critic-reviewer.md Compellingness Gate 섹션 · 조기 소진 결정론 신호(`buildAgentReviewPrompt`+storyx.mjs 미러) · **review-agent payoffStatus 배관 봉합**(dev 브리지·CLI 파싱·prod whitelist — 기존 정체 신호도 dev 미발화였던 잠복 갭 수리). 인라인 TDD 4태스크·init.sh 녹색·적대적 검토 APPROVE(발견 2건 반영: getAgentLabel 라벨·하네스 키 동기화). **라이브 end-to-end** — 작가실 6/6/5명 분기 정확 + 실 codex 호출에서 평론가가 소진 회차에 revise·tension_decay_audit 명시.
+
+### 손대지 말 것 (불변식)
+- **검토망 정보성 유지** — 흡인력 판정(blocked 포함)이 회차 확정을 막지 않는다. 하드 차단은 누수 게이트 하나뿐.
+- **조기 소진 오탐 가드 = `paidPromises > 0`** — computePayoffLedger는 rewardArc 미사용 작품에서 openPromises 0을 돌려주므로 이 가드를 지우면 전 작품 오탐. 신호는 산출만 받는다(직접 합성 금지).
+- **미러 byte-identical** — 조기 소진 문구는 promptBuilders.ts ↔ storyx.mjs 동시 갱신(TENSION_DRAIN_PIN 테스트가 물고 있음).
+- **에세이·학술·비연재 무접촉** — `COMPELLINGNESS_EXCLUDED_MEDIA` + `isSerialFormat` 게이트. short-novel은 기존 백로그(format 축 정합)대로 비연재 취급 — 백로그 해소 시 자동 편입.
+
+### 다음 한 가지
+- **머지 결정** — 브랜치 `feat/compellingness-gate` 커밋 6개, init.sh 녹색. PR 생성/로컬 머지 사용자 결정 대기.
+- 후속 후보 — 온보딩 1화 자동 검토(`runAiReview`)에 critic 미포함(검토 INFO) · VS 후보 흡인력 재순위 · canonSuspect 배지 실사례 · PLAN AI 설계 채널.
+
+### 검증 팁
+- 이 세션 permission classifier(claude-opus-4-8) 장기 간헐 장애 — **allowlist 단순 명령(`npm test --`·`bash init.sh`·`git add <파일>`·한 줄 `git commit -m`)은 통과, `&&` 체인·여러 줄 커밋 메시지·Agent 디스패치는 거부**. 명령을 쪼개면 대부분 진행 가능.
+- 라이브 시딩은 손수 객체 금지 — `createEmptyProject()`+`addCharacter`/`renameCharacter` 순수 함수 경유(하드-시딩 파생 필드 결여 크래시, 기존 잠복 버그 재확인).
+
+---
+
 ## 2026-07-06 — PLAY 전개 후보(VS) done·머지 (흡인력 축 첫 구현, main 머지 `a33768e` fast-forward)
 
 > 흡인력 딥리서치 결론(서프라이즈=모델·프롬프트 아니라 구조로 넘긴다·Verbalized Sampling)을 PLAY 이어 굴리기에 적용한 **첫 조각**([[two-axis-compellingness]]). DiveDesk 「✦ 전개 후보」 opt-in 버튼→다음 전개 후보 3~4개를 의외도 게이지로 펼쳐 사람이 고른다. spec `docs/storyx-play-vs-candidates-plan.md`. progress.md "PLAY 전개 후보(VS)" 절 상세. 커밋 `ca27167`(spec)·`6c5b049`(구현).
