@@ -15,8 +15,8 @@ export interface AgentReviewInput {
   target: string;
   medium: string;
   context: string;
-  /** 아크 페이오프 1단계 — 정체 측정값. 있으면 검토 프롬프트에 evidence 로 주입된다. */
-  payoffStatus?: { isStalled: boolean; deferredStreak: number; openPromises: number };
+  /** 아크 페이오프 1단계 — 정체 측정값. 있으면 검토 프롬프트에 evidence 로 주입된다. paidPromises 는 흡인력 게이트 조기 소진 오탐 가드(2026-07-06). */
+  payoffStatus?: { isStalled: boolean; deferredStreak: number; openPromises: number; paidPromises?: number };
   /** 작품 헌장 예산 — 있으면 쇼러너 검토에 길 잃음 점검·예산 초과 block 을 주입한다(A-5). */
   contractStatus?: { remaining: number; unpaidCount: number; overBudget: boolean; finalStretch: boolean };
 }

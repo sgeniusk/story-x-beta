@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildContractStatus, buildEpisodeForks, composeIntentWithFork, stripConsumedSeeds, classifyRarity, buildVsIntentSeed, normalizeVsCandidates } from './episodeBriefing';
+import { buildContractStatus, buildEpisodeForks, composeIntentWithFork, stripConsumedSeeds, classifyRarity, buildVsIntentSeed, normalizeVsCandidates, rarityToBars, collectUnpaidPromises } from './episodeBriefing';
 import { computePayoffLedger } from './payoffLedger';
 import type { Chapter, StoryContract, StoryProject } from './storyEngine';
 import { applyContractAmendment, createEmptyProject } from './storyEngine';
@@ -540,5 +540,27 @@ describe('normalizeVsCandidates', () => {
   it('4개 초과는 상위 4개만', () => {
     const five = Array.from({ length: 5 }, (_, i) => ({ direction: `D${i}`, probability: 0.5 }));
     expect(normalizeVsCandidates({ candidates: five }, [])).toHaveLength(4);
+  });
+});
+
+describe('rarityToBars — VS 게이지 칸 수 (의외도에 비례)', () => {
+  it('common 은 1칸 (가장 덜 의외)', () => {
+    expect(rarityToBars('common')).toBe(1);
+  });
+  it('surprising 은 2칸', () => {
+    expect(rarityToBars('surprising')).toBe(2);
+  });
+  it('radical 은 3칸 (가장 의외)', () => {
+    expect(rarityToBars('radical')).toBe(3);
+  });
+});
+
+describe('collectUnpaidPromises — 미회수 약속 수집 (PLAY 재사용 위해 export 승격)', () => {
+  it('payoff 빈 promise 만 등장 순서대로 모으고 중복은 제거', () => {
+    const project = projectWith([
+      ch(1, { rewardArc: [{ promise: '배신자의 정체', payoff: '' }, { promise: '회수된 약속', payoff: '됨' }] }),
+      ch(2, { rewardArc: [{ promise: '배신자의 정체', payoff: '' }, { promise: '탑의 비밀', payoff: '' }] })
+    ]);
+    expect(collectUnpaidPromises(project)).toEqual(['배신자의 정체', '탑의 비밀']);
   });
 });

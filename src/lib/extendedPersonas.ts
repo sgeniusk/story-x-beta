@@ -54,7 +54,7 @@ export const CORE_PERSONAS: PersonaCard[] = [
  * ========================================================================== */
 export const EXTENDED_PERSONAS: ExtendedPersona[] = [
   // --- 확장 11명 — 코어와 함께 자란, 검토 보조 역할 ---
-  { id: 'critic-reviewer',        name: '평론가',          role: '메타 비평',         tint: '#7c87e5', isCore: false, group: '확장' },
+  { id: 'critic-reviewer',        name: '평론가',          role: '긴장과 흡인력',      tint: '#7c87e5', isCore: false, group: '확장' },
   { id: 'essay-curator',          name: '에세이 큐레이터',  role: '에세이 결',         tint: '#7c87e5', isCore: false, group: '확장' },
   { id: 'voice-curator',          name: '문체 큐레이터',    role: '문장 톤',           tint: '#7c87e5', isCore: false, group: '확장' },
   { id: 'audio-narration-director', name: '낭독 디렉터',    role: '듣는 호흡',         tint: '#7c87e5', isCore: false, group: '확장' },

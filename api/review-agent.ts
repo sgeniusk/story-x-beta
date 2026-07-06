@@ -14,7 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     target?: string;
     medium?: string;
     context?: string;
-    payoffStatus?: { isStalled?: boolean; deferredStreak?: number; openPromises?: number };
+    payoffStatus?: { isStalled?: boolean; deferredStreak?: number; openPromises?: number; paidPromises?: number };
     contractStatus?: { remaining?: number; unpaidCount?: number; overBudget?: boolean; finalStretch?: boolean };
   };
 
@@ -31,7 +31,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? {
           isStalled: Boolean(body.payoffStatus.isStalled),
           deferredStreak: body.payoffStatus.deferredStreak,
-          openPromises: typeof body.payoffStatus.openPromises === 'number' ? body.payoffStatus.openPromises : 0
+          openPromises: typeof body.payoffStatus.openPromises === 'number' ? body.payoffStatus.openPromises : 0,
+          paidPromises: typeof body.payoffStatus.paidPromises === 'number' ? body.payoffStatus.paidPromises : 0
         }
       : undefined;
 

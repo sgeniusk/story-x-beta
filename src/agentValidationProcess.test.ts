@@ -70,3 +70,24 @@ describe('persona validation process', () => {
     expect(skill).toContain('성장 메모리 업데이트');
   });
 });
+
+describe('critic-reviewer 흡인력 게이트 승격 (2026-07-06)', () => {
+  const critic = validationProcesses.find((p) => p.agentId === 'critic-reviewer');
+
+  it('흡인력 criteriaKeys 2개가 추가되고 기존 문학 기준 3개는 보존된다', () => {
+    expect(critic?.criteriaKeys).toEqual(
+      expect.arrayContaining([
+        'ambiguity_audit',
+        'ethical_pressure_test',
+        'silence_audit',
+        'tension_decay_audit',
+        'predictability_audit'
+      ])
+    );
+  });
+
+  it('agenda 가 긴장·서프라이즈 흡인력 판정 역할을 명시한다', () => {
+    expect(critic?.agenda).toContain('긴장');
+    expect(critic?.agenda).toContain('흡인력');
+  });
+});

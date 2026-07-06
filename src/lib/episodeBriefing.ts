@@ -41,6 +41,11 @@ export function buildVsIntentSeed(direction: string): string {
   return `이번 화의 전개: "${direction}"`;
 }
 
+// VS 게이지 칸 수 — 의외도에 비례(common 1 · surprising 2 · radical 3). PLAY 게이지 막대 렌더가 사용.
+export function rarityToBars(rarity: VsRarity): 1 | 2 | 3 {
+  return rarity === 'common' ? 1 : rarity === 'surprising' ? 2 : 3;
+}
+
 // provider 응답({ candidates: [{ direction, probability }] })을 VsCandidate[] 로 정규화.
 // direction 빈 것 제외 · probability 0~1 clamp(누락 시 0.3) · rarity 변환 · canonSuspect(overlapsCanonFact) · 최대 4개.
 const MAX_VS_CANDIDATES = 4;
@@ -142,7 +147,8 @@ function overlapsCanonFact(text: string, canonStatements: string[]): boolean {
 }
 
 // 전 회차에서 payoff 가 비어 있는 promise 를 등장 순서대로 모은다 (중복 제거).
-function collectUnpaidPromises(project: StoryProject): string[] {
+// PLAY 전개 후보(VsCandidatesInput.unpaidPromises)도 이 함수를 재사용한다 — export.
+export function collectUnpaidPromises(project: StoryProject): string[] {
   const unpaid: string[] = [];
   for (const chapter of project.chapters) {
     for (const entry of chapter.rewardArc ?? []) {

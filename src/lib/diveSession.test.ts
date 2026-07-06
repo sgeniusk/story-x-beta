@@ -10,9 +10,12 @@ import {
   buildCondenseTranscript,
   buildRecentDialogue,
   parseSceneSegments,
+  buildVsCandidatesInput,
+  buildPlayDirectionSeed,
   CONDENSE_SUGGEST_TURNS,
   CONDENSE_KEEP_RECENT
 } from './diveSession';
+import { createEmptyProject } from './storyEngine';
 
 describe('diveSession', () => {
   // Task 1
@@ -138,5 +141,37 @@ describe('diveSession', () => {
     const transcript = buildCondenseTranscript(s);
     expect(transcript).not.toContain('사실 서준은 죽었어.');
     expect(transcript).toContain('무슨 일이야');
+  });
+});
+
+describe('buildPlayDirectionSeed — VS 후보를 PLAY 연출 지시로 감쌈', () => {
+  it('괄호 연출문으로 감싸고 앞뒤 공백을 제거한다 (⏭전개과 같은 계열)', () => {
+    expect(buildPlayDirectionSeed('  도윤이 먼저 진실을 꺼낸다 ')).toBe('(전개 — 도윤이 먼저 진실을 꺼낸다)');
+  });
+});
+
+describe('buildVsCandidatesInput — PLAY 런타임 상태 → VsCandidatesInput', () => {
+  it('scene+최근 대화로 recentSummary, canon·미회수 약속·medium 을 채우고 format 미설정은 빈 문자열', () => {
+    const base = createEmptyProject({ title: 't', medium: 'novel' });
+    const project = {
+      ...base,
+      canonFacts: [{ id: 'c1', episode: 1, owner: 'character' as const, statement: '도윤은 왼손잡이다' }],
+      chapters: [
+        {
+          id: 'episode-1', episode: 1, title: '1화', hook: '', outline: [],
+          beats: [], prose: '', memoryAnchors: [], newCanonFacts: [],
+          rewardArc: [{ promise: '배신자의 정체', payoff: '' }]
+        }
+      ]
+    };
+    let session = createDiveSession('seed', project.id);
+    session = { ...session, scene: '현관 앞', chatBuffer: [{ id: 'm1', role: 'user' as const, text: '안녕', turn: 1 }] };
+    const input = buildVsCandidatesInput(session, project);
+    expect(input.recentSummary).toContain('현관 앞');
+    expect(input.recentSummary).toContain('안녕');
+    expect(input.canonStatements).toEqual(['도윤은 왼손잡이다']);
+    expect(input.unpaidPromises).toEqual(['배신자의 정체']);
+    expect(input.medium).toBe('novel');
+    expect(input.format).toBe('');
   });
 });

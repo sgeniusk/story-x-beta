@@ -4,6 +4,52 @@
 
 ---
 
+## 2026-07-07 — 흡인력 게이트 done (critic-reviewer 검토망 승격, 브랜치 `feat/compellingness-gate` 머지 대기)
+
+> 흡인력 딥리서치의 승인된 나머지 후속 — critic-reviewer를 연재 서사 라이브 검토 **6번째 흡인력 판정자**로 승격(Re3 재순위의 Story X 번역 = 검토 verdict가 게이트). progress.md "흡인력 게이트" 절 상세. spec/plan `docs/superpowers/{specs,plans}/2026-07-06-compellingness-gate*`. 커밋 `7f7ff52`(docs)·`417106d`·`c8f6b0a`·`179b18c`·`521b864`·`468325f`(검토 반영).
+
+### 한 것
+- `getMediumReviewAgentIds(medium, format?)` 연재 확장 · criteriaKeys `tension_decay_audit`·`predictability_audit` · critic-reviewer.md Compellingness Gate 섹션 · 조기 소진 결정론 신호(`buildAgentReviewPrompt`+storyx.mjs 미러) · **review-agent payoffStatus 배관 봉합**(dev 브리지·CLI 파싱·prod whitelist — 기존 정체 신호도 dev 미발화였던 잠복 갭 수리). 인라인 TDD 4태스크·init.sh 녹색·적대적 검토 APPROVE(발견 2건 반영: getAgentLabel 라벨·하네스 키 동기화). **라이브 end-to-end** — 작가실 6/6/5명 분기 정확 + 실 codex 호출에서 평론가가 소진 회차에 revise·tension_decay_audit 명시.
+
+### 손대지 말 것 (불변식)
+- **검토망 정보성 유지** — 흡인력 판정(blocked 포함)이 회차 확정을 막지 않는다. 하드 차단은 누수 게이트 하나뿐.
+- **조기 소진 오탐 가드 = `paidPromises > 0`** — computePayoffLedger는 rewardArc 미사용 작품에서 openPromises 0을 돌려주므로 이 가드를 지우면 전 작품 오탐. 신호는 산출만 받는다(직접 합성 금지).
+- **미러 byte-identical** — 조기 소진 문구는 promptBuilders.ts ↔ storyx.mjs 동시 갱신(TENSION_DRAIN_PIN 테스트가 물고 있음).
+- **에세이·학술·비연재 무접촉** — `COMPELLINGNESS_EXCLUDED_MEDIA` + `isSerialFormat` 게이트. short-novel은 기존 백로그(format 축 정합)대로 비연재 취급 — 백로그 해소 시 자동 편입.
+
+### 다음 한 가지
+- **머지 결정** — 브랜치 `feat/compellingness-gate` 커밋 6개, init.sh 녹색. PR 생성/로컬 머지 사용자 결정 대기.
+- 후속 후보 — 온보딩 1화 자동 검토(`runAiReview`)에 critic 미포함(검토 INFO) · VS 후보 흡인력 재순위 · canonSuspect 배지 실사례 · PLAN AI 설계 채널.
+
+### 검증 팁
+- 이 세션 permission classifier(claude-opus-4-8) 장기 간헐 장애 — **allowlist 단순 명령(`npm test --`·`bash init.sh`·`git add <파일>`·한 줄 `git commit -m`)은 통과, `&&` 체인·여러 줄 커밋 메시지·Agent 디스패치는 거부**. 명령을 쪼개면 대부분 진행 가능.
+- 라이브 시딩은 손수 객체 금지 — `createEmptyProject()`+`addCharacter`/`renameCharacter` 순수 함수 경유(하드-시딩 파생 필드 결여 크래시, 기존 잠복 버그 재확인).
+
+---
+
+## 2026-07-06 — PLAY 전개 후보(VS) done·머지 (흡인력 축 첫 구현, main 머지 `a33768e` fast-forward)
+
+> 흡인력 딥리서치 결론(서프라이즈=모델·프롬프트 아니라 구조로 넘긴다·Verbalized Sampling)을 PLAY 이어 굴리기에 적용한 **첫 조각**([[two-axis-compellingness]]). DiveDesk 「✦ 전개 후보」 opt-in 버튼→다음 전개 후보 3~4개를 의외도 게이지로 펼쳐 사람이 고른다. spec `docs/storyx-play-vs-candidates-plan.md`. progress.md "PLAY 전개 후보(VS)" 절 상세. 커밋 `ca27167`(spec)·`6c5b049`(구현).
+
+### 한 것
+- 데이터 계층(`requestVsCandidates`·`/api/vs-candidates`)은 WRITE와 공유·재사용. `episodeBriefing` `collectUnpaidPromises` export+`rarityToBars` · `diveSession` `buildVsCandidatesInput`+`buildPlayDirectionSeed`(순수) · `VsCandidatePanel.tsx` 신규 · `DiveDesk` 배선 · `.dx-vs-*` CSS. TDD 4단 red→green. 804 테스트·build·init.sh·tsc 클린. **라이브 전체 해피패스 통과** — 버튼→후보 4개→게이지 의외도 정합→radical 선택→`(전개 —…)` 괄호 굴림→dive-chat 이어감·콘솔0.
+
+### 손대지 말 것 (불변식)
+- **opt-in 전용** — VS는 「✦ 전개 후보」 버튼 클릭 시에만 생성. 자동/매 턴 금지(비용·player-first). 기존 `res.choices` 가벼운 칩과 **공존**(대체 아님).
+- **확률 숫자 비노출** — 게이지 3칸 강도만(`rarityToBars`). 색은 WRITE `fc-vs` 언어(회색·라임·로즈) 미러링 — 갈리면 혼란.
+- **선택 = 기존 send 괄호 연출 재사용** — `pickCandidate`→`send(buildPlayDirectionSeed(direction))`=`'(전개 —…)'`. ⏭전개과 같은 계열, 신규 굴림 경로 만들지 말 것.
+- **데이터 계층 무접촉** — `requestVsCandidates`·`/api/vs-candidates`·`normalizeVsCandidates`는 WRITE와 공유. PLAY는 입력 조립(`buildVsCandidatesInput`)만 다름(recentSummary=라이브 대화+장면).
+
+### 다음 한 가지
+- ~~머지~~ — **main 머지 완료**(`a33768e`, fast-forward, 사용자 승인 "main 로컬 머지"). 머지 후 main init.sh 녹색 재확인·브랜치 삭제 완료.
+- **후속(사용자 승인된 나머지, 1순위)** — 흡인력 게이트 = `critic-reviewer` 를 긴장·서프라이즈 기준 게이트로 승격(Re3 재순위 흡인력 기준). 큰 조각·새 세션 권장. 근거 = 흡인력 딥리서치 리포트.
+- 그 외 — `canonSuspect` 배지 실사례 확인 · VS 비용/포인트 연동 · 자유 서술 새 작품→PLAY 온보딩 · PLAN AI 설계 채널.
+
+### 검증 팁
+- preview_click 이 React onClick 을 안 태우면 `preview_eval` 로 `dispatchEvent(new MouseEvent('click',{bubbles:true}))` 우회(이 세션 실증) · 브레인스토밍 목업 서버는 30분 유휴 자동 종료(회수 아님) — 필요 시 `.claude/plugins/.../brainstorming/scripts/server.cjs` 를 `BRAINSTORM_DIR` 지정해 `run_in_background` 로 재기동.
+
+---
+
 ## 2026-07-05 (2차) — 홈 랜딩 "작성 여정" 원페이저 done·머지 (PR #24 main `c18f878`)
 
 > 랜딩 히어로 다음에 4단계 흐름 섹션 추가 — 세 방식(PLAY/WRITE/PLAN)이 **하나의 캐논을 두 방향(안 무너진다·끌어당긴다)으로 조각**한다는 서사. dogfooding 진입 혼란 해소([[landing-onepager-request]]) + 흡인력 축 명시(King 논지). progress.md "작성 여정 원페이저" 절이 상세. spec/계획 `docs/superpowers/{specs,plans}/2026-07-05-landing-flow-onepager*`.

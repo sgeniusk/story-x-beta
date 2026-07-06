@@ -712,7 +712,7 @@ export function StoryXDesk({
       }
 
       const context = buildProjectContextDigest(project);
-      const reviewAgentIds = getMediumReviewAgentIds(blueprint.medium);
+      const reviewAgentIds = getMediumReviewAgentIds(blueprint.medium, blueprint.format);
       setIsReviewing(true);
       setGenerationNote(null);
       setEditedSinceReview(false);
@@ -873,7 +873,10 @@ export function StoryXDesk({
     },
     [blueprint.medium, currentReviewText, marginDefaultAnchor, project]
   );
-  const mediumReviewAgentIds = useMemo(() => getMediumReviewAgentIds(blueprint.medium), [blueprint.medium]);
+  const mediumReviewAgentIds = useMemo(
+    () => getMediumReviewAgentIds(blueprint.medium, blueprint.format),
+    [blueprint.medium, blueprint.format]
+  );
   const marginReview = useMarginReview({
     paragraphs: marginParagraphs,
     corePersonaIds: mediumReviewAgentIds,

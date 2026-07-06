@@ -80,7 +80,7 @@ export interface AgentReviewPromptInput {
   medium: string;
   context: string;
   /** 아크 페이오프 1단계 — 연재 정체 측정값. 있으면 검토에 evidence 로 주입한다. */
-  payoffStatus?: { isStalled: boolean; deferredStreak: number; openPromises: number };
+  payoffStatus?: { isStalled: boolean; deferredStreak: number; openPromises: number; paidPromises?: number };
   /** 작품 헌장 예산 — 있으면 쇼러너 검토에 길 잃음 점검을 주입한다(A-4). */
   contractStatus?: ContractStatusInput;
 }
@@ -431,6 +431,18 @@ export function buildAgentReviewPrompt(input: AgentReviewPromptInput): string {
         `- [측정] 전제 진척 정체 신호 — 회수 없이 ${payoffStatus.deferredStreak}회차 연속(열린 약속 ${payoffStatus.openPromises}개). criteriaKey: stakes_progression_audit. 이 회차가 행동·대가·전환으로 약속에 다가가는지 특히 엄격히 본다.`
       ]
     : [];
+  // 흡인력 게이트 조기 소진 신호(2026-07-06) — critic-reviewer 한정. paidPromises>0 이 오탐 가드
+  // (computePayoffLedger 는 rewardArc 미사용 작품에서 openPromises 0 을 돌려주므로, 약속을 실제로 쓰다가
+  // 전부 회수된 경우만 신호). 정체(isStalled)와 배타, 종반(finalStretch)은 소진이 정상이라 제외. storyx.mjs 미러.
+  const compellingnessEvidence =
+    agentId === 'critic-reviewer' &&
+    payoffStatus && !payoffStatus.isStalled &&
+    payoffStatus.openPromises === 0 && (payoffStatus.paidPromises ?? 0) > 0 &&
+    contractStatus && !contractStatus.finalStretch
+      ? [
+          `- [측정] 긴장 조기 소진 신호 — 열린 약속 0개인데 잔여 ${contractStatus.remaining}회차. criteriaKey: tension_decay_audit. 이 회차가 새 질문·새 긴장을 장전하는지 특히 엄격히 본다.`
+        ]
+      : [];
   // 작품 헌장 길 잃음 점검 — 헌장이 있으면 척추 이탈·예산 초과를 검토 지시로 주입(A-4). storyx.mjs 미러.
   const contractChecks = contractStatus
     ? [
@@ -463,6 +475,8 @@ export function buildAgentReviewPrompt(input: AgentReviewPromptInput): string {
     '- 연재 장편이라면, 이 회차가 작품의 중심 질문(전제·독자 약속)을 진척시키는지도 본다 — 발견·추론만 쌓고 같은 질문이 여러 회차 제자리면, 인물의 행동·대가·선택 변화로 약속에 다가가지 못한 점을 지적한다.',
     // 정체 측정값이 있으면 결정론적 evidence 로 추가 주입한다 (아크 페이오프 1단계).
     ...payoffEvidence,
+    // 흡인력 게이트 — 조기 소진 측정값(critic-reviewer 한정).
+    ...compellingnessEvidence,
     // 작품 헌장 길 잃음 점검 (A-4).
     ...contractChecks,
     '',

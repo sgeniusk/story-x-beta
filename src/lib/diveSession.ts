@@ -1,5 +1,9 @@
 // Dive X 실시간 채팅 세션의 순수 도메인 — 버퍼 누적·응결 분기·컨텍스트 압축
 import type { PlayTurnVerdict } from './playRuntimeValidator';
+import type { SeriesProject } from './storyEngine';
+import type { VsCandidatesInput } from './vsCandidatesClient';
+// episodeBriefing 은 런타임 import 가 전부 type-only 라 순환 없음.
+import { collectUnpaidPromises } from './episodeBriefing';
 
 export type DiveRole = 'user' | 'character';
 
@@ -95,6 +99,25 @@ export function buildTranscript(messages: DiveMessage[]): string {
 export function buildRecentDialogue(session: DiveSession, limit = 6): string {
   const recent = session.chatBuffer.slice(-limit);
   return buildTranscript(recent);
+}
+
+// PLAY 전개 후보 선택을 채팅에 태울 연출 지시 — ⏳계속·⏭전개과 같은 괄호 연출문 계열.
+export function buildPlayDirectionSeed(direction: string): string {
+  return `(전개 — ${direction.trim()})`;
+}
+
+// PLAY 런타임 상태(라이브 대화·장면·캐논) → VS 전개 후보 요청 입력.
+// WRITE(StoryXDesk) 매핑을 미러링하되, recentSummary 만 "지난 회차"가 아니라 라이브 대화로 만든다.
+export function buildVsCandidatesInput(session: DiveSession, project: SeriesProject): VsCandidatesInput {
+  const scene = session.scene?.trim() ?? '';
+  const recentSummary = [scene, buildRecentDialogue(session)].filter((s) => s.length > 0).join('\n');
+  return {
+    medium: project.medium ?? '',
+    format: project.format ?? '',
+    recentSummary,
+    unpaidPromises: collectUnpaidPromises(project),
+    canonStatements: project.canonFacts.map((f) => f.statement)
+  };
 }
 
 // 응결 대상 span에서 캐논화 차단(앵커 위반) 턴을 제외한 transcript. 정본 §7 하드 차단.

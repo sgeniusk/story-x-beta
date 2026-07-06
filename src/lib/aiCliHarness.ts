@@ -282,14 +282,14 @@ function buildHarnessPrompt(options: AiCliRunOptions, selectedAgentIds: Validati
     '- 새 기억 후보는 memoryCandidates에만 적고, blocked/revision/reveal 중 하나로 분류하세요.',
     '- 한국어 문장은 자연스럽게 쓰고, 번역투와 과한 AI식 설명을 피하세요.',
     '',
-    // M4 청크 H — 16 craft 검토 기준 키 (5-2 정본). agentReviewProcess.AgentValidationProcess.criteriaKeys 와 일치.
-    'Craft 검토 기준 16 키 — 각 에이전트는 자기 키 기준으로 평가합니다:',
+    // M4 청크 H — craft 검토 기준 키 (5-2 정본). agentReviewProcess.AgentValidationProcess.criteriaKeys 와 일치(개수 드리프트 방지 위해 카운트 비표기).
+    'Craft 검토 기준 키 — 각 에이전트는 자기 키 기준으로 평가합니다:',
     '- showrunner: chapter_one_hook_check, chapter_end_hook_check, stakes_progression_audit',
     '- character-custodian: pressure_triangle_validation, flat_character_warning',
     '- world-keeper: motif_variation_audit, historical_consistency_extended',
     '- genre-stylist: scene_sequel_ratio, voice_match_score, read_aloud_audit',
     '- continuity-editor: open_threads_overload',
-    '- critic-reviewer: ambiguity_audit, ethical_pressure_test, silence_audit',
+    '- critic-reviewer: ambiguity_audit, ethical_pressure_test, silence_audit, tension_decay_audit, predictability_audit',
     '- essay-curator: universal_leap_check, self_reversal_check, disclosure_scope_check',
     '',
     // M4 청크 H — 12 품질 게이트 (qualityGates.ts). StoryMode 가중치로 강제/권고 결정.
@@ -606,6 +606,8 @@ export function getAgentLabel(agentId: string) {
     'world-keeper': '배경 설계자',
     'genre-stylist': '장르 스타일리스트',
     'continuity-editor': '연속성 감수자',
+    'critic-reviewer': '평론가',
+    'essay-curator': '에세이 큐레이터',
     'essay-interviewer': '에세이 인터뷰어',
     'voice-curator': '문체 큐레이터',
     'audio-narration-director': '오디오 연출가',
