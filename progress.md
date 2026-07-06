@@ -1,10 +1,18 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-07 · Branch: `main` (**디자인 정비 슬라이스 1+2 `done` — PR #26 main 머지 `eec9023`, 머지 후 main init.sh 녹색 재확인. 스튜디오 공통 `--st-*` 토큰(WRITE warm oklch 승격)·모드색 셸 pill·PLAY 표면 접속·모션 스케일. 적대적 검토 워크플로 3렌즈 발견 9건 중 7건 반영·라이브 3모드 실측. · 이전: 흡인력 게이트 PR #25 `238dda1`.**)
+> Last Updated: 2026-07-07 · Branch: `main` (**디자인 정비 슬라이스 3 `done` — PR #27 main 머지 `cf5657f`, 머지 후 main init.sh 녹색 재확인. sx 토큰 핀 완화(사용자 결정 "핀 완화 해")로 PLAN 내용물을 `--st-*` warm에 매핑, 흰 베니어 제거, ⌘K 팔레트 토큰 스코프 잠복 버그 수리. 적대적 검토 3렌즈 발견 15건 중 11건 반영. · 이전: 슬라이스 1+2 PR #26 `eec9023` · 흡인력 게이트 PR #25.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 최근 검증 (2026-07-07 디자인 정비 후)
-`bash init.sh` 통과 — `npm test` **830 통과**(82 파일, styles.studio 계약 4 신규 + workspaceModeBar aria 1 신규) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 · 파트 2 PR #23 · 랜딩 원페이저 PR #24 · PLAY 전개 후보(VS) `a33768e` · 흡인력 게이트 PR #25 · **디자인 정비 슬라이스 1+2 PR #26** (전부 main).
+## 최근 검증 (2026-07-07 디자인 정비 슬라이스 3 후)
+`bash init.sh` 통과 — `npm test` **830 통과**(82 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 · 파트 2 PR #23 · 랜딩 원페이저 PR #24 · PLAY 전개 후보(VS) `a33768e` · 흡인력 게이트 PR #25 · 디자인 정비 슬라이스 1+2 PR #26 · **슬라이스 3(핀 완화) PR #27** (전부 main).
+
+## 완료 트랙 — 디자인 정비 슬라이스 3: PLAN 이음새 봉합·sx 핀 완화 (`done` · 2026-07-07, **PR #27 main 머지** `cf5657f`)
+
+사용자 결정("핀 완화 해")으로 `.sx-desk`의 Linear 다크 리터럴을 버리고 전역 `--st-*` warm 토큰에 매핑 — `.fc-app`(warm) 안 `.sx-desk`(pitch black) 냉온 충돌이 원인이던 PLAN 이음새를 봉합.
+- **구현** — sx 토큰 전면 alias(surface·ink·rule·brand→st-accent·page, AI-stage 파스텔 보존) + `--nx-on-primary: var(--sx-brand-ink)` 동반 매핑(골드 CTA 위 흰 글자 1.9:1→9.55:1) · 라이트 시절 흰 베니어 제거(sx-canon-canvas·sx-bible-workbench·sx-canon-refactor-panel + 자식 행·핑크 경고·러스트 충돌 텍스트) · **⌘K 팔레트 스코프 수리(기존 잠복)** — 팔레트가 .sx-desk 밖 fixed 오버레이라 색 토큰 미해석→투명 유령이던 것을 sx 색 토큰 스코프(.sx-desk+두 backdrop+.fc-app)로 해결, 흰 글로우·흰 kbd 칩도 warm 교체 · `:root:has`/`body:has` 다크 뒤판(흰 띠 봉합) · PublishScreen 인라인 pitch black→st 토큰 · 포커스 링 28%→60%(1.8:1→4.1:1) · faint 티어 28%→40%·page-ink-mute→ink-dim.
+- **핀 갱신(승인된 계약 변경)** — styles.montage.test 3번을 sx→st 매핑 핀으로 재작성(+--sx-line 추가, 파스텔 5종 보존) · editorFocusLayout 2단언 · CLAUDE.md·AGENTS.md DoD "디자인 토큰 규율" 교체 · token-map.md 스테일 배너. 변이 실험으로 새 핀 강제력 확인.
+- **검증** — init.sh 녹색 · 적대적 검토 3렌즈(회귀·계약·접근성) 발견 15건 중 11건 반영, 대비 실계산 ink 13.3:1·muted 5.2:1·CTA 9.55:1 · **라이브** PLAN 인물 회색 슬랩 소멸·바이블 warm·⌘K 정상 렌더·승인 큐 CTA computed 실측·출간 warm·콘솔 0.
+- **범위 밖(슬라이스 4 후보)** — 죽은 표면 라이트 잔재(sx-version-log·sx-publishing-hero·ex-toolstrip)·`src/lib/studioConstants.ts` 죽은 Linear 팔레트 모듈(되살릴 때 sx 매핑을 무음 우회하는 지뢰)·`ex-*` 229곳 — 삭제 슬라이스 적대적 검토 필수. err 틴트 배지 4.26:1 근소 미달(low) 보류.
 
 ## 완료 트랙 — 디자인 정비 슬라이스 1+2: 스튜디오 공통 토큰·셸·PLAY 모션 (`done` · 2026-07-07, **PR #26 main 머지** `eec9023`)
 

@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-07-07 (3차) — 디자인 정비 슬라이스 3 done·머지 (sx 핀 완화·PLAN 이음새 봉합·⌘K 팔레트 수리, PR #27 main `cf5657f`)
+
+> 사용자 결정 "핀 완화 해" → `.sx-desk` Linear 리터럴을 전역 `--st-*` warm에 매핑. progress.md "슬라이스 3" 절 상세.
+
+### 한 것
+- sx 토큰 전면 alias(+`--nx-on-primary`) · 라이브 표면 흰 베니어 제거 · **⌘K 팔레트 토큰 스코프 잠복 버그 수리**(투명 유령→warm 카드) · `:has` 다크 뒤판(흰 띠) · PublishScreen warm · 포커스 링 60% · CLAUDE.md/AGENTS.md/token-map.md 규율 동기화. 적대적 검토 3렌즈 15건 중 11건 반영, 라이브 실측(PLAN 슬랩 소멸·CTA 9.55:1·콘솔 0).
+
+### 손대지 말 것 (불변식)
+- **sx 색 토큰의 값 원천은 `--st-*`** — 리터럴 되돌리기 금지(montage·editorFocusLayout 새 핀이 물고 있음, 변이 실험으로 강제력 확인됨). AI-stage 파스텔 5종·warn/good/err 은 의미색으로 보존.
+- **sx 색 토큰 스코프** = `.sx-desk, .sx-command-palette-backdrop, .sx-spotlight-backdrop, .fc-app`. sx-* 클래스를 새 표면(오버레이·패널)에서 렌더하면 이 스코프에 포함돼 있는지 먼저 확인 — 밖이면 투명 유령이 된다.
+- **`src/lib/studioConstants.ts` 는 옛 Linear 팔레트를 든 죽은 모듈** — 사용자 트윅 기능을 되살릴 때 그대로 배선하면 sx→st 매핑을 무음 우회한다(슬라이스 4에서 삭제 검토).
+
+### 다음 한 가지
+- **슬라이스 4(선택) = 죽은 세대 정리** — ex-* 229곳·sx-version-log/publishing-hero·studioConstants·hx 잔재·미사용 wds/mx alias. 삭제 슬라이스라 적대적 검토 필수([[subagent-commit-hygiene]]). 급하지 않음 — 라이브 표면은 이미 전부 warm 통합.
+- 그 외 대기 — 기존 후속 4건(`docs/handoff/2026-07-07-next-session-prompt.md`). **부수 발견**: 후속 ④의 `변경 검토 요청` 버튼은 PLAN→작품 데이터→캐논 원장 동선에서 도달 가능함을 이번 세션 라이브에서 확인(BibleWorkbenchHeader 렌더) — "도달 불가" 단정은 수정 필요.
+
+---
+
 ## 2026-07-07 (2차) — 디자인 정비 슬라이스 1+2 done·머지 (스튜디오 공통 토큰·모드색 셸·PLAY 모션, PR #26 main `eec9023`)
 
 > 사용자 요청 "심플하지만 인터랙티브한 반응 + 세 모드 일체감 검토" → 검토 후 승인된 권장안(WRITE `.fc-app` warm oklch 승격) 구현. progress.md "디자인 정비 슬라이스 1+2" 절 상세. spec `docs/superpowers/specs/2026-07-07-studio-shell-motion-unify-design.md`.
