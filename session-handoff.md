@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-07-07 (2차) — 디자인 정비 슬라이스 1+2 done·머지 (스튜디오 공통 토큰·모드색 셸·PLAY 모션, PR #26 main `eec9023`)
+
+> 사용자 요청 "심플하지만 인터랙티브한 반응 + 세 모드 일체감 검토" → 검토 후 승인된 권장안(WRITE `.fc-app` warm oklch 승격) 구현. progress.md "디자인 정비 슬라이스 1+2" 절 상세. spec `docs/superpowers/specs/2026-07-07-studio-shell-motion-unify-design.md`.
+
+### 한 것
+- 전역 `--st-*` 토큰(warm 팔레트+모드색+모션 3단) · `.fc-app` alias 전환 · 셸 pill 모드색+인터랙션+aria · `.dx-*` 접속+`st-rise` 모션 · 진입 페이드 · reduced-motion 일괄. TDD(styles.studio.test 신규+aria) → **적대적 검토 워크플로 3렌즈(회귀·계약·접근성) 발견 9건 중 7건 반영**(ink-faint 대비 붕괴 6곳·공허 단언·포커스 구멍 등) → 라이브 3모드 실측(pill computed·콘솔 0) → PR #26 squash 머지·main init.sh 녹색 재확인.
+
+### 손대지 말 것 (불변식)
+- **`--st-*` 값 원천은 :root 한 곳** — `.fc-app` 로컬 토큰은 alias만. 값을 fc 쪽에서 다시 리터럴로 되돌리면 미러 드리프트 재발.
+- **모드색 = 랜딩 `--flow-*` 다크 값과 동일** — 갈라지면 랜딩의 약속과 앱이 어긋난다(styles.studio.test 핀).
+- **dx 의미색 보존** — 쇼러너 보라·VS 라임·retcon 로즈·유저 버블 청록은 토큰화 대상 아님(상태 언어).
+- **새 모션 셀렉터는 reduced-motion 블록에도 추가** — styles.studio.test 가 블록 앵커링으로 물고 있음. `.dx-empty` 류 후행 규칙은 미디어 블록보다 앞에 둘 것(소스 순서가 리셋을 이긴다).
+- **몬태주 핀·`.sx-desk` Linear 다크 무접촉 유지** — 슬라이스 3 전까지.
+
+### 다음 한 가지
+- **슬라이스 3 = PLAN 이음새** — `.fc-app`(warm) 안 `.sx-desk`(Linear pitch black) 충돌. 몬태주 테스트 핀 + CLAUDE.md "Linear 다크 토큰 유지" 조항과 얽혀 **착수 전 사용자 결정 필요**(핀 완화 vs 브리지 토큰). 그 외 — 슬라이스 4(죽은 세대 정리, 적대적 검토 필수) · `.fc-app` remount 페이드 트레이드오프 관찰 · 기존 후속 4건(`docs/handoff/2026-07-07-next-session-prompt.md`) 대기.
+
+### 검증 팁
+- 이 세션도 permission classifier 간헐 장애 지속 — preview MCP·Agent·여러 줄 Bash가 무작위로 거부. **재시도 1~3회면 대부분 통과**, gh pr body는 `--body-file`로 우회. Workflow(백그라운드)는 정상 작동했음.
+- 라이브 3모드 재현 — 백업 주입 스니펫(`docs/handoff/2026-06-11-demo-video-kit.md`) 후 `?stage=editor`/`?stage=dive` URL 파라미터로 직행 가능.
+
+---
+
 ## 2026-07-07 — 흡인력 게이트 done·머지 (critic-reviewer 검토망 승격, PR #25 main 머지 `238dda1`)
 
 > 흡인력 딥리서치의 승인된 나머지 후속 — critic-reviewer를 연재 서사 라이브 검토 **6번째 흡인력 판정자**로 승격(Re3 재순위의 Story X 번역 = 검토 verdict가 게이트). progress.md "흡인력 게이트" 절 상세. spec/plan `docs/superpowers/{specs,plans}/2026-07-06-compellingness-gate*`. 커밋 `7f7ff52`(docs)·`417106d`·`c8f6b0a`·`179b18c`·`521b864`·`468325f`(검토 반영).

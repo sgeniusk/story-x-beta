@@ -1,10 +1,19 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-07 · Branch: `main` (**흡인력 게이트 `done` — PR #25 main 머지 `238dda1`, 머지 후 main init.sh 녹색 재확인. critic-reviewer를 연재 서사 라이브 검토 6번째 흡인력 판정자로 승격(긴장·서프라이즈 criteriaKeys + 조기 소진 결정론 신호 + review-agent payoffStatus 배관 봉합). 적대적 검토 APPROVE·라이브 end-to-end 실증(평론가 revise + tension_decay_audit 명시). · 이전: PLAY 전개 후보(VS) main 머지 `a33768e`.**)
+> Last Updated: 2026-07-07 · Branch: `main` (**디자인 정비 슬라이스 1+2 `done` — PR #26 main 머지 `eec9023`, 머지 후 main init.sh 녹색 재확인. 스튜디오 공통 `--st-*` 토큰(WRITE warm oklch 승격)·모드색 셸 pill·PLAY 표면 접속·모션 스케일. 적대적 검토 워크플로 3렌즈 발견 9건 중 7건 반영·라이브 3모드 실측. · 이전: 흡인력 게이트 PR #25 `238dda1`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 최근 검증 (2026-07-07)
-`bash init.sh` 통과 — `npm test` **821 통과**(81 파일, 흡인력 게이트 17 신규: agentSeedData 5·agentValidationProcess 2·promptBuilders 9·reviewClient 1... +aiCliHarness 라벨 1) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 · 파트 2 PR #23 · 랜딩 원페이저 PR #24 · PLAY 전개 후보(VS) `a33768e` · **흡인력 게이트 PR #25** (전부 main).
+## 최근 검증 (2026-07-07 디자인 정비 후)
+`bash init.sh` 통과 — `npm test` **830 통과**(82 파일, styles.studio 계약 4 신규 + workspaceModeBar aria 1 신규) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 · 파트 2 PR #23 · 랜딩 원페이저 PR #24 · PLAY 전개 후보(VS) `a33768e` · 흡인력 게이트 PR #25 · **디자인 정비 슬라이스 1+2 PR #26** (전부 main).
+
+## 완료 트랙 — 디자인 정비 슬라이스 1+2: 스튜디오 공통 토큰·셸·PLAY 모션 (`done` · 2026-07-07, **PR #26 main 머지** `eec9023`)
+
+사용자 검토 요청("심플하지만 인터랙티브한 반응 + 세 모드 일체감") → 검토 세션 진단(3모드가 3개 디자인 시스템·셸은 4번째 언어·transition 61곳 duration 16종·PLAY keyframes 0·focus-visible은 sx 스코프만·WRITE↔PLAN 페이드는 isWorkbenchFading 미배선으로 시각적 사망) → 승인된 권장안 = **WRITE `.fc-app` warm oklch 승격**. spec `docs/superpowers/specs/2026-07-07-studio-shell-motion-unify-design.md`.
+- **구현** — 전역 `--st-*` 토큰 블록(:root, styles.css ~9109): warm 팔레트 13종 + 모드색 3종(`--st-mode-play/write/plan` = 랜딩 다크 `--flow-*` 동일 값) + 모션 스케일(`--st-dur-fast 120·base 160·slow 320ms`·`--st-ease` 단일) · `.fc-app` 로컬 토큰 → `--st-*` alias(값 원천 단일화, fc 내부 수백 사용처 무변경) · `.wm-*` 셸 토큰화 + hover/active/focus-visible/transition + **활성 pill 모드색**(data-mode 셀렉터) + `aria-pressed`·토글 `role=group aria-label="작업 모드"` · `.dx-*` 중성 표면 토큰 스왑(의미색 보존: 쇼러너 보라·VS 라임·retcon 로즈·유저 버블 청록) + `st-rise` 등장 모션(버블·챕터·승인·VS패널·쇼러너 시트·om-menu) + `.dx-desk button` 공통 인터랙션 규칙 · `.dx-desk`/`.fc-app` 마운트 진입 페이드(`st-fade-in`) — stage 하드 스왑·트랙 전환 모두 커버 · `prefers-reduced-motion` 일괄 리셋 블록.
+- **적대적 검토(워크플로 3렌즈: 회귀·테스트 계약·접근성, 발견 9건 중 7건 반영)** — ink-faint 재티어링 6곳(대비 2.8:1→ink-dim으로 AA 복원) · styles.studio.test reduced-motion 공허 단언→블록 앵커링 정규식 · `.dx-empty` 리셋 커버 + 소스 순서 교정(미디어 블록보다 앞으로) · `.wm-title-input:focus-visible` 링(기존 1.10:1 비가시 구멍) · `.dx-input` outline:none 제거(공용 링 복원) · 색상 전환 5곳 감속 블록 추가 · 토글 그룹 시맨틱. 모드 pill 대비 실계산 7.33~12.02:1(AA~AAA). 몬태주 `--wds-*`·`.sx-desk` Linear 핀 무접촉(렌즈 확인).
+- **검증** — init.sh 녹색 · **라이브(preview 5175, 로판 23화 백업)** 3모드 스크린샷: 셸-캔버스 이음새 소멸·활성 pill 모드색(computed rgb 실측 `196,182,255` 등)·PLAY warm 접속·fresh reload 콘솔 0.
+- **알려진 트레이드오프(의도적 보류)** — `.fc-app` 진입 페이드가 `key=syncVersion` remount 경로(⟳최신화·PLAN 반영/버리기)에도 발화(320ms 페이드인). 콘텐츠 갱신 피드백으로 기능한다고 판단해 유지 — 거슬리면 `--st-dur-base`로 단축 or remount 시 클래스 억제.
+- **범위 밖(슬라이스 3·4 후속)** — **PLAN 이음새**: `.fc-app`(warm) 안 `.sx-desk`(Linear pitch black) 내용물 충돌. 몬태주 테스트 핀 + CLAUDE.md "Linear 다크 토큰 유지" 조항과 얽혀 **사용자 결정 필요**(핀 완화 vs 브리지 토큰) · 죽은 세대 정리(`ex-*` 229곳·`hx-*`·미사용 wds/mx alias, 삭제 슬라이스 적대적 검토 필수).
 
 ## 완료 트랙 — 흡인력 게이트: critic-reviewer 검토망 승격 (`done` · 2026-07-07, **PR #25 main 머지** `238dda1`)
 
