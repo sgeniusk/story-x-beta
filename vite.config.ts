@@ -242,6 +242,26 @@ export default defineConfig({
       '--unpaid-json',
       JSON.stringify(Array.isArray(input.unpaidPromises) ? input.unpaidPromises : [])
     ]),
+    storyxBridge('/api/plan-chat', (input) => [
+      'tools/storyx.mjs',
+      'plan-chat',
+      '--provider',
+      'codex',
+      '--medium',
+      String(input.medium ?? 'novel'),
+      '--format',
+      String(input.format ?? 'long-novel'),
+      '--section',
+      String(input.activeSection ?? ''),
+      '--context',
+      String(input.contextDigest ?? ''),
+      '--catalog',
+      String(input.catalogText ?? ''),
+      '--dialogue',
+      String(input.dialogue ?? ''),
+      '--query',
+      String(input.query ?? '')
+    ]),
     storyxBridge('/api/dive-chat', (input) => [
       'tools/storyx.mjs',
       'dive-chat',
