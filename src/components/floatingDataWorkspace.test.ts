@@ -128,4 +128,16 @@ describe('FloatingDataWorkspace', () => {
     expect(onSelectCategory).toHaveBeenCalled();
     unmount();
   });
+
+  it('설계 독 버튼이 설계 패널을 열고 designSlot 을 렌더한다', () => {
+    const { host, click, unmount } = mount(baseProps({
+      designSlot: createElement('div', { 'data-testid': 'design-slot' }, '설계 대화'),
+    }));
+    const btn = Array.from(host.querySelectorAll('.tool')).find((b) => b.textContent?.includes('설계'));
+    expect(btn).not.toBeUndefined();
+    click(btn ?? null);
+    expect(host.querySelector('#fc-pd-design')?.classList.contains('show')).toBe(true);
+    expect(host.querySelector('[data-testid="design-slot"]')).not.toBeNull();
+    unmount();
+  });
 });
