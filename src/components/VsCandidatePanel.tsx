@@ -1,4 +1,4 @@
-// PLAY 전개 후보(VS) 게이지 패널 — 의외도 3칸 막대·캐논 배지·선택. 상태·fetch 는 DiveDesk 소유(프레젠테이션만).
+// PLAY 전개 후보(VS) 게이지 패널 — 의외도 3칸 막대·긴장 배지·캐논 배지·선택. 상태·fetch 는 DiveDesk 소유(프레젠테이션만).
 import { rarityToBars, type VsCandidate } from '../lib/episodeBriefing';
 
 interface VsCandidatePanelProps {
@@ -30,6 +30,11 @@ export function VsCandidatePanel({ candidates, onPick, onDismiss }: VsCandidateP
               ))}
             </span>
             <span className="dx-vs-direction">{c.direction}</span>
+            {c.tension && (
+              <em className={`dx-vs-tension is-${c.tension}`} title={c.tensionNote}>
+                {c.tension === 'arms' ? '새 긴장' : '회수만'}
+              </em>
+            )}
             {c.canonSuspect && <em className="dx-vs-suspect">캐논 확인</em>}
           </button>
         );

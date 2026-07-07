@@ -541,6 +541,39 @@ describe('normalizeVsCandidates', () => {
     const five = Array.from({ length: 5 }, (_, i) => ({ direction: `D${i}`, probability: 0.5 }));
     expect(normalizeVsCandidates({ candidates: five }, [])).toHaveLength(4);
   });
+  it('tension arms/drains 를 보존하고 tensionNote 를 함께 싣는다', () => {
+    const out = normalizeVsCandidates({ candidates: [
+      { direction: 'A', probability: 0.5, tension: 'arms', tensionNote: '새 질문을 연다' },
+      { direction: 'B', probability: 0.5, tension: 'drains' }
+    ] }, []);
+    expect(out[0].tension).toBe('arms');
+    expect(out[0].tensionNote).toBe('새 질문을 연다');
+    expect(out[1].tension).toBe('drains');
+    expect(out[1].tensionNote).toBeUndefined();
+  });
+  it('비정상 tension 값·누락은 필드 자체를 생략한다(조용한 강등)', () => {
+    const out = normalizeVsCandidates({ candidates: [
+      { direction: 'A', probability: 0.5, tension: 'both' },
+      { direction: 'B', probability: 0.5, tension: 1 },
+      { direction: 'C', probability: 0.5 }
+    ] }, []);
+    expect('tension' in out[0]).toBe(false);
+    expect('tension' in out[1]).toBe(false);
+    expect('tension' in out[2]).toBe(false);
+  });
+  it('tensionNote 는 trim 후 120자 초과분을 절단한다', () => {
+    const long = '가'.repeat(150);
+    const out = normalizeVsCandidates({ candidates: [
+      { direction: 'A', probability: 0.5, tension: 'arms', tensionNote: `  ${long}  ` }
+    ] }, []);
+    expect(out[0].tensionNote).toBe('가'.repeat(120));
+  });
+  it('tension 없는 tensionNote 는 버린다', () => {
+    const out = normalizeVsCandidates({ candidates: [
+      { direction: 'A', probability: 0.5, tensionNote: '홀로 온 근거' }
+    ] }, []);
+    expect(out[0].tensionNote).toBeUndefined();
+  });
 });
 
 describe('rarityToBars — VS 게이지 칸 수 (의외도에 비례)', () => {
