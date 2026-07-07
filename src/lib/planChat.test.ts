@@ -102,6 +102,14 @@ describe('normalizePlanChatResponse', () => {
     expect('targetId' in turn!.proposals[0]).toBe(false);
     expect('targetLabel' in turn!.proposals[0]).toBe(false);
   });
+  it('story-core 중복은 임의 targetId 가 달라도 첫 것만 남는다(출력 정체성 dedup)', () => {
+    const turn = ok([
+      { kind: 'story-core', field: 'tone', after: 'a', targetId: 'x1' },
+      { kind: 'story-core', field: 'tone', after: 'b', targetId: 'x2' }
+    ]);
+    expect(turn?.proposals).toHaveLength(1);
+    expect(turn?.proposals[0].after).toBe('a');
+  });
   it('proposals 부재·비배열이어도 reply 만으로 정상 턴', () => {
     expect(normalizePlanChatResponse({ reply: '안녕' }, catalog)?.proposals).toEqual([]);
     expect(normalizePlanChatResponse({ reply: '안녕', proposals: 'oops' }, catalog)?.proposals).toEqual([]);

@@ -120,11 +120,11 @@ export function normalizePlanChatResponse(raw: unknown, catalog: PlanChatCatalog
     } else {
       continue;
     }
-    const dedupKey = `${kind}:${targetId}:${field}`;
+    const isEntityKind = kind === 'character' || kind === 'world' || kind === 'canon';
+    const dedupKey = `${kind}:${isEntityKind ? targetId : ''}:${field}`;
     if (seen.has(dedupKey)) continue;
     seen.add(dedupKey);
     const rationale = typeof p.rationale === 'string' ? p.rationale.trim().slice(0, MAX_RATIONALE) : '';
-    const isEntityKind = kind === 'character' || kind === 'world' || kind === 'canon';
     const targetLabel =
       isEntityKind && Object.prototype.hasOwnProperty.call(catalog.targetLabels, targetId)
         ? catalog.targetLabels[targetId]
