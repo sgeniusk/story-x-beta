@@ -85,7 +85,13 @@ export function PlanChatPanel({ messages, busy, note, harnessPreview, onSend, on
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="파트너에게 말하기 — 설계 고민을 그대로 적어보세요"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              submit();
+            }
+          }}
+          placeholder="파트너에게 말하기 (Enter 전송 · Shift+Enter 줄바꿈)"
           rows={2}
           disabled={busy}
           aria-label="설계 파트너에게 보낼 말"

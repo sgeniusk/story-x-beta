@@ -9029,7 +9029,7 @@ body:has(.fc-app) {
 .pcp-empty{font-size:12px;color:var(--ink-dim);line-height:1.6;margin:0}
 .pcp-log{display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:46vh}
 .pcp-msg{display:flex;flex-direction:column;gap:6px}
-.pcp-msg .pcp-text{margin:0;font-size:13px;line-height:1.55;padding:8px 10px;border-radius:10px;background:var(--bg-2);color:var(--paper)}
+.pcp-msg .pcp-text{margin:0;font-size:13px;line-height:1.55;padding:8px 10px;border-radius:10px;background:var(--bg-2);color:var(--paper);white-space:pre-wrap}
 .pcp-msg.is-user .pcp-text{background:color-mix(in srgb, var(--st-mode-plan) 14%, transparent);align-self:flex-end;max-width:88%}
 .pcp-prop{display:flex;flex-direction:column;gap:3px;border:1px dashed color-mix(in srgb, var(--st-mode-plan) 55%, transparent);border-radius:10px;padding:8px 10px;background:color-mix(in srgb, var(--st-mode-plan) 7%, transparent)}
 .pcp-prop.is-approved{border-style:solid;opacity:0.65}

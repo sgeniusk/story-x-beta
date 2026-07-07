@@ -24,6 +24,9 @@ describe('PlanChatPanel', () => {
   it('빈 대화면 안내 문구를 렌더한다', () => {
     expect(render()).toContain('설계 파트너와');
   });
+  it('컴포저 placeholder 가 Enter 전송 관례를 안내한다', () => {
+    expect(render()).toContain('Enter 전송 · Shift+Enter 줄바꿈');
+  });
   it('파트너 버블·제안 카드(라벨·근거·승인 버튼)를 렌더한다', () => {
     const html = render({ messages: [partnerMsg] });
     expect(html).toContain('욕망을 좁혀볼까요?');
@@ -37,7 +40,7 @@ describe('PlanChatPanel', () => {
     const approved = { ...partnerMsg, proposals: [{ ...partnerMsg.proposals![0], approved: true }] };
     const html = render({ messages: [approved] });
     expect(html).toContain('✓ 설계안 (미반영)');
-    expect(html).toContain('disabled');
+    expect(html).toMatch(/pcp-prop-stage" disabled/);
   });
   it('harnessPreview 한 줄을 렌더한다', () => {
     const html = render({ harnessPreview: { before: 71, after: 78, count: 2 } });
