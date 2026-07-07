@@ -9201,6 +9201,9 @@ body:has(.fc-app) {
 .dx-vs-radical .dx-vs-bar.is-on { background: #fb7185; }
 .dx-vs-direction { flex: 1 1 auto; font-size: 13px; }
 .dx-vs-suspect { flex: 0 0 auto; font-style: normal; font-size: 9px; padding: 1px 6px; border-radius: 999px; background: color-mix(in srgb, #e7a13d 22%, transparent); color: #e7a13d; }
+.dx-vs-tension { flex: 0 0 auto; font-style: normal; font-size: 9px; padding: 1px 6px; border-radius: 999px; }
+.dx-vs-tension.is-arms { background: color-mix(in srgb, #22d3ee 20%, transparent); color: #22d3ee; }
+.dx-vs-tension.is-drains { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.45); }
 .dx-chapter { border: 1px solid var(--st-rule); border-radius: 10px; padding: 12px 14px; background: rgba(124,92,255,0.12); animation: st-rise var(--st-dur-slow) var(--st-ease); }
 .dx-chapter h4 { margin: 0 0 6px; color: var(--st-mode-plan); font-size: 14px; }
 .dx-chapter p { margin: 0; color: var(--st-ink); line-height: 1.6; }

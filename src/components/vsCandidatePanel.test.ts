@@ -34,4 +34,23 @@ describe('VsCandidatePanel', () => {
   it('rarity 색 클래스를 붙인다', () => {
     expect(render([cand({ rarity: 'radical' })])).toContain('dx-vs-radical');
   });
+  it('tension arms 후보에 「새 긴장」 배지·is-arms 클래스·title 툴팁', () => {
+    const html = render([cand({ tension: 'arms', tensionNote: '죽은 형의 서명이라는 새 질문을 연다' })]);
+    expect(html).toContain('새 긴장');
+    expect(html).toContain('dx-vs-tension is-arms');
+    expect(html).toContain('죽은 형의 서명이라는 새 질문을 연다');
+  });
+  it('tension drains 후보에 「회수만」 배지', () => {
+    const html = render([cand({ tension: 'drains' })]);
+    expect(html).toContain('회수만');
+    expect(html).toContain('is-drains');
+  });
+  it('tension 없으면 긴장 배지 무렌더', () => {
+    expect(render([cand({})])).not.toContain('dx-vs-tension');
+  });
+  it('arms+canonSuspect 병기 — 긴장 배지가 캐논 배지 앞(버튼 title=캐논 경고와 배지 title=근거 공존은 의도)', () => {
+    const html = render([cand({ tension: 'arms', canonSuspect: true })]);
+    expect(html.indexOf('새 긴장')).toBeGreaterThan(-1);
+    expect(html.indexOf('새 긴장')).toBeLessThan(html.indexOf('캐논 확인'));
+  });
 });
