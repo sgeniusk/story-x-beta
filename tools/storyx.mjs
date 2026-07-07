@@ -2240,11 +2240,12 @@ function buildVsCandidatesPrompt({ medium, format, contractDigest, recentSummary
     '- 결말 헌장은 절대 배신하지 않습니다. 결말로 수렴하는 경로만 의외로 흔듭니다.',
     '- 각 방향은 인물의 선택과 대가가 드러나는 한 문장으로 씁니다. 일반론·해설 금지.',
     '- 확률은 0과 1 사이 숫자입니다.',
+    '- 각 방향의 "tension"을 판정합니다 — 새 질문·위험·갈등을 장전하면 "arms", 열린 질문·약속을 닫기만 하면 "drains". "tensionNote"에는 그 판정의 근거를 한 문장으로 씁니다.',
     '- 한국어로 씁니다.',
     '',
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',
-    '  "candidates": [{ "direction": "...", "probability": 0.0 }]',
+    '  "candidates": [{ "direction": "...", "probability": 0.0, "tension": "arms", "tensionNote": "..." }]',
     '}'
   ].join('\n');
 }
