@@ -22,11 +22,14 @@ const MAX_FORKS = 3;
 const MAX_OPTIONS = 3;
 
 export type VsRarity = 'common' | 'surprising' | 'radical';
+export type VsTension = 'arms' | 'drains';
 export interface VsCandidate {
   direction: string;
   probability: number;     // LLM verbalize 추정, 내부용(비노출)
   rarity: VsRarity;
   canonSuspect?: boolean;
+  tension?: VsTension;     // LLM verbalize — arms=새 긴장 장전 · drains=열린 질문 회수만. 비정상 값·누락은 생략(배지 무렌더 강등).
+  tensionNote?: string;    // 판정 근거 한 문장(배지 title 툴팁). tension 유효할 때만, trim 후 120자 절단.
 }
 
 // VS 의외도 — LLM verbalize 확률을 흔함/의외/파격 라벨로 결정론 변환(Phase C-1). 임계는 라이브 후 조정 가능.
@@ -46,9 +49,11 @@ export function rarityToBars(rarity: VsRarity): 1 | 2 | 3 {
   return rarity === 'common' ? 1 : rarity === 'surprising' ? 2 : 3;
 }
 
-// provider 응답({ candidates: [{ direction, probability }] })을 VsCandidate[] 로 정규화.
-// direction 빈 것 제외 · probability 0~1 clamp(누락 시 0.3) · rarity 변환 · canonSuspect(overlapsCanonFact) · 최대 4개.
+// provider 응답({ candidates: [{ direction, probability, tension?, tensionNote? }] })을 VsCandidate[] 로 정규화.
+// direction 빈 것 제외 · probability 0~1 clamp(누락 시 0.3) · rarity 변환 · canonSuspect(overlapsCanonFact)
+// · tension enum 검증(그 외 값 생략) · tensionNote 는 tension 유효 시에만 trim+120자 절단 · 최대 4개.
 const MAX_VS_CANDIDATES = 4;
+const MAX_TENSION_NOTE = 120;
 export function normalizeVsCandidates(raw: unknown, canonStatements: string[]): VsCandidate[] {
   if (typeof raw !== 'object' || raw === null) return [];
   const list = (raw as Record<string, unknown>).candidates;
@@ -61,11 +66,16 @@ export function normalizeVsCandidates(raw: unknown, canonStatements: string[]): 
     if (!direction) continue;
     let probability = typeof r.probability === 'number' && Number.isFinite(r.probability) ? r.probability : 0.3;
     probability = Math.min(1, Math.max(0, probability));
+    const tension = r.tension === 'arms' || r.tension === 'drains' ? (r.tension as VsTension) : undefined;
+    const tensionNote =
+      tension && typeof r.tensionNote === 'string' ? r.tensionNote.trim().slice(0, MAX_TENSION_NOTE) : '';
     out.push({
       direction,
       probability,
       rarity: classifyRarity(probability),
-      ...(overlapsCanonFact(direction, canonStatements) ? { canonSuspect: true } : {})
+      ...(overlapsCanonFact(direction, canonStatements) ? { canonSuspect: true } : {}),
+      ...(tension ? { tension } : {}),
+      ...(tension && tensionNote ? { tensionNote } : {})
     });
     if (out.length >= MAX_VS_CANDIDATES) break;
   }
