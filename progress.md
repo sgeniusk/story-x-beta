@@ -1,12 +1,12 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-07 · Branch: `feat/vs-tension-annotation` (**VS 긴장 배지 슬라이스 — PR #29 검증 완료. 흡인력 후속 ①(VS 후보 흡인력 재순위)을 2축 주석으로 구현 — 같은 콜 verbalize(tension/tensionNote)·배지 순서 불변·canonSuspect 독립 병기. · 이전: 디자인 정비 4a PR #28 `96cdb9b` · 3 PR #27 `cf5657f` · 1+2 PR #26 `eec9023`.**)
+> Last Updated: 2026-07-07 · Branch: `main` (**VS 긴장 배지 슬라이스 `done` — PR #29 main 머지 `6dec0fd`, 머지 후 main init.sh 녹색 재확인. 흡인력 후속 ①(VS 후보 흡인력 재순위)을 2축 주석으로 구현 — 같은 콜 verbalize(tension/tensionNote)·배지 순서 불변·canonSuspect 독립 병기. · 이전: 디자인 정비 4a PR #28 `96cdb9b` · 3 PR #27 `cf5657f` · 1+2 PR #26 `eec9023`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 ## 최근 검증 (2026-07-07 VS 긴장 배지 슬라이스 후)
 `bash init.sh` 통과 — `npm test` **839 통과**(82 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 · 파트 2 PR #23 · 랜딩 원페이저 PR #24 · PLAY 전개 후보(VS) `a33768e` · 흡인력 게이트 PR #25 · 디자인 정비 슬라이스 1+2 PR #26 · 슬라이스 3(핀 완화) PR #27 · 슬라이스 4a(죽은 세대 정리) PR #28 · **VS 긴장 배지 PR #29** (전부 main).
 
-## 완료 트랙 — VS 긴장 배지: 후보 흡인력 2축 주석 (`done` · 2026-07-07, **PR #29**)
+## 완료 트랙 — VS 긴장 배지: 후보 흡인력 2축 주석 (`done` · 2026-07-07, **PR #29 main 머지** `6dec0fd`)
 
 흡인력 후속 ①(VS 후보 흡인력 재순위)의 구현 — 의외도(rarity) 단일 축에 **긴장 기여 축**을 얹되, 자동 재순위가 아니라 **주석(배지)** 으로. 근거 = 딥리서치 "VS 재료 확장→흡인력 재순위→인간 선별" + 열린 질문 2(자동 재순위 우위 근거 없음). 사용자 결정 4건(brainstorming·목업) — ⓐ 같은 VS 콜 verbalize(별도 콜·결정론 판정 기각) ⓑ 배지·순서 불변(무언 정렬 기각) ⓒ canonSuspect와 독립 병기(긴장 먼저·캐논 끝) + 접근안 2(근거 툴팁). spec `docs/superpowers/specs/2026-07-07-vs-tension-annotation-design.md` · 계획 `docs/superpowers/plans/2026-07-07-vs-tension-annotation.md`. subagent-driven TDD 5태스크(태스크별 spec/품질 2단 검토).
 - **구현** — `VsCandidate.tension?: 'arms'|'drains'`·`tensionNote?`(120자 절단) + `normalizeVsCandidates` enum 검증·조용한 강등(`8191b31`) · 프롬프트 지시 1줄+JSON 계약 2필드 미러 3점 세트(`9c7c30c`)+`[vs-mirror]` 핀에 지시문 전문(변이 실험 강제력 확인, `7d9ab47`) · PLAY `dx-vs-tension` 배지(`b1da70c`) · WRITE `fc-vs-tension` 배지(`2a8afcd`). 서버·입력 조립·선택 배관 무변경(후보 무가공 통과 구조 그대로).

@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-07-07 (5차) — VS 긴장 배지 done·머지 (후보 흡인력 2축 주석, PR #29 main `6dec0fd`)
+
+> 흡인력 후속 ①을 brainstorming(목업 4화면)→spec→plan→subagent-driven TDD 5태스크→라이브→머지로 완주. progress.md "VS 긴장 배지" 절 상세. 사용자 결정 4건 — ⓐ 같은 콜 verbalize ⓑ 배지·순서 불변 ⓒ canonSuspect 독립 병기 + 접근안 2(근거 툴팁).
+
+### 한 것
+- `VsCandidate.tension('arms'|'drains')`·`tensionNote`(120자) + normalize 조용한 강등 · 프롬프트 미러 3점 세트(+[vs-mirror] 핀에 지시문 전문, 변이 실험 확인) · PLAY `dx-vs-tension`·WRITE `fc-vs-tension` 배지. 태스크별 spec/품질 2단 검토 + 최종 홀리스틱 Ready to merge(발견 0 블로킹). **라이브** — WRITE·PLAY 실 codex 8/8 tension 도착·배지·툴팁 렌더(#22d3ee 실측)·콘솔 0·620px 오버플로 0.
+
+### 손대지 말 것 (불변식)
+- **VS 재순위는 주석이지 정렬이 아니다** — 후보 순서는 LLM 응답 그대로(정렬 로직 없음이 설계 결정). 정렬을 얹으려면 라이브 관찰 후 별도 조각 + 새 spec.
+- **tension은 enum 검증 후 생략식 강등** — 비정상 값이면 필드 자체가 사라져 배지 무렌더가 정상 동작. "무배지 = drains" 해석 금지(누락과 구분 불가 방지 결정).
+- **미러 핀 확장됨** — [vs-mirror]가 이제 JSON 계약 + 지시문 전문 둘 다 문다. 프롬프트 수정 시 promptBuilders.ts·storyx.mjs·테스트 상수 3곳 동시 갱신.
+
+### 다음 한 가지
+- **관찰 대상 2건 겸측** — 라이브 롤 8후보 전부 arms(「회수만」 미발화). drains 발화율·판정 품질과 canonSuspect 배지 실사례(후속 ②, 캐논 91 백업 + VS 반복 요청)를 같은 dogfooding 세션에서 함께 관찰 권장.
+- 그 외 대기 — ③ PLAN AI 설계 대화 채널(brainstorming 필수) · 선택 4b(desk-grid 계약 재협상) · 기존 백로그(`docs/handoff/2026-07-08-next-session-prompt.md`).
+
+### 검증 팁
+- 이 세션 permission classifier 안정적이었음(거부 0). preview 5175 + ch23 백업 주입 + `?stage=editor`/`?stage=dive` 직행, React 클릭은 dispatchEvent 우회 그대로 유효.
+
+---
+
 ## 2026-07-07 (4차) — 디자인 정비 슬라이스 4a done·머지 (죽은 라이트 세대 정리, PR #28 main `96cdb9b`) — **디자인 정비 1~4a 완결**
 
 > 렌더 무변경 삭제 슬라이스(-651줄). progress.md "슬라이스 4a" 절 상세. 이로써 이 세션의 디자인 정비 아크(검토→슬라이스 1+2 PR #26→3 PR #27→4a PR #28)가 완결.
