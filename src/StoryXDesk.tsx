@@ -1652,7 +1652,7 @@ export function StoryXDesk({
   // PLAN staged 핸들러 — setProject 대신 패치 upsert. before 는 본편(project) 값, logCanonChange 없음(패치가 이력).
   function stageCharacterMemory(characterId: string, field: 'desire' | 'wound' | 'currentState', value: string) {
     const character = project.characters.find((item) => item.id === characterId);
-    if (!character) return;
+    if (!character) return false;
     const labels = { desire: '욕망', wound: '상처', currentState: '현재 상태' } as const;
     setPlanPatches((prev) =>
       upsertPlanPatch(prev, {
@@ -1664,22 +1664,25 @@ export function StoryXDesk({
         after: value
       })
     );
+    return true;
   }
 
   function stageWorldMemory(ruleId: string, value: string) {
     const rule = project.worldRules.find((item) => item.id === ruleId);
-    if (!rule) return;
+    if (!rule) return false;
     setPlanPatches((prev) =>
       upsertPlanPatch(prev, { kind: 'world', id: ruleId, label: rule.title, before: rule.rule, after: value })
     );
+    return true;
   }
 
   function stageCanonMemory(canonId: string, value: string) {
     const fact = project.canonFacts.find((item) => item.id === canonId);
-    if (!fact) return;
+    if (!fact) return false;
     setPlanPatches((prev) =>
       upsertPlanPatch(prev, { kind: 'canon', id: canonId, label: `캐논 ${fact.episode}화`, before: fact.statement, after: value })
     );
+    return true;
   }
 
   function stageStoryCore(
@@ -1689,7 +1692,7 @@ export function StoryXDesk({
     if (field === 'title') {
       // title 은 wm-bar 소유(직행 유지) — MemoryBankStudio 는 title 을 편집하지 않지만 prop 타입 호환용.
       updateProject('title', value);
-      return;
+      return true;
     }
     const labels = {
       logline: '로그라인',
@@ -1701,6 +1704,7 @@ export function StoryXDesk({
     setPlanPatches((prev) =>
       upsertPlanPatch(prev, { kind: 'story-core', field, label: labels[field], before: project[field], after: value })
     );
+    return true;
   }
 
   function stageCreativeWeight(weight: CreativeWeight) {
@@ -1747,22 +1751,26 @@ export function StoryXDesk({
   }
 
   // 제안 승인 — 기존 stage* 핸들러 재사용(upsert 불변식·D6 자동 상속). 'title' 은 normalize 가 이미 드랍.
+  // stage* 성공 시에만 ✓ 마킹 — 대상이 본편에서 사라져 no-op 이면 note 강등(가짜 설계안 방지).
   function approvePlanProposal(messageId: string, index: number) {
     const message = planChatMessages.find((m) => m.id === messageId);
     const proposal = message?.proposals?.[index];
     if (!message || !proposal || proposal.approved) return;
+    let staged = false;
     if (proposal.kind === 'character' && proposal.targetId && proposal.field) {
-      stageCharacterMemory(proposal.targetId, proposal.field as 'desire' | 'wound' | 'currentState', proposal.after);
+      staged = stageCharacterMemory(proposal.targetId, proposal.field as 'desire' | 'wound' | 'currentState', proposal.after);
     } else if (proposal.kind === 'world' && proposal.targetId) {
-      stageWorldMemory(proposal.targetId, proposal.after);
+      staged = stageWorldMemory(proposal.targetId, proposal.after);
     } else if (proposal.kind === 'canon' && proposal.targetId) {
-      stageCanonMemory(proposal.targetId, proposal.after);
+      staged = stageCanonMemory(proposal.targetId, proposal.after);
     } else if (proposal.kind === 'story-core' && proposal.field) {
-      stageStoryCore(
+      staged = stageStoryCore(
         proposal.field as 'logline' | 'audiencePromise' | 'deepQuestion' | 'formIntent' | 'tone',
         proposal.after
       );
-    } else {
+    }
+    if (!staged) {
+      setPlanChatNote('제안 대상이 본편에서 사라져 설계안으로 만들 수 없어요.');
       return;
     }
     setPlanChatMessages((prev) =>
