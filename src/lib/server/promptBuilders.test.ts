@@ -405,6 +405,8 @@ import { buildVsCandidatesPrompt } from './promptBuilders';
 describe('buildVsCandidatesPrompt — VS 전개 후보 (Phase C-1)', () => {
   const VS_JSON_CONTRACT =
     '  "candidates": [{ "direction": "...", "probability": 0.0, "tension": "arms", "tensionNote": "..." }]';
+  const VS_TENSION_INSTRUCTION =
+    '- 각 방향의 "tension"을 판정합니다 — 새 질문·위험·갈등을 장전하면 "arms", 열린 질문·약속을 닫기만 하면 "drains". "tensionNote"에는 그 판정의 근거를 한 문장으로 씁니다.';
   it('방향 4개·꼬리 분포·결말 불가침·JSON 계약을 담는다', () => {
     const p = buildVsCandidatesPrompt({
       medium: 'novel', format: 'long-novel',
@@ -414,11 +416,12 @@ describe('buildVsCandidatesPrompt — VS 전개 후보 (Phase C-1)', () => {
     expect(p).toContain('파격');
     expect(p).toContain('결말 헌장은 절대 배신하지 않습니다');
     expect(p).toContain('약속A');
-    expect(p).toContain('새 질문·위험·갈등을 장전하면 "arms"');
+    expect(p).toContain(VS_TENSION_INSTRUCTION);
     expect(p).toContain(VS_JSON_CONTRACT);
   });
   it('[vs-mirror] storyx.mjs 가 JSON 출력 계약을 byte-identical 로 미러한다', () => {
     const cli = readFileSync(resolve(__dirname, '../../../tools/storyx.mjs'), 'utf8');
     expect(cli).toContain(VS_JSON_CONTRACT);
+    expect(cli).toContain(VS_TENSION_INSTRUCTION);
   });
 });
