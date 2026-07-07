@@ -1236,7 +1236,7 @@ if (command === 'plan-chat') {
   const prompt = buildPlanChatPrompt({ medium, format, activeSection: section, contextDigest: context, catalog, dialogue, query });
 
   if (dryRun) {
-    printJson({ provider, medium, mode: 'plan-chat', dryRun: true, prompt, warning: 'dry-run 모드 — provider 호출 없이 프롬프트만 출력합니다.' });
+    printJson({ provider, medium, format, mode: 'plan-chat', dryRun: true, prompt, warning: 'dry-run 모드 — provider 호출 없이 프롬프트만 출력합니다.' });
     process.exit(0);
   }
   if (provider === 'mock') {
