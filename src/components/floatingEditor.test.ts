@@ -553,6 +553,20 @@ describe('FloatingEditor VS 전개 후보 (C-1 Task8)', () => {
     unmount();
   });
 
+  it('[VS] tension 배지를 렌더한다 — arms 새 긴장·drains 회수만', () => {
+    const { host, unmount } = mount(baseProps({
+      onRequestVsCandidates: () => {},
+      onIntentChange: () => {},
+      vsCandidates: [
+        { direction: '배신한다', probability: 0.1, rarity: 'radical', tension: 'arms', tensionNote: '새 적을 만든다' },
+        { direction: '화해한다', probability: 0.5, rarity: 'common', tension: 'drains' },
+      ],
+    }));
+    expect(host.textContent).toContain('새 긴장');
+    expect(host.textContent).toContain('회수만');
+    unmount();
+  });
+
   it('[VS] onRequestVsCandidates 미주입이면 블록 미렌더', () => {
     const { host, unmount } = mount(baseProps({ onIntentChange: () => {} }));
     expect(host.textContent).not.toContain('전개 후보 받기');

@@ -841,6 +841,11 @@ export function FloatingEditor({
                     >
                       <span className="fc-vs-rarity">{rarityLabel(c.rarity)}</span>
                       <span className="fc-vs-dir">{c.direction}</span>
+                      {c.tension && (
+                        <em className={`fc-vs-tension is-${c.tension}`} title={c.tensionNote}>
+                          {c.tension === 'arms' ? '새 긴장' : '회수만'}
+                        </em>
+                      )}
                       {c.canonSuspect && <em className="fc-fork-suspect">캐논 확인</em>}
                     </button>
                   ))}
