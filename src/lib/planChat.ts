@@ -124,10 +124,14 @@ export function normalizePlanChatResponse(raw: unknown, catalog: PlanChatCatalog
     if (seen.has(dedupKey)) continue;
     seen.add(dedupKey);
     const rationale = typeof p.rationale === 'string' ? p.rationale.trim().slice(0, MAX_RATIONALE) : '';
-    const targetLabel = targetId ? catalog.targetLabels[targetId] : undefined;
+    const isEntityKind = kind === 'character' || kind === 'world' || kind === 'canon';
+    const targetLabel =
+      isEntityKind && Object.prototype.hasOwnProperty.call(catalog.targetLabels, targetId)
+        ? catalog.targetLabels[targetId]
+        : undefined;
     proposals.push({
       kind: kind as PlanChatProposal['kind'],
-      ...(targetId ? { targetId } : {}),
+      ...(isEntityKind ? { targetId } : {}),
       ...(targetLabel ? { targetLabel } : {}),
       ...(field && (kind === 'character' || kind === 'story-core') ? { field } : {}),
       after,

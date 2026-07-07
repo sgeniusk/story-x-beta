@@ -96,4 +96,23 @@ describe('normalizePlanChatResponse', () => {
     const turn = ok([{ kind: 'world', targetId: 'w1', after: 'x', rationale: `  ${'나'.repeat(150)}  ` }]);
     expect(turn?.proposals[0].rationale).toBe('나'.repeat(120));
   });
+  it('story-core 에 임의 targetId 가 와도 targetId·targetLabel 을 싣지 않는다(프로토타입 누수 가드)', () => {
+    const turn = ok([{ kind: 'story-core', field: 'tone', after: 'y', targetId: '__proto__' }]);
+    expect(turn?.proposals).toHaveLength(1);
+    expect('targetId' in turn!.proposals[0]).toBe(false);
+    expect('targetLabel' in turn!.proposals[0]).toBe(false);
+  });
+  it('proposals 부재·비배열이어도 reply 만으로 정상 턴', () => {
+    expect(normalizePlanChatResponse({ reply: '안녕' }, catalog)?.proposals).toEqual([]);
+    expect(normalizePlanChatResponse({ reply: '안녕', proposals: 'oops' }, catalog)?.proposals).toEqual([]);
+  });
+  it('빈 프로젝트 카탈로그도 안전하다', () => {
+    const empty = {
+      characters: [], worldRules: [], canonFacts: [],
+      logline: '', audiencePromise: '', deepQuestion: '', formIntent: '', tone: ''
+    } as unknown as SeriesProject;
+    const catalogEmpty = buildPlanChatCatalog(empty);
+    expect(catalogEmpty.text).toContain('[인물]');
+    expect(normalizePlanChatResponse({ reply: 'ok', proposals: [] }, catalogEmpty)?.proposals).toEqual([]);
+  });
 });
