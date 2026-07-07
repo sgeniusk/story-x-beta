@@ -19,6 +19,7 @@ import type { CreativeFormat, CreativeMedium, HomeFlowStep } from './projectBlue
 import type { DiveSession } from './diveSession';
 import type { ProjectIntakeQuestion } from './projectIntake';
 import type { PlanPatch } from './planStage';
+import type { PlanChatMessage } from './planChat';
 
 const storageKey = 'serial-story-studio/project';
 const snapshotsKey = 'serial-story-studio/snapshots';
@@ -512,6 +513,42 @@ export function savePlanPatches(patches: PlanPatch[]): void {
 export function clearPlanPatches(): void {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(planStageKey);
+}
+
+// PLAN 설계 대화 버퍼 — syncVersion remount·새로고침 생존(spec 2026-07-07). 패치(plan-stage)와 별개 키.
+const planChatKey = 'serial-story-studio/plan-chat';
+const PLAN_CHAT_MAX_MESSAGES = 40;
+
+export interface PlanChatState {
+  schema: 'storyx/plan-chat/v1';
+  messages: PlanChatMessage[];
+}
+
+export function loadPlanChatMessages(): PlanChatMessage[] {
+  if (typeof window === 'undefined') return [];
+  const raw = window.localStorage.getItem(planChatKey);
+  if (!raw) return [];
+  try {
+    const value = JSON.parse(raw) as Partial<PlanChatState>;
+    if (!value || value.schema !== 'storyx/plan-chat/v1' || !Array.isArray(value.messages)) return [];
+    return value.messages as PlanChatMessage[];
+  } catch {
+    return [];
+  }
+}
+
+export function savePlanChatMessages(messages: PlanChatMessage[]): void {
+  if (typeof window === 'undefined') return;
+  const state: PlanChatState = {
+    schema: 'storyx/plan-chat/v1',
+    messages: messages.slice(-PLAN_CHAT_MAX_MESSAGES)
+  };
+  window.localStorage.setItem(planChatKey, JSON.stringify(state));
+}
+
+export function clearPlanChatMessages(): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(planChatKey);
 }
 
 function isStringRecord(value: unknown): value is Record<string, string> {
