@@ -17,7 +17,7 @@
 
 ### 다음 한 가지
 - **디자인 정비는 완결** — 남은 4b(desk-grid 세대 + editorFocusLayout 계약 재협상)는 급하지 않은 별도 조각.
-- **다음 세션 권장 = 기존 대기열 1순위 "VS 후보 흡인력 재순위"**(`docs/handoff/2026-07-07-next-session-prompt.md` ① — brainstorming 필수·큰 조각·신선한 세션). 그 외 ② canonSuspect 배지 실사례 ③ PLAN AI 설계 채널 대기. ④ 변경 검토 요청 도달성은 이 세션에서 "도달 가능" 확인으로 사실상 해소.
+- **다음 세션 = `docs/handoff/2026-07-08-next-session-prompt.md`** — 흡인력 후속 3건(① VS 후보 흡인력 재순위[권장 1순위·brainstorming] ② canonSuspect 배지 실사례 ③ PLAN AI 설계 채널)+선택 4b를 배경·코드 포인터·환경 팁까지 자립 프롬프트로 정리해 둠. 붙여넣기만 하면 시작 가능. ④ 변경 검토 요청 도달성은 이 세션에서 "도달 가능" 확인으로 해소.
 
 ---
 
