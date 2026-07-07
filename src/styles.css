@@ -9024,6 +9024,8 @@ body:has(.fc-app) {
 .fc-pd-health .track{flex:1;height:5px;border-radius:3px;background:var(--rule-soft);overflow:hidden}
 .fc-pd-health .track i{display:block;height:100%;background:var(--accent)}
 /* PLAN 설계 대화 패널(설계실 2단계) — 파트너 버블·승인형 제안 카드. PLAN 모드색 악센트. */
+/* 이중 스크롤 방지 — 설계 패널은 .pb 캡을 풀고 .pcp-log(46vh)만 유일한 스크롤 컨테이너로 둔다. */
+#fc-pd-design .pb{max-height:none}
 .pcp{display:flex;flex-direction:column;gap:10px}
 .pcp-harness{font-size:12px;color:var(--st-mode-plan);border:1px solid color-mix(in srgb, var(--st-mode-plan) 35%, transparent);border-radius:8px;padding:6px 10px}
 .pcp-empty{font-size:12px;color:var(--ink-dim);line-height:1.6;margin:0}
