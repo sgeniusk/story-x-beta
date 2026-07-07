@@ -17,7 +17,7 @@
 - **미러 핀 확장됨** — [vs-mirror]가 이제 JSON 계약 + 지시문 전문 둘 다 문다. 프롬프트 수정 시 promptBuilders.ts·storyx.mjs·테스트 상수 3곳 동시 갱신.
 
 ### 다음 한 가지
-- **관찰 대상 2건 겸측** — 라이브 롤 8후보 전부 arms(「회수만」 미발화). drains 발화율·판정 품질과 canonSuspect 배지 실사례(후속 ②, 캐논 91 백업 + VS 반복 요청)를 같은 dogfooding 세션에서 함께 관찰 권장.
+- ~~관찰 ② canonSuspect 실사례~~ — **해소(같은 세션)**. 4롤 16후보 + 커버리지 오프라인 분석(진음성 판정·임계 0.65 유지 권고). progress.md "관찰 ② 해소" 절 상세. drains(「회수만」)도 16/16 미발화 — 지시 구조("대가" 강제)상 중반부에선 자연스러움, 종반 dogfooding에서 재관찰.
 - 그 외 대기 — ③ PLAN AI 설계 대화 채널(brainstorming 필수) · 선택 4b(desk-grid 계약 재협상) · 기존 백로그(`docs/handoff/2026-07-08-next-session-prompt.md`).
 
 ### 검증 팁
