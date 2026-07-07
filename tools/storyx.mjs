@@ -1222,6 +1222,54 @@ if (command === 'vs-candidates') {
   process.exit(isError ? 1 : 0);
 }
 
+if (command === 'plan-chat') {
+  const provider = readFlag(args, '--provider', 'codex');
+  const medium = readFlag(args, '--medium', 'novel');
+  const format = readFlag(args, '--format', 'long-novel');
+  const section = readFlag(args, '--section', '');
+  const context = readFlag(args, '--context', '');
+  const catalog = readFlag(args, '--catalog', '');
+  const dialogue = readFlag(args, '--dialogue', '');
+  const query = readFlag(args, '--query', '');
+  const dryRun = args.includes('--dry-run');
+
+  const prompt = buildPlanChatPrompt({ medium, format, activeSection: section, contextDigest: context, catalog, dialogue, query });
+
+  if (dryRun) {
+    printJson({ provider, medium, mode: 'plan-chat', dryRun: true, prompt, warning: 'dry-run 모드 — provider 호출 없이 프롬프트만 출력합니다.' });
+    process.exit(0);
+  }
+  if (provider === 'mock') {
+    printJson({ provider, medium, mode: 'plan-chat', status: 'complete', reply: '(mock) 설계 파트너 응답', proposals: [] });
+    process.exit(0);
+  }
+
+  const commandPreview =
+    provider === 'claude'
+      ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', prompt]
+      : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
+
+  const { result: providerResult, raw: rawOutput, retried } = runProviderWithRetry(commandPreview);
+  const isError = looksLikeProviderError(rawOutput, providerResult);
+  const parsed = isError ? null : parseProviderJson(rawOutput);
+  const reply = typeof parsed?.reply === 'string' ? parsed.reply : '';
+  const proposals = Array.isArray(parsed?.proposals) ? parsed.proposals : [];
+
+  printJson({
+    provider,
+    medium,
+    mode: 'plan-chat',
+    status: isError ? 'failed' : 'complete',
+    exitCode: providerResult.status,
+    reply,
+    proposals,
+    warning: isError
+      ? (retried ? 'provider 호출이 재시도 후에도 실패했습니다.' : 'provider 호출이 실패했습니다.')
+      : undefined
+  });
+  process.exit(isError ? 1 : 0);
+}
+
 printJson({
   usage: [
     'npm run storyx -- doctor',
@@ -2246,6 +2294,46 @@ function buildVsCandidatesPrompt({ medium, format, contractDigest, recentSummary
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',
     '  "candidates": [{ "direction": "...", "probability": 0.0, "tension": "arms", "tensionNote": "..." }]',
+    '}'
+  ].join('\n');
+}
+
+// PLAN 설계 대화(설계실 2단계) 프롬프트 — src/lib/server/promptBuilders.ts 의 buildPlanChatPrompt 와
+// 핵심 지시문 byte-identical 미러 — 변경 시 두 곳 동시 수정.
+function buildPlanChatPrompt({ medium, format, activeSection, contextDigest, catalog, dialogue, query }) {
+  return [
+    'Story X PLAN 설계 대화(설계실) 요청.',
+    `매체: ${medium} / 포맷: ${format}`,
+    '',
+    '## 작품 컨텍스트',
+    (contextDigest || '').trim() || '(컨텍스트 없음)',
+    '',
+    '## 엔티티 카탈로그 (제안은 반드시 아래 실존 id 만 겨냥)',
+    (catalog || '').trim() || '(카탈로그 없음)',
+    '',
+    '## 지금 보는 섹션',
+    (activeSection || '').trim() || '(미지정)',
+    '',
+    '## 최근 대화',
+    (dialogue || '').trim() || '(첫 대화)',
+    '',
+    '## 작가의 말',
+    (query || '').trim(),
+    '',
+    '## 역할',
+    '당신은 Story X 설계실의 설계 파트너입니다. 바이블 큐레이터의 성격으로 — 작가의 설계를 대신 정하지 않고, 질문하고 다듬고 제안합니다.',
+    '',
+    '## 지시',
+    '- reply 는 작가의 말에 대한 응답입니다. 짧고 구체적으로, 설계의 빈 곳·모순·기회를 짚습니다.',
+    '- proposals 는 0~3개. 바이블 필드의 구체 수정안이 있을 때만 냅니다. 대화만 해도 됩니다.',
+    '- 제안은 엔티티 카탈로그의 실존 id 만 겨냥합니다. kind 별 필드 — character: desire|wound|currentState · story-core: logline|audiencePromise|deepQuestion|formIntent|tone · world/canon: 필드 없음.',
+    '- rationale 에 그 제안의 근거를 한 문장으로 씁니다.',
+    '- 결말 헌장은 절대 배신하지 않습니다. 새 인물 추가·헌장 개정은 제안하지 않습니다.',
+    '- 한국어로 씁니다.',
+    '',
+    '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
+    '{',
+    '  "reply": "...", "proposals": [{ "kind": "character", "targetId": "...", "field": "desire", "after": "...", "rationale": "..." }]',
     '}'
   ].join('\n');
 }
