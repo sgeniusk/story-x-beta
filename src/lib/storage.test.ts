@@ -259,3 +259,25 @@ describe('planStage 영속', () => {
     expect(loadPlanPatches()).toEqual([]);
   });
 });
+
+describe('plan-chat 대화 버퍼 영속 (설계실 2단계)', () => {
+  it('저장·로드 왕복 + 스키마 가드', async () => {
+    const { loadPlanChatMessages, savePlanChatMessages, clearPlanChatMessages } = await import('./storage');
+    clearPlanChatMessages();
+    expect(loadPlanChatMessages()).toEqual([]);
+    savePlanChatMessages([{ id: 'm1', role: 'user', text: '안녕' }]);
+    expect(loadPlanChatMessages()).toEqual([{ id: 'm1', role: 'user', text: '안녕' }]);
+    window.localStorage.setItem('serial-story-studio/plan-chat', JSON.stringify({ schema: 'wrong', messages: [] }));
+    expect(loadPlanChatMessages()).toEqual([]);
+    clearPlanChatMessages();
+  });
+  it('저장 시 최근 40메시지로 절단한다', async () => {
+    const { loadPlanChatMessages, savePlanChatMessages, clearPlanChatMessages } = await import('./storage');
+    const many = Array.from({ length: 50 }, (_, i) => ({ id: `m${i}`, role: 'user' as const, text: `t${i}` }));
+    savePlanChatMessages(many);
+    const loaded = loadPlanChatMessages();
+    expect(loaded).toHaveLength(40);
+    expect(loaded[0].id).toBe('m10');
+    clearPlanChatMessages();
+  });
+});

@@ -37,6 +37,17 @@ export interface VsCandidatesPromptInput {
   unpaidPromises: string[];
 }
 
+// PLAN 설계 대화(설계실 2단계). 단일 설계 파트너 + 승인형 패치 제안 0~3개.
+export interface PlanChatPromptInput {
+  medium: string;
+  format: CreativeFormat;
+  activeSection: string;
+  contextDigest: string;
+  catalog: string;
+  dialogue: string;
+  query: string;
+}
+
 /** 4줄 척추 제안 입력 — Phase A-3b. charter 단계에 있는 자유 서술·결말·대가를 받는다. */
 export interface SpineSuggestionPromptInput {
   medium: string;
@@ -645,6 +656,47 @@ export function buildVsCandidatesPrompt(input: VsCandidatesPromptInput): string 
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',
     '  "candidates": [{ "direction": "...", "probability": 0.0, "tension": "arms", "tensionNote": "..." }]',
+    '}'
+  ].join('\n');
+}
+
+// PLAN 설계 대화(설계실 2단계) 프롬프트 — 단일 설계 파트너 + 승인형 패치 제안.
+// storyx.mjs 의 buildPlanChatPrompt 와 핵심 지시문 byte-identical 유지 — 변경 시 두 곳 동시 수정.
+export function buildPlanChatPrompt(input: PlanChatPromptInput): string {
+  const { medium, format, activeSection, contextDigest, catalog, dialogue, query } = input;
+  return [
+    'Story X PLAN 설계 대화(설계실) 요청.',
+    `매체: ${medium} / 포맷: ${format}`,
+    '',
+    '## 작품 컨텍스트',
+    contextDigest.trim() || '(컨텍스트 없음)',
+    '',
+    '## 엔티티 카탈로그 (제안은 반드시 아래 실존 id 만 겨냥)',
+    catalog.trim() || '(카탈로그 없음)',
+    '',
+    '## 지금 보는 섹션',
+    activeSection.trim() || '(미지정)',
+    '',
+    '## 최근 대화',
+    dialogue.trim() || '(첫 대화)',
+    '',
+    '## 작가의 말',
+    query.trim(),
+    '',
+    '## 역할',
+    '당신은 Story X 설계실의 설계 파트너입니다. 바이블 큐레이터의 성격으로 — 작가의 설계를 대신 정하지 않고, 질문하고 다듬고 제안합니다.',
+    '',
+    '## 지시',
+    '- reply 는 작가의 말에 대한 응답입니다. 짧고 구체적으로, 설계의 빈 곳·모순·기회를 짚습니다.',
+    '- proposals 는 0~3개. 바이블 필드의 구체 수정안이 있을 때만 냅니다. 대화만 해도 됩니다.',
+    '- 제안은 엔티티 카탈로그의 실존 id 만 겨냥합니다. kind 별 필드 — character: desire|wound|currentState · story-core: logline|audiencePromise|deepQuestion|formIntent|tone · world/canon: 필드 없음.',
+    '- rationale 에 그 제안의 근거를 한 문장으로 씁니다.',
+    '- 결말 헌장은 절대 배신하지 않습니다. 새 인물 추가·헌장 개정은 제안하지 않습니다.',
+    '- 한국어로 씁니다.',
+    '',
+    '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
+    '{',
+    '  "reply": "...", "proposals": [{ "kind": "character", "targetId": "...", "field": "desire", "after": "...", "rationale": "..." }]',
     '}'
   ].join('\n');
 }

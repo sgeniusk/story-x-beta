@@ -67,15 +67,20 @@ import {
 import {
   clearProject,
   clearProjectSnapshots,
+  loadPlanChatMessages,
   loadPlanPatches,
   loadProject,
   loadProjectSnapshots,
   pushProjectSnapshot,
+  savePlanChatMessages,
   savePlanPatches,
   saveProject,
   type ProjectSnapshot
 } from './lib/storage';
 import { applyPlanPatches, patchKey, upsertPlanPatch, type PlanPatch } from './lib/planStage';
+import { buildPlanChatCatalog, buildPlanChatTranscript, type PlanChatMessage } from './lib/planChat';
+import { requestPlanChat } from './lib/planChatClient';
+import { PlanChatPanel } from './components/PlanChatPanel';
 
 type DeskTrack = 'draft' | 'bible';
 type ApprovalDecision = MemoryApprovalDecision;
@@ -1279,6 +1284,32 @@ export function StoryXDesk({
   }, [planPatches]);
   const overlayProject = useMemo(() => applyPlanPatches(project, planPatches), [project, planPatches]);
   const planStagedKeys = useMemo(() => new Set(planPatches.map(patchKey)), [planPatches]);
+  // PLAN 설계 대화(설계실 2단계) — 버퍼는 localStorage 영속(반영 remount 생존), 제안 승인은 stage* 재사용.
+  const [planChatMessages, setPlanChatMessages] = useState<PlanChatMessage[]>(() => loadPlanChatMessages());
+  const [planChatBusy, setPlanChatBusy] = useState(false);
+  const [planChatNote, setPlanChatNote] = useState<string | null>(null);
+  useEffect(() => {
+    savePlanChatMessages(planChatMessages);
+  }, [planChatMessages]);
+  // 설계안 반영 시 하네스 미리보기 — overlayProject 재채점. qualityGatesReport 는 committed 재사용(spec §2.4 명시 결정).
+  const overlayHarnessReport: StoryHarnessReport = useMemo(
+    () =>
+      runStoryHarness({
+        medium: blueprint.medium,
+        formatLabel: blueprint.formatLabel,
+        material: overlayProject.logline || '',
+        storySeed: overlayProject.deepQuestion || overlayProject.audiencePromise || '',
+        characterSeed: overlayProject.characters[0]
+          ? `${overlayProject.characters[0].name}: ${overlayProject.characters[0].desire}`
+          : '',
+        audience: overlayProject.audiencePromise || '',
+        constraints: blueprint.formatLabel || '',
+        canonFacts: overlayProject.canonFacts,
+        qualityGatesReport,
+        chapters: overlayProject.chapters
+      }),
+    [blueprint.medium, blueprint.formatLabel, overlayProject, qualityGatesReport]
+  );
 
   // 본문 자동 저장(베타테스트 #1) — 타이핑이 멈추면 현재 회차 prose 로 commit → 위 saveProject effect 가 영속한다.
   // commitChapterProse 는 prose 가 동일하면 no-op(참조 동일)이라 불필요한 저장을 막는다.
@@ -1621,7 +1652,7 @@ export function StoryXDesk({
   // PLAN staged 핸들러 — setProject 대신 패치 upsert. before 는 본편(project) 값, logCanonChange 없음(패치가 이력).
   function stageCharacterMemory(characterId: string, field: 'desire' | 'wound' | 'currentState', value: string) {
     const character = project.characters.find((item) => item.id === characterId);
-    if (!character) return;
+    if (!character) return false;
     const labels = { desire: '욕망', wound: '상처', currentState: '현재 상태' } as const;
     setPlanPatches((prev) =>
       upsertPlanPatch(prev, {
@@ -1633,22 +1664,25 @@ export function StoryXDesk({
         after: value
       })
     );
+    return true;
   }
 
   function stageWorldMemory(ruleId: string, value: string) {
     const rule = project.worldRules.find((item) => item.id === ruleId);
-    if (!rule) return;
+    if (!rule) return false;
     setPlanPatches((prev) =>
       upsertPlanPatch(prev, { kind: 'world', id: ruleId, label: rule.title, before: rule.rule, after: value })
     );
+    return true;
   }
 
   function stageCanonMemory(canonId: string, value: string) {
     const fact = project.canonFacts.find((item) => item.id === canonId);
-    if (!fact) return;
+    if (!fact) return false;
     setPlanPatches((prev) =>
       upsertPlanPatch(prev, { kind: 'canon', id: canonId, label: `캐논 ${fact.episode}화`, before: fact.statement, after: value })
     );
+    return true;
   }
 
   function stageStoryCore(
@@ -1658,7 +1692,7 @@ export function StoryXDesk({
     if (field === 'title') {
       // title 은 wm-bar 소유(직행 유지) — MemoryBankStudio 는 title 을 편집하지 않지만 prop 타입 호환용.
       updateProject('title', value);
-      return;
+      return true;
     }
     const labels = {
       logline: '로그라인',
@@ -1670,11 +1704,81 @@ export function StoryXDesk({
     setPlanPatches((prev) =>
       upsertPlanPatch(prev, { kind: 'story-core', field, label: labels[field], before: project[field], after: value })
     );
+    return true;
   }
 
   function stageCreativeWeight(weight: CreativeWeight) {
     setPlanPatches((prev) =>
       upsertPlanPatch(prev, { kind: 'creative-weight', label: '작품 무게중심', before: project.creativeWeight, after: weight })
+    );
+  }
+
+  // 설계 대화 — 사용자 발화 시에만 LLM 1콜. 컨텍스트·카탈로그는 overlayProject(현 설계안 반영 상태) 기준.
+  async function sendPlanChat(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || planChatBusy) return;
+    const userMsg: PlanChatMessage = { id: `pc-${Date.now()}`, role: 'user', text: trimmed };
+    const next = [...planChatMessages, userMsg];
+    setPlanChatMessages(next);
+    setPlanChatBusy(true);
+    setPlanChatNote(null);
+    const catalog = buildPlanChatCatalog(overlayProject);
+    const result = await requestPlanChat(
+      {
+        medium: blueprint.medium,
+        format: blueprint.format,
+        activeSection:
+          dataView.kind === 'bible' ? dataView.section : dataView.kind === 'canon' ? dataView.category : 'board',
+        contextDigest: buildProjectContextDigest(overlayProject),
+        catalogText: catalog.text,
+        dialogue: buildPlanChatTranscript(next),
+        query: trimmed
+      },
+      catalog
+    );
+    if (result.ok && result.turn) {
+      const partnerMsg: PlanChatMessage = {
+        id: `pc-${Date.now()}-p`,
+        role: 'partner',
+        text: result.turn.reply,
+        ...(result.turn.proposals.length > 0 ? { proposals: result.turn.proposals } : {})
+      };
+      setPlanChatMessages((prev) => [...prev, partnerMsg]);
+    } else {
+      setPlanChatNote(result.reason ?? '설계 파트너 응답 실패');
+    }
+    setPlanChatBusy(false);
+  }
+
+  // 제안 승인 — 기존 stage* 핸들러 재사용(upsert 불변식·D6 자동 상속). 'title' 은 normalize 가 이미 드랍.
+  // stage* 성공 시에만 ✓ 마킹 — 대상이 본편에서 사라져 no-op 이면 note 강등(가짜 설계안 방지).
+  function approvePlanProposal(messageId: string, index: number) {
+    const message = planChatMessages.find((m) => m.id === messageId);
+    const proposal = message?.proposals?.[index];
+    if (!message || !proposal || proposal.approved) return;
+    let staged = false;
+    if (proposal.kind === 'character' && proposal.targetId && proposal.field) {
+      staged = stageCharacterMemory(proposal.targetId, proposal.field as 'desire' | 'wound' | 'currentState', proposal.after);
+    } else if (proposal.kind === 'world' && proposal.targetId) {
+      staged = stageWorldMemory(proposal.targetId, proposal.after);
+    } else if (proposal.kind === 'canon' && proposal.targetId) {
+      staged = stageCanonMemory(proposal.targetId, proposal.after);
+    } else if (proposal.kind === 'story-core' && proposal.field) {
+      staged = stageStoryCore(
+        proposal.field as 'logline' | 'audiencePromise' | 'deepQuestion' | 'formIntent' | 'tone',
+        proposal.after
+      );
+    }
+    if (!staged) {
+      setPlanChatNote('제안 대상이 본편에서 사라져 설계안으로 만들 수 없어요.');
+      return;
+    }
+    setPlanChatMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId
+          ? { ...m, proposals: m.proposals?.map((p, i) => (i === index ? { ...p, approved: true } : p)) }
+          : m
+      )
     );
   }
 
@@ -2208,6 +2312,24 @@ export function StoryXDesk({
           onAmendCharter={amendCharter}
         />
       ) : null;
+    const planChatSlot = (
+      <PlanChatPanel
+        messages={planChatMessages}
+        busy={planChatBusy}
+        note={planChatNote}
+        harnessPreview={
+          planPatches.length > 0
+            ? {
+                before: harnessReport.qualityScore,
+                after: overlayHarnessReport.qualityScore,
+                count: planPatches.length
+              }
+            : null
+        }
+        onSend={sendPlanChat}
+        onApproveProposal={approvePlanProposal}
+      />
+    );
     return (
       <>
         {deskContextLine}
@@ -2228,6 +2350,7 @@ export function StoryXDesk({
           onRequestReview={runDataReview}
           onOpenApprovalQueue={() => openBibleSection('approval')}
           centerSlot={centerSlot}
+          designSlot={planChatSlot}
           metaLeft={`캐논 ${project.canonFacts.length} · 떡밥 ${project.openThreads.length}`}
           metaRightSlot={metaRightSlot}
         />

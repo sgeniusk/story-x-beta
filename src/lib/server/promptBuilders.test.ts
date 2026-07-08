@@ -425,3 +425,30 @@ describe('buildVsCandidatesPrompt — VS 전개 후보 (Phase C-1)', () => {
     expect(cli).toContain(VS_TENSION_INSTRUCTION);
   });
 });
+
+// PLAN 설계 대화 프롬프트 — 설계실 2단계. storyx.mjs 미러 byte-identical — 계약·지시문 전문 양쪽 동시 갱신.
+import { buildPlanChatPrompt } from './promptBuilders';
+
+describe('buildPlanChatPrompt — PLAN 설계 대화 (설계실 2단계)', () => {
+  const PLAN_CHAT_JSON_CONTRACT =
+    '  "reply": "...", "proposals": [{ "kind": "character", "targetId": "...", "field": "desire", "after": "...", "rationale": "..." }]';
+  const PLAN_CHAT_ID_INSTRUCTION =
+    '- 제안은 엔티티 카탈로그의 실존 id 만 겨냥합니다. kind 별 필드 — character: desire|wound|currentState · story-core: logline|audiencePromise|deepQuestion|formIntent|tone · world/canon: 필드 없음.';
+  it('역할·카탈로그·제안 상한·헌장 불가침·JSON 계약을 담는다', () => {
+    const p = buildPlanChatPrompt({
+      medium: 'novel', format: 'long-novel', activeSection: 'characters',
+      contextDigest: '계약 요약', catalog: '- id=c1 리아나', dialogue: '작가: 안녕', query: '욕망을 다듬자'
+    });
+    expect(p).toContain('설계 파트너');
+    expect(p).toContain('- id=c1 리아나');
+    expect(p).toContain('proposals 는 0~3개');
+    expect(p).toContain('결말 헌장은 절대 배신하지 않습니다');
+    expect(p).toContain(PLAN_CHAT_ID_INSTRUCTION);
+    expect(p).toContain(PLAN_CHAT_JSON_CONTRACT);
+  });
+  it('[plan-mirror] storyx.mjs 가 JSON 계약·id 지시문을 byte-identical 로 미러한다', () => {
+    const cli = readFileSync(resolve(__dirname, '../../../tools/storyx.mjs'), 'utf8');
+    expect(cli).toContain(PLAN_CHAT_JSON_CONTRACT);
+    expect(cli).toContain(PLAN_CHAT_ID_INSTRUCTION);
+  });
+});

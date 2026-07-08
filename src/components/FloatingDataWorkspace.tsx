@@ -32,6 +32,8 @@ export interface FloatingDataWorkspaceProps {
   /** 슬라이스 C — 하단 메타 줄. metaLeft=캐논·떡밥 요약, metaRightSlot=저장 상태 등. */
   metaLeft?: string;
   metaRightSlot?: ReactNode;
+  /** 설계실 2단계 — dock 「✦ 설계」 패널 내용(PlanChatPanel). StoryXDesk 가 조립해 주입. */
+  designSlot?: ReactNode;
 }
 
 const BIBLE_ENTRIES: Array<{ id: BibleSection; label: string }> = [
@@ -41,7 +43,7 @@ const BIBLE_ENTRIES: Array<{ id: BibleSection; label: string }> = [
   { id: 'approval', label: '승인 대기' },
 ];
 
-type DataPanelId = 'metrics' | 'review' | 'canon' | 'bible' | 'state';
+type DataPanelId = 'metrics' | 'review' | 'canon' | 'bible' | 'state' | 'design';
 
 // 정제 지표 요약 — board·독 지표 패널 공유. DataPanel(.sx-* 스코프)이 .fc-app 에서 깨져 floating-네이티브로 대체.
 function MetricSummary({ metrics }: { metrics: StudioMetrics }) {
@@ -166,6 +168,12 @@ export function FloatingDataWorkspace(props: FloatingDataWorkspaceProps) {
             </svg>
             <span className="t">상태</span>
           </button>
+          <button className={`tool${openPanel === 'design' ? ' on' : ''}`} onClick={() => togglePanel('design')} title="설계 대화">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span className="t">✦ 설계</span>
+          </button>
           <button className="tool" onClick={() => setIsFocus((f) => !f)} title="집중 모드">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
               <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3" />
@@ -240,6 +248,11 @@ export function FloatingDataWorkspace(props: FloatingDataWorkspaceProps) {
             <span>{props.canonHealth}%</span>
           </div>
         </div>
+      </div>
+
+      <div className={`panel${openPanel === 'design' ? ' show' : ''}`} id="fc-pd-design">
+        <div className="ph"><h4>설계 대화</h4><button className="x" onClick={closeAll}>✕</button></div>
+        <div className="pb">{props.designSlot ?? null}</div>
       </div>
 
       <div className={`scrim${scrimShown ? ' show' : ''}`} onClick={closeAll} />
