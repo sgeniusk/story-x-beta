@@ -1,10 +1,19 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-07 · Branch: `main` (**VS 긴장 배지 슬라이스 `done` — PR #29 main 머지 `6dec0fd`, 머지 후 main init.sh 녹색 재확인. 흡인력 후속 ①(VS 후보 흡인력 재순위)을 2축 주석으로 구현 — 같은 콜 verbalize(tension/tensionNote)·배지 순서 불변·canonSuspect 독립 병기. · 이전: 디자인 정비 4a PR #28 `96cdb9b` · 3 PR #27 `cf5657f` · 1+2 PR #26 `eec9023`.**)
+> Last Updated: 2026-07-08 · Branch: `feat/plan-design-chat` (**PLAN 설계 대화 채널(설계실 2단계) 슬라이스 — subagent TDD 9태스크 완료·라이브 6게이트 통과·최종 리뷰 대기. PLAN dock 「✦ 설계」에서 단일 설계 파트너와 대화→승인형 패치 제안→기존 stage\* 로 설계안 합류→하네스 미리보기, 대화 버퍼 localStorage 영속(remount 생존). PR #20 잔여 clear+remount 회귀 테스트 동봉. · 이전: VS 긴장 배지 PR #29 `6dec0fd` · 디자인 정비 4a PR #28 `96cdb9b`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 최근 검증 (2026-07-07 VS 긴장 배지 슬라이스 후)
-`bash init.sh` 통과 — `npm test` **839 통과**(82 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 · 파트 2 PR #23 · 랜딩 원페이저 PR #24 · PLAY 전개 후보(VS) `a33768e` · 흡인력 게이트 PR #25 · 디자인 정비 슬라이스 1+2 PR #26 · 슬라이스 3(핀 완화) PR #27 · 슬라이스 4a(죽은 세대 정리) PR #28 · **VS 긴장 배지 PR #29** (전부 main).
+## 최근 검증 (2026-07-08 PLAN 설계 대화 채널 슬라이스 후)
+`bash init.sh` 통과 — `npm test` **868 통과**(86 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 · 파트 2 PR #23 · 랜딩 원페이저 PR #24 · PLAY 전개 후보(VS) `a33768e` · 흡인력 게이트 PR #25 · 디자인 정비 슬라이스 1+2 PR #26 · 슬라이스 3(핀 완화) PR #27 · 슬라이스 4a(죽은 세대 정리) PR #28 · VS 긴장 배지 PR #29 (전부 main) · **PLAN 설계 대화 채널 브랜치 `feat/plan-design-chat`(라이브 통과·머지 대기)**.
+
+## 완료 트랙 — PLAN 설계 대화 채널: 설계실 2단계 (`done` · 2026-07-08, 브랜치 `feat/plan-design-chat` 라이브 통과·머지 대기)
+
+PLAN staged(PR #20)의 사용자 결정 ①("PLAN 역할 = AI와 같이 짜는 설계실")을 완성한 조각 — 설계안을 안전하게 쌓는 그릇 위에 "같이 짜는 상대"를 얹었다. PLAN dock 「✦ 설계」 패널에서 단일 설계 파트너와 대화하고, LLM이 같은 콜에서 reply + 승인형 패치 제안(인물 desire/wound/currentState·세계 rule·캐논 statement·스토리코어 5필드)을 verbalize, 「설계안으로」 승인 시 **기존 stage\* 핸들러 재사용**으로 설계안(PLAN +N)에 합류. spec `docs/superpowers/specs/2026-07-07-plan-design-chat-design.md` · 계획 `docs/superpowers/plans/2026-07-08-plan-design-chat.md`. brainstorming 결정 6건(승인형 제안·dock 패널·단일 파트너·localStorage 영속·6점 배선·접근안 2 하네스 미리보기). subagent-driven TDD 9태스크(태스크별 spec/품질 2단 검토, 발견 반영 다수).
+- **구현** — 순수 `planChat.ts`(카탈로그 id 집합+80자 절단·transcript·정규화: kind/field 화이트리스트·**title 드랍 필수 핀**·프로토타입 누수 가드·출력 정체성 dedup·상한 3) · `plan-chat` localStorage 영속(schema v1·40 cap, remount 생존) · 프롬프트 6점 배선(promptBuilders↔storyx.mjs byte-identical + `[plan-mirror]` 핀이 계약+지시문 전문·prod Function·클라이언트 3중 강등·AiCallMode) · `PlanChatPanel`(버블·승인형 카드·하네스 미리보기·Enter 전송·pre-wrap) · FDW dock 「✦ 설계」+designSlot · StoryXDesk 배선(상태·sendPlanChat[catalog 단일 객체·overlay 컨텍스트]·approvePlanProposal[stage\* 성공 시에만 ✓, 대상 소멸 시 note 강등]·overlayHarnessReport 미리보기) · `#fc-pd-design .pb{max-height:none}` 이중 스크롤 수리 · **clear+remount 회귀 테스트**(PR #20 잔여 MEDIUM 해소, 변이 실험 강제력 입증).
+- **불변식** — 승인=stage\* 재사용(upsertPlanPatch 직접 호출 0) · 제안은 필드 수정만(인물 CRUD·헌장·제목·creative-weight 불가) · LLM 호출은 사용자 발화 시에만 · 미러 byte-identical(핀) · App key=syncVersion만·반영/버리기·충돌 게이트 무접촉 · WRITE/PLAY 무접촉.
+- **검증** — init.sh 녹색 · 태스크별 2단 검토(Important 수리: 프로토타입 누수·dedup·dry-run format·pre-wrap/Enter·approve 성공 확인·회귀 테스트 위생) · **라이브(preview 5175, ch23 백업) 6게이트** — ① dock 「✦ 설계」 패널(상태·집중 사이·Enter placeholder) ② 실 codex 왕복 reply + 제안 3개(카탈로그 실존 인물 리아나 정확 겨냥·근거 동반) ③ 「설계안으로」→카드 ✓ 비활성 + SyncConsole ✦ PLAN +1 + **워크벤치 리아나 욕망 필드 「설계안 (미반영)」 태그·새 값 반영(스크린샷 실증)** ④ 하네스 미리보기 줄(100→100, ch23 만점작이라 동점 — spec "전후 동점도 표시" 그대로, overlay 재채점은 실작동) ⑤ **새로고침(remount보다 강함) 후 대화 2·승인 카드 ✓·하네스·staged 패치 전부 생존** ⑥ 콘솔 에러 0.
+- **라이브 관찰(무접촉)** — PLAN 배지 메뉴(SyncConsole)는 preview dispatchEvent로 React onClick 미발화(기존 quirk) — 반영 자체는 PR #20 라이브 검증분 + Task 8 회귀 테스트로 갈음. 짧은 뷰포트 패널 클리핑(dock 패널 공통·이번 변경 무관)은 후속 관찰.
+- **후속(비목표)** — 섹션별 페르소나 스위칭 · 결정론 신호 주입(미회수 약속·충돌·조기 소진) · 인물 추가/헌장 제안 · 하네스 스테이지별 상세 미리보기.
 
 ## 완료 트랙 — VS 긴장 배지: 후보 흡인력 2축 주석 (`done` · 2026-07-07, **PR #29 main 머지** `6dec0fd`)
 
