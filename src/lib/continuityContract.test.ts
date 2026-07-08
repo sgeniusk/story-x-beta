@@ -168,6 +168,93 @@ describe('continuityContract', () => {
     expect(result.layer).toBe('hard-canon');
   });
 
+  // 한국어 recall 보강 (2026-07-08 예비비행 findings) —
+  // 케이스 A: 소스 절의 무관한 부정이 술어 반전을 가리던 문제.
+  it('flags a predicate reversal even when the source clause carries an unrelated negation', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['윤민서는 강력계 형사이며 감정을 드러내지 않는다'],
+      livingState: [],
+      softSignals: []
+    });
+
+    const result = classifyCanonChange(contract, '윤민서는 형사가 아니라 민간인이다');
+
+    expect(result.allowed).toBe(false);
+    expect(result.layer).toBe('hard-canon');
+  });
+
+  // 케이스 B: 살해가 death 축 대립어로 인식되지 않고, 주어가 문중에 있어 엔티티 매칭이 실패하던 문제.
+  it('flags 살해 as a death-axis reversal even when the subject is mid-sentence', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['폐쇄된 사진관에서 한태겸이 얼굴이 훼손된 채 살해되었다'],
+      livingState: [],
+      softSignals: []
+    });
+
+    const result = classifyCanonChange(contract, '한태겸은 살해되지 않았고 살아 있다');
+
+    expect(result.allowed).toBe(false);
+    expect(result.layer).toBe('hard-canon');
+  });
+
+  // 오탐 가드 — 소스 절에 무관한 부정이 있어도 정당한 전개는 통과.
+  it('does not flag unrelated progression against a canon clause with an incidental negation', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['윤민서는 강력계 형사이며 감정을 드러내지 않는다'],
+      livingState: [],
+      softSignals: []
+    });
+
+    const result = classifyCanonChange(contract, '윤민서는 백서연을 다음 피해자로부터 보호하기로 한다');
+
+    expect(result.allowed).toBe(true);
+  });
+
+  // 오탐 가드 — 선언된 술어를 부정하지 않는 시드된 반전(주인공=범인)은 통과.
+  it('allows a seeded twist that negates no declared predicate', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['윤민서는 강력계 형사이며 사건 전후 기억 공백이 있다'],
+      livingState: [],
+      softSignals: []
+    });
+
+    const result = classifyCanonChange(contract, '윤민서가 바로 한태겸을 살해한 진범이다');
+
+    expect(result.allowed).toBe(true);
+  });
+
+  // 오탐 가드 — 다른 인물의 삶/죽음은 충돌 아님.
+  it('does not flag a different entity being alive against a murder canon', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['폐쇄된 사진관에서 한태겸이 살해되었다'],
+      livingState: [],
+      softSignals: []
+    });
+
+    const result = classifyCanonChange(contract, '백서연은 아직 살아 있다');
+
+    expect(result.allowed).toBe(true);
+  });
+
+  // 오탐 가드 — 부수 부정("완벽한 준비 없이도")이 같은 인물의 비모순 전개를 막지 않는다.
+  it('does not flag incidental negation on a non-shared predicate as a reversal', () => {
+    const contract = createContinuityContract({
+      hardCanon: [
+        '카리나와 남자친구는 병원에서 초기 임신을 확인하고 결혼을 결심한다',
+        '남자친구는 두려움을 느끼지만 카리나가 혼자 감당하게 두지 않겠다고 결심한다'
+      ],
+      livingState: [],
+      softSignals: []
+    });
+
+    const result = classifyCanonChange(
+      contract,
+      '남자친구는 완벽한 준비 없이도 지금 곁에 있겠다고 고백하고 카리나는 처음으로 울음을 터뜨린다'
+    );
+
+    expect(result.allowed).toBe(true);
+  });
+
   // 4B — 성장 레저.
   it('validateGrowthEntry — 필수 필드 모두 채워지면 ok=true', () => {
     const result = validateGrowthEntry({

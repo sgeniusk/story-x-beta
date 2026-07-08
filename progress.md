@@ -3,6 +3,22 @@
 > Last Updated: 2026-07-08 · Branch: `main` (**PLAN 설계 대화 채널(설계실 2단계) `done` — PR #30 main 머지 `254cb2b`, 머지 후 main init.sh 녹색 재확인. PLAN dock 「✦ 설계」에서 단일 설계 파트너와 대화→승인형 패치 제안→기존 stage\* 로 설계안 합류→하네스 미리보기, 대화 버퍼 localStorage 영속(remount 생존). PR #20 잔여 clear+remount 회귀 테스트 동봉. 알려진 한계 = in-flight 응답 remount 손실(accepted-risk·후속). · 이전: VS 긴장 배지 PR #29 `6dec0fd` · 디자인 정비 4a PR #28 `96cdb9b`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
+## 완료 트랙 — 자동 의미 연속성 게이트 한국어 recall 보강 (`done` · 2026-07-08)
+
+예비비행이 실측한 발견(자동 의미 게이트가 한국어 직접 모순 미포착) 해소. brainstorming(목표=정밀한 직접 모순만)→spec(`docs/superpowers/specs/2026-07-08-continuity-semantic-gate-korean-recall-design.md`)→TDD. `classifyCanonChange`/`findReversalMatch`(continuityContract.ts) 국소 보강, 결정론 유지.
+- **구현** — ① 절 확장 토큰화(`clauseExpandedNouns` — "형사이며"→형사) ② death 축에 살해/피살/살인(OPPOSITION_PATTERNS·isStateToken) ③ 문중 주어 추출 폴백(`extractSubject` — "…한태겸이 살해") ④ 계사 부정(`copulaNegatedNouns` — "X가 아니") ⑤ 주술어(마지막 절) 부정 극성(`hasFinalNegation`) + 엔티티 제외 공유 술어(`sharesNonEntityPredicate`) — 부수 부정("없이도") 오탐 차단. 죽은 `claimNegated` 파라미터 정리.
+- **정밀도/불변식** — 정밀한 직접 모순만(사용자 결정) · 결정론(LLM·사전 없음) · living-state/soft-signal 보존 · classifyCanonChange는 프롬프트 미러 아님(순수 코드).
+- **검증(TDD)** — continuityContract 6 신규(케이스 A·B·오탐 가드 3·FP 회귀 1) + 기존 18 회귀 0 · init.sh 녹색. **실측** — 실 #6 캐논 직접 모순 2/2 BLOCK(전엔 0/2)·시드 반전/정합 통과·**6개 실 캐논 39주장 오탐 0**(`gate-continuity.ts`·`gate-fp-scan.ts`). FP 발견→회귀 테스트 박제→최종 절 부정 규칙으로 해소(TDD 과정에서 부수 부정 오탐 클래스 잡음).
+- **후속** — 학술 A2/A4 한국어 문형 recall · canon-librarian 메타 필터 · 실존인물 정책 · (다음 라운드) 장편 여러 화 이어 생성·PLAY/WRITE/PLAN 실사용 연속성 관찰.
+
+## 완료 트랙 — 6-페르소나 예비비행 + 차별점 게이트 실발화 검증 (`done` · 2026-07-08, 외부 테스트 준비)
+
+사용자 설계 6조건(소설×3·에세이·만화·학술)을 로컬 Codex CLI 배치로 생성해 제품 폭·게이트 판정력을 실측. 정본 `docs/reviews/2026-07-08-preflight-personas/`(context-notes·checklist·findings·drafts·gate-*.ts). 경계 = 폭 검증이지 M7 단계2(외부 시장신호) 대체 아님.
+- **폭 검증 PASS** — 6/6 생성 성공(실패 0), 매체 4종 전부 코헤런트·조건 정합·구조 완비(1,780~2,598자). 에세이 진실계약 실작동(#3 사적 디테일 발명 거부) 확인.
+- **차별점 게이트 실발화(tsx로 실 prose 직접 실행) — 핵심 발견** — ① **학술(#5)** = A3 인용 무결성 견고(인용/참고문헌 부재 정확 포착), 단 A2 주장추출 한국어 recall 약함(2000자 논증에서 주장 1개만). ② **연속성(#6)** = 명시 규칙(forbiddenContradictions) 경로는 발화 O(주 메커니즘·신뢰), 그러나 **자동 의미 게이트(classifyCanonChange/Gap-3)가 직접 hard-canon 모순 2/2 미포착** — 근본원인 문장단위 부정극성 상쇄 + 고유명사·한자어 명사추출 약함. "연속성=제품요건"은 바이블 forbiddenContradictions가 채워졌을 때 실작동(23화 실증), 자유 생성물 드리프트 자동포착은 한국어에서 약함(2026-06-01 검토의 "판정력 비어있음"이 자동층에서 실측 확인).
+- **교차 발견** — 메타 누수→캐논(#3/#5가 medium/format를 캐논 사실로 발화)·draft 산문우선(웹툰 패널·학술 인용은 다운스트림층)·실존인물 가드 부재(#1 우연 탈식별).
+- **후속 후보** — 자동 의미 게이트 한국어 recall 보강(부정극성 절 단위화·고유명사 사전)·학술 A2/A4 한국어 문형·canon-librarian 메타 필터·실존인물 처리 정책.
+
 ## 완료 트랙 — first-run E2E 무개입 검증 (`done` · 2026-07-08, 외부 테스트 준비 게이트0)
 
 외부 작가 실증(M7 단계2) 착수 전, **신규 사용자가 백업 주입·`?stage=` 직행 없이 랜딩부터 첫 회차 생성까지 통짜로 완주하는지**를 처음으로 라이브 검증(사용자 결정 = first-run E2E 우선). localStorage 완전 초기화 후 빈 상태에서 시작, 실 codex 왕복 3콜 포함.

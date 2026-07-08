@@ -95,10 +95,8 @@ export function classifyCanonChange(
   context: CanonChangeContext = {}
 ): CanonChangeResult {
   const claimTokens = extractKoreanNouns(claim);
-  const claimNegated = hasNegation(claim);
-
   // hard-canon 먼저 — 가장 무거운 계층이므로 우선 매칭.
-  const hardMatch = findReversalMatch(contract.hardCanon, claimTokens, claimNegated, claim);
+  const hardMatch = findReversalMatch(contract.hardCanon, claimTokens, claim);
   if (hardMatch) {
     return {
       allowed: false,
@@ -111,7 +109,7 @@ export function classifyCanonChange(
   }
 
   // living-state — 반전 시 cause + cost 모두 있으면 허용.
-  const livingMatch = findReversalMatch(contract.livingState, claimTokens, claimNegated, claim);
+  const livingMatch = findReversalMatch(contract.livingState, claimTokens, claim);
   if (livingMatch) {
     const hasCause = Boolean(context.cause && context.cause.trim().length > 0);
     const hasCost = Boolean(context.cost && context.cost.trim().length > 0);
@@ -139,7 +137,7 @@ export function classifyCanonChange(
   }
 
   // soft-signal — 자유. 매칭만 보고하고 통과.
-  const softMatch = findReversalMatch(contract.softSignals, claimTokens, claimNegated, claim);
+  const softMatch = findReversalMatch(contract.softSignals, claimTokens, claim);
   if (softMatch) {
     return {
       allowed: true,
@@ -248,7 +246,7 @@ export function proposeContinuityRepair(result: CanonChangeResult): ContinuityRe
 
 // --- 휴리스틱 helpers (1차 컷) ---
 
-const NEGATION_PATTERN = /않(는|다|아|음|을)|없(는|다|이|어|음)|안\s|아니다|아닙니다|못한다|못하/;
+const NEGATION_PATTERN = /않(는|다|아|음|을)|없(는|다|이|어|음)|안\s|아니다|아닙니다|아니라|아닌|아니고|못한다|못하/;
 
 function hasNegation(text: string): boolean {
   return NEGATION_PATTERN.test(text);
@@ -303,7 +301,7 @@ interface StateEvidence {
 const OPPOSITION_PATTERNS: OppositionPattern[] = [
   // Life / death.
   { axis: 'life', side: 'a', pattern: /살아\s*있|살아있|생존|살다/ },
-  { axis: 'life', side: 'b', pattern: /죽었|죽다|사망|죽은/ },
+  { axis: 'life', side: 'b', pattern: /죽었|죽다|사망|죽은|살해|피살|살인/ },
   // Presence / absence.
   { axis: 'presence', side: 'a', pattern: /나타났|나타나|발견|존재|있다/ },
   { axis: 'presence', side: 'b', pattern: /사라졌|사라지|실종|없다|없는/ },
@@ -329,29 +327,91 @@ function extractKoreanNouns(text: string): Set<string> {
   return out;
 }
 
+// 절(clause) 경계 연결어미 — "형사이며"처럼 술어에 붙는 접속을 끊어 술어 명사를 노출한다.
+// 동사 연결 '고'(찾고 싶어)나 쉼표는 제외한다 — 술어와 부정을 분리해 기존 반전 판정을 깨기 때문.
+const CLAUSE_SPLIT_RE = /(?:이며|으며|며|지만|는데|으나)\s*/;
+
+function clauseSplit(text: string): string[] {
+  return text.split(CLAUSE_SPLIT_RE).map((part) => part.trim()).filter(Boolean);
+}
+
+// 절 단위로 쪼갠 뒤 명사를 합친다 — "강력계 형사이며"가 형사를 내놓게 한다.
+function clauseExpandedNouns(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const clause of clauseSplit(text)) {
+    for (const token of extractKoreanNouns(clause)) out.add(token);
+  }
+  return out;
+}
+
+// 계사 부정 — "X가/이/은/는 아니(다/라/…)" 의 X 명사. 술어명사를 직접 부정하는 강한 모순 신호.
+function copulaNegatedNouns(text: string): Set<string> {
+  const out = new Set<string>();
+  const re = /([가-힣]{2,8})(?:이|가|은|는)\s*아니/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) out.add(match[1].replace(JOSA_RE, ''));
+  return out;
+}
+
+// 은/는/이/가/께서 로 표지된 명사(주어·주제 = 엔티티) 집합. 술어 부정 판정에서 엔티티는 제외한다.
+function markedEntities(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const match of text.matchAll(/([가-힣]{2,8})(?:은|는|이|가|께서)/g)) {
+    out.add(match[1].replace(JOSA_RE, ''));
+  }
+  return out;
+}
+
+// 주술어(마지막 절) 부정 여부 — 부수 부정("없이도")과 주술어 부정("하지 않는다")을 가른다.
+// "…하지 않는다"는 참, "…없이도 …울음을 터뜨린다"(마지막 절 긍정)는 거짓.
+function hasFinalNegation(text: string): boolean {
+  const clauses = text.split(/(?:이며|으며|며|지만|는데|으나|고|,)\s*/).filter(Boolean);
+  return hasNegation(clauses[clauses.length - 1] ?? text);
+}
+
+// 두 문장이 엔티티(주어·주제)가 아닌 공유 술어 토큰을 갖는가 — 반전이 술어에 걸렸음을 보증.
+function sharesNonEntityPredicate(a: Set<string>, b: Set<string>, aText: string, bText: string): boolean {
+  const entities = new Set([...markedEntities(aText), ...markedEntities(bText)]);
+  for (const token of a) {
+    if (token.length < 2 || entities.has(token) || isStateToken(token)) continue;
+    if (b.has(token)) return true;
+  }
+  return false;
+}
+
 // 명사 ≥ 2 공유 + 부정 마커 차이 → 같은 주제의 반전으로 본다. 매칭된 contract 항목을 반환.
 function findReversalMatch(
   pool: string[],
   claimTokens: Set<string>,
-  claimNegated: boolean,
   claim: string
 ): string | null {
   const claimStates = extractStateEvidence(claim);
   const claimNumbers = extractNumericValues(claim);
   for (const source of pool) {
     const sourceTokens = extractKoreanNouns(source);
-    const shared = countShared(claimTokens, sourceTokens);
     if (hasOpposingState(source, claim, sourceTokens, claimTokens, claimStates)) return source;
     if (hasNumericDivergence(source, claim, sourceTokens, claimTokens, claimNumbers)) return source;
-    if (shared < 2) continue;
-    const sourceNegated = hasNegation(source);
-    // 부정 신호 차이 있으면 반전. 같으면 같은 주장 — 일치라 통과.
-    if (claimNegated !== sourceNegated && hasSameEntity(source, claim, sourceTokens, claimTokens)) {
-      return source;
+    // 절 확장 — 연결어미가 붙어 술어 명사가 안 쪼개진 경우("형사이며")까지 공유를 본다.
+    const expandedSource = clauseExpandedNouns(source);
+    const expandedClaim = clauseExpandedNouns(claim);
+    if (countShared(expandedClaim, expandedSource) < 2) continue;
+    // 계사 부정 — 한쪽이 "X가 아니"로 부정한 술어명사 X를 다른 쪽이 단정하면 반전(케이스 A: 형사).
+    const claimCopula = copulaNegatedNouns(claim);
+    const sourceCopula = copulaNegatedNouns(source);
+    for (const noun of claimCopula) {
+      if (expandedSource.has(noun) && !sourceCopula.has(noun)) return source;
     }
-    // 부정 신호 같은데 명사 ≥ 3 공유 — claim 이 source 와 거의 동일한 주장. 일치로 본다.
-    if (shared >= 3 && claim.trim() !== source.trim()) {
-      // 같은 주장 반복은 위반 아님 — 통과.
+    for (const noun of sourceCopula) {
+      if (expandedClaim.has(noun) && !claimCopula.has(noun)) return source;
+    }
+    // 주술어 부정 극성 — 한쪽만 주술어를 부정 + 같은 엔티티 + 공유 술어면 반전.
+    // 부수 부정("없이도")은 마지막 절이 긍정이라 제외되고, 엔티티만 공유하면 술어 미공유로 제외된다.
+    if (
+      hasFinalNegation(claim) !== hasFinalNegation(source) &&
+      hasSameEntity(source, claim, expandedSource, expandedClaim) &&
+      sharesNonEntityPredicate(expandedClaim, expandedSource, claim, source)
+    ) {
+      return source;
     }
   }
   return null;
@@ -427,7 +487,11 @@ function hasSameEntity(
 
 function extractSubject(text: string): string | undefined {
   const match = text.match(SUBJECT_RE);
-  return match?.[1]?.replace(JOSA_RE, '');
+  if (match?.[1]) return match[1].replace(JOSA_RE, '');
+  // 폴백 — 주어가 문두에 없을 때("…한태겸이 살해되었고") 첫 주격/주제 표지 명사.
+  // 소유격 '의'는 제외(수식어라 주어가 아님). 단음절 잡음 방지로 2자+.
+  const mid = text.match(/([가-힣]{2,8})(?:은|는|이|가|께서)(?![가-힣])/u);
+  return mid?.[1]?.replace(JOSA_RE, '');
 }
 
 function extractNumericValues(text: string): Set<string> {
@@ -441,7 +505,7 @@ function extractNumericValues(text: string): Set<string> {
 
 function isStateToken(token: string): boolean {
   if (STATE_STOPWORDS.has(token)) return true;
-  if (/(살아있|살았|죽었|사망|생존|나타났|사라졌|실종|발견|존재|열렸|닫혔|신뢰|의심|불신|숨겼|드러났|밝혀졌)/.test(token)) return true;
+  if (/(살아있|살았|죽었|사망|살해|피살|살인|생존|나타났|사라졌|실종|발견|존재|열렸|닫혔|신뢰|의심|불신|숨겼|드러났|밝혀졌)/.test(token)) return true;
   return [...STATE_STOPWORDS].some((word) => token.includes(word) || word.includes(token));
 }
 

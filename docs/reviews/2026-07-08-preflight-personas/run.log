@@ -1,0 +1,13 @@
+[01-karina] start medium=novel format=long-novel title=카리나와 나
+[01-karina] exit=0 complete | prose=2598자 | beats=5 | canon=4
+[02-quebec-mystery] start medium=novel format=long-novel title=만파식적의 그림자
+[02-quebec-mystery] exit=0 complete | prose=1780자 | beats=6 | canon=3
+[03-vibecoding-essay] start medium=essay format=essay-series title=월 1억의 사이드
+[03-vibecoding-essay] exit=0 complete | prose=1921자 | beats=6 | canon=3
+[04-eyebeam-webtoon] start medium=comics format=serial-webtoon title=눈빛맨 등원기
+[04-eyebeam-webtoon] exit=0 complete | prose=2091자 | beats=6 | canon=4
+[05-fx-column] start medium=academic format=academic-column title=환율은 무력한가
+[05-fx-column] exit=0 complete | prose=2003자 | beats=5 | canon=2
+[06-twist-thriller] start medium=novel format=long-novel title=추적자의 얼굴
+[06-twist-thriller] exit=0 complete | prose=2301자 | beats=5 | canon=5
+ALL DONE
