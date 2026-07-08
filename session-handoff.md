@@ -4,6 +4,51 @@
 
 ---
 
+## 2026-07-08 (4차) — 자동 의미 연속성 게이트 한국어 recall 보강 (done)
+
+> 예비비행이 실측한 "자동 게이트가 한국어 직접 모순 미포착"을 brainstorming→spec→TDD로 해소. progress.md 해당 절 상세. spec `docs/superpowers/specs/2026-07-08-continuity-semantic-gate-korean-recall-design.md`.
+
+### 한 것
+- `continuityContract.ts` `classifyCanonChange`/`findReversalMatch` 보강 — 절 확장 토큰화·death축 살해·문중 주어 폴백·계사 부정(X가 아니)·주술어 마지막절 부정 극성+엔티티 제외 공유 술어. 결정론 유지.
+- 실측 — 실 #6 캐논 직접 모순 2/2 BLOCK(전 0/2)·6개 실 캐논 39주장 오탐 0. continuityContract 6 신규 + init.sh 녹색.
+
+### 손대지 말 것 (불변식)
+- **정밀도 우선** — 이 게이트는 "정밀한 직접 모순만"이 사용자 결정. recall을 더 올리려다 오탐 내지 말 것. 판별 핵심 = `hasFinalNegation`(주술어 부정 vs 부수 부정 "없이도")·`sharesNonEntityPredicate`(엔티티만 공유하면 반전 아님)·`copulaNegatedNouns`(X가 아니). 이 3개가 오탐 0을 지킨다.
+- **결정론** — LLM·외부 사전 금지. `classifyCanonChange`는 프롬프트 미러 대상 아님(순수 코드, 미러/핀 없음).
+- 재현 스크립트 `docs/reviews/2026-07-08-preflight-personas/gate-*.ts`(npx tsx) 보존 — 회귀 시 여기부터.
+
+### 다음 한 가지
+- **커밋/머지 미완** — 이 세션 작업 전부 main에 **uncommitted**(게이트 fix·테스트·spec·예비비행 docs·progress·handoff). 컨벤션상 feature 브랜치→PR 권장(base 규칙 "default 브랜치면 브랜치 먼저"). 사용자 확인 대기.
+- 후속 — 학술 A2/A4 한국어 recall · canon-librarian 메타 필터 · 실존인물 정책 · **다음 검증 라운드(장편 여러 화 이어 생성·PLAY/WRITE/PLAN 실사용 연속성 관찰)** · 외부 작가 모집(게이트0 하드닝 후).
+
+### 검증 팁
+- 게이트를 실 prose에 직접 돌리려면 tsx로 src/lib import(continuityContract.classifyCanonChange·claimLedger·citationGate). FP 스캔은 각 초안 newCanonFacts를 계약으로 두고 자기 beats/hook을 주장으로 → block 0 확인.
+
+---
+
+## 2026-07-08 (3차) — 6-페르소나 예비비행 + 차별점 게이트 실발화 검증
+
+> 사용자 설계 6조건을 로컬 Codex로 돌려 폭 검증 + 핵심 차별점 게이트가 데모 아니라 실제 판정력이 있는지 실측. 정본 `docs/reviews/2026-07-08-preflight-personas/`. progress.md 해당 절 상세.
+
+### 한 것
+- feat/gen-progress-feedback → main ff 머지·푸시(7938886). 진행피드백+first-run E2E는 이미 커밋돼 있던 걸 확인·머지.
+- 6조건(카리나·퀘벡미스터리·바이브코딩에세이·눈빛맨웹툰·환율칼럼·반전스릴러) CLI 배치 생성 = 6/6 성공(폭 PASS).
+- **차별점 게이트 tsx 실측** — 학술 A3 견고·A2 한국어 recall 약함 / 연속성 명시규칙 발화 O·**자동 의미게이트 한국어 모순 미포착(2/2)**.
+
+### 손대지 말 것 / 유의
+- gate-*.ts 검증 스크립트는 `docs/reviews/2026-07-08-preflight-personas/`에 보존(재현용). npx tsx로 실행.
+- 연속성 발견은 **까다롭게 다뤄라** — "게이트가 안 된다"가 아니라 "명시 규칙은 되고 자동 의미층이 한국어에서 약하다"가 정확한 진술. 23화 실증(바이블 채워짐)은 여전히 유효.
+
+### 다음 한 가지
+- **후속 우선순위 = 자동 의미 게이트 한국어 recall 보강** — findReversalMatch 부정극성을 절 단위로 쪼개고 고유명사/한자어 동사 추출 강화. 이게 "연속성=제품요건"을 자유 생성물에서도 실제 게이트로 만드는 핵심. (별도 조각·brainstorming 권장)
+- 그 외 — 학술 A2/A4 한국어 문형·canon-librarian 메타 필터·실존인물 정책·(원래) M7 단계2 외부 작가 모집(게이트0 하드닝 후).
+
+### 검증 팁
+- storyx CLI 배치 = `node tools/storyx.mjs draft --provider codex --medium X --format Y --freewrite "..."` (enum: novel/long-novel·essay/essay-series·comics/serial-webtoon·academic/academic-column). 각 ~2.5~3분, 순차 배치 background + Monitor(run.log)로 조건별 진행 포착.
+- 게이트를 실 prose에 직접 돌리려면 tsx로 src/lib 함수 import(claimLedger·citationGate·academicIntegrity·continuityContract.classifyCanonChange·storyEngine.validateContinuity).
+
+---
+
 ## 2026-07-08 (2차) — 외부 테스트 준비: first-run E2E 무개입 검증 + 개발 현황 정리
 
 > 사용자 요청 = "개발 현황·완성도 검토·외부 테스트 준비 정리". 결정 2건 = ① first-run E2E 검증 우선 ② 과금은 BYOK 우선. progress.md "first-run E2E 무개입 검증" 절 상세. 코드 변경 없음(검증·문서만).
