@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-07-08 — PLAN 설계 대화 채널 done·머지 (설계실 2단계, PR #30 main `254cb2b`)
+
+> 흡인력 후속 ③을 brainstorming(목업 3화면·결정 6건)→spec→plan→subagent TDD 9태스크→라이브 6게이트→최종 리뷰→머지로 완주. progress.md "PLAN 설계 대화 채널" 절 상세. 같은 세션 앞부분에서 VS 긴장 배지(PR #29)·관찰 ②도 완결.
+
+### 한 것
+- PLAN dock 「✦ 설계」 패널 = 단일 설계 파트너 대화. LLM이 같은 콜에서 reply+승인형 패치 제안(인물/세계/캐논/스토리코어 필드) verbalize → 「설계안으로」 승인 시 **기존 stage\* 재사용**으로 설계안(PLAN +N) 합류 → 반영/버리기·충돌 게이트 계승. 하네스 미리보기(overlay 재채점)·대화 localStorage 영속(remount 생존). PR #20 잔여 clear+remount 회귀 테스트 동봉. 태스크별 2단 검토 + 최종 리뷰 Ready to merge. 라이브 6게이트(실 codex 왕복·워크벤치 태그 스크린샷·새로고침 생존·콘솔 0).
+
+### 손대지 말 것 (불변식)
+- **승인 경로 = stage\* 4종 재사용** — 채널이 upsertPlanPatch를 직접 부르지 않는다. stage\*가 boolean 반환(대상 소멸 시 false→approved 마킹 스킵+note 강등). 이걸 되돌리면 "패치 없는 가짜 설계안" 버그 재발.
+- **제안 경계 = 기존 엔티티 필드 수정만** — 인물 CRUD·헌장·제목·creative-weight 제안 불가. **story-core `'title'` 은 normalize가 반드시 드랍**(stageStoryCore('title')은 본편 직행이라, 이 화이트리스트가 승인→즉시 쓰기 우회를 막는 유일한 문). planChat.test의 필수 핀.
+- **미러 byte-identical** — buildPlanChatPrompt promptBuilders↔storyx.mjs, `[plan-mirror]` 핀이 JSON 계약+지시문 전문 둘 다 문다.
+- **catalog 단일 객체 규율** — sendPlanChat은 `buildPlanChatCatalog(overlayProject)` 한 객체에서 catalogText·검증 catalog를 파생. 분리 구성 금지(제안 무음 드랍 유발).
+- **App key=syncVersion만** — 반영/버리기·충돌 게이트 무접촉 계승.
+
+### 다음 한 가지
+- **알려진 한계(accepted-risk) 해소가 후속 1순위** — plan-chat busy 중 반영/버리기 누르면 remount로 뒤늦은 파트너 응답이 조용히 소실. 근본 수정 = `planChatBusy`(StoryXDesk 내부)를 App이 알아 반영/버리기 게이트(App↔StoryXDesk busy 배관 확장). 작은 조각.
+- 그 외 후속 — 섹션별 페르소나 스위칭 · 결정론 신호 주입(미회수 약속·충돌·조기 소진을 파트너 프롬프트에) · 인물 추가/헌장 제안 · VS 긴장 배지 dogfooding(drains 발화율·canonSuspect) · 선택 4b(desk-grid 계약 재협상).
+
+### 검증 팁
+- 이 세션 permission classifier 안정적. preview 5175 + ch23 백업(`docs/handoff/2026-06-11-demo-video-kit.md` 스니펫) + `?stage=editor` → PLAN 토글. textarea는 `preview_fill` 유효, 버튼은 `dispatchEvent(MouseEvent bubbles:true)`. **SyncConsole 배지 메뉴(반영/버리기)는 dispatchEvent로 React onClick 미발화** — remount 검증은 새로고침(더 강한 재마운트)으로 갈음. 배지 메뉴 클릭은 preview 한계.
+- subagent TDD 리듬 — 구현자(sonnet)→spec 검토→품질 검토(code-reviewer) 3단, Important는 SendMessage로 같은 구현자 재개해 수리 후 재검토. 이 세션 Important 6건 전부 이 루프로 해소.
+
+---
+
 ## 2026-07-07 (5차) — VS 긴장 배지 done·머지 (후보 흡인력 2축 주석, PR #29 main `6dec0fd`)
 
 > 흡인력 후속 ①을 brainstorming(목업 4화면)→spec→plan→subagent-driven TDD 5태스크→라이브→머지로 완주. progress.md "VS 긴장 배지" 절 상세. 사용자 결정 4건 — ⓐ 같은 콜 verbalize ⓑ 배지·순서 불변 ⓒ canonSuspect 독립 병기 + 접근안 2(근거 툴팁).
