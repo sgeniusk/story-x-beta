@@ -8789,8 +8789,14 @@ body:has(.fc-app) {
 .fc-app .btn-confirm-lock:hover{background:color-mix(in oklch,var(--accent) 18%,transparent);border-color:var(--accent)}
 .fc-app .btn-confirm-lock svg{width:14px;height:14px}
 /* 슬라이스 C — 원고 시트 끝 CTA 행 */
-.fc-sheet-cta{display:flex;align-items:center;gap:10px;margin-top:30px;padding-top:18px;border-top:1px dashed var(--rule-soft,rgba(255,255,255,.1))}
+.fc-sheet-cta{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:30px;padding-top:18px;border-top:1px dashed var(--rule-soft,rgba(255,255,255,.1))}
 .fc-sheet-cta .btn-primary{display:inline-flex;align-items:center;gap:7px}
+/* 초안 생성 진행 피드백 — 정적 스피너 hang 오인 방지(외부 테스트 게이트0) */
+.fc-gen-progress{flex-basis:100%;display:flex;flex-direction:column;gap:2px;margin:2px 0 0;padding-left:2px}
+.fc-gen-stage{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--ink)}
+.fc-gen-stage::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--st-mode-write,#60a5fa);animation:fc-gen-pulse 1.2s var(--st-ease,ease-in-out) infinite}
+.fc-gen-hint{font-size:12px;color:var(--ink-dim)}
+@keyframes fc-gen-pulse{0%,100%{opacity:.35}50%{opacity:1}}
 .fc-sheet-cta .btn-primary svg{width:15px;height:15px}
 .fc-sheet-cta .btn-confirm-lock{display:inline-flex;align-items:center;gap:7px}
 .fc-sheet-cta .btn-confirm-lock svg{width:14px;height:14px}
@@ -9436,7 +9442,8 @@ body:has(.fc-app) {
   .dx-vs-panel,
   .dx-showrunner-sheet,
   .om-menu,
-  .dx-empty {
+  .dx-empty,
+  .fc-gen-stage::before {
     animation: none;
   }
   .wm-btn,

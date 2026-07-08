@@ -114,6 +114,25 @@ describe('FloatingEditor 실데이터 배선', () => {
     unmount();
   });
 
+  it('isGenerating 이면 진행 피드백 줄(경과·안심 메시지·예상시간)을 렌더한다', () => {
+    const { host, unmount } = mount(baseProps({ isGenerating: true }));
+    const cta = host.querySelector('.fc-sheet-cta .btn-primary') as HTMLButtonElement;
+    expect(cta.textContent).toContain('생성 중');
+    expect(cta.textContent).toMatch(/\d+:\d\d/); // 경과 m:ss
+    const progress = host.querySelector('.fc-gen-progress');
+    expect(progress).not.toBeNull();
+    expect(progress?.getAttribute('role')).toBe('status');
+    expect(host.querySelector('.fc-gen-stage')?.textContent?.length).toBeGreaterThan(0);
+    expect(host.querySelector('.fc-gen-hint')?.textContent).toContain('분');
+    unmount();
+  });
+
+  it('생성 중이 아니면 진행 피드백 줄을 렌더하지 않는다', () => {
+    const { host, unmount } = mount(baseProps({ isGenerating: false }));
+    expect(host.querySelector('.fc-gen-progress')).toBeNull();
+    unmount();
+  });
+
   it('pill topbar 를 렌더하지 않는다 — 단일 바 셸 (슬라이스 C)', () => {
     const { host, unmount } = mount(baseProps());
     expect(host.querySelector('.topbar')).toBeNull();

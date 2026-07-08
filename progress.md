@@ -3,6 +3,21 @@
 > Last Updated: 2026-07-08 · Branch: `main` (**PLAN 설계 대화 채널(설계실 2단계) `done` — PR #30 main 머지 `254cb2b`, 머지 후 main init.sh 녹색 재확인. PLAN dock 「✦ 설계」에서 단일 설계 파트너와 대화→승인형 패치 제안→기존 stage\* 로 설계안 합류→하네스 미리보기, 대화 버퍼 localStorage 영속(remount 생존). PR #20 잔여 clear+remount 회귀 테스트 동봉. 알려진 한계 = in-flight 응답 remount 손실(accepted-risk·후속). · 이전: VS 긴장 배지 PR #29 `6dec0fd` · 디자인 정비 4a PR #28 `96cdb9b`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
+## 완료 트랙 — first-run E2E 무개입 검증 (`done` · 2026-07-08, 외부 테스트 준비 게이트0)
+
+외부 작가 실증(M7 단계2) 착수 전, **신규 사용자가 백업 주입·`?stage=` 직행 없이 랜딩부터 첫 회차 생성까지 통짜로 완주하는지**를 처음으로 라이브 검증(사용자 결정 = first-run E2E 우선). localStorage 완전 초기화 후 빈 상태에서 시작, 실 codex 왕복 3콜 포함.
+- **통과 구간** — ① 랜딩 렌더·콘솔0 ② 「창작 시작」→온보딩(매체 소설/장편 기본 선택) ③ 자유 서술 입력→`POST /api/interview`(실 codex)→**내 소재에 정확 맞춤화된 질문·선택지 생성** ④ 인터뷰 답변→헌장 단계 spine-suggest 맞춤 척추 제안 ⑤ 「에디터로」→에디터(`fc-app`) 진입, **로그라인·캐논3·캐릭터3 자동 구성**, 크래시0 ⑥ 「초안 생성」→`POST /api/draft`(실 codex)→완결 첫 회차 렌더("반환실의 초승달" 1,975자·비트6 긴장곡선·새 캐논3·rewardArc·stakesLedger, `.storyx-runs/drafts/`에 저장)·**streak 「🔥 1일 연속」 자동 발화(B2)** ⑦ 전 구간 콘솔 에러0·크래시0.
+- **발견(외부 테스트 리스크)** — ⓐ **초안 생성 지연 ~2.5~3분**(codex), 그 동안 정적 「생성 중…」만 노출·진행 표시/스트리밍 없음 → 신규 사용자가 hang으로 오인할 위험 → **아래 진행 피드백 슬라이스로 해소** ⓑ 작품 제목이 온보딩에서 자동 설정 안 됨(에디터 상단 「샘플 작품」 기본값, 회차 제목은 정상) — 코스메틱 ⓒ **BYOK 미지원** — 배포 앱은 서버 env 키(`AI_GATEWAY_API_KEY`/`ANTHROPIC_API_KEY`=소유자 키)만 소스, 클라이언트 키 입력 UI 없음(`src/lib/server/llmRunner.ts`) → "작가 자기 키 부담" BYOK 외부 테스트는 현 코드로 불가, 별도 결정/구현 필요.
+- **결론** — 핵심 완성 루프(인터뷰→헌장→생성)는 신규 사용자에게 무개입으로 작동. 게이트0 first-run 항목 충족. 남은 게이트0 = ~~생성 지연 UX~~(해소)·BYOK 경로·(self-reported) FloatingEditor 하드-시딩 크래시 방어·프로덕션 배포 URL 실호출 확인.
+
+## 완료 트랙 — 초안 생성 진행 피드백 (`done` · 2026-07-08, 게이트0 발견 ⓐ 해소, 미머지)
+
+first-run E2E 발견 ⓐ(초안 생성 ~2.5~3분 정적 「생성 중…」이 hang으로 오인) 해소. 실 스트리밍(서버 SSE)은 범위 밖으로 두고, **경과 타이머 + 단계별 안심 메시지 + 예상시간 힌트**로 신규 작가를 붙잡는다. TDD(순수 모듈 먼저).
+- **구현** — 순수 `src/lib/generationProgress.ts`(`formatElapsed` m:ss·음수/NaN 방어 · `generationStageMessage` 4구간 20/50/100초 경계·마지막 수렴 · `GENERATION_TIME_HINT`) + `generationProgress.test.ts` 7 · `FloatingEditor` isGenerating 동안 1초 setInterval 경과 상태(시작 시 0 리셋) → 버튼 라벨 「생성 중 · m:ss」 + `.fc-gen-progress`(role=status·aria-live=polite: 단계 메시지 + 힌트) · `styles.css` `.fc-gen-*`(warm `--ink`/`--ink-dim`·모드색 펄스 도트·`--st-ease`, reduced-motion 블록에 `.fc-gen-stage::before` 추가) · floatingEditor.test +2(진행줄 렌더/미렌더) · editorFocusLayout F-002 핀 갱신(`생성 중…`→`생성 중`+`fc-gen-progress`, 약화 아님·강화).
+- **불변식** — 진행 표시는 isGenerating 파생만(생성 동작·데이터 무접촉) · 타이머는 isGenerating 토글에 리셋 · 실 codex 소요는 못 줄임(정직한 힌트로 기대치만 조정).
+- **검증** — init.sh 녹색(순수 7 + 컴포넌트 2 신규) · **라이브(preview 5175)** HMR 후 에디터 무회귀 마운트·콘솔0·리뷰(쇼러너/캐릭터 큐레이터) 정상. 진행줄 자체의 mid-generation 시각은 jsdom 컴포넌트 테스트로 확정(라이브 재트리거는 빈 새 회차 상태 필요 — 현 프로젝트는 단일 회차라 「출간 확정」만 노출).
+- **후속** — 진짜 스트리밍(서버 SSE로 토큰/비트 단위 진행) · 빈 새 회차 경로에서 progress 라이브 캡처 · 미머지(브랜치 미생성, main 직접 편집 상태 — 커밋 전 브랜치 필요).
+
 ## 최근 검증 (2026-07-08 PLAN 설계 대화 채널 슬라이스 후)
 `bash init.sh` 통과 — `npm test` **868 통과**(86 파일) · `npm run build`(tsc+vite) 성공. Canon Core(MVP-0) PR #7 · MVP-1 PLAY 거버넌스 PR #9 · MVP-2 응결 스튜디오 PR #10 · 슬라이스 B(LLM 검증기) PR #11 · 🔴 retcon 경로 PR #12 · 융합 셸 슬라이스 A PR #13 · B(싱크 콘솔) PR #14 · B-2(reconcile 게이트) PR #15 · 최신화 토스트 PR #16 · 슬라이스 C(단일 바 셸) PR #17 · legacy 셸 정리 PR #18 · 고아·CSS 정리 PR #19 · PLAN staged PR #20 · PLAY 진입 융합 파트 1 PR #21 · 파트 2 PR #23 · 랜딩 원페이저 PR #24 · PLAY 전개 후보(VS) `a33768e` · 흡인력 게이트 PR #25 · 디자인 정비 슬라이스 1+2 PR #26 · 슬라이스 3(핀 완화) PR #27 · 슬라이스 4a(죽은 세대 정리) PR #28 · VS 긴장 배지 PR #29 · **PLAN 설계 대화 채널 PR #30** (전부 main).
 

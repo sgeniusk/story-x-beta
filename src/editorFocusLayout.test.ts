@@ -437,7 +437,8 @@ describe('검증 데스크 회귀 — 생성 피드백·검토 fallback (2026-06
   it('floating 초안 생성 버튼이 생성 중·상태별 라벨을 표시한다 (F-002)', () => {
     const floating = componentSrc('FloatingEditor');
     expect(floating).toContain('mainActionLabel');
-    expect(floating).toContain('생성 중…');
+    expect(floating).toContain('생성 중');           // 경과 타이머 접두어(생성 중 · m:ss)
+    expect(floating).toContain('fc-gen-progress');   // F-002 강화 — 진행 피드백 줄
     const propsStart = desk.indexOf('const floatingEditorProps');
     expect(propsStart).toBeGreaterThan(-1);
     expect(desk.slice(propsStart, propsStart + 1600)).toContain('mainActionLabel');

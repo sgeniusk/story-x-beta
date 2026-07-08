@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-07-08 (2차) — 외부 테스트 준비: first-run E2E 무개입 검증 + 개발 현황 정리
+
+> 사용자 요청 = "개발 현황·완성도 검토·외부 테스트 준비 정리". 결정 2건 = ① first-run E2E 검증 우선 ② 과금은 BYOK 우선. progress.md "first-run E2E 무개입 검증" 절 상세. 코드 변경 없음(검증·문서만).
+
+### 한 것
+- 마일스톤 현황 정리 — M1~M6·A1~A5·B1~B4·DX1~DX4·M12 전부 done, M11 rank1~4 done(rank5~7 미착수), **M7-alpha-1.0 = 단계1(기술+내부실증) 달성·단계2(외부작가 3명 실증) 미착수**. `bash init.sh` 실측 녹색(868 테스트).
+- **first-run E2E 라이브 통과** — localStorage 초기화 후 빈 상태에서 랜딩→창작시작→매체(소설/장편)→자유서술→인터뷰(실 codex 맞춤 질문)→헌장(맞춤 척추)→에디터(로그라인·캐논3·캐릭터3 자동)→초안생성(실 codex 완결 회차 "반환실의 초승달" 1,975자·streak 발화)까지 콘솔0·크래시0.
+
+### 이어서 한 것 (같은 세션)
+- **초안 생성 진행 피드백 `done`(미머지)** — 발견 ⓐ 해소. 순수 `generationProgress.ts`(경과 m:ss·4구간 안심 메시지·예상시간 힌트) TDD + FloatingEditor 타이머 배선(버튼 「생성 중 · m:ss」+`.fc-gen-progress` role=status) + `.fc-gen-*` warm CSS + reduced-motion. init.sh 녹색(+9 테스트)·라이브 무회귀. progress.md "초안 생성 진행 피드백" 절. **미머지 — main 직접 편집 상태라 커밋 전 브랜치 필요**(`feat/gen-progress-feedback` 등). editorFocusLayout F-002 핀 갱신(약화 아님).
+
+### 다음 한 가지 (외부 테스트 게이트0 잔여)
+- **BYOK 결정 필요** — 앱에 클라이언트 키 입력 UI 없음(서버 env 소유자 키만). 두 갈래 — (A) BYOK 키 입력 UI 신설 or (B) 클로즈드 베타는 소유자 키로 원가 부담(진짜 BYOK 아님·간단). 사용자 결정 필요.
+- 그 외 게이트0 — FloatingEditor 하드-시딩 크래시 방어(정규화 백필/에러 바운더리, self-reported) · 프로덕션 배포 URL 살아있음+서버 LLM 실호출 확인(Vercel 인증 필요, 이 환경 불가). 게이트1(데모영상·베타안내·이탈수집)·게이트2(작가 3명 모집)는 M7 결정문서 `docs/decisions/2026-06-10-market-proof-1.0.md` 방법 A/B/C 참조.
+
+### 검증 팁
+- 이 세션 preview 안정적. CTA·버튼은 `preview_click`이 React onClick 미발화 → `dispatchEvent(MouseEvent bubbles:true)` 우회 필수(온보딩 전 구간 이걸로 구동). textarea는 `preview_fill` 유효. 실 codex 초안은 2.5~3분, 백그라운드 `sleep`으로 대기 후 `preview_network` requestId로 응답 본문 확인.
+
+---
+
 ## 2026-07-08 — PLAN 설계 대화 채널 done·머지 (설계실 2단계, PR #30 main `254cb2b`)
 
 > 흡인력 후속 ③을 brainstorming(목업 3화면·결정 6건)→spec→plan→subagent TDD 9태스크→라이브 6게이트→최종 리뷰→머지로 완주. progress.md "PLAN 설계 대화 채널" 절 상세. 같은 세션 앞부분에서 VS 긴장 배지(PR #29)·관찰 ②도 완결.

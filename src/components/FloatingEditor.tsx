@@ -9,6 +9,7 @@ import { composeIntentWithFork, buildVsIntentSeed, type EpisodeFork, type VsCand
 import { replacePaceSeed, type PaceQuestion } from '../lib/paceInterview';
 import type { LeakReport } from '../lib/leakGate';
 import type { RetentionStats } from '../lib/retentionStats';
+import { formatElapsed, generationStageMessage, GENERATION_TIME_HINT } from '../lib/generationProgress';
 import { DeskMetaLine } from './DeskMetaLine';
 
 interface ChapterBeatLike {
@@ -152,6 +153,21 @@ export function FloatingEditor({
       personas.find((p) => p.id === id) ?? { id, name: id, role: '', tint: '#62666d', isCore: false },
     [personas]
   );
+
+  // 초안 생성 경과 타이머 — isGenerating 동안 1초마다 경과를 올려 진행 피드백을 그린다(정적 스피너 오인 방지).
+  const [genElapsed, setGenElapsed] = useState(0);
+  useEffect(() => {
+    if (!isGenerating) {
+      setGenElapsed(0);
+      return;
+    }
+    setGenElapsed(0);
+    const started = Date.now();
+    const id = setInterval(() => {
+      setGenElapsed(Math.floor((Date.now() - started) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isGenerating]);
 
   const liveReviews = reviews.filter((r) => !r.pending);
   const reviewForAnchor = (anchorId: string) => liveReviews.find((r) => r.anchor === anchorId) ?? null;
@@ -594,8 +610,14 @@ export function FloatingEditor({
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                   <path d="M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5z" />
                 </svg>
-                <span>{isGenerating ? '생성 중…' : productionBlockedReason ? '헌장 잠금 필요' : mainActionLabel}</span>
+                <span>{isGenerating ? `생성 중 · ${formatElapsed(genElapsed)}` : productionBlockedReason ? '헌장 잠금 필요' : mainActionLabel}</span>
               </button>
+              {isGenerating && (
+                <p className="fc-gen-progress" role="status" aria-live="polite">
+                  <span className="fc-gen-stage">{generationStageMessage(genElapsed)}</span>
+                  <span className="fc-gen-hint">{GENERATION_TIME_HINT}</span>
+                </p>
+              )}
               {canConfirmLock && (
                 <button
                   className="btn-confirm-lock"
