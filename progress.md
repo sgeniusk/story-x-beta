@@ -3,6 +3,14 @@
 > Last Updated: 2026-07-08 · Branch: `main` (**PLAN 설계 대화 채널(설계실 2단계) `done` — PR #30 main 머지 `254cb2b`, 머지 후 main init.sh 녹색 재확인. PLAN dock 「✦ 설계」에서 단일 설계 파트너와 대화→승인형 패치 제안→기존 stage\* 로 설계안 합류→하네스 미리보기, 대화 버퍼 localStorage 영속(remount 생존). PR #20 잔여 clear+remount 회귀 테스트 동봉. 알려진 한계 = in-flight 응답 remount 손실(accepted-risk·후속). · 이전: VS 긴장 배지 PR #29 `6dec0fd` · 디자인 정비 4a PR #28 `96cdb9b`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
+## 완료 트랙 — 멀티회차 실제 codex 이어 생성 관찰 (`done` · 2026-07-09, 코드 변경 0)
+
+1순위 잔여(실제 codex 이어 생성·유기적 드리프트)를 밟음. 예비비행 #6 스릴러(`젖은 유리의 얼굴`) ch1 위에 **실제 codex로 ch2~ch6 이어 생성**(드라이버가 매 화 누적 캐논을 context로 먹이고 `validateContinuity`를 돌림). 정본 `docs/reviews/2026-07-09-multichapter-live/`(drive-chapters.ts·chapters/·observations.md).
+- **생성** — 5/5 화 성공(status=complete·prose 1.9~2.5K자), 캐논 **5→23 누적**, 전 화 hard-canon BLOCK 0. 윤민서 형사·기억공백 1:17·한태겸 살해·사진 전시 수법 유지하며 오세진 도입→내부 은폐→사진 순서표→B-3 증거실 코헤런트 전개.
+- **검증(BLOCK 0 = 진음성 확인)** — 누적 23팩트 위 직접 실측 — **재진술 FP 0/23·정합신규 0/2**(유기적 누적, reveal형 "자신이 아니라 백서연" 포함 → 계사부정 수정 실전 검증). **이빨 recall 3/4** — 死·목격자 부정 hard-BLOCK, 형사→민간인 living-state 경고(character owner→livingState 층), 진짜 누락 1 = "기억 공백 전혀 없다"(추상 없음/있음 미모델링).
+- **핵심 결론** — 계사부정 수정(`1962c2d`)의 정밀도가 **로판 픽스처(잔여 16)와 달리 전형적 유기 누적에선 0 FP** — 잔여 16은 밀집 동일테마 reveal 클러스터 특수 케이스. "연속성=제품요건"이 이어 생성에서 실작동(누적 context 주입 시 codex가 하드 캐논 준수·게이트가 직접 모순 포착).
+- **후속** — character owner→livingState 라우팅(정체성 반전이 경고에 그침) 재검토 · 추상 없음/있음·비-최종절 부정 미모델링 · PLAY/WRITE/PLAN 3모드 실사용 연속성(1순위 마지막 잔여, 미착수).
+
 ## 완료 트랙 — 멀티회차 누적 연속성 게이트 검증 + 계사부정 FP 정밀화 (`done` · 2026-07-09, **main 머지** `1962c2d`)
 
 > 최근 검증(2026-07-09) — `bash init.sh` 통과: `npm test` 887 통과(87 파일) · `npm run build`(tsc+vite) 성공. 누적 하네스 재진술 FP 16/91·recall 3/5.

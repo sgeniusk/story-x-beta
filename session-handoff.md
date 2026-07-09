@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-07-09 (2차) — 멀티회차 실제 codex 이어 생성 관찰 (done·코드 변경 0)
+
+> 1순위 잔여(실제 이어 생성·유기 드리프트). 예비비행 #6 스릴러 위에 codex로 ch2~ch6 생성하며 매 화 validateContinuity 관찰. progress.md 해당 절·정본 `docs/reviews/2026-07-09-multichapter-live/`.
+
+### 한 것
+- 드라이버(`drive-chapters.ts`)가 누적 캐논을 context로 먹여 5화 이어 생성 — 5/5 성공, 캐논 5→23, 전 화 hard BLOCK 0, 코헤런트 전개.
+- **검증** — 누적 23팩트 위 재진술 FP **0/23**·정합신규 0/2(계사부정 수정 실전 검증) · 이빨 recall 3/4(死·목격자 hard-BLOCK, 형사→민간인 living-state 경고, 기억공백 1건 진짜 누락).
+- **결론** — 로판 픽스처 잔여 16 FP는 밀집 동일테마 reveal 특수 케이스, 전형 유기 누적에선 0 FP. "연속성=제품요건" 이어 생성 실작동.
+
+### 다음 한 가지
+- **PLAY/WRITE/PLAN 3모드 실사용 연속성**(1순위 마지막 잔여, 미착수) — 세 방식이 한 캐논을 조각하는 융합 동선이 여러 화에서 안 무너지나 라이브 관찰.
+- 후속 — character owner→livingState 라우팅(정체성 반전이 경고에 그침)·추상 없음/있음 미모델링·ch23류 밀집 reveal 잔여 FP.
+
+---
+
 ## 2026-07-09 — 멀티회차 누적 연속성 검증 → 계사부정 FP 정밀화 (done·미머지)
 
 > 핸드오프 1순위. 결정론 하네스로 실제 23화·91팩트 누적 캐논에서 게이트 정밀도 붕괴를 발견하고 즉시 수정. brainstorming→spec→(스파이크 검증)→TDD→init 녹색. progress.md "완료 트랙 — 멀티회차 누적…" 절 상세. 브랜치 `feat/continuity-copula-accumulation-fp`.

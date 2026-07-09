@@ -5,6 +5,7 @@ dist/
 .omc/
 .superpowers/
 .storyx-runs/
+.storyx-runs-live/
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts
