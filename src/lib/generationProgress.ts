@@ -28,3 +28,22 @@ export function generationStageMessage(elapsedSeconds: number): string {
 
 /** 예상 소요 안내 — 창을 닫지 않게 붙잡는 정직한 문구. */
 export const GENERATION_TIME_HINT = '보통 2~3분쯤 걸려요. 창을 닫지 말고 기다려 주세요.';
+
+// 작가 인터뷰 생성(dev codex ~1분) 단계 안심 메시지. 실제 인터뷰 파이프라인 순서를 반영한다.
+const INTERVIEW_STAGES: ReadonlyArray<{ until: number; message: string }> = [
+  { until: 15, message: '작가진이 자유 서술을 처음부터 끝까지 읽는 중이에요' },
+  { until: 40, message: '이 작품에만 필요한 질문을 고르는 중이에요' },
+  { until: Number.POSITIVE_INFINITY, message: '질문과 선택지를 다듬는 중이에요' },
+];
+
+/** 인터뷰 생성 경과 초에 맞는 단계별 안심 메시지. 마지막 구간으로 수렴한다. */
+export function interviewStageMessage(elapsedSeconds: number): string {
+  const safe = Number.isFinite(elapsedSeconds) && elapsedSeconds > 0 ? elapsedSeconds : 0;
+  for (const stage of INTERVIEW_STAGES) {
+    if (safe < stage.until) return stage.message;
+  }
+  return INTERVIEW_STAGES[INTERVIEW_STAGES.length - 1].message;
+}
+
+/** 인터뷰 예상 소요 + 새로고침 금지 안내 — fetch 는 새로고침 시 취소되므로 명시해 붙잡는다. */
+export const INTERVIEW_TIME_HINT = '보통 1분 안팎 걸려요. 새로고침하지 말고 기다려 주세요.';
