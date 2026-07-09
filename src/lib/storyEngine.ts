@@ -1339,7 +1339,22 @@ function isSoftCanonStatement(statement: string): boolean {
 
 function isLivingCanonStatement(statement: string): boolean {
   if (isDefinitivePastEvent(statement)) return false;
+  // 계사 정체성 단정("X는 …형사이며")은 state 키워드가 섞여 있어도 정체성이므로 hard canon 으로 둔다.
+  // 이게 없으면 "형사이며 감정을 드러내지 않는다"가 '감정' 때문에 livingState 로 가, 정체성 반전이
+  // 하드 차단이 아니라 경고에 그친다. 순수 mutable-state("믿지 않는다")는 계사 정체성이 없어 보존된다.
+  if (hasCopulaIdentity(statement)) return false;
   return /현재|아직|믿지|믿기|믿는다|신뢰|의심|불신|숨기|두려|망설|관계|감정|상태/.test(statement);
+}
+
+// [비상태 명사] + 이며/이고/이다 → 정체성 단정 신호. 상태 명사(감정·관계·상태 등)는 제외해
+// "불안한 상태이며" 같은 가변 상태 서술이 정체성으로 오인되지 않게 한다.
+function hasCopulaIdentity(statement: string): boolean {
+  const re = /([가-힣]{2,10})(?:이며|이고|이다)/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(statement)) !== null) {
+    if (!/감정|관계|상태|마음|기분|사이|처지/.test(match[1])) return true;
+  }
+  return false;
 }
 
 function isDefinitivePastEvent(statement: string): boolean {
