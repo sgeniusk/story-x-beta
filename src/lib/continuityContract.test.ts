@@ -255,6 +255,52 @@ describe('continuityContract', () => {
     expect(result.allowed).toBe(true);
   });
 
+  // 누적 오탐 방어 — reveal 팩트("X가 아니며 Y")가 다른 주어 팩트를 오염시키지 않는다.
+  it('does not flag a subject-mismatched mention against a copula-negated reveal fact', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['첫 회송 날짜의 오른편 권한자는 레나 위클리프가 아니며 루시안이 오른편을 대리했다'],
+      livingState: [],
+      softSignals: []
+    });
+    const result = classifyCanonChange(contract, '레나 위클리프는 리아나에게 동쪽 문 근처에 가지 말라고 경고했다');
+    expect(result.allowed).toBe(true);
+  });
+
+  // 주어 일치 시 진짜 계사 반전(source 부정·claim 단정)은 여전히 잡는다 — 주어 일치 게이트가
+  // FP만 거르고 legitimate 반전을 죽이지 않음을 보증.
+  it('still flags a copula reversal when the two statements share the same subject', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['윤민서는 형사가 아니다'],
+      livingState: [],
+      softSignals: []
+    });
+    const result = classifyCanonChange(contract, '윤민서는 형사이며 사건을 조사한다');
+    expect(result.allowed).toBe(false);
+    expect(result.layer).toBe('hard-canon');
+  });
+
+  // presence 축 — 보조용언 "-어 있다"는 존재사로 세지 않는다.
+  it('does not flag auxiliary -어 있다 as a presence reversal against an existential 없다', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['레나 위클리프는 은여우 상단과의 접촉에서 위임장 원본이 없다는 이유로 계약 진행을 늦추고 있었다'],
+      livingState: [],
+      softSignals: []
+    });
+    const result = classifyCanonChange(contract, '레나 위클리프는 벨로트 가문의 하급 회계 보좌로 기록되어 있다');
+    expect(result.allowed).toBe(true);
+  });
+
+  // finalNeg — 주어는 같아도 공유 술어가 1개뿐이면 반전으로 보지 않는다.
+  it('does not flag final-negation polarity when only one predicate token is shared', () => {
+    const contract = createContinuityContract({
+      hardCanon: ['오른편 봉투는 협박장이 아니라 위장이다'],
+      livingState: [],
+      softSignals: []
+    });
+    const result = classifyCanonChange(contract, '오른편 봉투는 창고에서 발견되었다');
+    expect(result.allowed).toBe(true);
+  });
+
   // 4B — 성장 레저.
   it('validateGrowthEntry — 필수 필드 모두 채워지면 ok=true', () => {
     const result = validateGrowthEntry({

@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-07-09 — 멀티회차 누적 연속성 검증 → 계사부정 FP 정밀화 (done·미머지)
+
+> 핸드오프 1순위. 결정론 하네스로 실제 23화·91팩트 누적 캐논에서 게이트 정밀도 붕괴를 발견하고 즉시 수정. brainstorming→spec→(스파이크 검증)→TDD→init 녹색. progress.md "완료 트랙 — 멀티회차 누적…" 절 상세. 브랜치 `feat/continuity-copula-accumulation-fp`.
+
+### 한 것
+- **발견** — #32의 1화 격리 "오탐 0"이 91팩트 누적에서 재진술 FP **53/91**로 붕괴. 근인 = reveal 팩트("X가 아니며")를 하드 제약 삼아 그 엔티티 언급·성씨조각 공유만으로 위반 판정.
+- **수정(`bf232d5`)** — 계사부정 두 루프·finalNeg를 **`sameSubject`(양쪽 extractSubject 확정 일치) 안에만** 발화 + presence 보조용언 lookbehind 제외 + finalNeg 공유 술어 2개+. **재진술 FP 53→16(70%↓)·정합신규 3→1·recall 3/5 무손실·단위 28**. init.sh 전체 녹색(887).
+- 커밋 체인 — spec `ed5ab29`·plan `f694c58`·RED `de3f48d`·GREEN `bf232d5`(+원 발견 docs `302c3eb`).
+
+### 손대지 말 것 / 유의
+- 주어 일치가 핵심 지렛대(naive 엔티티 가드는 53→44에 그침 — 성씨 조각이 여러 엔티티 공유). 되돌리지 말 것.
+- 재현/회귀 = `npx tsx docs/reviews/2026-07-09-multichapter-continuity/gate-accumulation.ts`(FP 16·recall 3/5가 현 기준선).
+- 멸문-miss는 후반 캐논이 supersede한 **정당한 non-block일 수 있음** — recall 갭으로 오해 말 것.
+- 결정론 유지·classifyCanonChange 프롬프트 미러 아님·케이스 A(첫째 루프) 보존.
+
+### 다음 한 가지
+- **PR 생성·머지** — main 머지 전 사용자 확인 대기(현재 미머지). init.sh 녹색 확인됨.
+- 후속 — 잔여 FP 16(밀집 동일테마 reveal, 공격적 제약 시 recall 트레이드오프)·recall 누락 2건·캐논 화차 태그 시효 모델·**실제 codex 이어 생성(예비비행 #6 유기적 드리프트)·PLAY/WRITE/PLAN 3모드 실사용 연속성**(1순위 잔여).
+
+---
+
 ## 2026-07-08 (4차) — 자동 의미 연속성 게이트 한국어 recall 보강 (done)
 
 > 예비비행이 실측한 "자동 게이트가 한국어 직접 모순 미포착"을 brainstorming→spec→TDD로 해소. progress.md 해당 절 상세. spec `docs/superpowers/specs/2026-07-08-continuity-semantic-gate-korean-recall-design.md`.
