@@ -4,22 +4,24 @@
 
 ---
 
-## 2026-07-09 — 멀티회차 누적 연속성 게이트 검증 (발견·코드 변경 0·사용자 결정 대기)
+## 2026-07-09 — 멀티회차 누적 연속성 검증 → 계사부정 FP 정밀화 (done·미머지)
 
-> 핸드오프 1순위. 결정론 하네스로 실제 23화·91팩트 누적 캐논에서 게이트 실측. progress.md "발견 트랙" 절 상세. 정본 `docs/reviews/2026-07-09-multichapter-continuity/`.
+> 핸드오프 1순위. 결정론 하네스로 실제 23화·91팩트 누적 캐논에서 게이트 정밀도 붕괴를 발견하고 즉시 수정. brainstorming→spec→(스파이크 검증)→TDD→init 녹색. progress.md "완료 트랙 — 멀티회차 누적…" 절 상세. 브랜치 `feat/continuity-copula-accumulation-fp`.
 
 ### 한 것
-- 예비비행 1화 소재엔 누적이 없어, 저장소의 실제 23화 로판 백업(forbiddenContradictions 0 → 자동 의미 게이트만 발화)을 픽스처로 `validateContinuity` 직접 실측 + FP를 detector별 분류.
-- **핵심 발견 — #32 정밀도가 누적에서 붕괴.** 재진술 FP **53/91**·정합신규 3/4·recall 3/5. **53건 중 ~51건이 #32 계사부정(X가아니) 매처 과발화** — reveal 팩트를 하드 제약으로 삼아 그 엔티티 언급만으로 위반 판정. `findReversalMatch` 둘째 루프(continuityContract.ts:404).
+- **발견** — #32의 1화 격리 "오탐 0"이 91팩트 누적에서 재진술 FP **53/91**로 붕괴. 근인 = reveal 팩트("X가 아니며")를 하드 제약 삼아 그 엔티티 언급·성씨조각 공유만으로 위반 판정.
+- **수정(`bf232d5`)** — 계사부정 두 루프·finalNeg를 **`sameSubject`(양쪽 extractSubject 확정 일치) 안에만** 발화 + presence 보조용언 lookbehind 제외 + finalNeg 공유 술어 2개+. **재진술 FP 53→16(70%↓)·정합신규 3→1·recall 3/5 무손실·단위 28**. init.sh 전체 녹색(887).
+- 커밋 체인 — spec `ed5ab29`·plan `f694c58`·RED `de3f48d`·GREEN `bf232d5`(+원 발견 docs `302c3eb`).
 
 ### 손대지 말 것 / 유의
-- 이 발견은 "정밀한 직접 모순만·오탐 0"·"recall 올리려다 오탐 금지" **불변식 영역**을 직접 건드린다. 수정은 사용자 결정 후 brainstorming→spec→TDD.
-- 재현 = `npx tsx docs/reviews/2026-07-09-multichapter-continuity/gate-accumulation.ts`(+`-diagnose.ts`). 회귀 픽스처.
-- 멸문-miss는 후반 캐논이 이미 완화한 **정당한 non-block일 수 있음**(누적이 초기 하드팩트 supersede) — recall 갭으로 오해 말 것.
+- 주어 일치가 핵심 지렛대(naive 엔티티 가드는 53→44에 그침 — 성씨 조각이 여러 엔티티 공유). 되돌리지 말 것.
+- 재현/회귀 = `npx tsx docs/reviews/2026-07-09-multichapter-continuity/gate-accumulation.ts`(FP 16·recall 3/5가 현 기준선).
+- 멸문-miss는 후반 캐논이 supersede한 **정당한 non-block일 수 있음** — recall 갭으로 오해 말 것.
+- 결정론 유지·classifyCanonChange 프롬프트 미러 아님·케이스 A(첫째 루프) 보존.
 
 ### 다음 한 가지
-- **사용자 결정 대기** — 권고 ① 계사부정 둘째 루프를 진짜 반전에만 좁힘(claim이 부정명사를 술어로 단정할 때만·주어 언급 스킵, 첫째 루프 케이스 A 보존, 재진술 FP ~51 제거·recall 무손실 목표)을 별도 슬라이스로 진행할지. ② presence 축 보조용언 제외 ③ 캐논 화차 태그 시효 모델(설계).
-- 미착수 — 실제 codex 이어 생성(예비비행 #6, 유기적 드리프트)·PLAY/WRITE/PLAN 3모드 실사용 연속성.
+- **PR 생성·머지** — main 머지 전 사용자 확인 대기(현재 미머지). init.sh 녹색 확인됨.
+- 후속 — 잔여 FP 16(밀집 동일테마 reveal, 공격적 제약 시 recall 트레이드오프)·recall 누락 2건·캐논 화차 태그 시효 모델·**실제 codex 이어 생성(예비비행 #6 유기적 드리프트)·PLAY/WRITE/PLAN 3모드 실사용 연속성**(1순위 잔여).
 
 ---
 

@@ -3,9 +3,15 @@
 > Last Updated: 2026-07-08 · Branch: `main` (**PLAN 설계 대화 채널(설계실 2단계) `done` — PR #30 main 머지 `254cb2b`, 머지 후 main init.sh 녹색 재확인. PLAN dock 「✦ 설계」에서 단일 설계 파트너와 대화→승인형 패치 제안→기존 stage\* 로 설계안 합류→하네스 미리보기, 대화 버퍼 localStorage 영속(remount 생존). PR #20 잔여 clear+remount 회귀 테스트 동봉. 알려진 한계 = in-flight 응답 remount 손실(accepted-risk·후속). · 이전: VS 긴장 배지 PR #29 `6dec0fd` · 디자인 정비 4a PR #28 `96cdb9b`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 발견 트랙 — 멀티회차 누적 연속성 게이트 검증 (2026-07-09, 코드 변경 0·사용자 결정 대기)
+## 완료 트랙 — 멀티회차 누적 연속성 게이트 검증 + 계사부정 FP 정밀화 (`done` · 2026-07-09, 브랜치 `feat/continuity-copula-accumulation-fp` 미머지)
 
-핸드오프 1순위(멀티회차 누적 대비 게이트 실측)를 결정론 하네스로 밟음. 예비비행 1화 소재엔 누적이 없어, 저장소의 **실제 23화·91팩트 로판 백업**(`02-work-backup-ch23.json`, forbiddenContradictions 0 → 자동 의미 게이트만 발화)을 픽스처로 `validateContinuity`/`classifyCanonChange` 직접 실측. 정본 `docs/reviews/2026-07-09-multichapter-continuity/`(context-notes·findings·gate-accumulation.ts·-diagnose.ts).
+핸드오프 1순위(멀티회차 누적 대비 게이트 실측)를 결정론 하네스로 밟아 **정밀도 붕괴를 발견하고 즉시 수정**. 예비비행 1화 소재엔 누적이 없어, 저장소의 **실제 23화·91팩트 로판 백업**(`02-work-backup-ch23.json`, forbiddenContradictions 0 → 자동 의미 게이트만 발화)을 픽스처로 `validateContinuity`/`classifyCanonChange` 직접 실측. 정본 `docs/reviews/2026-07-09-multichapter-continuity/` · spec/plan `docs/superpowers/{specs,plans}/2026-07-09-continuity-copula-accumulation-fp*`.
+- **수정(fix `bf232d5`) — 주어 일치 게이트로 누적 오탐 정밀화** — 계사부정 두 루프·주술어부정을 **`sameSubject`(양쪽 `extractSubject` 확정 일치) 안에만** 발화. 반전은 정의상 "같은 주어에 대한 상반 서술"이므로 성씨 조각(벨로트·위클리프) 공유만으론 반전 아님 → reveal 팩트가 다른 주어 팩트를 오염시키던 문제 차단. + presence side a `있다` 보조용언("-어/-고 있다") negative-lookbehind 제외 + finalNeg 공유 술어 **2개+** 요구(`sharesNonEntityPredicate`→`sharedNonEntityPredicateCount`). **재진술 FP 53→16(70%↓)·정합신규 3→1·recall 3/5 무손실·기존 24 단위 무회귀**(스파이크 실측: naive 엔티티 가드 53→44, 주어 일치 53→19, +presence/finalNeg 53→16). TDD(RED 4→GREEN, continuityContract 28) · init.sh 녹색.
+- **원 발견 — #32 정밀도가 누적에서 붕괴** — 1화 격리(#32)의 오탐 0이 91팩트 누적에서 재진술 FP 53/91로 무너짐. 근인 = reveal 팩트("X가 아니며")를 하드 제약으로 삼아 그 엔티티 언급·조각공유만으로 위반 판정. #32 recall 보강이 이 오탐 유발, 1화 테스트가 가림.
+- **범위 밖(후속)** — 잔여 FP 16(밀집 동일테마 reveal, 공격적 제약 시 recall 트레이드오프) · recall 누락 2건(멸문↔번영 미등록 축·레오르 death형 "죽지" 미매치, 멸문-miss는 후반 캐논이 supersede해 정당 non-block 가능) · 캐논 화차 태그 시효 모델 · **PR 미생성**(main 머지 전 사용자 확인) · 실제 codex 이어 생성(예비비행 #6 유기적 드리프트)·PLAY/WRITE/PLAN 3모드 실사용 연속성.
+
+### (원 발견 기록 — 참고)
+결정론 하네스 실측 상세. 정본 `docs/reviews/2026-07-09-multichapter-continuity/`(context-notes·findings·gate-accumulation.ts·-diagnose.ts).
 - **핵심 발견 — #32 정밀도가 누적에서 붕괴** — 1화 격리(#32)의 오탐 0이 91팩트 누적에서 무너짐. **재진술 FP 53/91**(기존 캐논을 그대로 다시 진술해도 53개가 하드 모순 BLOCK)·정합신규 FP 3/4·직접모순 recall 3/5.
 - **근인(정량)** — 53건 중 **~51건이 #32가 추가한 계사부정(X가아니) 매처 과발화**. reveal 팩트("권한자는 레나 위클리프가 아니며…")를 하드 제약으로 삼아, 그 엔티티(레나·레오르)를 **언급만 해도** 위반 판정(claim이 술어로 단정하는지 미확인). 미스터리·로판 반전은 본디 부정형 서술이라 구조적. `findReversalMatch` 둘째 루프(continuityContract.ts:404). presence 있다/없다 보조용언 혼동은 2건(부차).
 - **recall 3/5(혼재)** — 멸문-miss는 후반 캐논이 "운명 바뀌었음"을 이미 확정 → 누적이 초기 하드팩트를 supersede한 **정당한 non-block일 수 있음**. 레오르 생사-miss는 부정형 "죽지" death패턴 미매치 + record형 엔티티 매칭 미발화(정밀 추적 후속).
