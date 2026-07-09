@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-07-09 — 멀티회차 누적 연속성 게이트 검증 (발견·코드 변경 0·사용자 결정 대기)
+
+> 핸드오프 1순위. 결정론 하네스로 실제 23화·91팩트 누적 캐논에서 게이트 실측. progress.md "발견 트랙" 절 상세. 정본 `docs/reviews/2026-07-09-multichapter-continuity/`.
+
+### 한 것
+- 예비비행 1화 소재엔 누적이 없어, 저장소의 실제 23화 로판 백업(forbiddenContradictions 0 → 자동 의미 게이트만 발화)을 픽스처로 `validateContinuity` 직접 실측 + FP를 detector별 분류.
+- **핵심 발견 — #32 정밀도가 누적에서 붕괴.** 재진술 FP **53/91**·정합신규 3/4·recall 3/5. **53건 중 ~51건이 #32 계사부정(X가아니) 매처 과발화** — reveal 팩트를 하드 제약으로 삼아 그 엔티티 언급만으로 위반 판정. `findReversalMatch` 둘째 루프(continuityContract.ts:404).
+
+### 손대지 말 것 / 유의
+- 이 발견은 "정밀한 직접 모순만·오탐 0"·"recall 올리려다 오탐 금지" **불변식 영역**을 직접 건드린다. 수정은 사용자 결정 후 brainstorming→spec→TDD.
+- 재현 = `npx tsx docs/reviews/2026-07-09-multichapter-continuity/gate-accumulation.ts`(+`-diagnose.ts`). 회귀 픽스처.
+- 멸문-miss는 후반 캐논이 이미 완화한 **정당한 non-block일 수 있음**(누적이 초기 하드팩트 supersede) — recall 갭으로 오해 말 것.
+
+### 다음 한 가지
+- **사용자 결정 대기** — 권고 ① 계사부정 둘째 루프를 진짜 반전에만 좁힘(claim이 부정명사를 술어로 단정할 때만·주어 언급 스킵, 첫째 루프 케이스 A 보존, 재진술 FP ~51 제거·recall 무손실 목표)을 별도 슬라이스로 진행할지. ② presence 축 보조용언 제외 ③ 캐논 화차 태그 시효 모델(설계).
+- 미착수 — 실제 codex 이어 생성(예비비행 #6, 유기적 드리프트)·PLAY/WRITE/PLAN 3모드 실사용 연속성.
+
+---
+
 ## 2026-07-08 (4차) — 자동 의미 연속성 게이트 한국어 recall 보강 (done)
 
 > 예비비행이 실측한 "자동 게이트가 한국어 직접 모순 미포착"을 brainstorming→spec→TDD로 해소. progress.md 해당 절 상세. spec `docs/superpowers/specs/2026-07-08-continuity-semantic-gate-korean-recall-design.md`.
