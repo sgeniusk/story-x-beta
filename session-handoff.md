@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-07-09 (4차) — 온보딩 LLM 대기 진행 피드백 + 폴백 문구 (done·main 머지 `3a94165`)
+
+> 사용자 dogfooding 발견("Failed to fetch")을 근인 진단→TDD→라이브 검증→머지로 완주. progress.md "온보딩 LLM 대기 진행 피드백" 절 상세.
+
+### 한 것
+- 근인 = 로컬 dev 는 codex CLI 로 인터뷰 생성(API 키 무관), 실측 ~70초 걸리는데 로딩이 "10~30초" 정적 문구뿐 → hang 오인·새로고침 → **진행 중 fetch 취소**("Failed to fetch"). 타임아웃 아님(codex 5분·클라 무한대기).
+- 인터뷰·첫 초안 생성 대기 화면에 경과 타이머+단계 메시지+새로고침 금지 안내(순수 `generationProgress` TDD 재사용). 폴백 문구를 claude/ANTHROPIC → codex CLI·`npm run dev`·새로고침 금지로 교체.
+
+### 손대지 말 것 / 유의
+- 진행 표시는 로딩 상태 파생만(생성 동작·데이터 무접촉). 실 codex 소요는 못 줄임 — 정직한 힌트로 기대치만 조정.
+- **로컬은 codex CLI 를 씀**(vite.config `/api/*` 브리지 `--provider codex`). API 키 안내는 오해 소지라 제거함. claude 로 되돌리려면 브리지 `--provider` 를 바꿔야.
+
+### 다음 한 가지
+- 사용자 dogfooding 계속(다음 세션 프롬프트 `docs/handoff/2026-07-09-next-session-prompt.md`). 발견 시 슬라이스.
+- 진짜 스트리밍(SSE)로 대기 자체를 짧게 체감시키는 건 별도 큰 조각.
+
+---
+
 ## 2026-07-09 (3차) — 게이트/에디터 후속 정비 3건 (done·main 머지 `4fd2978`)
 
 > 3모드 라이브 관찰이 드러낸 후속(사용자 선택 3건)을 TDD로 마감·main 머지. progress.md "게이트/에디터 후속 정비 3건" 절 상세.

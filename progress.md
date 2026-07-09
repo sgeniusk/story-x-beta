@@ -3,6 +3,13 @@
 > Last Updated: 2026-07-08 · Branch: `main` (**PLAN 설계 대화 채널(설계실 2단계) `done` — PR #30 main 머지 `254cb2b`, 머지 후 main init.sh 녹색 재확인. PLAN dock 「✦ 설계」에서 단일 설계 파트너와 대화→승인형 패치 제안→기존 stage\* 로 설계안 합류→하네스 미리보기, 대화 버퍼 localStorage 영속(remount 생존). PR #20 잔여 clear+remount 회귀 테스트 동봉. 알려진 한계 = in-flight 응답 remount 손실(accepted-risk·후속). · 이전: VS 긴장 배지 PR #29 `6dec0fd` · 디자인 정비 4a PR #28 `96cdb9b`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
+## 완료 트랙 — 온보딩 LLM 대기 진행 피드백 + 폴백 문구 (`done` · 2026-07-09, **main 머지** `3a94165`)
+
+사용자 dogfooding 중 발견 — 로컬에서 인터뷰 진입 시 "⚠️ LLM 인터뷰 호출 실패 — Failed to fetch". 근인 진단(추측 배제·라이브 실측) — ① dev 는 `/api/interview` vite 브리지가 **codex CLI**로 생성(API 키 무관 — 폴백 문구의 claude login/ANTHROPIC_API_KEY 안내가 틀림) ② 인터뷰가 **실측 ~70초** 걸리는데 로딩 화면이 "10~30초" 정적 문구뿐 → hang 오인·새로고침 → **진행 중 fetch 취소**("Failed to fetch"). 타임아웃 문제 아님(codex 5분·클라 무한대기·vite 무설정 확인).
+- **수정(`3a94165`)** — `generationProgress` 에 `interviewStageMessage`(3구간)·`INTERVIEW_TIME_HINT`(~1분·새로고침 금지) 추가(순수 TDD) · 인터뷰 로딩 화면에 경과 타이머(1초 setInterval·상태 토글 리셋)+단계 메시지+새로고침 금지(role=status·aria-live) · 폴백 문구를 codex CLI·`npm run dev`·새로고침 금지로 교체 · **같은 fetch-사망 함정이 있는 첫 초안 생성(~2~3분) 화면도 동일 패턴 적용**(`GENERATION_TIME_HINT` 에 새로고침 금지 추가, FloatingEditor 초안 진행과 공유).
+- **라이브 검증** — 인터뷰 로딩 0:08→0:37 타이머 카운트·단계 메시지 진전("자유 서술 읽는 중"→"질문 고르는 중")·안내 렌더·콘솔 0, 실 codex 인터뷰 성공 후 다음 단계 진행.
+- **불변식** — 진행 표시는 로딩 상태 파생만(생성 동작 무접촉)·타이머는 상태 토글에 리셋·실 codex 소요는 못 줄임(정직한 힌트로 기대치 조정). 범위 밖 = 진짜 스트리밍(SSE).
+
 ## 완료 트랙 — 게이트/에디터 후속 정비 3건 (`done` · 2026-07-09, **main 머지** `4fd2978`)
 
 > 최근 검증(2026-07-09) — `bash init.sh` 통과: `npm test` 전체 통과 · `npm run build`(tsc+vite) 성공. 머지 후 main 재확인 녹색.
