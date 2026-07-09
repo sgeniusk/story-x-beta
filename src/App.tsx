@@ -29,6 +29,7 @@ import {
 } from './lib/projectIntake';
 import { requestLlmInterview } from './lib/interviewClient';
 import { requestSpineSuggestion } from './lib/spineSuggestClient';
+import { formatElapsed, interviewStageMessage, INTERVIEW_TIME_HINT, generationStageMessage, GENERATION_TIME_HINT } from './lib/generationProgress';
 import { AiStatusBadge } from './components/AiStatusBadge';
 import { PublishScreen } from './components/PublishScreen';
 import { buildAcademicPublishSummary } from './lib/academicPublish';
@@ -1180,7 +1181,35 @@ function StoryXHome({
     () => restoredDraft?.llmIntakeQuestions ?? null
   );
   const [isInterviewLoading, setIsInterviewLoading] = useState(false);
+  // 인터뷰 생성 경과(초) — dev codex 는 ~1분 걸려 정적 스피너면 hang 으로 오인·새로고침(fetch 사망)한다.
+  const [interviewElapsed, setInterviewElapsed] = useState(0);
+  useEffect(() => {
+    if (!isInterviewLoading) {
+      setInterviewElapsed(0);
+      return;
+    }
+    setInterviewElapsed(0);
+    const started = Date.now();
+    const id = setInterval(() => {
+      setInterviewElapsed(Math.floor((Date.now() - started) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isInterviewLoading]);
   const [isBuilding, setIsBuilding] = useState(false);
+  // 첫 초안 생성 경과(초) — dev codex 는 ~2~3분 걸려 정적 문구만 두면 새로고침(fetch 사망)한다.
+  const [buildElapsed, setBuildElapsed] = useState(0);
+  useEffect(() => {
+    if (!isBuilding) {
+      setBuildElapsed(0);
+      return;
+    }
+    setBuildElapsed(0);
+    const started = Date.now();
+    const id = setInterval(() => {
+      setBuildElapsed(Math.floor((Date.now() - started) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isBuilding]);
   // LLM 인터뷰 결과 메타 — 라인업 띠 / 폴백 안내에 쓴다
   const [interviewPersonaLineup, setInterviewPersonaLineup] = useState<
     Array<{ id: string; label: string; tone: string; category: string; isFictionalized: boolean }>
@@ -1617,7 +1646,11 @@ function StoryXHome({
                   이 작품에만 필요한 질문을 추립니다.
                 </li>
               </ol>
-              <p className="hx-building-note">잠시만 기다려 주세요 — 보통 10~30초 걸립니다.</p>
+              <p className="hx-building-note" role="status" aria-live="polite">
+                <strong>생성 중 · {formatElapsed(interviewElapsed)}</strong> — {interviewStageMessage(interviewElapsed)}.
+                <br />
+                {INTERVIEW_TIME_HINT}
+              </p>
             </div>
           ) : (
             <>
@@ -1647,8 +1680,10 @@ function StoryXHome({
                 ⚠️ LLM 인터뷰 호출 실패 — 매체별 기본 질문으로 진행 중입니다. 사유 — {interviewFallbackReason}
                 <br />
                 <span style={{ opacity: 0.8 }}>
-                  터미널에서 <code>claude login</code> 또는 <code>export ANTHROPIC_API_KEY=…</code> 를 설정한 뒤 자유
-                  서술을 살짝 바꿔 다시 진입하면 작품 맞춤 질문이 생성됩니다.
+                  로컬 dev 에서는 <code>codex</code> CLI 로 질문을 만듭니다(API 키 불필요). <code>npm run dev</code>
+                  로 실행 중인지·<code>codex</code> 가 로그인됐는지 확인하세요. 생성은 보통 1분 안팎 걸리니 그동안
+                  <strong> 새로고침하지 마세요</strong> — 새로고침하면 진행 중인 요청이 취소됩니다. 자유 서술을 살짝
+                  바꿔 다시 진입하면 작품 맞춤 질문을 새로 생성합니다.
                 </span>
               </div>
             )}
@@ -2024,7 +2059,11 @@ function StoryXHome({
                 {draftUnitLabel} 초안을 쓰고, 바이블에 초기 설정을 제안합니다.
               </li>
             </ol>
-            <p className="hx-building-note">잠시만 기다려 주세요 — 보통 1~3분 걸립니다.</p>
+            <p className="hx-building-note" role="status" aria-live="polite">
+              <strong>생성 중 · {formatElapsed(buildElapsed)}</strong> — {generationStageMessage(buildElapsed)}.
+              <br />
+              {GENERATION_TIME_HINT}
+            </p>
           </div>
         </section>
       </div>

@@ -4,6 +4,8 @@ import {
   formatElapsed,
   generationStageMessage,
   GENERATION_TIME_HINT,
+  interviewStageMessage,
+  INTERVIEW_TIME_HINT,
 } from './generationProgress';
 
 describe('formatElapsed', () => {
@@ -45,8 +47,37 @@ describe('generationStageMessage', () => {
 });
 
 describe('GENERATION_TIME_HINT', () => {
-  it('예상 소요를 사람이 읽는 문구로 제공한다', () => {
+  it('예상 소요 + 새로고침 금지를 안내한다(fetch 는 새로고침에 죽는다)', () => {
     expect(GENERATION_TIME_HINT).toContain('분');
+    expect(GENERATION_TIME_HINT).toContain('새로고침');
     expect(GENERATION_TIME_HINT.endsWith(':')).toBe(false);
+  });
+});
+
+describe('interviewStageMessage', () => {
+  it('경과 구간마다 다른 안심 메시지를 준다', () => {
+    const s0 = interviewStageMessage(3);
+    const s1 = interviewStageMessage(25);
+    const s2 = interviewStageMessage(60);
+    for (const s of [s0, s1, s2]) {
+      expect(s.length).toBeGreaterThan(0);
+      expect(s.endsWith(':')).toBe(false); // 콜론 종결 금지
+    }
+    expect(new Set([s0, s1, s2]).size).toBe(3);
+  });
+  it('경계값에서 안정적이다', () => {
+    expect(interviewStageMessage(0)).toBe(interviewStageMessage(14));
+    expect(interviewStageMessage(15)).not.toBe(interviewStageMessage(14));
+  });
+  it('아주 긴 대기도 마지막 구간으로 수렴한다', () => {
+    expect(interviewStageMessage(300)).toBe(interviewStageMessage(60));
+  });
+});
+
+describe('INTERVIEW_TIME_HINT', () => {
+  it('예상 소요 + 새로고침 금지를 안내한다(fetch 는 새로고침에 죽는다)', () => {
+    expect(INTERVIEW_TIME_HINT).toContain('분');
+    expect(INTERVIEW_TIME_HINT).toContain('새로고침');
+    expect(INTERVIEW_TIME_HINT.endsWith(':')).toBe(false);
   });
 });
