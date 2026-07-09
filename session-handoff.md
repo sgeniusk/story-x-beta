@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-07-09 (3차) — 게이트/에디터 후속 정비 3건 (done)
+
+> 3모드 라이브 관찰이 드러낸 후속(사용자 선택 3건)을 TDD로 마감. progress.md "게이트/에디터 후속 정비 3건" 절 상세. 브랜치 `feat/continuity-followups`.
+
+### 한 것
+- **FloatingEditor 크래시 방어(`b2ecb05`)** — 하드시드/import 회차·인물 배열 누락 → `chapter.memoryAnchors.length`·`character.voiceRules.join` TypeError → StoryXDesk 빈 화면. `normalizeProject`(로드·import 공용 관문)에서 누락 배열 []·문자열 '' 백필. 라이브 재현→수정→무손상 렌더 확인.
+- **PLAN 충돌 배지 + PLAY 주인공(`3c1b983`)** — continuitySummary.warnings 에서 memory-anchor 정보성 넛지 제외 + seedPlayFromProject 주인공 감지(role→캐논→로그라인→폴백).
+- **계사 정체성 hard 라우팅(`7102b84`)** — "형사이며 감정을…" 이 '감정'에 끌려 livingState 로 가던 것을 hasCopulaIdentity 가드로 hard canon 승격. 실측 형사→민간인 recall 경고→BLOCK, 재진술 FP 0/23 유지.
+
+### 손대지 말 것 / 유의
+- 정밀도 무손실이 불변식 — 라우팅/카운트 변경 후 재진술 FP 0 재확인(verify-live.ts, 스릴러 누적 캐논).
+- 계사 정체성 가드는 **상태 명사(감정·관계·상태) 제외**가 핵심 — 이걸 빼면 가변 상태가 hard 로 잘못 승격돼 캐릭터 성장이 차단된다.
+- normalizeProject 는 로드·import 공용 관문 — 새 필수 필드 추가 시 여기 백필 동반.
+
+### 다음 한 가지
+- **2순위 외부 테스트 게이트0** — BYOK 결정(A UI vs B 소유자 키 베타, 직전 추천 B, **사용자 결정 대기**)·프로덕션 URL 실호출(Vercel 인증 필요·이 환경 불가).
+- 게이트 경미 후속 — 추상 없음/있음·비-최종절 부정 미모델링(기억공백 miss)·잔여 FP 16(밀집 reveal 클러스터).
+
+---
+
 ## 2026-07-09 (2차) — 멀티회차 실제 codex 이어 생성 관찰 (done·코드 변경 0)
 
 > 1순위 잔여(실제 이어 생성·유기 드리프트). 예비비행 #6 스릴러 위에 codex로 ch2~ch6 생성하며 매 화 validateContinuity 관찰. progress.md 해당 절·정본 `docs/reviews/2026-07-09-multichapter-live/`.

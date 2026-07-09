@@ -3,6 +3,14 @@
 > Last Updated: 2026-07-08 · Branch: `main` (**PLAN 설계 대화 채널(설계실 2단계) `done` — PR #30 main 머지 `254cb2b`, 머지 후 main init.sh 녹색 재확인. PLAN dock 「✦ 설계」에서 단일 설계 파트너와 대화→승인형 패치 제안→기존 stage\* 로 설계안 합류→하네스 미리보기, 대화 버퍼 localStorage 영속(remount 생존). PR #20 잔여 clear+remount 회귀 테스트 동봉. 알려진 한계 = in-flight 응답 remount 손실(accepted-risk·후속). · 이전: VS 긴장 배지 PR #29 `6dec0fd` · 디자인 정비 4a PR #28 `96cdb9b`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
+## 완료 트랙 — 게이트/에디터 후속 정비 3건 (`done` · 2026-07-09, 브랜치 `feat/continuity-followups`)
+
+3모드 라이브 관찰이 드러낸 후속(사용자 선택 3건)을 TDD로 마감. 각 근인 라이브/유닛 재현→수정→검증.
+- **FloatingEditor 크래시 방어(`b2ecb05`)** — 하드-시딩/import 프로젝트가 회차의 `outline·memoryAnchors·newCanonFacts` 나 인물의 `voiceRules·canonAnchors·forbiddenContradictions` 를 빠뜨리면 `buildStoryEditorWorkspace` 의 `chapter.memoryAnchors.length`·`buildCodexEntries` 의 `character.voiceRules.join` 에서 TypeError→StoryXDesk 크래시(빈 화면). 라이브 재현→근인 2개(회차·인물 배열) 확정→`normalizeProject`(로드·import 공용 관문)에서 누락 배열 [] · 문자열 '' 백필→하드시드 무손상 렌더 확인.
+- **PLAN 충돌 배지 정보성 경고 제외 + PLAY 주인공 감지(`3c1b983`)** — ① `continuitySummary.warnings` 가 memory-anchor 정보성 넛지까지 세어 PLAN "⚠ 충돌 N" 이 상시 부풀던 것을 카운트에서 제외(issues 배열엔 유지). ② `seedPlayFromProject` 가 `characters[0]` 무조건 주인공→role(주인공/주연)→"주인공" 캐논 문장 내 이름→로그라인→폴백 순 감지(ch23=리아나 정확).
+- **계사 정체성 hard canon 라우팅(`7102b84`)** — "형사이며 감정을…" 이 '감정' 키워드에 끌려 livingState 로 가 정체성 반전이 경고에 그치던 것을, `hasCopulaIdentity`([비상태 명사]+이며/이고/이다) 가드로 hard canon 승격. 상태 명사+계사는 제외해 가변 상태 보존(기존 living-state 테스트 무회귀). **실측** — 스릴러 누적 캐논 형사→민간인 recall 경고→BLOCK(3/4), 재진술 FP 0/23 유지.
+- **불변식** — 정밀도 무손실(재진술 FP 0)·living-state cause/cost 보존·결정론. 범위 밖 = 추상 없음/있음·비-최종절 부정 미모델링(기억공백 miss)·잔여 FP 16(밀집 reveal)·BYOK(사용자 결정 대기).
+
 ## 완료 트랙 — 멀티회차 실제 codex 이어 생성 관찰 (`done` · 2026-07-09, 코드 변경 0)
 
 1순위 잔여(실제 codex 이어 생성·유기적 드리프트)를 밟음. 예비비행 #6 스릴러(`젖은 유리의 얼굴`) ch1 위에 **실제 codex로 ch2~ch6 이어 생성**(드라이버가 매 화 누적 캐논을 context로 먹이고 `validateContinuity`를 돌림). 정본 `docs/reviews/2026-07-09-multichapter-live/`(drive-chapters.ts·chapters/·observations.md).
