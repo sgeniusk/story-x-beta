@@ -29,7 +29,7 @@ import {
 } from './lib/projectIntake';
 import { requestLlmInterview } from './lib/interviewClient';
 import { requestSpineSuggestion } from './lib/spineSuggestClient';
-import { formatElapsed, interviewStageMessage, INTERVIEW_TIME_HINT } from './lib/generationProgress';
+import { formatElapsed, interviewStageMessage, INTERVIEW_TIME_HINT, generationStageMessage, GENERATION_TIME_HINT } from './lib/generationProgress';
 import { AiStatusBadge } from './components/AiStatusBadge';
 import { PublishScreen } from './components/PublishScreen';
 import { buildAcademicPublishSummary } from './lib/academicPublish';
@@ -1196,6 +1196,20 @@ function StoryXHome({
     return () => clearInterval(id);
   }, [isInterviewLoading]);
   const [isBuilding, setIsBuilding] = useState(false);
+  // 첫 초안 생성 경과(초) — dev codex 는 ~2~3분 걸려 정적 문구만 두면 새로고침(fetch 사망)한다.
+  const [buildElapsed, setBuildElapsed] = useState(0);
+  useEffect(() => {
+    if (!isBuilding) {
+      setBuildElapsed(0);
+      return;
+    }
+    setBuildElapsed(0);
+    const started = Date.now();
+    const id = setInterval(() => {
+      setBuildElapsed(Math.floor((Date.now() - started) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isBuilding]);
   // LLM 인터뷰 결과 메타 — 라인업 띠 / 폴백 안내에 쓴다
   const [interviewPersonaLineup, setInterviewPersonaLineup] = useState<
     Array<{ id: string; label: string; tone: string; category: string; isFictionalized: boolean }>
@@ -2045,7 +2059,11 @@ function StoryXHome({
                 {draftUnitLabel} 초안을 쓰고, 바이블에 초기 설정을 제안합니다.
               </li>
             </ol>
-            <p className="hx-building-note">잠시만 기다려 주세요 — 보통 1~3분 걸립니다.</p>
+            <p className="hx-building-note" role="status" aria-live="polite">
+              <strong>생성 중 · {formatElapsed(buildElapsed)}</strong> — {generationStageMessage(buildElapsed)}.
+              <br />
+              {GENERATION_TIME_HINT}
+            </p>
           </div>
         </section>
       </div>

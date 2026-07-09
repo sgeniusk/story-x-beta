@@ -26,8 +26,8 @@ export function generationStageMessage(elapsedSeconds: number): string {
   return STAGES[STAGES.length - 1].message;
 }
 
-/** 예상 소요 안내 — 창을 닫지 않게 붙잡는 정직한 문구. */
-export const GENERATION_TIME_HINT = '보통 2~3분쯤 걸려요. 창을 닫지 말고 기다려 주세요.';
+/** 예상 소요 안내 — 창을 닫거나 새로고침하지 않게 붙잡는 정직한 문구(새로고침 시 요청이 취소됨). */
+export const GENERATION_TIME_HINT = '보통 2~3분쯤 걸려요. 새로고침하거나 창을 닫지 말고 기다려 주세요.';
 
 // 작가 인터뷰 생성(dev codex ~1분) 단계 안심 메시지. 실제 인터뷰 파이프라인 순서를 반영한다.
 const INTERVIEW_STAGES: ReadonlyArray<{ until: number; message: string }> = [

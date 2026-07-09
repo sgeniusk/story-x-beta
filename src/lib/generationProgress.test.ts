@@ -47,8 +47,9 @@ describe('generationStageMessage', () => {
 });
 
 describe('GENERATION_TIME_HINT', () => {
-  it('예상 소요를 사람이 읽는 문구로 제공한다', () => {
+  it('예상 소요 + 새로고침 금지를 안내한다(fetch 는 새로고침에 죽는다)', () => {
     expect(GENERATION_TIME_HINT).toContain('분');
+    expect(GENERATION_TIME_HINT).toContain('새로고침');
     expect(GENERATION_TIME_HINT.endsWith(':')).toBe(false);
   });
 });
