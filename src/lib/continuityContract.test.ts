@@ -266,14 +266,15 @@ describe('continuityContract', () => {
     expect(result.allowed).toBe(true);
   });
 
-  // 주어 일치 시 진짜 계사 반전은 여전히 잡는다.
+  // 주어 일치 시 진짜 계사 반전(source 부정·claim 단정)은 여전히 잡는다 — 주어 일치 게이트가
+  // FP만 거르고 legitimate 반전을 죽이지 않음을 보증.
   it('still flags a copula reversal when the two statements share the same subject', () => {
     const contract = createContinuityContract({
-      hardCanon: ['범인은 철수가 아니다'],
+      hardCanon: ['윤민서는 형사가 아니다'],
       livingState: [],
       softSignals: []
     });
-    const result = classifyCanonChange(contract, '범인은 철수다');
+    const result = classifyCanonChange(contract, '윤민서는 형사이며 사건을 조사한다');
     expect(result.allowed).toBe(false);
     expect(result.layer).toBe('hard-canon');
   });

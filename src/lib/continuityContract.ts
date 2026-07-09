@@ -302,8 +302,8 @@ const OPPOSITION_PATTERNS: OppositionPattern[] = [
   // Life / death.
   { axis: 'life', side: 'a', pattern: /살아\s*있|살아있|생존|살다/ },
   { axis: 'life', side: 'b', pattern: /죽었|죽다|사망|죽은|살해|피살|살인/ },
-  // Presence / absence.
-  { axis: 'presence', side: 'a', pattern: /나타났|나타나|발견|존재|있다/ },
+  // Presence / absence. 보조용언 "-어/-고 있다"(되어 있다·늦추고 있었다)는 존재사가 아니므로 제외.
+  { axis: 'presence', side: 'a', pattern: /나타났|나타나|발견|존재|(?<![어아고]\s?)있다/ },
   { axis: 'presence', side: 'b', pattern: /사라졌|사라지|실종|없다|없는/ },
   // Open / closed.
   { axis: 'open', side: 'a', pattern: /열렸|열리|열린/ },
@@ -369,14 +369,15 @@ function hasFinalNegation(text: string): boolean {
   return hasNegation(clauses[clauses.length - 1] ?? text);
 }
 
-// 두 문장이 엔티티(주어·주제)가 아닌 공유 술어 토큰을 갖는가 — 반전이 술어에 걸렸음을 보증.
-function sharesNonEntityPredicate(a: Set<string>, b: Set<string>, aText: string, bText: string): boolean {
+// 두 문장이 엔티티(주어·주제)가 아닌 공유 술어 토큰을 몇 개 갖는가 — 반전이 술어에 걸렸음을 보증.
+function sharedNonEntityPredicateCount(a: Set<string>, b: Set<string>, aText: string, bText: string): number {
   const entities = new Set([...markedEntities(aText), ...markedEntities(bText)]);
+  let n = 0;
   for (const token of a) {
     if (token.length < 2 || entities.has(token) || isStateToken(token)) continue;
-    if (b.has(token)) return true;
+    if (b.has(token)) n++;
   }
-  return false;
+  return n;
 }
 
 // 명사 ≥ 2 공유 + 부정 마커 차이 → 같은 주제의 반전으로 본다. 매칭된 contract 항목을 반환.
@@ -395,21 +396,29 @@ function findReversalMatch(
     const expandedSource = clauseExpandedNouns(source);
     const expandedClaim = clauseExpandedNouns(claim);
     if (countShared(expandedClaim, expandedSource) < 2) continue;
+    // 누적 오탐 방어 — 계사부정·주술어부정은 두 문장의 주어가 확정 일치할 때만 반전으로 본다.
+    // 반전은 정의상 "같은 주어에 대한 상반된 서술"이며, 성씨 조각(벨로트·위클리프)이 여러 엔티티에
+    // 공유되는 것만으로는 반전이 아니다(누적 reveal 팩트가 다른 주어 팩트를 오염시키던 문제).
+    const sourceSubject = extractSubject(source);
+    const claimSubject = extractSubject(claim);
+    const sameSubject = Boolean(sourceSubject && claimSubject && sourceSubject === claimSubject);
     // 계사 부정 — 한쪽이 "X가 아니"로 부정한 술어명사 X를 다른 쪽이 단정하면 반전(케이스 A: 형사).
     const claimCopula = copulaNegatedNouns(claim);
     const sourceCopula = copulaNegatedNouns(source);
-    for (const noun of claimCopula) {
-      if (expandedSource.has(noun) && !sourceCopula.has(noun)) return source;
+    if (sameSubject) {
+      for (const noun of claimCopula) {
+        if (expandedSource.has(noun) && !sourceCopula.has(noun)) return source;
+      }
+      for (const noun of sourceCopula) {
+        if (expandedClaim.has(noun) && !claimCopula.has(noun)) return source;
+      }
     }
-    for (const noun of sourceCopula) {
-      if (expandedClaim.has(noun) && !claimCopula.has(noun)) return source;
-    }
-    // 주술어 부정 극성 — 한쪽만 주술어를 부정 + 같은 엔티티 + 공유 술어면 반전.
-    // 부수 부정("없이도")은 마지막 절이 긍정이라 제외되고, 엔티티만 공유하면 술어 미공유로 제외된다.
+    // 주술어 부정 극성 — 한쪽만 주술어를 부정 + 같은 주어 + 공유 술어 2개+면 반전.
+    // 부수 부정("없이도")은 마지막 절이 긍정이라 제외되고, 밀집 동일테마 우연 공유는 2개 요구로 거른다.
     if (
+      sameSubject &&
       hasFinalNegation(claim) !== hasFinalNegation(source) &&
-      hasSameEntity(source, claim, expandedSource, expandedClaim) &&
-      sharesNonEntityPredicate(expandedClaim, expandedSource, claim, source)
+      sharedNonEntityPredicateCount(expandedClaim, expandedSource, claim, source) >= 2
     ) {
       return source;
     }
