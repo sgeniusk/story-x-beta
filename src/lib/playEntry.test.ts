@@ -52,6 +52,22 @@ describe('seedPlayFromProject', () => {
     expect(seed!.session.projectId).toBe(project.id);
     expect(seed!.project).toBe(project);
   });
+  it('주인공 캐논 신호가 있으면 characters[0] 대신 그 인물을 주인공으로 잡는다', () => {
+    // ch23 로판처럼 주인공(빙의 대상)이 characters[0] 이 아닌 경우 — canonFact "주인공은 …민호…" 로 감지.
+    const base = createEmptyProject({ title: '빙의작' });
+    // ch23 로판처럼 role 은 비어 있고(주인공 명시 없음), 주인공은 canonFact 로만 드러난다.
+    const project = {
+      ...base,
+      characters: [
+        { ...makeCharacter('c-1', '서윤'), role: '' },
+        { ...makeCharacter('c-2', '민호'), role: '' }
+      ],
+      canonFacts: [
+        { id: 'k1', episode: 1, owner: 'character' as const, statement: '주인공은 몰락 가문의 막내 민호로 빙의했다.' }
+      ]
+    };
+    expect(seedPlayFromProject(project)!.session.characterId).toBe('c-2');
+  });
   it('최근 회차가 있으면 scene 을 이어붙인다', () => {
     const base = createEmptyProject({ title: '연재작' });
     const project = {

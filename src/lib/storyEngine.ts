@@ -1339,7 +1339,22 @@ function isSoftCanonStatement(statement: string): boolean {
 
 function isLivingCanonStatement(statement: string): boolean {
   if (isDefinitivePastEvent(statement)) return false;
+  // 계사 정체성 단정("X는 …형사이며")은 state 키워드가 섞여 있어도 정체성이므로 hard canon 으로 둔다.
+  // 이게 없으면 "형사이며 감정을 드러내지 않는다"가 '감정' 때문에 livingState 로 가, 정체성 반전이
+  // 하드 차단이 아니라 경고에 그친다. 순수 mutable-state("믿지 않는다")는 계사 정체성이 없어 보존된다.
+  if (hasCopulaIdentity(statement)) return false;
   return /현재|아직|믿지|믿기|믿는다|신뢰|의심|불신|숨기|두려|망설|관계|감정|상태/.test(statement);
+}
+
+// [비상태 명사] + 이며/이고/이다 → 정체성 단정 신호. 상태 명사(감정·관계·상태 등)는 제외해
+// "불안한 상태이며" 같은 가변 상태 서술이 정체성으로 오인되지 않게 한다.
+function hasCopulaIdentity(statement: string): boolean {
+  const re = /([가-힣]{2,10})(?:이며|이고|이다)/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(statement)) !== null) {
+    if (!/감정|관계|상태|마음|기분|사이|처지/.test(match[1])) return true;
+  }
+  return false;
 }
 
 function isDefinitivePastEvent(statement: string): boolean {
@@ -2044,7 +2059,12 @@ export function buildStoryEditorWorkspace(
 ): StoryEditorWorkspace {
   const continuityIssues = validateContinuity(project, options.draftClaims ?? []);
   const blocked = continuityIssues.filter((issue) => issue.severity === 'error').length;
-  const warnings = continuityIssues.filter((issue) => issue.severity === 'warning').length;
+  // memory-anchor 는 "다음 회차 의도가 캐논 문장을 축어 인용 안 함"을 알리는 정보성 넛지로,
+  // 캐논 문장을 인용하지 않으면 항상 뜬다. 실제 연속성 충돌이 아니므로 충돌 카운트에서 제외한다
+  // (PLAN "충돌 N" 배지 = blocked + warnings). issues 배열에는 그대로 남겨 상세 표시는 유지.
+  const warnings = continuityIssues.filter(
+    (issue) => issue.severity === 'warning' && issue.claim !== 'memory-anchor'
+  ).length;
   const codexEntries = buildCodexEntries(project);
   const corkboardCards = buildCorkboardCards(project, blocked > 0);
   const compileText = buildCompileText(project);

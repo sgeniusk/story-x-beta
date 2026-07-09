@@ -271,6 +271,15 @@ export function normalizeProject(project: SeriesProject): SeriesProject {
     characters: Array.isArray(project.characters)
       ? project.characters.map((character): CharacterProfile => ({
           ...character,
+          // 하드-시딩/import 인물이 배열 필드를 빠뜨리면 buildCodexEntries 의 character.voiceRules.join
+          // (또는 canonAnchors·forbiddenContradictions 소비처)에서 TypeError → 에디터 크래시.
+          role: typeof character.role === 'string' ? character.role : '',
+          desire: typeof character.desire === 'string' ? character.desire : '',
+          wound: typeof character.wound === 'string' ? character.wound : '',
+          currentState: typeof character.currentState === 'string' ? character.currentState : '',
+          voiceRules: Array.isArray(character.voiceRules) ? character.voiceRules : [],
+          canonAnchors: Array.isArray(character.canonAnchors) ? character.canonAnchors : [],
+          forbiddenContradictions: Array.isArray(character.forbiddenContradictions) ? character.forbiddenContradictions : [],
           relations: Array.isArray(character.relations) ? character.relations : []
         }))
       : [],
@@ -284,6 +293,12 @@ export function normalizeProject(project: SeriesProject): SeriesProject {
         : defaultBibleOutline(),
     chapters: project.chapters.map((chapter) => ({
       ...chapter,
+      // 하드-시딩/import 회차가 파생 배열 필드를 빠뜨리면 buildStoryEditorWorkspace 등에서
+      // chapter.memoryAnchors.length·newCanonFacts.length 접근이 TypeError → 에디터 크래시.
+      // 로드/import 는 모두 이 정규화를 거치므로 여기서 누락 배열을 [] 로 백필해 방어한다.
+      outline: Array.isArray(chapter.outline) ? chapter.outline : [],
+      memoryAnchors: Array.isArray(chapter.memoryAnchors) ? chapter.memoryAnchors : [],
+      newCanonFacts: Array.isArray(chapter.newCanonFacts) ? chapter.newCanonFacts : [],
       beats: Array.isArray(chapter.beats)
         ? chapter.beats.map((beat) => ({
             ...beat,

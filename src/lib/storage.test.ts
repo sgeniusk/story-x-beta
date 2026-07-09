@@ -16,7 +16,7 @@ import {
   type DiveState
 } from './storage';
 import type { PlanPatch } from './planStage';
-import { createSeedProject, createEmptyProject } from './storyEngine';
+import { createSeedProject, createEmptyProject, buildStoryEditorWorkspace } from './storyEngine';
 import { createDiveSession } from './diveSession';
 import { importanceBand } from './canonImportance';
 
@@ -96,6 +96,42 @@ describe('AI주입 토글 영속 (canonFact.alwaysInclude · B3)', () => {
     };
     const normalized = normalizeProject(legacy);
     expect(normalized.canonFacts[0].alwaysInclude).toBe(false);
+  });
+});
+
+describe('하드-시딩/import 파생 배열 백필 (크래시 방어)', () => {
+  // 손수 시드/import 회차·인물이 배열 필드를 빠뜨리면 buildStoryEditorWorkspace 의
+  // chapter.memoryAnchors.length·character.voiceRules.join 등에서 TypeError → 에디터 크래시.
+  const hardSeedProject = () =>
+    ({
+      ...createSeedProject(),
+      currentEpisode: 1,
+      // voiceRules·canonAnchors·forbiddenContradictions·relations 의도적 누락 인물
+      characters: [{ id: 'c1', name: '주인공', role: '', desire: '', wound: '', currentState: '' } as unknown],
+      chapters: [
+        // outline·memoryAnchors·newCanonFacts 의도적 누락 회차
+        { id: 'ch1', episode: 1, title: '1화', hook: '후크', prose: '본문', beats: [] } as unknown,
+      ],
+    }) as ReturnType<typeof createSeedProject>;
+
+  it('normalizeProject 가 회차의 누락 배열 필드를 [] 로 백필한다', () => {
+    const ch = normalizeProject(hardSeedProject()).chapters[0];
+    expect(Array.isArray(ch.outline)).toBe(true);
+    expect(Array.isArray(ch.memoryAnchors)).toBe(true);
+    expect(Array.isArray(ch.newCanonFacts)).toBe(true);
+  });
+
+  it('normalizeProject 가 인물의 누락 배열 필드를 [] 로 백필한다', () => {
+    const char = normalizeProject(hardSeedProject()).characters[0];
+    expect(Array.isArray(char.voiceRules)).toBe(true);
+    expect(Array.isArray(char.canonAnchors)).toBe(true);
+    expect(Array.isArray(char.forbiddenContradictions)).toBe(true);
+    expect(Array.isArray(char.relations)).toBe(true);
+  });
+
+  it('정규화된 하드-시드 프로젝트로 buildStoryEditorWorkspace 가 크래시하지 않는다', () => {
+    const project = normalizeProject(hardSeedProject());
+    expect(() => buildStoryEditorWorkspace(project, { draftClaims: [] })).not.toThrow();
   });
 });
 

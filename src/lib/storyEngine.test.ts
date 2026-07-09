@@ -665,6 +665,27 @@ describe('storyEngine', () => {
     );
   });
 
+  it('계사 정체성 단정 인물 캐논은 state 키워드가 있어도 hard canon 으로 잡고 반전을 차단한다', () => {
+    // "형사이며"는 정체성 단정(hard). "감정" 키워드에 끌려 livingState 로 가면 정체성 반전이
+    // 경고에 그치던 문제를 고친다. 순수 mutable-state 팩트는 아래 회귀 테스트로 보존 확인.
+    const project = {
+      ...createSeedProject(),
+      canonFacts: [
+        { id: 'canon-identity', episode: 1, owner: 'character' as const, statement: '윤민서는 강력계 형사이며 감정을 드러내지 않는다' }
+      ]
+    };
+    const contract = buildContinuityContractFromProject(project);
+    expect(contract.hardCanon).toEqual(expect.arrayContaining(['윤민서는 강력계 형사이며 감정을 드러내지 않는다']));
+    expect(contract.livingState).not.toEqual(expect.arrayContaining(['윤민서는 강력계 형사이며 감정을 드러내지 않는다']));
+
+    const issues = validateContinuity(project, ['윤민서는 형사가 아니라 평범한 민간인이다']);
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ severity: 'error', source: 'continuity-editor' })
+      ])
+    );
+  });
+
   it('keeps confirmed past-tense world and plot facts in hard canon', () => {
     const project = {
       ...createSeedProject(),
@@ -806,6 +827,19 @@ describe('storyEngine', () => {
     );
     expect(workspace.continuitySummary.blocked).toBe(2);
     expect(workspace.continuitySummary.status).toBe('blocked');
+  });
+
+  it('정보성 memory-anchor 경고는 충돌 카운트(warnings)에 세지 않는다', () => {
+    // 다음 회차 의도가 캐논 문장을 축어 인용하지 않으면 항상 뜨는 정보성 넛지 —
+    // 실제 연속성 충돌이 아니므로 PLAN "충돌 N" 배지(=blocked+warnings)에 셈하지 않는다.
+    const workspace = buildStoryEditorWorkspace(createEmptyProject({ title: '빈 작품' }), {
+      draftClaims: ['다음 회차를 이어 씁니다']
+    });
+    expect(
+      workspace.continuityIssues.some((i) => i.claim === 'memory-anchor')
+    ).toBe(true);
+    expect(workspace.continuitySummary.warnings).toBe(0);
+    expect(workspace.continuitySummary.status).toBe('clear');
   });
 
   it('serializeCanonCategory renders characters with desire, wound, and relations', () => {
