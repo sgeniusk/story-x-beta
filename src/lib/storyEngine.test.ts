@@ -808,6 +808,19 @@ describe('storyEngine', () => {
     expect(workspace.continuitySummary.status).toBe('blocked');
   });
 
+  it('정보성 memory-anchor 경고는 충돌 카운트(warnings)에 세지 않는다', () => {
+    // 다음 회차 의도가 캐논 문장을 축어 인용하지 않으면 항상 뜨는 정보성 넛지 —
+    // 실제 연속성 충돌이 아니므로 PLAN "충돌 N" 배지(=blocked+warnings)에 셈하지 않는다.
+    const workspace = buildStoryEditorWorkspace(createEmptyProject({ title: '빈 작품' }), {
+      draftClaims: ['다음 회차를 이어 씁니다']
+    });
+    expect(
+      workspace.continuityIssues.some((i) => i.claim === 'memory-anchor')
+    ).toBe(true);
+    expect(workspace.continuitySummary.warnings).toBe(0);
+    expect(workspace.continuitySummary.status).toBe('clear');
+  });
+
   it('serializeCanonCategory renders characters with desire, wound, and relations', () => {
     const project = createSeedProject();
 

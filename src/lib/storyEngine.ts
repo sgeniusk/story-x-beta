@@ -2044,7 +2044,12 @@ export function buildStoryEditorWorkspace(
 ): StoryEditorWorkspace {
   const continuityIssues = validateContinuity(project, options.draftClaims ?? []);
   const blocked = continuityIssues.filter((issue) => issue.severity === 'error').length;
-  const warnings = continuityIssues.filter((issue) => issue.severity === 'warning').length;
+  // memory-anchor 는 "다음 회차 의도가 캐논 문장을 축어 인용 안 함"을 알리는 정보성 넛지로,
+  // 캐논 문장을 인용하지 않으면 항상 뜬다. 실제 연속성 충돌이 아니므로 충돌 카운트에서 제외한다
+  // (PLAN "충돌 N" 배지 = blocked + warnings). issues 배열에는 그대로 남겨 상세 표시는 유지.
+  const warnings = continuityIssues.filter(
+    (issue) => issue.severity === 'warning' && issue.claim !== 'memory-anchor'
+  ).length;
   const codexEntries = buildCodexEntries(project);
   const corkboardCards = buildCorkboardCards(project, blocked > 0);
   const compileText = buildCompileText(project);
