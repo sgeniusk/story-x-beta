@@ -13,9 +13,12 @@
 - **검증** — 누적 23팩트 위 재진술 FP **0/23**·정합신규 0/2(계사부정 수정 실전 검증) · 이빨 recall 3/4(死·목격자 hard-BLOCK, 형사→민간인 living-state 경고, 기억공백 1건 진짜 누락).
 - **결론** — 로판 픽스처 잔여 16 FP는 밀집 동일테마 reveal 특수 케이스, 전형 유기 누적에선 0 FP. "연속성=제품요건" 이어 생성 실작동.
 
+### 이어서 한 것 (같은 세션) — 3모드 라이브 융합 관찰 (done)
+- preview에 23화·91캐논 로판 주입 후 PLAY/WRITE/PLAN 관찰(정본 `docs/reviews/2026-07-09-multichapter-live/3mode-observations.md`). 세 방식이 한 committed 캐논을 코헤런트하게 조각·크래시/콘솔 0. 「흐름 검증」 6인 codex 패널 연속성 감수자 "차단할 직접 모순 없음"(누적 91캐논 가짜 충돌 0), PLAN "충돌 1"은 benign 앵커 warning. **→ 1순위(멀티회차 연속성) 3단계 전부 완료.**
+
 ### 다음 한 가지
-- **PLAY/WRITE/PLAN 3모드 실사용 연속성**(1순위 마지막 잔여, 미착수) — 세 방식이 한 캐논을 조각하는 융합 동선이 여러 화에서 안 무너지나 라이브 관찰.
-- 후속 — character owner→livingState 라우팅(정체성 반전이 경고에 그침)·추상 없음/있음 미모델링·ch23류 밀집 reveal 잔여 FP.
+- **1순위 전 완료.** 다음은 2순위 외부 테스트 게이트0 하드닝 — BYOK 결정(A: UI 신설 vs B: 소유자 키 클로즈드 베타·직전 추천 B)·FloatingEditor 하드-시딩 크래시 방어·프로덕션 URL 실호출.
+- 게이트 후속(경미) — character owner→livingState 라우팅·추상 없음/있음 미모델링·ch23류 밀집 reveal 잔여 FP 16·PLAN "충돌 N" 라벨 코스메틱·PLAY 주인공 시딩 휴리스틱.
 
 ---
 
