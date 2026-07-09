@@ -3,7 +3,9 @@
 > Last Updated: 2026-07-08 · Branch: `main` (**PLAN 설계 대화 채널(설계실 2단계) `done` — PR #30 main 머지 `254cb2b`, 머지 후 main init.sh 녹색 재확인. PLAN dock 「✦ 설계」에서 단일 설계 파트너와 대화→승인형 패치 제안→기존 stage\* 로 설계안 합류→하네스 미리보기, 대화 버퍼 localStorage 영속(remount 생존). PR #20 잔여 clear+remount 회귀 테스트 동봉. 알려진 한계 = in-flight 응답 remount 손실(accepted-risk·후속). · 이전: VS 긴장 배지 PR #29 `6dec0fd` · 디자인 정비 4a PR #28 `96cdb9b`.**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 완료 트랙 — 게이트/에디터 후속 정비 3건 (`done` · 2026-07-09, 브랜치 `feat/continuity-followups`)
+## 완료 트랙 — 게이트/에디터 후속 정비 3건 (`done` · 2026-07-09, **main 머지** `4fd2978`)
+
+> 최근 검증(2026-07-09) — `bash init.sh` 통과: `npm test` 전체 통과 · `npm run build`(tsc+vite) 성공. 머지 후 main 재확인 녹색.
 
 3모드 라이브 관찰이 드러낸 후속(사용자 선택 3건)을 TDD로 마감. 각 근인 라이브/유닛 재현→수정→검증.
 - **FloatingEditor 크래시 방어(`b2ecb05`)** — 하드-시딩/import 프로젝트가 회차의 `outline·memoryAnchors·newCanonFacts` 나 인물의 `voiceRules·canonAnchors·forbiddenContradictions` 를 빠뜨리면 `buildStoryEditorWorkspace` 의 `chapter.memoryAnchors.length`·`buildCodexEntries` 의 `character.voiceRules.join` 에서 TypeError→StoryXDesk 크래시(빈 화면). 라이브 재현→근인 2개(회차·인물 배열) 확정→`normalizeProject`(로드·import 공용 관문)에서 누락 배열 [] · 문자열 '' 백필→하드시드 무손상 렌더 확인.

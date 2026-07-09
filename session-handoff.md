@@ -4,9 +4,9 @@
 
 ---
 
-## 2026-07-09 (3차) — 게이트/에디터 후속 정비 3건 (done)
+## 2026-07-09 (3차) — 게이트/에디터 후속 정비 3건 (done·main 머지 `4fd2978`)
 
-> 3모드 라이브 관찰이 드러낸 후속(사용자 선택 3건)을 TDD로 마감. progress.md "게이트/에디터 후속 정비 3건" 절 상세. 브랜치 `feat/continuity-followups`.
+> 3모드 라이브 관찰이 드러낸 후속(사용자 선택 3건)을 TDD로 마감·main 머지. progress.md "게이트/에디터 후속 정비 3건" 절 상세.
 
 ### 한 것
 - **FloatingEditor 크래시 방어(`b2ecb05`)** — 하드시드/import 회차·인물 배열 누락 → `chapter.memoryAnchors.length`·`character.voiceRules.join` TypeError → StoryXDesk 빈 화면. `normalizeProject`(로드·import 공용 관문)에서 누락 배열 []·문자열 '' 백필. 라이브 재현→수정→무손상 렌더 확인.
