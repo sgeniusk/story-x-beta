@@ -58,4 +58,16 @@ describe('PlaySeedPanel', () => {
     const html = renderToStaticMarkup(createElement(PlaySeedPanel, { ...baseProps, loading: true }));
     expect(html).toContain('플레이 상대를 준비하는 중');
   });
+
+  it('loading 중에만 loadingNote(경과·새로고침 안내)를 렌더한다', () => {
+    const note = '0:42 경과 · 보통 1~2분 걸려요. 새로고침하지 마세요.';
+    const loadingHtml = renderToStaticMarkup(
+      createElement(PlaySeedPanel, { ...baseProps, loading: true, loadingNote: note })
+    );
+    expect(loadingHtml).toContain('새로고침하지 마세요');
+    const idleHtml = renderToStaticMarkup(
+      createElement(PlaySeedPanel, { ...baseProps, loading: false, loadingNote: note })
+    );
+    expect(idleHtml).not.toContain('새로고침하지 마세요');
+  });
 });

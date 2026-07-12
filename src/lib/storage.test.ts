@@ -188,7 +188,12 @@ describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
       interviewPersonaLineup: [
         { id: 'p1', label: '쇼러너', tone: '구조', category: 'novel', isFictionalized: false }
       ],
-      interviewFallbackReason: null
+      interviewFallbackReason: null,
+      playSetup: {
+        scene: '늦은 밤 편의점, 정전 직후.',
+        cast: [{ name: '지호', role: '야간 알바', desire: '가게를 지키고 싶다', wound: '', voiceRules: [] }],
+        myRole: '단골'
+      }
     };
   }
 
@@ -220,6 +225,7 @@ describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
     expect(restored?.llmIntakeQuestions).toBeNull();
     expect(restored?.interviewPersonaLineup).toEqual([]);
     expect(restored?.medium).toBe('novel');
+    expect(restored?.playSetup).toBeNull();
   });
 
   it('갓 시작한 빈 온보딩은 진행 중으로 보지 않는다', () => {

@@ -1233,6 +1233,27 @@ function StoryXHome({
   const [interviewFallbackReason, setInterviewFallbackReason] = useState<string | null>(
     () => restoredDraft?.interviewFallbackReason ?? null
   );
+  // PLAY-first — 소설류 자유 서술에서 인터뷰를 건너뛰고 바로 플레이로 진입하는 경로.
+  // 영속 effect 의존성보다 먼저 선언해야 한다(아래 debounce 저장이 playSetup 을 참조).
+  const [playSetup, setPlaySetup] = useState<DiveSetup | null>(() => restoredDraft?.playSetup ?? null);
+  const [playSeedLoading, setPlaySeedLoading] = useState(false);
+  const [playSeedError, setPlaySeedError] = useState('');
+  // stale 응답 방어 — 이전으로 갔다 재요청 시 늦게 도착한 옛 응답이 새 제안을 덮지 않게 시퀀스로 판별.
+  const playSeedSeqRef = useRef(0);
+  // 플레이 시드 대기 경과(초) — 인터뷰/초안 화면과 같은 관례. 정적 스피너만 두면 hang 으로 오인·새로고침한다.
+  const [playSeedElapsed, setPlaySeedElapsed] = useState(0);
+  useEffect(() => {
+    if (!playSeedLoading) {
+      setPlaySeedElapsed(0);
+      return;
+    }
+    setPlaySeedElapsed(0);
+    const started = Date.now();
+    const id = setInterval(() => {
+      setPlaySeedElapsed(Math.floor((Date.now() - started) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [playSeedLoading]);
   const effectiveIntakeQuestions = llmIntakeQuestions ?? intakePlan.questions;
 
   // 영속 Part 2 — 온보딩 입력 변경을 debounce(600ms) 저장한다.
@@ -1256,7 +1277,8 @@ function StoryXHome({
         contractSpine,
         llmIntakeQuestions,
         interviewPersonaLineup,
-        interviewFallbackReason
+        interviewFallbackReason,
+        playSetup
       };
       if (hasMeaningfulOnboardingInput(draft)) {
         saveOnboardingDraft(draft);
@@ -1281,7 +1303,8 @@ function StoryXHome({
     contractSpine,
     llmIntakeQuestions,
     interviewPersonaLineup,
-    interviewFallbackReason
+    interviewFallbackReason,
+    playSetup
   ]);
 
   // 자유 서술이나 매체가 바뀌면 LLM 인터뷰 질문 캐시·라인업·폴백 사유를 비워 다음 진입 때 새로 생성한다
@@ -1323,25 +1346,25 @@ function StoryXHome({
       setIsInterviewLoading(false);
     }
   }
-  // PLAY-first — 소설류 자유 서술에서 인터뷰를 건너뛰고 바로 플레이로 진입하는 경로.
-  const [playSetup, setPlaySetup] = useState<DiveSetup | null>(null);
-  const [playSeedLoading, setPlaySeedLoading] = useState(false);
-  const [playSeedError, setPlaySeedError] = useState('');
   // 자유 서술 → 플레이 시드 제안. 서술이 비면 콜 없이 프리셋만 보여준다.
   async function goToPlaySeed() {
+    if (playSeedLoading) return;
     setHomeFlowStep('playseed');
     setPlaySeedError('');
     const story = freewriteText.trim();
     if (!story) return;
+    const seq = ++playSeedSeqRef.current;
     setPlaySeedLoading(true);
     try {
       const res = await requestDiveSetup({ story });
+      if (seq !== playSeedSeqRef.current) return;
       if (res.setup) setPlaySetup(res.setup);
       else setPlaySeedError('조금만 더 적어주세요 — 누구와, 어디서, 무슨 상황인지 한두 줄이면 충분해요.');
     } catch {
+      if (seq !== playSeedSeqRef.current) return;
       setPlaySeedError('제안 요청에 실패했어요. 프리셋으로 시작하거나 다시 시도해 주세요.');
     } finally {
-      setPlaySeedLoading(false);
+      if (seq === playSeedSeqRef.current) setPlaySeedLoading(false);
     }
   }
   function confirmPlaySeed() {
@@ -1649,7 +1672,7 @@ function StoryXHome({
                   <button type="button" className="hx-btn-ghost" onClick={goToIntake}>
                     인터뷰로 초안 만들기
                   </button>
-                  <button type="button" className="hx-btn" onClick={goToPlaySeed}>
+                  <button type="button" className="hx-btn" onClick={goToPlaySeed} disabled={playSeedLoading}>
                     플레이로 시작
                   </button>
                 </>
@@ -2084,6 +2107,7 @@ function StoryXHome({
                 setup={playSetup}
                 loading={playSeedLoading}
                 error={playSeedError}
+                loadingNote={`${formatElapsed(playSeedElapsed)} 경과 · 보통 1~2분 걸려요. 새로고침하지 마세요.`}
                 presets={DIVE_SEED_CHARACTERS}
                 onPickPreset={(i) => {
                   setPlaySetup(presetToDiveSetup(DIVE_SEED_CHARACTERS[i]));

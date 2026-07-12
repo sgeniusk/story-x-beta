@@ -13,10 +13,12 @@ interface PlaySeedPanelProps {
   onPickPreset: (index: number) => void;
   onConfirm: () => void;
   onBack: () => void;
+  // LLM 대기 안내 — 경과 시간·새로고침 금지 문구(App 이 조립). loading 중에만 렌더한다.
+  loadingNote?: string;
 }
 
 export function PlaySeedPanel({
-  setup, loading, error, presets, onPickPreset, onConfirm, onBack
+  setup, loading, error, presets, onPickPreset, onConfirm, onBack, loadingNote
 }: PlaySeedPanelProps) {
   return (
     <div className="hx-playseed">
@@ -38,6 +40,7 @@ export function PlaySeedPanel({
       </div>
 
       {loading && <p className="hx-playseed-loading" role="status">플레이 상대를 준비하는 중…</p>}
+      {loading && loadingNote && <p className="hx-playseed-loading-note">{loadingNote}</p>}
       {error && !loading && <p className="hx-playseed-error">{error}</p>}
 
       {setup && !loading && (

@@ -17,6 +17,7 @@ import { normalizeWritingLog } from './retentionStats';
 import { loadEvolutionHistory, replaceEvolutionHistory, type EvolutionHistory } from './evolutionMemory';
 import type { CreativeFormat, CreativeMedium, HomeFlowStep } from './projectBlueprint';
 import type { DiveSession } from './diveSession';
+import type { DiveSetup } from './diveProposal';
 import type { ProjectIntakeQuestion } from './projectIntake';
 import type { PlanPatch } from './planStage';
 import type { PlanChatMessage } from './planChat';
@@ -356,6 +357,8 @@ export interface OnboardingDraft {
   llmIntakeQuestions: ProjectIntakeQuestion[] | null;
   interviewPersonaLineup: OnboardingPersonaLineupEntry[];
   interviewFallbackReason: string | null;
+  // PLAY-first 시드 캐시 — playseed 단계 복원 시 requestDiveSetup 재호출 없이 제안을 유지한다.
+  playSetup?: DiveSetup | null;
 }
 
 export function serializeOnboardingDraft(draft: OnboardingDraft): string {
@@ -414,7 +417,8 @@ export function parseOnboardingDraft(raw: string | null): OnboardingDraft | null
     interviewPersonaLineup: Array.isArray(parsed.interviewPersonaLineup)
       ? (parsed.interviewPersonaLineup as OnboardingPersonaLineupEntry[])
       : [],
-    interviewFallbackReason: typeof parsed.interviewFallbackReason === 'string' ? parsed.interviewFallbackReason : null
+    interviewFallbackReason: typeof parsed.interviewFallbackReason === 'string' ? parsed.interviewFallbackReason : null,
+    playSetup: isRecord(parsed.playSetup) ? (parsed.playSetup as unknown as DiveSetup) : null
   };
 }
 
