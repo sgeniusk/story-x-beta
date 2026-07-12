@@ -232,7 +232,9 @@ describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
       { scene: '장면', cast: 'not-array', myRole: '' },     // cast 비배열
       { scene: '장면', cast: [], myRole: '' },              // cast 빈 배열
       { scene: '장면', cast: [{ role: 'r' }], myRole: '' }, // cast 인물에 name 없음
-      { scene: 7, cast: [{ name: 'a' }], myRole: '' }       // scene 비문자열
+      { scene: '장면', cast: [{ name: '   ' }], myRole: '' }, // cast 인물 name 이 공백뿐
+      { scene: 7, cast: [{ name: 'a' }], myRole: '' },      // scene 비문자열
+      { scene: '장면', cast: [{ name: 'a' }], myRole: 9 }   // myRole 비문자열
     ];
     for (const bad of broken) {
       const parsed = parseOnboardingDraft(JSON.stringify({ ...fullDraft(), playSetup: bad }));
