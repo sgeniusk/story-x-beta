@@ -190,7 +190,7 @@ describe('PLAY-first 온보딩 CTA 위계 (소설류)', () => {
 
   it('플레이 승인 핸들러는 saveProject→saveDiveState→clearOnboardingDraft→dive 순서를 지킨다', () => {
     const handler = app.match(/function handleStartPlay[\s\S]{0,600}?\n  \}/)?.[0] ?? '';
-    const order = ['saveProject(', 'saveDiveState(', 'clearOnboardingDraft(', "setStage('dive')"];
+    const order = ['saveProject(', 'setWorkTitle(', 'saveDiveState(', 'clearOnboardingDraft(', "setStage('dive')"];
     const idx = order.map((s) => handler.indexOf(s));
     expect(idx.every((v) => v >= 0)).toBe(true);
     expect([...idx]).toEqual([...idx].sort((a, b) => a - b));

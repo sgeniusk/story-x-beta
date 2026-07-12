@@ -292,6 +292,7 @@ function App() {
   // PLAY-first 온보딩 — 플레이 승인 시 최소 프로젝트를 본편으로 커밋하고 시드 DiveState 로 바로 dive 진입.
   function handleStartPlay(project: SeriesProject, diveState: DiveState) {
     saveProject(project);          // committed 본편 생성 — 온보딩 졸업 관할
+    setWorkTitle(project.title);   // 공통 셸 제목 재동기화 — 마운트 시점 옛 프로젝트 제목이 남지 않게
     saveDiveState(diveState);      // working 시드
     clearOnboardingDraft();        // 다음 새 프로젝트 복원 오염 방지
     setPendingSync({ chapters: 0, canon: 0, total: 0 }); // 방금 커밋한 본편과 working 이 동일 — 미반영 없음
