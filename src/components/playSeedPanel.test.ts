@@ -61,14 +61,15 @@ describe('PlaySeedPanel', () => {
     expect(html).toContain('플레이 상대를 준비하는 중');
   });
 
-  it('cast 가 여럿이면 대화 상대 선택 버튼이 렌더되고 partnerIndex 가 selected 로 표시된다', () => {
+  it('cast 가 여럿이면 대화 상대 선택 버튼이 렌더되고 partnerIndex 만 selected 로 표시된다', () => {
     const html = renderToStaticMarkup(
       createElement(PlaySeedPanel, {
         setup: {
           scene: '장면',
           cast: [
             { name: '가온', role: '주연', desire: 'd', wound: 'w', voiceRules: [] },
-            { name: '나루', role: '조연', desire: 'd2', wound: 'w2', voiceRules: [] }
+            { name: '나루', role: '조연', desire: 'd2', wound: 'w2', voiceRules: [] },
+            { name: '다미', role: '단역', desire: 'd3', wound: 'w3', voiceRules: [] }
           ],
           myRole: '행인'
         },
@@ -83,12 +84,14 @@ describe('PlaySeedPanel', () => {
       })
     );
     expect(html).toContain('대화 상대');
-    expect(html).toContain('hx-playseed-partner');
-    // 선택 상태 — 나루(index 1) 버튼에만 is-selected
-    const naru = html.slice(html.indexOf('나루') - 200, html.indexOf('나루'));
-    expect(naru).toContain('is-selected');
-    const gaon = html.slice(html.indexOf('가온') - 200, html.indexOf('가온'));
-    expect(gaon).not.toContain('is-selected');
+    // 버튼 단위로 잘라 검사 — 근접 슬라이스는 cast 3인 이상에서 이웃 버튼의 is-selected 를 주워 위양성.
+    const partnerButtons = (html.match(/<button[^>]*hx-playseed-partner[\s\S]*?<\/button>/g) ?? []);
+    expect(partnerButtons).toHaveLength(3);
+    const byName = (name: string) => partnerButtons.find((b) => b.includes(name))!;
+    expect(byName('나루')).toContain('is-selected');
+    expect(byName('나루')).toContain('aria-pressed="true"');
+    expect(byName('가온')).not.toContain('is-selected');
+    expect(byName('다미')).not.toContain('is-selected');
   });
 
   it('loading 중에만 loadingNote(경과·새로고침 안내)를 렌더한다', () => {

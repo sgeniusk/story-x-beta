@@ -65,7 +65,7 @@ export function PlaySeedPanel({
                 <button
                   key={c.name}
                   type="button"
-                  className={`hx-playseed-partner ${i === partnerIndex ? 'is-selected' : ''}`}
+                  className={i === partnerIndex ? 'hx-playseed-partner is-selected' : 'hx-playseed-partner'}
                   aria-pressed={i === partnerIndex}
                   onClick={() => onPickPartner(i)}
                 >
