@@ -7856,7 +7856,7 @@ body {
   color: var(--nx-slate);
   font-style: normal;
 }
-/* 함께 구상 대화 패널 (S2) — 라이트/다크 홈 모두 nx 토큰만 사용, 신규 버튼은 색 명시(UA 검정 상속 금지) */
+/* 함께 구상 대화 패널 (S2) — 홈은 다크 고정, nx 토큰이 co-vary 하므로 토큰만 사용·신규 버튼은 색 명시(UA 검정 상속 금지) */
 .home-page .ocp {
   display: grid;
   gap: 12px;

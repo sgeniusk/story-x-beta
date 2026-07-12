@@ -63,6 +63,8 @@ describe('OnboardChatPanel', () => {
     expect(html).toContain('파트너가 생각 중 · 12초 경과');
     expect(html).toMatch(/ocp-send" disabled/);
     expect(html).toMatch(/ocp-seed-use" disabled/);
+    expect(html).toMatch(/ocp-condense" disabled/);
+    expect(html).toMatch(/<textarea[^>]* disabled/);
   });
   it('busyNote 는 busy 아닐 땐 렌더하지 않는다', () => {
     expect(render({ busyNote: '지연 안내' })).not.toContain('지연 안내');
