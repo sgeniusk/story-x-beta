@@ -174,17 +174,31 @@ describe('Story X page experience', () => {
   });
 });
 
-describe('온보딩 소재발굴 (S1 — 선택 스텝 + 프리셋 갈래)', () => {
-  it('소설류 2단계는 소재발굴 3갈래 카드다 — 자유 서술·함께 구상(준비 중)·인기 프리셋', () => {
+describe('온보딩 소재발굴 (S1+S2 — 선택 스텝 + 프리셋·구상 갈래)', () => {
+  it('소설류 2단계는 소재발굴 3갈래 카드다 — 함께 구상 활성(S2)', () => {
     expect(blueprintSource).toContain("'source'");
-    expect(blueprintSource).toContain("'preset'");
+    expect(blueprintSource).toContain("'ideate'");
     expect(app).toContain('소재발굴');
     expect(app).toContain('함께 구상');
     expect(app).toContain('인기 프리셋');
-    expect(app).toContain('준비 중'); // 함께 구상은 S2 까지 비활성 노출
-    expect(app).toContain('소재발굴로 계속'); // 소설류 매체 패널 CTA
-    expect(app).toContain('자유 서술로 계속'); // 비소설 CTA 보존
-    expect(app).toContain('인터뷰로 계속'); // 자유 서술 갈래 CTA 보존
+    expect(app).not.toContain('준비 중'); // S2 — 함께 구상 활성화
+    expect(app).toContain("setHomeFlowStep('ideate')");
+    expect(app).toContain('소재발굴로 계속');
+    expect(app).toContain('자유 서술로 계속');
+    expect(app).toContain('인터뷰로 계속');
+  });
+
+  it('함께 구상 갈래는 onboard-chat 으로 응결해 playseed 에 합류한다', () => {
+    expect(app).toContain('OnboardChatPanel');
+    expect(app).toContain("homeFlowStep === 'ideate'");
+    expect(app).toContain('sendOnboardChat');
+    expect(app).toContain('requestOnboardChat');
+    expect(app).toContain("setPlaySeedEntry('ideate')");
+  });
+
+  it('playseed 의 이전 버튼은 진입원 갈래로 돌아간다', () => {
+    expect(app).toContain('playSeedEntry');
+    expect(app).toMatch(/usesSourceDiscovery \? playSeedEntry : 'freewrite'/);
   });
 
   it('프리셋 갈래는 LLM 0콜로 playseed 확인 카드에 도달한다', () => {

@@ -29,6 +29,9 @@ import {
 } from './lib/projectIntake';
 import { requestLlmInterview } from './lib/interviewClient';
 import { requestSpineSuggestion } from './lib/spineSuggestClient';
+import { buildOnboardChatTranscript, ONBOARD_CHAT_MAX_MESSAGES, type OnboardChatMessage } from './lib/onboardChat';
+import { requestOnboardChat } from './lib/onboardChatClient';
+import { OnboardChatPanel } from './components/OnboardChatPanel';
 import { formatElapsed, interviewStageMessage, INTERVIEW_TIME_HINT, generationStageMessage, GENERATION_TIME_HINT } from './lib/generationProgress';
 import { AiStatusBadge } from './components/AiStatusBadge';
 import { PublishScreen } from './components/PublishScreen';
@@ -77,7 +80,8 @@ import {
   saveProject,
   saveOnboardingDraft,
   type DiveState,
-  type OnboardingDraft
+  type OnboardingDraft,
+  type PlaySeedEntry
 } from './lib/storage';
 import { DiveDesk } from './components/DiveDesk';
 import { WorkspaceModeBar, type WorkspaceMode } from './components/WorkspaceModeBar';
@@ -1260,6 +1264,30 @@ function StoryXHome({
     }, 1000);
     return () => clearInterval(id);
   }, [playSeedLoading]);
+  // 함께 구상(S2) — 구상 대화 상태. 온보딩 draft 로 영속·복원, 매체 변경 시 클리어.
+  const [onboardChatMessages, setOnboardChatMessages] = useState<OnboardChatMessage[]>(
+    () => restoredDraft?.onboardChatMessages ?? []
+  );
+  const [onboardChatBusy, setOnboardChatBusy] = useState(false);
+  const [onboardChatNote, setOnboardChatNote] = useState<string | null>(null);
+  // 구상 파트너 응답 경과(초) — 인터뷰/초안/playseed 화면과 같은 관례. 정적 화면만 두면 hang 으로 오인·새로고침한다.
+  const [onboardChatElapsed, setOnboardChatElapsed] = useState(0);
+  useEffect(() => {
+    if (!onboardChatBusy) {
+      setOnboardChatElapsed(0);
+      return;
+    }
+    setOnboardChatElapsed(0);
+    const started = Date.now();
+    const id = setInterval(() => {
+      setOnboardChatElapsed(Math.floor((Date.now() - started) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [onboardChatBusy]);
+  // playseed 진입원 — 확인 카드 「이전」이 돌아갈 갈래(기본 preset). goToPlaySeed 재배선(S3) 때 확장.
+  const [playSeedEntry, setPlaySeedEntry] = useState<PlaySeedEntry>(
+    () => restoredDraft?.playSeedEntry ?? 'preset'
+  );
   const effectiveIntakeQuestions = llmIntakeQuestions ?? intakePlan.questions;
 
   // 영속 Part 2 — 온보딩 입력 변경을 debounce(600ms) 저장한다.
@@ -1284,7 +1312,9 @@ function StoryXHome({
         llmIntakeQuestions,
         interviewPersonaLineup,
         interviewFallbackReason,
-        playSetup
+        playSetup,
+        onboardChatMessages,
+        playSeedEntry
       };
       if (hasMeaningfulOnboardingInput(draft)) {
         saveOnboardingDraft(draft);
@@ -1310,7 +1340,9 @@ function StoryXHome({
     llmIntakeQuestions,
     interviewPersonaLineup,
     interviewFallbackReason,
-    playSetup
+    playSetup,
+    onboardChatMessages,
+    playSeedEntry
   ]);
 
   // 자유 서술이나 매체가 바뀌면 LLM 인터뷰 질문 캐시·라인업·폴백 사유를 비워 다음 진입 때 새로 생성한다
@@ -1319,6 +1351,18 @@ function StoryXHome({
     setInterviewPersonaLineup([]);
     setInterviewFallbackReason(null);
   }, [freewriteText, blueprint.medium]);
+
+  // 매체를 바꾸면 구상 대화를 비운다 — 소재가 매체에 묶이므로. 마운트 직후 실행은 복원 보존을 위해
+  // 이전 값 비교로 건너뛴다(불리언 skip ref 는 StrictMode 이중 실행에서 복원을 지워 부적합).
+  const onboardChatMediumRef = useRef(blueprint.medium);
+  useEffect(() => {
+    if (onboardChatMediumRef.current === blueprint.medium) {
+      return;
+    }
+    onboardChatMediumRef.current = blueprint.medium;
+    setOnboardChatMessages([]);
+    setOnboardChatNote(null);
+  }, [blueprint.medium]);
 
   // 인터뷰 단계로 진입 — 자유 서술이 있으면 그 작품에 맞는 질문을 LLM에 요청한다
   async function goToIntake() {
@@ -1353,8 +1397,8 @@ function StoryXHome({
     }
   }
   // [휴면 — 호출자 0] 자유 서술 → 플레이 시드 제안(requestDiveSetup 1콜). 서술이 비면 콜 없이 프리셋만.
-  // S1 은 playseed 진입을 프리셋 갈래로만 연다. S3(적응형 인터뷰)에서 이 경로를 재배선할 때
-  // playseed 패널의 onBack('preset' 고정)도 진입원 분기로 함께 고쳐야 한다 — 지금은 preset-전용 가정.
+  // playseed 진입은 프리셋·함께 구상 갈래로 열린다. onBack 은 playSeedEntry 분기 완료(S2) —
+  // S3(적응형 인터뷰)에서 이 경로를 재배선할 때 PlaySeedEntry 에 진입원 값을 추가하면 된다.
   async function goToPlaySeed() {
     if (playSeedLoading) return;
     setHomeFlowStep('playseed');
@@ -1384,6 +1428,54 @@ function StoryXHome({
     setPlaySetup(preset.setup);
     setPlayPartnerIndex(0);
     setPlaySeedError('');
+    setPlaySeedEntry('preset');
+    setHomeFlowStep('playseed');
+  }
+  // 함께 구상 턴(S2) — 하이브리드 응결: condense=true 면 강제 응결 지시(고정 문구 버블 동반).
+  async function sendOnboardChat(text: string, condense = false) {
+    if (onboardChatBusy) return;
+    const trimmed = text.trim() || (condense ? '이 소재로 시작할게요.' : '');
+    if (!trimmed) return;
+    const userMessage: OnboardChatMessage = { id: `oc-${Date.now()}`, role: 'user', text: trimmed };
+    const next = [...onboardChatMessages, userMessage].slice(-ONBOARD_CHAT_MAX_MESSAGES);
+    setOnboardChatMessages(next);
+    setOnboardChatBusy(true);
+    setOnboardChatNote(null);
+    const result = await requestOnboardChat({
+      medium: blueprint.medium,
+      format: blueprint.format,
+      freewrite: freewriteText,
+      dialogue: buildOnboardChatTranscript(next),
+      query: trimmed,
+      condense
+    });
+    if (result.ok && result.turn) {
+      const turn = result.turn;
+      setOnboardChatMessages((prev) =>
+        [
+          ...prev,
+          {
+            id: `oc-${Date.now()}-p`,
+            role: 'partner' as const,
+            text: turn.reply,
+            ...(turn.setup ? { setup: turn.setup } : {})
+          }
+        ].slice(-ONBOARD_CHAT_MAX_MESSAGES)
+      );
+      if (condense && !turn.setup) {
+        setOnboardChatNote('소재가 아직 얕아 시드를 만들지 못했어요 — 한두 턴 더 나눠주세요.');
+      }
+    } else {
+      setOnboardChatNote(result.reason ?? '구상 파트너 응답에 실패했어요. 다시 보내주세요.');
+    }
+    setOnboardChatBusy(false);
+  }
+  // 시드 카드 승인(S2) — pickStoryPreset 동형으로 playseed 에 합류(확인 카드 이후 경로 공유).
+  function useOnboardSetup(setup: DiveSetup) {
+    setPlaySetup(setup);
+    setPlayPartnerIndex(0);
+    setPlaySeedError('');
+    setPlaySeedEntry('ideate');
     setHomeFlowStep('playseed');
   }
   function confirmPlaySeed() {
@@ -1529,8 +1621,9 @@ function StoryXHome({
   ];
   // building 패널 앞에는 charter 를 뺀 단계만 실제 mount 된다(charter 는 homeFlowStep==='charter'일 때만 렌더).
   const buildingPanelIndex = homeFlowSteps.filter((s) => s.id !== 'charter').length;
-  // 소재발굴 갈래 패널(freewrite/preset) — 소설류에선 source 다음 슬롯에 조건부 mount 되어 DOM 인덱스를 공유한다.
-  const isSourceBranch = usesSourceDiscovery && (homeFlowStep === 'freewrite' || homeFlowStep === 'preset');
+  // 소재발굴 갈래 패널(freewrite/ideate/preset) — 소설류에선 source 다음 슬롯에 상호배타 mount 되어 DOM 인덱스를 공유한다.
+  const isSourceBranch =
+    usesSourceDiscovery && (homeFlowStep === 'freewrite' || homeFlowStep === 'preset' || homeFlowStep === 'ideate');
   const sourceBranchIndex = homeFlowSteps.findIndex((step) => step.id === 'source') + 1;
   // playseed 는 인디케이터 배열에 없다(전용 경로로만 진입) — charter 처럼 활성일 때만 mount 되고,
   // charter conditional 뒤 · building 앞에 위치하므로 DOM 상 슬라이드 인덱스는 buildingPanelIndex 와 같다.
@@ -1665,10 +1758,9 @@ function StoryXHome({
                   <strong>자유 서술</strong>
                   <p>쓰고 싶은 이야기를 흘려 적으면 작가진이 맞춤 인터뷰를 준비합니다.</p>
                 </button>
-                <button type="button" className="hx-source-card" disabled>
+                <button type="button" className="hx-source-card" onClick={() => setHomeFlowStep('ideate')}>
                   <strong>함께 구상</strong>
-                  <span className="hx-source-soon">준비 중</span>
-                  <p>작가진과 채팅하며 소재를 캐냅니다. 곧 열립니다.</p>
+                  <p>작가진과 채팅하며 소재를 캐냅니다. 잡히면 그대로 플레이가 열립니다.</p>
                 </button>
                 <button type="button" className="hx-source-card" onClick={() => setHomeFlowStep('preset')}>
                   <strong>인기 프리셋</strong>
@@ -1743,6 +1835,28 @@ function StoryXHome({
             </div>
           </aside>
         </section>
+        )}
+
+        {usesSourceDiscovery && homeFlowStep === 'ideate' && (
+          <section className="hx-panel" aria-label="함께 구상">
+            <div className="hx-main">
+              <p className="hx-eyebrow">02 · 함께 구상</p>
+              <h1 className="hx-h1">수다 떨듯 소재를 캐봅시다.</h1>
+              <p className="hx-lead">떠오르는 조각을 던지면 구상 파트너가 되받아 넓힙니다. 소재가 잡히면 플레이 시드를 제안해요.</p>
+              <OnboardChatPanel
+                messages={onboardChatMessages}
+                busy={onboardChatBusy}
+                busyNote={`${formatElapsed(onboardChatElapsed)} 경과 · 보통 30초~1분 걸려요. 새로고침하지 마세요.`}
+                note={onboardChatNote}
+                onSend={(text) => void sendOnboardChat(text)}
+                onCondense={() => void sendOnboardChat('', true)}
+                onUseSetup={useOnboardSetup}
+              />
+              <div className="hx-aside-actions">
+                <button type="button" className="hx-btn-ghost" onClick={() => setHomeFlowStep('source')}>이전</button>
+              </div>
+            </div>
+          </section>
         )}
 
         {usesSourceDiscovery && homeFlowStep === 'preset' && (
@@ -2198,7 +2312,7 @@ function StoryXHome({
                   setPlaySeedError('');
                 }}
                 onConfirm={confirmPlaySeed}
-                onBack={() => setHomeFlowStep(usesSourceDiscovery ? 'preset' : 'freewrite')}
+                onBack={() => setHomeFlowStep(usesSourceDiscovery ? playSeedEntry : 'freewrite')}
               />
             </div>
           </section>
