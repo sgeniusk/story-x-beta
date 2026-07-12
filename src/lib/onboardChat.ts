@@ -16,7 +16,7 @@ export interface OnboardChatTurn {
 }
 
 export const ONBOARD_CHAT_TRANSCRIPT_LIMIT = 8; // plan-chat TRANSCRIPT_LIMIT 미러
-export const ONBOARD_CHAT_MAX_MESSAGES = 40; // plan-chat PLAN_CHAT_MAX_MESSAGES 미러 — OnboardingDraft cap
+export const ONBOARD_CHAT_MAX_MESSAGES = 40; // plan-chat PLAN_CHAT_MAX_MESSAGES(storage.ts) 미러 — OnboardingDraft cap, App append 시 적용
 
 export function buildOnboardChatTranscript(messages: OnboardChatMessage[], limit = ONBOARD_CHAT_TRANSCRIPT_LIMIT): string {
   return messages

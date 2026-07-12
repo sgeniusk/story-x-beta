@@ -18,6 +18,7 @@ import { loadEvolutionHistory, replaceEvolutionHistory, type EvolutionHistory } 
 import type { CreativeFormat, CreativeMedium, HomeFlowStep } from './projectBlueprint';
 import type { DiveSession } from './diveSession';
 import { parseDiveSetup, type DiveSetup } from './diveProposal';
+import type { OnboardChatMessage } from './onboardChat';
 import type { ProjectIntakeQuestion } from './projectIntake';
 import type { PlanPatch } from './planStage';
 import type { PlanChatMessage } from './planChat';
@@ -330,6 +331,9 @@ export function normalizeProject(project: SeriesProject): SeriesProject {
 // 작품(SeriesProject)이 아직 없는 단계라 project 필드가 아니라 독립 키에 저장한다(영속 보강 Part 2).
 const onboardingKey = 'serial-story-studio/onboarding';
 
+// playseed 진입원 — 확인 카드 「이전」이 돌아갈 갈래. App 과 공유한다.
+export type PlaySeedEntry = 'preset' | 'ideate';
+
 export interface OnboardingPersonaLineupEntry {
   id: string;
   label: string;
@@ -359,10 +363,38 @@ export interface OnboardingDraft {
   interviewFallbackReason: string | null;
   // PLAY-first 시드 캐시 — playseed 단계 복원 시 requestDiveSetup 재호출 없이 제안을 유지한다.
   playSetup?: DiveSetup | null;
+  // 함께 구상 대화(S2) — 온보딩 수명과 일치, clearOnboardingDraft 가 함께 지운다. cap 은 App append 시 ONBOARD_CHAT_MAX_MESSAGES.
+  onboardChatMessages?: OnboardChatMessage[];
+  // playseed 진입원(S2) — 확인 카드 「이전」이 돌아갈 갈래. S3(적응형 인터뷰)에서 확장.
+  playSeedEntry?: PlaySeedEntry;
 }
 
 export function serializeOnboardingDraft(draft: OnboardingDraft): string {
   return JSON.stringify(draft);
+}
+
+// 구상 대화 복원 가드 — 손상 항목은 그 항목만 드랍, 손상 setup 은 setup 필드만 강등(무효 제안 드랍 관례).
+// cap(ONBOARD_CHAT_MAX_MESSAGES)은 App 이 append 시 적용하므로 여기서 자르지 않는다.
+function parseOnboardChatMessages(value: unknown): OnboardChatMessage[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const messages: OnboardChatMessage[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry) || typeof entry.id !== 'string' || typeof entry.text !== 'string') {
+      continue;
+    }
+    if (entry.role !== 'user' && entry.role !== 'partner') {
+      continue;
+    }
+    const setup = parseDiveSetup(entry.setup);
+    messages.push(
+      setup
+        ? { id: entry.id, role: entry.role, text: entry.text, setup }
+        : { id: entry.id, role: entry.role, text: entry.text }
+    );
+  }
+  return messages;
 }
 
 // 저장본을 안전하게 복원한다. 손상·구버전 스키마는 null, 누락 필드는 기본값으로 백필(normalizeProject 패턴).
@@ -418,7 +450,9 @@ export function parseOnboardingDraft(raw: string | null): OnboardingDraft | null
       ? (parsed.interviewPersonaLineup as OnboardingPersonaLineupEntry[])
       : [],
     interviewFallbackReason: typeof parsed.interviewFallbackReason === 'string' ? parsed.interviewFallbackReason : null,
-    playSetup: parseDiveSetup(parsed.playSetup)
+    playSetup: parseDiveSetup(parsed.playSetup),
+    onboardChatMessages: parseOnboardChatMessages(parsed.onboardChatMessages),
+    playSeedEntry: parsed.playSeedEntry === 'ideate' ? 'ideate' : 'preset'
   };
 }
 
@@ -454,6 +488,7 @@ export function hasMeaningfulOnboardingInput(draft: OnboardingDraft): boolean {
     draft.interviewNote.trim().length > 0 ||
     Object.keys(draft.intakeAnswers).length > 0 ||
     Object.keys(draft.intakeOtherAnswers).length > 0 ||
+    (draft.onboardChatMessages?.length ?? 0) > 0 ||
     draft.contractEnding.trim().length > 0 ||
     draft.contractCost.trim().length > 0 ||
     draft.contractSpine.desire.trim().length > 0 ||
@@ -586,6 +621,7 @@ function isHomeFlowStep(value: unknown): value is HomeFlowStep {
     value === 'source' ||
     value === 'freewrite' ||
     value === 'preset' ||
+    value === 'ideate' ||
     value === 'playseed' ||
     value === 'intake' ||
     value === 'charter' ||
