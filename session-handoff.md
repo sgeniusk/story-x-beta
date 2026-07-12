@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-07-12 — PLAY-first 온보딩: 소설류 기본 진입 (done·브랜치 `feat/play-first-onboarding`)
+
+> 사용자 dogfooding 발견("질답 후 초안이 먼저 있으니 플레이가 재미없다")에서 출발. **PLAY(대화)가 Story X 기본 창작 진입**이라는 방향 확정([[play-first-paradigm]] 메모리·스펙 방향 섹션). brainstorming 5결정→spec→plan→subagent-driven TDD 3태스크+검증. progress.md 해당 절 상세.
+
+### 한 것
+- 소설류 자유 서술 다음 기본 CTA 「플레이로 시작」(인터뷰→초안은 보조 강등). 커스텀 = `requestDiveSetup` 1콜 제안, 프리셋 = 기존 시드 3종 0콜. 확인 카드(`PlaySeedPanel`, 주의사항 핀) → `buildPlayFirstProject`(회차 0·인물 진하게·플롯 얕게) → committed 생성+dive 직행.
+- 검토 반영 7건 — 재진입/seq stale 가드·playSetup 영속·대기 타이머 관례 승계·workTitle 재동기화(라이브 발견)·isHomeFlowStep 'playseed'(최종 리뷰 발견, 새로고침 매체 롤백) 등.
+- 라이브 통짜 — 자유 서술→제안(<1분, 소재 정확 맞춤)→dive 2턴→응결→⟳최신화 1화 합류→WRITE 렌더·프리셋 0콜·비-소설 무변경·콘솔 0.
+
+### 손대지 말 것 / 유의
+- 소설류 CTA 위계·handleStartPlay 순서는 appExperience.test.ts 소스 핀이 지킨다.
+- playseed 는 homeFlowSteps 인디케이터 배열에 넣지 않는다(homeFlowIndex 가 buildingPanelIndex 공유 — 배열에 넣으면 슬라이드 인덱스 깨짐).
+- `isHomeFlowStep`(storage.ts)에 새 스텝 추가 시 반드시 포함 — 빼먹으면 복원이 medium 으로 롤백.
+- 프리셋/커스텀은 같은 DiveSetup 스키마의 두 공급원 — 확인 카드 이후 경로를 갈라놓지 말 것.
+
+### 다음 한 가지
+- **에세이 대화형 플레이** (PLAY-first 다음 슬라이스) — essay-interviewer·interview-curator 를 에세이형 플레이 대화 상대로 재해석. 그 전에 사용자 dogfooding 으로 소설 PLAY-first 체감 확인 권장.
+- 경미 후속 — goToPlaySeed 캐시 비대칭·playSetup blind-cast 가드·stale 카드+에러 동시 렌더·dive-setup 프롬프트 정련(myRole cast 중복)·제목 파생 개선.
+
+---
+
 ## 2026-07-09 (4차) — 온보딩 LLM 대기 진행 피드백 + 폴백 문구 (done·main 머지 `3a94165`)
 
 > 사용자 dogfooding 발견("Failed to fetch")을 근인 진단→TDD→라이브 검증→머지로 완주. progress.md "온보딩 LLM 대기 진행 피드백" 절 상세.

@@ -1,7 +1,18 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-08 · Branch: `main` (**PLAN 설계 대화 채널(설계실 2단계) `done` — PR #30 main 머지 `254cb2b`, 머지 후 main init.sh 녹색 재확인. PLAN dock 「✦ 설계」에서 단일 설계 파트너와 대화→승인형 패치 제안→기존 stage\* 로 설계안 합류→하네스 미리보기, 대화 버퍼 localStorage 영속(remount 생존). PR #20 잔여 clear+remount 회귀 테스트 동봉. 알려진 한계 = in-flight 응답 remount 손실(accepted-risk·후속). · 이전: VS 긴장 배지 PR #29 `6dec0fd` · 디자인 정비 4a PR #28 `96cdb9b`.**)
+> Last Updated: 2026-07-12 · Branch: `feat/play-first-onboarding` (**PLAY-first 온보딩 — 소설류 기본 진입, 구현·검증 완료·PR 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
+
+## 완료 트랙 — PLAY-first 온보딩: 소설류 기본 진입 (`done` · 2026-07-12, 브랜치 `feat/play-first-onboarding`)
+
+> 최근 검증(2026-07-12) — `bash init.sh` 통과: `npm test` 913 통과(88 파일) · `npm run build`(tsc+vite) 성공.
+
+사용자 dogfooding 발견("초안이 먼저 있으니 플레이가 재미없다")에서 출발한 방향 전환 — **PLAY(대화)가 기본 창작 진입**([[play-first-paradigm]]). 소설류 온보딩에서 자유 서술 다음 기본 CTA를 「플레이로 시작」으로, 단발 제안 1콜(`requestDiveSetup` 재사용) 또는 프리셋 0콜(`DIVE_SEED_CHARACTERS` 3종) → 확인 카드(주의사항 핀 "정확하지 않아도 됩니다…") → 최소 프로젝트 생성(인물 진하게·플롯 얕게, 회차 0) → 바로 `stage='dive'`. 이후 응결·⟳최신화·PLAN 전부 기존 경로 무접촉 재사용. spec `docs/superpowers/specs/2026-07-12-play-first-onboarding-design.md` · plan `docs/superpowers/plans/2026-07-12-play-first-onboarding.md`. subagent-driven TDD 3태스크+검증(태스크별 스펙/품질 2단 검토, 발견 전부 반영).
+- **구현** — 순수 글루 `presetToDiveSetup`·`buildPlayFirstProject`(playEntry.ts, 옛 seedAndEnter 규칙 계승, `ae483b5`) · `PlaySeedPanel` 확인 카드(프레젠테이션 전용, nx 라이트 결, `02387a1`+`261cf14`) · App 배선(HomeFlowStep 'playseed'·소설류 CTA 위계·`handleStartPlay` saveProject→setWorkTitle→saveDiveState→졸업→dive, `5294ef3`+`a66e6f2`).
+- **검토 반영** — 공백-only myRole 제목 폴백 · disabled 단언 태그 스코프·field 클래스 개명 · goToPlaySeed 재진입 가드+seq stale 응답 방어 · playSetup 영속(OnboardingDraft) · LLM 대기 타이머+새로고침 금지 안내(7df75b3 관례 승계) · 라이브 발견 workTitle stale(`829614d`) · 최종 리뷰 발견 isHomeFlowStep 'playseed' 누락(새로고침 매체 롤백, `5e90401`).
+- **라이브 통짜(preview 5175, 빈 상태)** — 커스텀: 자유 서술(심야 세탁소)→실 codex 제안(소재 정확 맞춤, <1분)→확인 카드→dive 진입(제안 scene 주입·인물 2·회차 0)→2턴 대화(노인 역 코헤런트)→응결 「두 번 눌린 소매」→승인→⟳최신화 committed 1화(1,337자)·캐논 4 합류→WRITE 렌더. 프리셋: 빈 서술→0콜 확인→도윤 시드 dive 진입. 비-소설(에세이) 기존 단일 CTA 무변경. playseed 새로고침 복원. 전 구간 콘솔 에러 0.
+- **불변식** — 기존 인터뷰 경로 로직 무변경(CTA 위계만) · 비-소설 무접촉 · PLAY committed 읽기 전용 · 헌장/결말 미생성 · 바이블 형태 보존.
+- **후속(경미·기록)** — goToPlaySeed 캐시 비대칭(재진입마다 재호출, goToIntake 관례와 다름) · parseOnboardingDraft playSetup blind-cast shape 가드 · 실패 시 stale 카드+에러 동시 렌더 · codex가 myRole을 cast에 중복 포함(cast[0]=사용자 역이 세션 상대역, 프롬프트 정련) · 제목 파생 문장 중간 절단(코스메틱) · prod dive 엔드포인트 패리티(기존 갭) · 에세이 대화형 플레이(다음 슬라이스, essay-interviewer 재해석).
 
 ## 완료 트랙 — 온보딩 LLM 대기 진행 피드백 + 폴백 문구 (`done` · 2026-07-09, **main 머지** `3a94165`)
 
