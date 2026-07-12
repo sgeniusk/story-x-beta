@@ -1657,31 +1657,17 @@ function StoryXHome({
           <aside className="hx-aside">
             <div className="hx-aside-card">
               <div className="hx-aside-label">다음 단계</div>
-              <div className="hx-aside-title">{blueprint.medium === 'novel' ? '플레이' : '작가 인터뷰'}</div>
-              <p>
-                {blueprint.medium === 'novel'
-                  ? '이 서술에서 인물과 첫 장면을 뽑아 바로 대화로 시작합니다. 비워도 프리셋으로 시작할 수 있어요.'
-                  : '이 서술을 기반으로 작가진이 인물·세계·문체를 빠르게 묻습니다. 비워도 인터뷰는 작동합니다.'}
-              </p>
+              <div className="hx-aside-title">작가 인터뷰</div>
+              <p>이 서술을 기반으로 작가진이 인물·세계·문체를 빠르게 묻습니다. 비워도 인터뷰는 작동합니다.</p>
             </div>
             <div className="hx-aside-actions">
               <button type="button" className="hx-btn-ghost" onClick={() => setHomeFlowStep('medium')}>
                 이전
               </button>
-              {blueprint.medium === 'novel' ? (
-                <>
-                  <button type="button" className="hx-btn-ghost" onClick={goToIntake}>
-                    인터뷰로 초안 만들기
-                  </button>
-                  <button type="button" className="hx-btn" onClick={goToPlaySeed} disabled={playSeedLoading}>
-                    플레이로 시작
-                  </button>
-                </>
-              ) : (
-                <button type="button" className="hx-btn" onClick={goToIntake}>
-                  인터뷰로 계속
-                </button>
-              )}
+              {/* 플레이 직행 CTA 는 소재발굴 재설계(2026-07-12 사용자 결정)까지 파킹 — goToPlaySeed·playseed 패널은 휴면 보존, 재설계에서 인터뷰 경유로 재배선 예정. */}
+              <button type="button" className="hx-btn" onClick={goToIntake}>
+                인터뷰로 계속
+              </button>
             </div>
           </aside>
         </section>

@@ -174,12 +174,11 @@ describe('Story X page experience', () => {
   });
 });
 
-describe('PLAY-first 온보딩 CTA 위계 (소설류)', () => {
-  it('소설류 자유 서술 단계는 「플레이로 시작」이 기본(hx-btn), 인터뷰는 보조(hx-btn-ghost)', () => {
-    expect(app).toContain('플레이로 시작');
-    expect(app).toContain('인터뷰로 초안 만들기');
-    expect(app).toMatch(/hx-btn"[^>]*>[\s\S]{0,80}플레이로 시작/);
-    expect(app).toMatch(/hx-btn-ghost"[^>]*>[\s\S]{0,80}인터뷰로 초안 만들기/);
+describe('PLAY-first 온보딩 (playseed 파킹 상태)', () => {
+  it('자유 서술 CTA 는 인터뷰 단일 — 플레이 직행 버튼은 소재발굴 재설계까지 파킹', () => {
+    expect(app).toContain('인터뷰로 계속');
+    expect(app).not.toContain('플레이로 시작');
+    expect(app).toContain('소재발굴 재설계');
   });
 
   it("HomeFlowStep 에 'playseed' 가 있고 PlaySeedPanel 이 배선된다", () => {
