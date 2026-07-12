@@ -218,6 +218,38 @@ describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
     expect(parseOnboardingDraft(raw)?.homeFlowStep).toBe('playseed');
   });
 
+  it("homeFlowStep 'source'·'preset' 이 복원에서 살아남는다 (medium 롤백 방지)", () => {
+    for (const step of ['source', 'preset'] as const) {
+      const parsed = parseOnboardingDraft(JSON.stringify({ ...fullDraft(), homeFlowStep: step }));
+      expect(parsed?.homeFlowStep).toBe(step);
+    }
+  });
+
+  it('손상된 playSetup shape 은 null 로 강등된다 (blind-cast 가드)', () => {
+    const broken = [
+      {},                                                   // 필드 전무
+      { scene: '장면', myRole: '' },                        // cast 없음
+      { scene: '장면', cast: 'not-array', myRole: '' },     // cast 비배열
+      { scene: '장면', cast: [], myRole: '' },              // cast 빈 배열
+      { scene: '장면', cast: [{ role: 'r' }], myRole: '' }, // cast 인물에 name 없음
+      { scene: 7, cast: [{ name: 'a' }], myRole: '' }       // scene 비문자열
+    ];
+    for (const bad of broken) {
+      const parsed = parseOnboardingDraft(JSON.stringify({ ...fullDraft(), playSetup: bad }));
+      expect(parsed?.playSetup).toBeNull();
+    }
+  });
+
+  it('정상 playSetup 은 라운드트립을 유지하고 누락 옵션 필드는 백필된다', () => {
+    const setup = { scene: '장면', cast: [{ name: '가온' }], myRole: '행인' };
+    const parsed = parseOnboardingDraft(JSON.stringify({ ...fullDraft(), playSetup: setup }));
+    expect(parsed?.playSetup).toEqual({
+      scene: '장면',
+      cast: [{ name: '가온', role: '', desire: '', wound: '', voiceRules: [] }],
+      myRole: '행인'
+    });
+  });
+
   it('부분 저장본은 누락된 필드를 기본값으로 백필한다', () => {
     const partial = JSON.stringify({
       schema: 'storyx/onboarding/v1',
