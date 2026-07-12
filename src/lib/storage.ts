@@ -17,7 +17,7 @@ import { normalizeWritingLog } from './retentionStats';
 import { loadEvolutionHistory, replaceEvolutionHistory, type EvolutionHistory } from './evolutionMemory';
 import type { CreativeFormat, CreativeMedium, HomeFlowStep } from './projectBlueprint';
 import type { DiveSession } from './diveSession';
-import type { DiveSetup } from './diveProposal';
+import { parseDiveSetup, type DiveSetup } from './diveProposal';
 import type { ProjectIntakeQuestion } from './projectIntake';
 import type { PlanPatch } from './planStage';
 import type { PlanChatMessage } from './planChat';
@@ -363,29 +363,6 @@ export interface OnboardingDraft {
 
 export function serializeOnboardingDraft(draft: OnboardingDraft): string {
   return JSON.stringify(draft);
-}
-
-// playSetup 복원 shape 가드 — 손상 저장본이 DiveSetup 으로 blind-cast 되어 playseed 카드가 크래시하는 것을 막는다.
-// 이 필드만 백필이 아니라 all-or-nothing 거부인 이유 — playSetup 은 재호출 한 번이면 복구되는 캐시라 손실 비용이 낮고,
-// name 없는 cast 는 도메인상 무의미해 필드 기본값을 줄 수 없다. 빈 cast 조기 거부는 confirm 시점 에러 UX 를 복원 시점에 예방.
-function parseDiveSetup(value: unknown): DiveSetup | null {
-  if (!isRecord(value)) return null;
-  if (typeof value.scene !== 'string' || typeof value.myRole !== 'string') return null;
-  if (!Array.isArray(value.cast) || value.cast.length === 0) return null;
-  const cast: DiveSetup['cast'] = [];
-  for (const entry of value.cast) {
-    if (!isRecord(entry) || typeof entry.name !== 'string' || entry.name.trim() === '') return null;
-    cast.push({
-      name: entry.name,
-      role: typeof entry.role === 'string' ? entry.role : '',
-      desire: typeof entry.desire === 'string' ? entry.desire : '',
-      wound: typeof entry.wound === 'string' ? entry.wound : '',
-      voiceRules: Array.isArray(entry.voiceRules)
-        ? entry.voiceRules.filter((v): v is string => typeof v === 'string')
-        : []
-    });
-  }
-  return { scene: value.scene, cast, myRole: value.myRole };
 }
 
 // 저장본을 안전하게 복원한다. 손상·구버전 스키마는 null, 누락 필드는 기본값으로 백필(normalizeProject 패턴).

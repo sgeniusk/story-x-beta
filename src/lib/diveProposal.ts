@@ -72,3 +72,30 @@ export function isValidProposal(x: unknown): x is DiveProposal {
     Array.isArray(p.cast) && p.cast.length > 0
   );
 }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+// playSetup 복원 shape 가드 — 손상 저장본이 DiveSetup 으로 blind-cast 되어 playseed 카드가 크래시하는 것을 막는다.
+// 이 필드만 백필이 아니라 all-or-nothing 거부인 이유 — playSetup 은 재호출 한 번이면 복구되는 캐시라 손실 비용이 낮고,
+// name 없는 cast 는 도메인상 무의미해 필드 기본값을 줄 수 없다. 빈 cast 조기 거부는 confirm 시점 에러 UX 를 복원 시점에 예방.
+export function parseDiveSetup(value: unknown): DiveSetup | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.scene !== 'string' || typeof value.myRole !== 'string') return null;
+  if (!Array.isArray(value.cast) || value.cast.length === 0) return null;
+  const cast: DiveSetup['cast'] = [];
+  for (const entry of value.cast) {
+    if (!isRecord(entry) || typeof entry.name !== 'string' || entry.name.trim() === '') return null;
+    cast.push({
+      name: entry.name,
+      role: typeof entry.role === 'string' ? entry.role : '',
+      desire: typeof entry.desire === 'string' ? entry.desire : '',
+      wound: typeof entry.wound === 'string' ? entry.wound : '',
+      voiceRules: Array.isArray(entry.voiceRules)
+        ? entry.voiceRules.filter((v): v is string => typeof v === 'string')
+        : []
+    });
+  }
+  return { scene: value.scene, cast, myRole: value.myRole };
+}
