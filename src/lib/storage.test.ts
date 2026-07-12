@@ -188,7 +188,12 @@ describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
       interviewPersonaLineup: [
         { id: 'p1', label: '쇼러너', tone: '구조', category: 'novel', isFictionalized: false }
       ],
-      interviewFallbackReason: null
+      interviewFallbackReason: null,
+      playSetup: {
+        scene: '늦은 밤 편의점, 정전 직후.',
+        cast: [{ name: '지호', role: '야간 알바', desire: '가게를 지키고 싶다', wound: '', voiceRules: [] }],
+        myRole: '단골'
+      }
     };
   }
 
@@ -202,6 +207,15 @@ describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
     expect(parseOnboardingDraft(null)).toBeNull();
     expect(parseOnboardingDraft('{ broken json')).toBeNull();
     expect(parseOnboardingDraft(JSON.stringify({ schema: 'storyx/onboarding/v0' }))).toBeNull();
+  });
+
+  it("homeFlowStep 'playseed' 는 복원 관문을 통과한다 — medium 으로 롤백되지 않는다", () => {
+    const raw = JSON.stringify({
+      schema: 'storyx/onboarding/v1',
+      freewriteText: '심야 세탁소 이야기',
+      homeFlowStep: 'playseed'
+    });
+    expect(parseOnboardingDraft(raw)?.homeFlowStep).toBe('playseed');
   });
 
   it('부분 저장본은 누락된 필드를 기본값으로 백필한다', () => {
@@ -220,6 +234,7 @@ describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
     expect(restored?.llmIntakeQuestions).toBeNull();
     expect(restored?.interviewPersonaLineup).toEqual([]);
     expect(restored?.medium).toBe('novel');
+    expect(restored?.playSetup).toBeNull();
   });
 
   it('갓 시작한 빈 온보딩은 진행 중으로 보지 않는다', () => {

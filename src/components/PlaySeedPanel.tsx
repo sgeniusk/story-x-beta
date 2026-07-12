@@ -1,0 +1,77 @@
+// PLAY-first 온보딩 확인 카드 — 제안/프리셋 설정을 보여주고 바로 플레이로. 수정 UI 없음(스펙 결정 3).
+import type { DiveSetup } from '../lib/diveProposal';
+import type { DiveSeedCharacter } from '../lib/diveSeedCharacters';
+
+export const PLAY_SEED_DISCLAIMER =
+  '이 설정은 정확하지 않아도 됩니다 — 플레이하며 완성해나가는 초안입니다.';
+
+interface PlaySeedPanelProps {
+  setup: DiveSetup | null;
+  loading: boolean;
+  error: string;
+  presets: DiveSeedCharacter[];
+  onPickPreset: (index: number) => void;
+  onConfirm: () => void;
+  onBack: () => void;
+  // LLM 대기 안내 — 경과 시간·새로고침 금지 문구(App 이 조립). loading 중에만 렌더한다.
+  loadingNote?: string;
+}
+
+export function PlaySeedPanel({
+  setup, loading, error, presets, onPickPreset, onConfirm, onBack, loadingNote
+}: PlaySeedPanelProps) {
+  return (
+    <div className="hx-playseed">
+      <p className="hx-playseed-disclaimer">{PLAY_SEED_DISCLAIMER}</p>
+
+      <div className="hx-playseed-presets" role="group" aria-label="프리셋 상대">
+        {presets.map((p, i) => (
+          <button
+            key={p.character.id}
+            type="button"
+            className="hx-playseed-preset"
+            onClick={() => onPickPreset(i)}
+            disabled={loading}
+          >
+            <strong>{p.character.name}</strong>
+            <span>{p.character.role}</span>
+          </button>
+        ))}
+      </div>
+
+      {loading && <p className="hx-playseed-loading" role="status">플레이 상대를 준비하는 중…</p>}
+      {loading && loadingNote && <p className="hx-playseed-loading-note">{loadingNote}</p>}
+      {error && !loading && <p className="hx-playseed-error">{error}</p>}
+
+      {setup && !loading && (
+        <div className="hx-playseed-card">
+          <div className="hx-playseed-field">
+            <span className="hx-playseed-label">첫 장면</span>
+            <p>{setup.scene}</p>
+          </div>
+          {setup.myRole && (
+            <div className="hx-playseed-field">
+              <span className="hx-playseed-label">내 역할</span>
+              <p>{setup.myRole}</p>
+            </div>
+          )}
+          <ul className="hx-playseed-cast">
+            {setup.cast.map((c) => (
+              <li key={c.name}>
+                <strong>{c.name}</strong> · {c.role}
+                {c.desire ? <em> — {c.desire}</em> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="hx-playseed-actions">
+        <button type="button" className="hx-btn-ghost" onClick={onBack}>이전</button>
+        <button type="button" className="hx-btn" onClick={onConfirm} disabled={!setup || loading}>
+          이대로 시작
+        </button>
+      </div>
+    </div>
+  );
+}
