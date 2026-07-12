@@ -1352,7 +1352,9 @@ function StoryXHome({
       setIsInterviewLoading(false);
     }
   }
-  // 자유 서술 → 플레이 시드 제안. 서술이 비면 콜 없이 프리셋만 보여준다.
+  // [휴면 — 호출자 0] 자유 서술 → 플레이 시드 제안(requestDiveSetup 1콜). 서술이 비면 콜 없이 프리셋만.
+  // S1 은 playseed 진입을 프리셋 갈래로만 연다. S3(적응형 인터뷰)에서 이 경로를 재배선할 때
+  // playseed 패널의 onBack('preset' 고정)도 진입원 분기로 함께 고쳐야 한다 — 지금은 preset-전용 가정.
   async function goToPlaySeed() {
     if (playSeedLoading) return;
     setHomeFlowStep('playseed');
@@ -1663,7 +1665,7 @@ function StoryXHome({
                   <strong>자유 서술</strong>
                   <p>쓰고 싶은 이야기를 흘려 적으면 작가진이 맞춤 인터뷰를 준비합니다.</p>
                 </button>
-                <button type="button" className="hx-source-card is-soon" disabled>
+                <button type="button" className="hx-source-card" disabled>
                   <strong>함께 구상</strong>
                   <span className="hx-source-soon">준비 중</span>
                   <p>작가진과 채팅하며 소재를 캐냅니다. 곧 열립니다.</p>
