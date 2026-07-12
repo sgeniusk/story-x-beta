@@ -8,6 +8,7 @@ import {
 import { createEmptyProject, FALLBACK_EMPTY_LINE } from './storyEngine';
 import type { Chapter, CharacterProfile } from './storyEngine';
 import { DIVE_SEED_CHARACTERS } from './diveSeedCharacters';
+import type { DiveSetup } from './diveProposal';
 
 function makeChapter(overrides: Partial<Chapter> = {}): Chapter {
   return {
@@ -151,5 +152,32 @@ describe('buildPlayFirstProject', () => {
 
   it('cast 가 비면 null', () => {
     expect(buildPlayFirstProject({ scene: 'x', cast: [], myRole: 'y' }, {})).toBeNull();
+  });
+
+  it('partnerIndex 지정 시 해당 인물이 세션 상대(primaryCharacterId)가 된다', () => {
+    const setup: DiveSetup = {
+      scene: '골목 어귀',
+      cast: [
+        { name: '가온', role: '주연', desire: 'd', wound: 'w', voiceRules: ['r'] },
+        { name: '나루', role: '조연', desire: 'd2', wound: 'w2', voiceRules: ['r2'] }
+      ],
+      myRole: '지나가던 행인'
+    };
+    const built = buildPlayFirstProject(setup, { medium: 'novel', format: 'long-novel' }, 1);
+    expect(built).not.toBeNull();
+    const partner = built!.project.characters.find((c) => c.id === built!.diveState.session.characterId);
+    expect(partner?.name).toBe('나루');
+  });
+
+  it('partnerIndex 가 범위를 벗어나면 cast[0] 으로 폴백한다', () => {
+    const setup: DiveSetup = {
+      scene: '골목 어귀',
+      cast: [{ name: '가온', role: '주연', desire: 'd', wound: 'w', voiceRules: ['r'] }],
+      myRole: '지나가던 행인'
+    };
+    const built = buildPlayFirstProject(setup, { medium: 'novel', format: 'long-novel' }, 5);
+    expect(built).not.toBeNull();
+    const partner = built!.project.characters.find((c) => c.id === built!.diveState.session.characterId);
+    expect(partner?.name).toBe('가온');
   });
 });
