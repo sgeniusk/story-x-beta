@@ -1,10 +1,14 @@
 // 현재 작품에서 PLAY 세션을 이어 시딩하는 순수 로직 — 인물·최근 회차 기반
 import type { Chapter, CharacterProfile, SeriesProject } from './storyEngine';
-import { FALLBACK_EMPTY_LINE } from './storyEngine';
+import { FALLBACK_EMPTY_LINE, createEmptyProject } from './storyEngine';
 import type { DiveState } from './storage';
 import { createDiveSession } from './diveSession';
+import { seedFromProposal, type DiveSetup } from './diveProposal';
+import type { DiveSeedCharacter } from './diveSeedCharacters';
+import type { CreativeFormat, CreativeMedium } from './projectBlueprint';
 
 const CONTINUATION_PREFIX = '직전 회차 이후 — ';
+const PLAY_FIRST_FALLBACK_TITLE = '플레이로 시작한 이야기';
 
 /** 최근 회차에서 "직전에 무슨 일이 있었나"를 잇는 시작 장면. 원고 마지막 문단 > 마지막 beat 요약 > hook. */
 export function deriveContinuationScene(chapter: Chapter): string {
@@ -55,5 +59,42 @@ export function seedPlayFromProject(project: SeriesProject): DiveState | null {
     schema: 'storyx/dive/v1',
     session: scene ? { ...session, scene } : session,
     project
+  };
+}
+
+/** 프리셋 시드 → DiveSetup. background 가 첫 장면, 인물 1, myRole 은 비워 사용자 자유. */
+export function presetToDiveSetup(seed: DiveSeedCharacter): DiveSetup {
+  const c = seed.character;
+  return {
+    scene: seed.background,
+    cast: [{ name: c.name, role: c.role, desire: c.desire, wound: c.wound, voiceRules: c.voiceRules }],
+    myRole: ''
+  };
+}
+
+/**
+ * PLAY-first 온보딩 글루 — 제안/프리셋 setup 에서 최소 프로젝트(회차 0)와
+ * 첫 장면이 주입된 DiveState 를 만든다. 옛 seedAndEnter(6a95a52) 규칙 계승.
+ * 설정 깊이 상한 — 헌장·결말·회차 구조는 만들지 않는다(스펙 결정 5).
+ */
+export function buildPlayFirstProject(
+  setup: DiveSetup,
+  meta: { medium?: CreativeMedium; format?: CreativeFormat }
+): { project: SeriesProject; diveState: DiveState } | null {
+  const { scene, characters, primaryCharacterId } = seedFromProposal(setup);
+  if (!primaryCharacterId) return null;
+  const title = (setup.myRole || setup.scene).trim().slice(0, 20) || PLAY_FIRST_FALLBACK_TITLE;
+  const project: SeriesProject = {
+    ...createEmptyProject({ title, medium: meta.medium, format: meta.format }),
+    characters
+  };
+  const session = createDiveSession(primaryCharacterId, project.id);
+  return {
+    project,
+    diveState: {
+      schema: 'storyx/dive/v1',
+      session: scene ? { ...session, scene } : session,
+      project
+    }
   };
 }
