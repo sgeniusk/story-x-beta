@@ -21,7 +21,7 @@
 
 ### 다음 세션이 해야 할 한 가지
 - **S3 착수 전 사용자 dogfooding 권장** — 함께 구상 갈래 실사용 체감(응결 타이밍·파트너 톤). 그 다음 **S3 = 적응형 인터뷰** — 자유 서술 재배선(goToPlaySeed 부활+onBack 진입원 추가)·입력 유형 선분석·**STORY_PRESETS.keywords 유사-앵커 비교 제안**·상대 선택 마지막 질문·개수 고정 금지. 기존 requestLlmInterview 는 비소설 전용으로 잔존.
-- 경미 후속 — in-flight 응답 중 매체 변경 고아 버블(seq 가드 3줄) · prod 배포 후 api/onboard-chat.ts 스모크.
+- 경미 후속(최종 홀리스틱 리뷰 Minor 3, 전부 비차단) — in-flight 응답 중 매체 변경 고아 버블(seq 가드 3줄, S3 에서) · onboardChatNote 가 갈래 이탈·재진입에 잔존(코스메틱) · 시드 카드 cast key=name 동명 충돌(희귀) · prod 배포 후 api/onboard-chat.ts 스모크.
 
 ---
 
