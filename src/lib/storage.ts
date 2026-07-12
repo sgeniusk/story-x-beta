@@ -584,6 +584,7 @@ function isHomeFlowStep(value: unknown): value is HomeFlowStep {
   return (
     value === 'medium' ||
     value === 'freewrite' ||
+    value === 'playseed' ||
     value === 'intake' ||
     value === 'charter' ||
     value === 'building'

@@ -209,6 +209,15 @@ describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
     expect(parseOnboardingDraft(JSON.stringify({ schema: 'storyx/onboarding/v0' }))).toBeNull();
   });
 
+  it("homeFlowStep 'playseed' 는 복원 관문을 통과한다 — medium 으로 롤백되지 않는다", () => {
+    const raw = JSON.stringify({
+      schema: 'storyx/onboarding/v1',
+      freewriteText: '심야 세탁소 이야기',
+      homeFlowStep: 'playseed'
+    });
+    expect(parseOnboardingDraft(raw)?.homeFlowStep).toBe('playseed');
+  });
+
   it('부분 저장본은 누락된 필드를 기본값으로 백필한다', () => {
     const partial = JSON.stringify({
       schema: 'storyx/onboarding/v1',

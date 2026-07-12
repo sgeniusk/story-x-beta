@@ -7736,6 +7736,7 @@ body {
   font-style: normal;
 }
 .home-page .hx-playseed-loading,
+.home-page .hx-playseed-loading-note,
 .home-page .hx-playseed-error {
   margin: 0;
   font-size: 0.82rem;
