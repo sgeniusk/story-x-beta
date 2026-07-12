@@ -7716,7 +7716,7 @@ body {
   color: var(--nx-steel);
   margin-bottom: 5px;
 }
-.home-page .hx-playseed-scene p {
+.home-page .hx-playseed-field p {
   margin: 0;
   color: var(--nx-ink);
   font-size: 0.9rem;

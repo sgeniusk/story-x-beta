@@ -26,7 +26,7 @@ describe('PlaySeedPanel', () => {
 
   it('setup 이 없으면 「이대로 시작」이 비활성', () => {
     const html = renderToStaticMarkup(createElement(PlaySeedPanel, baseProps));
-    expect(html).toMatch(/이대로 시작[\s\S]{0,200}?disabled|disabled[\s\S]{0,200}?이대로 시작/);
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>이대로 시작/);
   });
 
   it('setup 이 있으면 인물·첫 장면·내 역할 카드를 렌더한다', () => {

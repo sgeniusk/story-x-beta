@@ -42,12 +42,12 @@ export function PlaySeedPanel({
 
       {setup && !loading && (
         <div className="hx-playseed-card">
-          <div className="hx-playseed-scene">
+          <div className="hx-playseed-field">
             <span className="hx-playseed-label">첫 장면</span>
             <p>{setup.scene}</p>
           </div>
           {setup.myRole && (
-            <div className="hx-playseed-scene">
+            <div className="hx-playseed-field">
               <span className="hx-playseed-label">내 역할</span>
               <p>{setup.myRole}</p>
             </div>
