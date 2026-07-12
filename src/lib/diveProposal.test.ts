@@ -74,7 +74,9 @@ describe('parseDiveSetup', () => {
       { scene: '장면', cast: [], myRole: '' },              // cast 빈 배열
       { scene: '장면', cast: [{ role: 'r' }], myRole: '' }, // name 없음
       { scene: '장면', cast: [{ name: '  ' }], myRole: '' },// name 공백
-      { scene: 7, cast: [{ name: 'a' }], myRole: '' }       // scene 비문자열
+      { scene: 7, cast: [{ name: 'a' }], myRole: '' },      // scene 비문자열
+      { scene: '장면', cast: 'not-array', myRole: '' },      // cast 비배열
+      { scene: '장면', cast: [{ name: 'a' }], myRole: 9 }    // myRole 비문자열
     ];
     for (const bad of broken) expect(parseDiveSetup(bad)).toBeNull();
   });
