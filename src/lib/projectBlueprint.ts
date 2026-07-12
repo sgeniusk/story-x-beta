@@ -74,7 +74,7 @@ export type CreativeFormat =
   | 'literature-review';
 
 // 온보딩 홈 플로우 단계 — 매체 선택→자유 서술→인터뷰→작품 헌장→빌딩. App.tsx·storage.ts 가 공유한다.
-export type HomeFlowStep = 'medium' | 'freewrite' | 'intake' | 'charter' | 'building';
+export type HomeFlowStep = 'medium' | 'freewrite' | 'playseed' | 'intake' | 'charter' | 'building';
 
 export interface MediumOption {
   id: CreativeMedium;

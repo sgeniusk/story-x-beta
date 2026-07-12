@@ -89,10 +89,14 @@ import { PlanApplyReview } from './components/PlanApplyReview';
 import { applyPlanPatches, derivePlanConflicts, resolvePlanApply, type PlanConflict } from './lib/planStage';
 import { countPendingSync, reconcileWorkingIntoCommitted, applyReconcile, type PendingSync } from './lib/syncConsole';
 import { deriveReconcilePlan, type ReconcilePlan } from './lib/playRuntimeValidator';
-import { seedPlayFromProject } from './lib/playEntry';
+import { seedPlayFromProject, presetToDiveSetup, buildPlayFirstProject } from './lib/playEntry';
 import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
 import { flowModes, canonAxes, flowEntryAgents, flowPublishMedia } from './landingFlow';
+import { PlaySeedPanel } from './components/PlaySeedPanel';
+import { DIVE_SEED_CHARACTERS } from './lib/diveSeedCharacters';
+import { requestDiveSetup } from './lib/diveClient';
+import type { DiveSetup } from './lib/diveProposal';
 import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
 import storyXSymbolLight from './assets/brand/story-x-symbol-light.svg';
 
@@ -284,6 +288,15 @@ function App() {
   function handleTitleChange(next: string) {
     setWorkTitle(next);
     saveProject({ ...loadProject(), title: next });
+  }
+  // PLAY-first 온보딩 — 플레이 승인 시 최소 프로젝트를 본편으로 커밋하고 시드 DiveState 로 바로 dive 진입.
+  function handleStartPlay(project: SeriesProject, diveState: DiveState) {
+    saveProject(project);          // committed 본편 생성 — 온보딩 졸업 관할
+    saveDiveState(diveState);      // working 시드
+    clearOnboardingDraft();        // 다음 새 프로젝트 복원 오염 방지
+    setPendingSync({ chapters: 0, canon: 0, total: 0 }); // 방금 커밋한 본편과 working 이 동일 — 미반영 없음
+    setDiveInit(diveState);
+    setStage('dive');
   }
   // 공통 셸 — ⋯ 오버플로: 전체 데이터 JSON 내보내기/가져오기(StoryXDesk 에서 이관).
   function handleExportProject() {
@@ -538,6 +551,7 @@ function App() {
           setPendingDraft(draft ?? null);
           setStage('editor');
         }}
+        onStartPlay={handleStartPlay}
       />
     );
   }
@@ -1125,7 +1139,8 @@ function StoryXHome({
   onSelectMedium,
   onSelectFormat,
   onOpenLanding,
-  onOpenEditor
+  onOpenEditor,
+  onStartPlay
 }: {
   medium: CreativeMedium;
   format: CreativeFormat;
@@ -1134,6 +1149,7 @@ function StoryXHome({
   onSelectFormat: (format: CreativeFormat) => void;
   onOpenLanding: () => void;
   onOpenEditor: (draft?: DraftChapterPayload) => void;
+  onStartPlay: (project: SeriesProject, diveState: DiveState) => void;
 }) {
   const formatOptions = getFormatOptions(medium);
   const intakePlan = useMemo(() => buildProjectIntakePlan(blueprint), [blueprint]);
@@ -1307,6 +1323,36 @@ function StoryXHome({
       setIsInterviewLoading(false);
     }
   }
+  // PLAY-first — 소설류 자유 서술에서 인터뷰를 건너뛰고 바로 플레이로 진입하는 경로.
+  const [playSetup, setPlaySetup] = useState<DiveSetup | null>(null);
+  const [playSeedLoading, setPlaySeedLoading] = useState(false);
+  const [playSeedError, setPlaySeedError] = useState('');
+  // 자유 서술 → 플레이 시드 제안. 서술이 비면 콜 없이 프리셋만 보여준다.
+  async function goToPlaySeed() {
+    setHomeFlowStep('playseed');
+    setPlaySeedError('');
+    const story = freewriteText.trim();
+    if (!story) return;
+    setPlaySeedLoading(true);
+    try {
+      const res = await requestDiveSetup({ story });
+      if (res.setup) setPlaySetup(res.setup);
+      else setPlaySeedError('조금만 더 적어주세요 — 누구와, 어디서, 무슨 상황인지 한두 줄이면 충분해요.');
+    } catch {
+      setPlaySeedError('제안 요청에 실패했어요. 프리셋으로 시작하거나 다시 시도해 주세요.');
+    } finally {
+      setPlaySeedLoading(false);
+    }
+  }
+  function confirmPlaySeed() {
+    if (!playSetup) return;
+    const built = buildPlayFirstProject(playSetup, { medium: blueprint.medium, format: blueprint.format });
+    if (!built) {
+      setPlaySeedError('인물을 만들지 못했어요 — 프리셋을 고르거나 서술을 조금 더 적어주세요.');
+      return;
+    }
+    onStartPlay(built.project, built.diveState);
+  }
   // 인터뷰 답을 freewrite 보강용 줄 목록으로 모은다(goToBuilding·suggestSpine 공용).
   function collectAnswerLines(): string[] {
     return effectiveIntakeQuestions
@@ -1438,8 +1484,10 @@ function StoryXHome({
   ];
   // building 패널 앞에는 charter 를 뺀 단계만 실제 mount 된다(charter 는 homeFlowStep==='charter'일 때만 렌더).
   const buildingPanelIndex = homeFlowSteps.filter((s) => s.id !== 'charter').length;
+  // playseed 는 인디케이터 배열에 없다(전용 CTA 로만 진입) — charter 처럼 활성일 때만 mount 되고,
+  // charter conditional 뒤 · building 앞에 위치하므로 DOM 상 슬라이드 인덱스는 buildingPanelIndex 와 같다.
   const homeFlowIndex =
-    homeFlowStep === 'building'
+    homeFlowStep === 'building' || homeFlowStep === 'playseed'
       ? buildingPanelIndex
       : homeFlowSteps.findIndex((step) => step.id === homeFlowStep);
 
@@ -1585,16 +1633,31 @@ function StoryXHome({
           <aside className="hx-aside">
             <div className="hx-aside-card">
               <div className="hx-aside-label">다음 단계</div>
-              <div className="hx-aside-title">작가 인터뷰</div>
-              <p>이 서술을 기반으로 작가진이 인물·세계·문체를 빠르게 묻습니다. 비워도 인터뷰는 작동합니다.</p>
+              <div className="hx-aside-title">{blueprint.medium === 'novel' ? '플레이' : '작가 인터뷰'}</div>
+              <p>
+                {blueprint.medium === 'novel'
+                  ? '이 서술에서 인물과 첫 장면을 뽑아 바로 대화로 시작합니다. 비워도 프리셋으로 시작할 수 있어요.'
+                  : '이 서술을 기반으로 작가진이 인물·세계·문체를 빠르게 묻습니다. 비워도 인터뷰는 작동합니다.'}
+              </p>
             </div>
             <div className="hx-aside-actions">
               <button type="button" className="hx-btn-ghost" onClick={() => setHomeFlowStep('medium')}>
                 이전
               </button>
-              <button type="button" className="hx-btn" onClick={goToIntake}>
-                인터뷰로 계속
-              </button>
+              {blueprint.medium === 'novel' ? (
+                <>
+                  <button type="button" className="hx-btn-ghost" onClick={goToIntake}>
+                    인터뷰로 초안 만들기
+                  </button>
+                  <button type="button" className="hx-btn" onClick={goToPlaySeed}>
+                    플레이로 시작
+                  </button>
+                </>
+              ) : (
+                <button type="button" className="hx-btn" onClick={goToIntake}>
+                  인터뷰로 계속
+                </button>
+              )}
             </div>
           </aside>
         </section>
@@ -2008,6 +2071,27 @@ function StoryXHome({
                 </button>
               </div>
             </div>
+            </div>
+          </section>
+        )}
+
+        {homeFlowStep === 'playseed' && (
+          <section className="hx-panel" aria-label="플레이 설정 확인">
+            <div className="hx-main">
+              <p className="hx-eyebrow">03 · 플레이 준비</p>
+              <h1 className="hx-h1">이 설정으로 바로 시작할까요?</h1>
+              <PlaySeedPanel
+                setup={playSetup}
+                loading={playSeedLoading}
+                error={playSeedError}
+                presets={DIVE_SEED_CHARACTERS}
+                onPickPreset={(i) => {
+                  setPlaySetup(presetToDiveSetup(DIVE_SEED_CHARACTERS[i]));
+                  setPlaySeedError('');
+                }}
+                onConfirm={confirmPlaySeed}
+                onBack={() => setHomeFlowStep('freewrite')}
+              />
             </div>
           </section>
         )}

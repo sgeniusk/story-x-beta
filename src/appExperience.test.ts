@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const app = readFileSync(resolve(__dirname, 'App.tsx'), 'utf8');
 const css = readFileSync(resolve(__dirname, 'styles.css'), 'utf8');
+const blueprintSource = readFileSync(resolve(__dirname, 'lib/projectBlueprint.ts'), 'utf8');
 
 describe('Story X page experience', () => {
   it('separates the product into landing, login, projects, new-project, and editor stages', () => {
@@ -170,5 +171,28 @@ describe('Story X page experience', () => {
   it('keeps the editor desk reachable from the routed stages', () => {
     expect(app).toContain("import { StoryXDesk }");
     expect(app).toContain('initialDraftPayload={pendingDraft}');
+  });
+});
+
+describe('PLAY-first 온보딩 CTA 위계 (소설류)', () => {
+  it('소설류 자유 서술 단계는 「플레이로 시작」이 기본(hx-btn), 인터뷰는 보조(hx-btn-ghost)', () => {
+    expect(app).toContain('플레이로 시작');
+    expect(app).toContain('인터뷰로 초안 만들기');
+    expect(app).toMatch(/hx-btn"[^>]*>[\s\S]{0,80}플레이로 시작/);
+    expect(app).toMatch(/hx-btn-ghost"[^>]*>[\s\S]{0,80}인터뷰로 초안 만들기/);
+  });
+
+  it("HomeFlowStep 에 'playseed' 가 있고 PlaySeedPanel 이 배선된다", () => {
+    expect(blueprintSource).toContain("'playseed'");
+    expect(app).toContain('PlaySeedPanel');
+    expect(app).toContain("homeFlowStep === 'playseed'");
+  });
+
+  it('플레이 승인 핸들러는 saveProject→saveDiveState→clearOnboardingDraft→dive 순서를 지킨다', () => {
+    const handler = app.match(/function handleStartPlay[\s\S]{0,600}?\n  \}/)?.[0] ?? '';
+    const order = ['saveProject(', 'saveDiveState(', 'clearOnboardingDraft(', "setStage('dive')"];
+    const idx = order.map((s) => handler.indexOf(s));
+    expect(idx.every((v) => v >= 0)).toBe(true);
+    expect([...idx]).toEqual([...idx].sort((a, b) => a - b));
   });
 });
