@@ -7664,6 +7664,89 @@ body {
   color: var(--nx-slate);
   line-height: 1.6;
 }
+/* PLAY-first 온보딩 확인 카드 */
+.home-page .hx-playseed {
+  display: grid;
+  gap: 16px;
+}
+.home-page .hx-playseed-disclaimer {
+  font-size: 0.82rem;
+  color: var(--nx-slate);
+  margin: 0;
+}
+.home-page .hx-playseed-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.home-page .hx-playseed-preset {
+  display: grid;
+  gap: 2px;
+  padding: 8px 14px;
+  border: 1px solid var(--nx-hairline-strong);
+  border-radius: var(--nx-r);
+  background: var(--nx-canvas);
+  color: var(--nx-ink);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--st-dur-fast) var(--st-ease), background var(--st-dur-fast) var(--st-ease);
+}
+.home-page .hx-playseed-preset:hover:not(:disabled) {
+  border-color: rgba(100, 72, 211, 0.38);
+}
+.home-page .hx-playseed-preset span {
+  font-size: 0.75rem;
+  color: var(--nx-steel);
+}
+.home-page .hx-playseed-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--nx-hairline);
+  border-radius: var(--nx-r-lg);
+  background: var(--nx-canvas);
+  box-shadow: var(--nx-sh-subtle);
+}
+.home-page .hx-playseed-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--nx-steel);
+  margin-bottom: 5px;
+}
+.home-page .hx-playseed-scene p {
+  margin: 0;
+  color: var(--nx-ink);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.home-page .hx-playseed-cast {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 0.86rem;
+  color: var(--nx-ink);
+}
+.home-page .hx-playseed-cast em {
+  color: var(--nx-slate);
+  font-style: normal;
+}
+.home-page .hx-playseed-loading,
+.home-page .hx-playseed-error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--nx-slate);
+}
+.home-page .hx-playseed-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .home-page .hx-fact-note > svg {
   flex-shrink: 0;
   margin-top: 2px;
