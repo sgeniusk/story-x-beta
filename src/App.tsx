@@ -90,6 +90,7 @@ import { applyPlanPatches, derivePlanConflicts, resolvePlanApply, type PlanConfl
 import { countPendingSync, reconcileWorkingIntoCommitted, applyReconcile, type PendingSync } from './lib/syncConsole';
 import { deriveReconcilePlan, type ReconcilePlan } from './lib/playRuntimeValidator';
 import { seedPlayFromProject, presetToDiveSetup, buildPlayFirstProject } from './lib/playEntry';
+import { STORY_PRESETS, type StoryPreset } from './lib/storyPresets';
 import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
 import { flowModes, canonAxes, flowEntryAgents, flowPublishMedia } from './landingFlow';
@@ -1169,6 +1170,8 @@ function StoryXHome({
   const [homeFlowStep, setHomeFlowStep] = useState<HomeFlowStep>(() => restoredDraft?.homeFlowStep ?? 'medium');
   // 작품 헌장(Stage 1) — 연재 서사만. 결말 역산 + 4줄 척추를 잠근 뒤 본문으로 넘어간다(A-3).
   const usesCharter = isSerial && blueprint.medium !== 'essay' && blueprint.medium !== 'academic';
+  // 소재발굴(S1) — 소설류만 2단계를 3갈래 선택으로 연다. 비소설은 기존 freewrite 직행 무접촉.
+  const usesSourceDiscovery = blueprint.medium === 'novel';
   const [contractLengthClass, setContractLengthClass] = useState<ContractLengthClass>(
     () => restoredDraft?.contractLengthClass ?? 'long'
   );
@@ -1237,6 +1240,8 @@ function StoryXHome({
   // PLAY-first — 소설류 자유 서술에서 인터뷰를 건너뛰고 바로 플레이로 진입하는 경로.
   // 영속 effect 의존성보다 먼저 선언해야 한다(아래 debounce 저장이 playSetup 을 참조).
   const [playSetup, setPlaySetup] = useState<DiveSetup | null>(() => restoredDraft?.playSetup ?? null);
+  // playseed 대화 상대 선택 — cast 인덱스(기본 0). setup 이 바뀌면 0 으로 리셋한다.
+  const [playPartnerIndex, setPlayPartnerIndex] = useState(0);
   const [playSeedLoading, setPlaySeedLoading] = useState(false);
   const [playSeedError, setPlaySeedError] = useState('');
   // stale 응답 방어 — 이전으로 갔다 재요청 시 늦게 도착한 옛 응답이 새 제안을 덮지 않게 시퀀스로 판별.
@@ -1359,8 +1364,12 @@ function StoryXHome({
     try {
       const res = await requestDiveSetup({ story });
       if (seq !== playSeedSeqRef.current) return;
-      if (res.setup) setPlaySetup(res.setup);
-      else setPlaySeedError('조금만 더 적어주세요 — 누구와, 어디서, 무슨 상황인지 한두 줄이면 충분해요.');
+      if (res.setup) {
+        setPlaySetup(res.setup);
+        setPlayPartnerIndex(0);
+      } else {
+        setPlaySeedError('조금만 더 적어주세요 — 누구와, 어디서, 무슨 상황인지 한두 줄이면 충분해요.');
+      }
     } catch {
       if (seq !== playSeedSeqRef.current) return;
       setPlaySeedError('제안 요청에 실패했어요. 프리셋으로 시작하거나 다시 시도해 주세요.');
@@ -1368,9 +1377,16 @@ function StoryXHome({
       if (seq === playSeedSeqRef.current) setPlaySeedLoading(false);
     }
   }
+  // 인기 프리셋 갈래 — LLM 0콜. 프리셋 setup 을 그대로 playseed 확인 카드에 싣는다.
+  function pickStoryPreset(preset: StoryPreset) {
+    setPlaySetup(preset.setup);
+    setPlayPartnerIndex(0);
+    setPlaySeedError('');
+    setHomeFlowStep('playseed');
+  }
   function confirmPlaySeed() {
     if (!playSetup) return;
-    const built = buildPlayFirstProject(playSetup, { medium: blueprint.medium, format: blueprint.format });
+    const built = buildPlayFirstProject(playSetup, { medium: blueprint.medium, format: blueprint.format }, playPartnerIndex);
     if (!built) {
       setPlaySeedError('인물을 만들지 못했어요 — 프리셋을 고르거나 서술을 조금 더 적어주세요.');
       return;
@@ -1499,7 +1515,10 @@ function StoryXHome({
 
   const homeFlowSteps: Array<{ id: HomeFlowStep; label: string; caption: string }> = [
     { id: 'medium', label: '매체 선택', caption: '무엇을 만들지 정합니다.' },
-    { id: 'freewrite', label: '자유 서술', caption: '쓰고 싶은 이야기를 흘려 적습니다.' },
+    // 소재발굴(S1) — 소설류는 2단계가 3갈래 선택. 갈래 패널(freewrite/preset)은 이 항목의 하위로 취급한다.
+    usesSourceDiscovery
+      ? { id: 'source' as HomeFlowStep, label: '소재발굴', caption: '소재를 찾는 방법을 고릅니다.' }
+      : { id: 'freewrite' as HomeFlowStep, label: '자유 서술', caption: '쓰고 싶은 이야기를 흘려 적습니다.' },
     { id: 'intake', label: '작가 인터뷰', caption: '에이전트가 맞춤 질문을 합니다.' },
     // 작품 헌장 — 연재 서사만 거치는 단계(A-3). 단편 단독·에세이·학술은 건너뛴다.
     ...(usesCharter
@@ -1508,12 +1527,23 @@ function StoryXHome({
   ];
   // building 패널 앞에는 charter 를 뺀 단계만 실제 mount 된다(charter 는 homeFlowStep==='charter'일 때만 렌더).
   const buildingPanelIndex = homeFlowSteps.filter((s) => s.id !== 'charter').length;
-  // playseed 는 인디케이터 배열에 없다(전용 CTA 로만 진입) — charter 처럼 활성일 때만 mount 되고,
+  // 소재발굴 갈래 패널(freewrite/preset) — 소설류에선 source 다음 슬롯에 조건부 mount 되어 DOM 인덱스를 공유한다.
+  const isSourceBranch = usesSourceDiscovery && (homeFlowStep === 'freewrite' || homeFlowStep === 'preset');
+  const sourceBranchIndex = homeFlowSteps.findIndex((step) => step.id === 'source') + 1;
+  // playseed 는 인디케이터 배열에 없다(전용 경로로만 진입) — charter 처럼 활성일 때만 mount 되고,
   // charter conditional 뒤 · building 앞에 위치하므로 DOM 상 슬라이드 인덱스는 buildingPanelIndex 와 같다.
   const homeFlowIndex =
     homeFlowStep === 'building' || homeFlowStep === 'playseed'
       ? buildingPanelIndex
-      : homeFlowSteps.findIndex((step) => step.id === homeFlowStep);
+      : isSourceBranch
+        ? sourceBranchIndex
+        : homeFlowSteps.findIndex((step) => step.id === homeFlowStep);
+  // 인디케이터 하이라이트·클릭 게이트는 갈래 패널을 source 항목으로 접는다(전진 스킵 방지 — intake 직행 금지).
+  const indicatorId: HomeFlowStep = isSourceBranch ? 'source' : homeFlowStep;
+  const indicatorIndex =
+    homeFlowStep === 'building' || homeFlowStep === 'playseed'
+      ? buildingPanelIndex
+      : homeFlowSteps.findIndex((step) => step.id === indicatorId);
 
   return (
     <main className="home-page">
@@ -1526,8 +1556,8 @@ function StoryXHome({
         </button>
         <div className="hx-steps" role="tablist" aria-label="온보딩 단계">
           {homeFlowSteps.map((step, index) => {
-            const stepIndex = homeFlowIndex < 0 ? 0 : homeFlowIndex;
-            const isActive = step.id === homeFlowStep;
+            const stepIndex = indicatorIndex < 0 ? 0 : indicatorIndex;
+            const isActive = step.id === indicatorId;
             const isDone = index < stepIndex;
             return (
               <button
@@ -1598,8 +1628,12 @@ function StoryXHome({
           <aside className="hx-aside">
             <div className="hx-aside-card">
               <div className="hx-aside-label">다음 단계</div>
-              <div className="hx-aside-title">자유 서술</div>
-              <p>쓰고 싶은 이야기를 자유롭게 흘려 적습니다. 구조나 인물 이름은 신경 쓰지 않아도 됩니다.</p>
+              <div className="hx-aside-title">{usesSourceDiscovery ? '소재발굴' : '자유 서술'}</div>
+              <p>
+                {usesSourceDiscovery
+                  ? '자유 서술·함께 구상·인기 프리셋 중에서 소재를 찾는 방법을 고릅니다.'
+                  : '쓰고 싶은 이야기를 자유롭게 흘려 적습니다. 구조나 인물 이름은 신경 쓰지 않아도 됩니다.'}
+              </p>
             </div>
             <div className="hx-aside-card is-selected">
               <div className="hx-aside-label">선택됨</div>
@@ -1608,12 +1642,45 @@ function StoryXHome({
               </div>
               <p>{blueprint.projectRoomSubtitle}</p>
             </div>
-            <button type="button" className="hx-btn hx-btn-block" onClick={() => setHomeFlowStep('freewrite')}>
-              자유 서술로 계속
+            <button
+              type="button"
+              className="hx-btn hx-btn-block"
+              onClick={() => setHomeFlowStep(usesSourceDiscovery ? 'source' : 'freewrite')}
+            >
+              {usesSourceDiscovery ? '소재발굴로 계속' : '자유 서술로 계속'}
             </button>
           </aside>
         </section>
 
+        {usesSourceDiscovery && (
+          <section className="hx-panel" aria-label="소재발굴 갈래 선택">
+            <div className="hx-main">
+              <p className="hx-eyebrow">02 · 소재발굴</p>
+              <h1 className="hx-h1">이야기의 소재를 어떻게 찾을까요?</h1>
+              <p className="hx-lead">세 가지 방법 중 하나를 고르세요. 어느 쪽이든 플레이하며 완성해나갈 수 있습니다.</p>
+              <div className="hx-source-grid">
+                <button type="button" className="hx-source-card" onClick={() => setHomeFlowStep('freewrite')}>
+                  <strong>자유 서술</strong>
+                  <p>쓰고 싶은 이야기를 흘려 적으면 작가진이 맞춤 인터뷰를 준비합니다.</p>
+                </button>
+                <button type="button" className="hx-source-card is-soon" disabled>
+                  <strong>함께 구상</strong>
+                  <span className="hx-source-soon">준비 중</span>
+                  <p>작가진과 채팅하며 소재를 캐냅니다. 곧 열립니다.</p>
+                </button>
+                <button type="button" className="hx-source-card" onClick={() => setHomeFlowStep('preset')}>
+                  <strong>인기 프리셋</strong>
+                  <p>인기 구성으로 바로 시작합니다. 고르면 그대로 플레이가 열립니다.</p>
+                </button>
+              </div>
+              <div className="hx-aside-actions">
+                <button type="button" className="hx-btn-ghost" onClick={() => setHomeFlowStep('medium')}>이전</button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {(!usesSourceDiscovery || homeFlowStep === 'freewrite') && (
         <section className="hx-panel" aria-label="자유 서술 단계">
           <div className="hx-main">
             <p className="hx-eyebrow">02 · 자유 서술</p>
@@ -1661,16 +1728,41 @@ function StoryXHome({
               <p>이 서술을 기반으로 작가진이 인물·세계·문체를 빠르게 묻습니다. 비워도 인터뷰는 작동합니다.</p>
             </div>
             <div className="hx-aside-actions">
-              <button type="button" className="hx-btn-ghost" onClick={() => setHomeFlowStep('medium')}>
+              <button
+                type="button"
+                className="hx-btn-ghost"
+                onClick={() => setHomeFlowStep(usesSourceDiscovery ? 'source' : 'medium')}
+              >
                 이전
               </button>
-              {/* 플레이 직행 CTA 는 소재발굴 재설계(2026-07-12 사용자 결정)까지 파킹 — goToPlaySeed·playseed 패널은 휴면 보존, 재설계에서 인터뷰 경유로 재배선 예정. */}
               <button type="button" className="hx-btn" onClick={goToIntake}>
                 인터뷰로 계속
               </button>
             </div>
           </aside>
         </section>
+        )}
+
+        {usesSourceDiscovery && homeFlowStep === 'preset' && (
+          <section className="hx-panel" aria-label="인기 프리셋 선택">
+            <div className="hx-main">
+              <p className="hx-eyebrow">02 · 인기 프리셋</p>
+              <h1 className="hx-h1">인기 구성으로 바로 시작하세요.</h1>
+              <p className="hx-lead">고르면 인물과 첫 장면이 채워진 채 플레이가 열립니다. 설정은 플레이하며 얼마든지 달라질 수 있어요.</p>
+              <div className="hx-preset-grid">
+                {STORY_PRESETS.map((preset) => (
+                  <button key={preset.id} type="button" className="hx-preset-card" onClick={() => pickStoryPreset(preset)}>
+                    <strong>{preset.title}</strong>
+                    <p>{preset.hook}</p>
+                  </button>
+                ))}
+              </div>
+              <div className="hx-aside-actions">
+                <button type="button" className="hx-btn-ghost" onClick={() => setHomeFlowStep('source')}>이전</button>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section
           className={`hx-panel ${isInterviewLoading ? 'hx-panel-building' : ''}`}
@@ -2096,12 +2188,15 @@ function StoryXHome({
                 error={playSeedError}
                 loadingNote={`${formatElapsed(playSeedElapsed)} 경과 · 보통 1~2분 걸려요. 새로고침하지 마세요.`}
                 presets={DIVE_SEED_CHARACTERS}
+                partnerIndex={playPartnerIndex}
+                onPickPartner={setPlayPartnerIndex}
                 onPickPreset={(i) => {
                   setPlaySetup(presetToDiveSetup(DIVE_SEED_CHARACTERS[i]));
+                  setPlayPartnerIndex(0);
                   setPlaySeedError('');
                 }}
                 onConfirm={confirmPlaySeed}
-                onBack={() => setHomeFlowStep('freewrite')}
+                onBack={() => setHomeFlowStep(usesSourceDiscovery ? 'preset' : 'freewrite')}
               />
             </div>
           </section>
