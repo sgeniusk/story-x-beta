@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-07-13 — 온보딩 소재발굴 S2: onboard-chat 엔진 + 함께 구상 갈래 (done·브랜치 `feat/onboard-chat-ideate`)
+
+> S1 인계의 "다음 한 가지" 완주 — brainstorm 3결정(하이브리드 응결·응결 한 방·단일 파트너)→spec→plan→subagent-driven TDD 7태스크+라이브 통짜. progress.md 해당 절 상세. **plan-chat 6층 미러 완성** — 순수 모듈·클라이언트·프롬프트 정본+[onboard-mirror] 핀·dev 브리지·**prod Function(api/onboard-chat.ts)**·영속(OnboardingDraft 통합).
+
+### 머지 대기 2건 (사용자 액션 필요)
+- **PR #34(S1)** — 자율 머지가 권한 분류기에 거부됨(에이전트 작성 PR 사전 리뷰 필요 판정). 사용자가 직접 머지해야 한다.
+- **S2 PR** — base 를 `feat/source-discovery-preset` 으로 쌓아둠(#34 머지 시 GitHub 이 자동으로 main 으로 retarget). #34 먼저, S2 다음 순서로 머지.
+
+### 손대지 말 것 / 유의
+- **[onboard-mirror] 핀** — buildOnboardChatPrompt 의 JSON 계약·응결 조건·condense 지시 3줄은 promptBuilders.ts↔storyx.mjs byte-identical. 프롬프트 수정 시 두 곳 동시 + 핀 테스트.
+- onboard-chat transcript 는 **OnboardingDraft 통합 영속**(별도 키 아님) — clearOnboardingDraft 가 클리어를 담당한다. 별도 클리어 호출을 추가하지 말 것.
+- 매체 변경 클리어 effect 는 **이전 값 비교 ref**(StrictMode 이중 mount 멱등) — 불리언 skip ref 로 바꾸면 dev 에서 복원이 지워진다.
+- playseed onBack 은 `playSeedEntry`('preset'|'ideate') 분기 — S3 에서 자유 서술 재배선 시 이 유니온에 진입원 값을 추가하고 goToPlaySeed(휴면, 호출자 0)를 부활시켜라.
+- setup 정규화는 클라이언트 normalize(parseDiveSetup 위임) 단일 지점 — CLI·prod Function 은 얕은 통과가 맞다(plan-chat proposals 관례).
+
+### 다음 세션이 해야 할 한 가지
+- **S3 착수 전 사용자 dogfooding 권장** — 함께 구상 갈래 실사용 체감(응결 타이밍·파트너 톤). 그 다음 **S3 = 적응형 인터뷰** — 자유 서술 재배선(goToPlaySeed 부활+onBack 진입원 추가)·입력 유형 선분석·**STORY_PRESETS.keywords 유사-앵커 비교 제안**·상대 선택 마지막 질문·개수 고정 금지. 기존 requestLlmInterview 는 비소설 전용으로 잔존.
+- 경미 후속 — in-flight 응답 중 매체 변경 고아 버블(seq 가드 3줄) · prod 배포 후 api/onboard-chat.ts 스모크.
+
+---
+
 ## 2026-07-12 (3차) — 온보딩 소재발굴 S1: 선택 스텝 + 인기 프리셋 갈래 (done·브랜치 `feat/source-discovery-preset`)
 
 > 재설계 brainstorm(결정 6건)→spec→plan→subagent-driven TDD 5태스크+라이브 통짜. progress.md 해당 절 상세. **S1 = 소설류 2단계를 소재발굴 3갈래 선택 스텝으로, 인기 프리셋 갈래를 LLM 0콜로 완주 가능하게** — 프리셋 5종(StoryPreset 구성 단위) → playseed 확인 카드(상대 선택 신설) → dive. 파킹 부품 재배선 완료(단 goToPlaySeed 는 여전히 휴면 — S3 몫).
