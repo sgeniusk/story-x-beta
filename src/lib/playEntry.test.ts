@@ -137,6 +137,11 @@ describe('buildPlayFirstProject', () => {
     expect(result!.project.title).toBe('10년 만에 돌아온 단골'.slice(0, 20));
   });
 
+  it('myRole 이 공백뿐이면 scene 앞 20자를 쓴다', () => {
+    const blank = buildPlayFirstProject({ ...setup, myRole: '   ' }, {});
+    expect(blank!.project.title).toBe('늦은 밤 편의점, 폐점 직전.'.slice(0, 20));
+  });
+
   it('myRole 이 비면 scene 앞 20자, 둘 다 비면 폴백 제목', () => {
     const noRole = buildPlayFirstProject({ ...setup, myRole: '' }, {});
     expect(noRole!.project.title).toBe('늦은 밤 편의점, 폐점 직전.'.slice(0, 20));

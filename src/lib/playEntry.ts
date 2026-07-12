@@ -83,7 +83,7 @@ export function buildPlayFirstProject(
 ): { project: SeriesProject; diveState: DiveState } | null {
   const { scene, characters, primaryCharacterId } = seedFromProposal(setup);
   if (!primaryCharacterId) return null;
-  const title = (setup.myRole || setup.scene).trim().slice(0, 20) || PLAY_FIRST_FALLBACK_TITLE;
+  const title = (setup.myRole.trim() || setup.scene.trim()).slice(0, 20) || PLAY_FIRST_FALLBACK_TITLE;
   const project: SeriesProject = {
     ...createEmptyProject({ title, medium: meta.medium, format: meta.format }),
     characters
