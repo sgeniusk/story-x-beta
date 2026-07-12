@@ -1,7 +1,18 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-12 · Branch: `feat/play-first-onboarding` (**PLAY-first 온보딩 — 소설류 기본 진입, 구현·검증 완료·PR 대기**)
+> Last Updated: 2026-07-12 · Branch: `feat/source-discovery-preset` (**온보딩 소재발굴 S1 — 선택 스텝+프리셋 갈래, 구현·라이브 검증 완료·PR 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
+
+## 완료 트랙 — 온보딩 소재발굴 S1: 선택 스텝 + 인기 프리셋 갈래 (`done` · 2026-07-12, 브랜치 `feat/source-discovery-preset`)
+
+> 최근 검증(2026-07-12) — `bash init.sh` 통과: `npm test` 924 통과(89 파일) · `npm run build`(tsc+vite) 성공.
+
+PR #33 파킹(`9f013ac`) 후 같은 날 확정된 온보딩 재설계([[play-first-paradigm]])의 첫 슬라이스. brainstorm 확정 결정 6건 — ① "함께 구상"+적응형 인터뷰 = **onboard-chat 한 엔진 두 진입점**(plan-chat 미러, prod Function 필수 — S2) ② 종료 산출 = 플레이 시드 응결·상대 선택 마지막 질문(S2/S3) ③ 3갈래 UI = **선택 스텝 → 갈래별 패널** ④ 프리셋 = 신규 **StoryPreset 구성 단위**(keywords가 S3 유사-앵커 데이터 기반) ⑤ 소설류만 ⑥ S1 프리셋 먼저 → S2 엔진+함께 구상 → S3 적응형 인터뷰. spec `docs/superpowers/specs/2026-07-12-source-discovery-preset-design.md` · plan `docs/superpowers/plans/2026-07-12-source-discovery-preset.md`. subagent-driven TDD 5태스크+라이브(태스크별 스펙/품질 2단 검토, 발견 전부 반영).
+- **구현** — `STORY_PRESETS` 5종 구성 단위 카탈로그(storyPresets.ts — 루프 회귀·부자·악역 영애 빙의·헌터·아카데미, 인물 진하게·헌장/결말 없음, `a506dcf`) · `buildPlayFirstProject` partnerIndex(기본 cast[0] 폴백, `bb3663a`) · HomeFlowStep 'source'/'preset' 8값+isHomeFlowStep+**playSetup shape 가드**(blind-cast 백로그 해소, `f4afa79`) · PlaySeedPanel 대화 상대 버튼 그룹(aria-pressed, `72be9f6`) · App 배선(source 3장 카드[함께 구상 「준비 중」 비활성]·preset 패널·갈래 조건부 mount·homeFlowIndex/indicatorIndex 이원화[갈래를 source로 접어 인터뷰 전진 스킵 방지]·파킹 핀→3갈래 핀 교체, `d915e07`).
+- **검토 반영** — parseDiveSetup all-or-nothing 정책 주석+거부 분기 커버리지(`500391b`) · 상대 선택 단언 버튼 단위 매칭(근접 슬라이스가 cast 3인에서 위양성 — 리뷰어 재현 증명, `175f4b4`) · goToPlaySeed 휴면 표식 복원+onBack preset-전용 가정 명시(`89b93a1`) · **라이브 발견** 카드 버튼 UA 검정 상속 비가시 → nx-ink 명시(`d178e8e`).
+- **라이브 통짜(preview 5175, 빈 상태)** — 소설 선택→인디케이터 「소재발굴」 2단계→3장 카드→인기 프리셋→5장 카드→루프 회귀물→playseed 확인 카드(핀 문구·프리셋 칩 3종 공존)→**상대를 차도현(cast[1])으로 변경→dive 세션 상대 정확 반영**→1턴 실 codex 대화(voiceRules 코헤런트 "믿느냐고 묻기 전에, 왜 하필 '오늘 밤'입니까?"·arc·선택지 칩). preset 스텝 새로고침 복원(transform -200% 정확). 자유 서술 갈래→「인터뷰로 계속」 보존·이전=source. 에세이 회귀(source unmount·「자유 서술로 계속」·기존 인디케이터). 전 구간 콘솔 에러 0. 전 상태 캐러셀 인덱스 실측 정합(스펙 검토 표).
+- **불변식** — 기존 인터뷰→헌장→building 로직 무변경 · 비소설 무접촉 · 프리셋 갈래 LLM 0콜 · 헌장/결말 선결정 없음 · handleStartPlay 순서 핀 유지.
+- **후속(기록)** — playPartnerIndex 비영속(새로고침 시 cast[0] 리셋 — 의도적 수용) · playseed에서 인디케이터가 인터뷰까지 ✓ 표시(buildingPanelIndex 공유의 코스메틱) · goToPlaySeed 여전히 휴면(S3에서 재배선, onBack 진입원 분기 동반 필요) · S2 = onboard-chat 엔진+함께 구상 · S3 = 적응형 인터뷰(유사-앵커 비교 제안·상대 선택 마지막 질문) · 플레이→이전 단계 복귀 동선.
 
 ## 완료 트랙 — PLAY-first 온보딩: 소설류 기본 진입 (`done` · 2026-07-12, 브랜치 `feat/play-first-onboarding`)
 
