@@ -48,6 +48,16 @@ export interface PlanChatPromptInput {
   query: string;
 }
 
+// 온보딩 구상 대화(함께 구상). 카탈로그·컨텍스트 없이 소재를 캐는 단일 구상 파트너 + optional setup 응결.
+export interface OnboardChatPromptInput {
+  medium: string;
+  format: CreativeFormat;
+  freewrite: string;
+  dialogue: string;
+  query: string;
+  condense: boolean;
+}
+
 /** 4줄 척추 제안 입력 — Phase A-3b. charter 단계에 있는 자유 서술·결말·대가를 받는다. */
 export interface SpineSuggestionPromptInput {
   medium: string;
@@ -697,6 +707,44 @@ export function buildPlanChatPrompt(input: PlanChatPromptInput): string {
     '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
     '{',
     '  "reply": "...", "proposals": [{ "kind": "character", "targetId": "...", "field": "desire", "after": "...", "rationale": "..." }]',
+    '}'
+  ].join('\n');
+}
+
+// 온보딩 구상 대화(함께 구상) 프롬프트 — 단일 구상 파트너 + 하이브리드 응결(자발 제안·강제 지시).
+// storyx.mjs 의 buildOnboardChatPrompt 와 핵심 지시문 byte-identical 유지 — 변경 시 두 곳 동시 수정.
+export function buildOnboardChatPrompt(input: OnboardChatPromptInput): string {
+  const { medium, format, freewrite, dialogue, query, condense } = input;
+  return [
+    'Story X 온보딩 구상 대화(함께 구상) 요청.',
+    `매체: ${medium} / 포맷: ${format}`,
+    '',
+    '## 먼저 적어둔 자유 서술 (있으면 소재의 씨앗)',
+    freewrite.trim() || '(없음)',
+    '',
+    '## 최근 대화',
+    dialogue.trim() || '(첫 대화)',
+    '',
+    '## 작가의 말',
+    query.trim(),
+    '',
+    '## 역할',
+    '당신은 Story X 온보딩의 구상 파트너입니다. 작가는 아직 작품이 없습니다 — 수다 떨듯 소재를 함께 캐고, 인물과 장면이 잡히면 플레이 시드를 제안합니다.',
+    '',
+    '## 지시',
+    '- reply 는 작가의 말에 대한 응답입니다. 짧고 구체적으로 — 한 턴에 질문은 하나만, 작가가 낸 재료를 되받아 넓힙니다.',
+    '- setup 은 소재가 무르익었을 때만 포함합니다 — 상대 인물, 첫 장면, 작가가 연기할 역할이 대화에서 잡혔을 때. 아직이면 setup 필드를 넣지 않습니다.',
+    '- setup.cast 는 상대 인물 1~3명 — name·role·desire·wound·voiceRules 를 대화에 나온 재료로 채웁니다. 작가 자신의 역할은 cast 에 넣지 않고 myRole 에만 씁니다.',
+    '- setup.scene 은 플레이가 시작될 첫 장면 한 단락, setup.myRole 은 작가가 연기할 주인공의 입장 한 줄입니다.',
+    '- 대화에 없는 설정을 지어내지 않습니다. 빈 곳은 대화에서 나온 재료의 자연스러운 구체화로만 채웁니다.',
+    '- 한국어로 씁니다.',
+    ...(condense
+      ? ['- 작가가 이 소재로 시작하기로 했습니다. 이번 턴에는 reply 를 한 문장으로 짧게 하고, 지금까지 나온 재료를 응결한 setup 을 반드시 포함합니다.']
+      : []),
+    '',
+    '## 출력 형식 — 아래 JSON 객체 하나만 출력하세요. 코드펜스나 다른 텍스트 금지.',
+    '{',
+    '  "reply": "...", "setup": { "scene": "...", "cast": [{ "name": "...", "role": "...", "desire": "...", "wound": "...", "voiceRules": ["..."] }], "myRole": "..." }',
     '}'
   ].join('\n');
 }
