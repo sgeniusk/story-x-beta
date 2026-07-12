@@ -9,6 +9,8 @@ const baseProps = {
   loading: false,
   error: '',
   presets: DIVE_SEED_CHARACTERS,
+  partnerIndex: 0,
+  onPickPartner: () => {},
   onPickPreset: () => {},
   onConfirm: () => {},
   onBack: () => {}
@@ -57,6 +59,36 @@ describe('PlaySeedPanel', () => {
   it('loading 이면 준비 중 문구를 렌더한다', () => {
     const html = renderToStaticMarkup(createElement(PlaySeedPanel, { ...baseProps, loading: true }));
     expect(html).toContain('플레이 상대를 준비하는 중');
+  });
+
+  it('cast 가 여럿이면 대화 상대 선택 버튼이 렌더되고 partnerIndex 가 selected 로 표시된다', () => {
+    const html = renderToStaticMarkup(
+      createElement(PlaySeedPanel, {
+        setup: {
+          scene: '장면',
+          cast: [
+            { name: '가온', role: '주연', desire: 'd', wound: 'w', voiceRules: [] },
+            { name: '나루', role: '조연', desire: 'd2', wound: 'w2', voiceRules: [] }
+          ],
+          myRole: '행인'
+        },
+        loading: false,
+        error: '',
+        presets: [],
+        partnerIndex: 1,
+        onPickPartner: () => {},
+        onPickPreset: () => {},
+        onConfirm: () => {},
+        onBack: () => {}
+      })
+    );
+    expect(html).toContain('대화 상대');
+    expect(html).toContain('hx-playseed-partner');
+    // 선택 상태 — 나루(index 1) 버튼에만 is-selected
+    const naru = html.slice(html.indexOf('나루') - 200, html.indexOf('나루'));
+    expect(naru).toContain('is-selected');
+    const gaon = html.slice(html.indexOf('가온') - 200, html.indexOf('가온'));
+    expect(gaon).not.toContain('is-selected');
   });
 
   it('loading 중에만 loadingNote(경과·새로고침 안내)를 렌더한다', () => {
