@@ -1,7 +1,29 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-13 · Branch: `main` (**온보딩 소재발굴 S1(PR #34)·S2(PR #36) 모두 main 머지 완료·머지 후 init.sh 녹색 — 다음 세션은 사용자 직접 테스트 결과로 시작**)
+> Last Updated: 2026-07-14 · Branch: `codex/storyx-service-direction-plan` (**Codex 이관 후 서비스 본질·1차 타깃·성공 지표·Phase 0~5 개발 순서를 단일 계획으로 정리 — 사용자 방향 승인과 첫 구현 슬라이스 선택 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
+
+## 현재 트랙 — Story X 서비스 지향점 및 개발 계획 (`planning` · 2026-07-14)
+
+> 최근 검증(2026-07-14) — `bash init.sh` 통과: `npm test` 952 통과(92 파일) · `npm run build`(tsc+vite) 성공.
+
+Codex 이관 패킷과 신규 사용자 실플레이 5 페르소나 5/5 차단 결과를 기존 북극성·Dive X 시장 방향·M7 외부 시장증명 계약과 합쳐, 기능 수가 아니라 사용자 산출물 기준의 개발 계획을 `docs/superpowers/plans/2026-07-14-storyx-service-direction-development-plan.md`에 작성했다.
+- **서비스 정의** — Story X는 캐릭터챗이나 범용 생성기가 아니라, PLAY 경험을 읽히는 한국어 연재 회차로 응결하고 승인된 캐논으로 다음 화까지 이어 주는 개인 연재 스튜디오.
+- **1차 쐐기 사용자** — 한국어 장르 웹소설 입문자·연재 실무자. 장기 다매체 OS 비전은 유지하되 텍스트 폐루프의 외부 시장증명 뒤로 실행 순서를 고정.
+- **북극성** — 주간 `반출 가능한 회차` 완성 수. Phase 0 신뢰 바닥→Phase 1 한 회차 완성→Phase 2 쉬운 진입→Phase 3 장편 해자→Phase 4 외부 10화 실증→Phase 5 매체 브리지.
+- **검토 원칙 반영** — `storyx-persona-review`의 차단 신호 우선 원칙에 따라 응결 유실·무정보 대기·반출 부재를 Phase 0 서비스 계약으로 승격.
+
+### Current State
+- 계획 문서 작성과 하네스 검증 완료. 코드 변경 없음.
+- 기존 사용자 소유 미커밋 변경(`docs/handoff/2026-07-14-codex-handoff.md`, 실플레이 검토 문서, `.agents/skills/story-score/`)은 보존.
+
+### Recommended Next Step
+- 사용자가 계획의 **1차 쐐기 사용자(한국어 장르 연재 창작자)**를 승인하거나 수정한다.
+- 승인 후 첫 구현 슬라이스를 선택한다. 계획상 첫 후보는 **P0-a 응결 신뢰성**이며, 선택되면 서버측 잡+폴링/SSE/타임아웃+계측을 brainstorm 질문으로 비교한 뒤 spec→plan→TDD로 진행한다.
+
+### Verification Evidence
+- `bash init.sh` — 2026-07-14 녹색: tsc · vitest(92 files/952 tests) · vite build 전체 통과.
+- 계획 문서 — `docs/superpowers/plans/2026-07-14-storyx-service-direction-development-plan.md`.
 
 ## 완료 트랙 — 온보딩 소재발굴 S2: onboard-chat 엔진 + 「함께 구상」 갈래 (`done` · 2026-07-13, **main 머지** `978d8af` — PR #36)
 
