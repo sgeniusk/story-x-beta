@@ -1,7 +1,18 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-12 · Branch: `feat/source-discovery-preset` (**온보딩 소재발굴 S1 — 선택 스텝+프리셋 갈래, 구현·라이브 검증 완료·PR 대기**)
+> Last Updated: 2026-07-13 · Branch: `feat/onboard-chat-ideate` (**온보딩 소재발굴 S2 — onboard-chat 엔진+함께 구상 갈래, 구현·라이브 검증 완료·PR 대기. S1 PR #34 도 머지 대기 — 자율 머지가 권한 분류기에 거부되어 사용자 머지 필요**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
+
+## 완료 트랙 — 온보딩 소재발굴 S2: onboard-chat 엔진 + 「함께 구상」 갈래 (`done` · 2026-07-13, 브랜치 `feat/onboard-chat-ideate`)
+
+> 최근 검증(2026-07-13) — `bash init.sh` 통과: `npm test` 952 통과(92 파일) · `npm run build`(tsc+vite) 성공.
+
+S1 인계 노트의 "다음 한 가지". 「준비 중」 비활성이던 함께 구상 카드를 **onboard-chat 대화 엔진(plan-chat 정본 미러, 카탈로그 없음)** 으로 활성화 — 단일 구상 파트너와 채팅으로 소재를 캐다가 DiveSetup 으로 응결 → 기존 playseed 확인 카드(상대 선택) → dive. brainstorm 확정 3건 — ① **응결 트리거 = 하이브리드**(LLM 자발 시드 카드 제안 + 상시 「이걸로 시작」 강제 응결 지시 턴, 같은 JSON 계약 `{reply, setup?}` 하나) ② **제안 스키마 = 응결 한 방**(대화 중 자유 텍스트만, plan-chat 식 필드 누적 없음) ③ **단일 구상 파트너**(로테이션은 S3). spec `docs/superpowers/specs/2026-07-12-onboard-chat-ideate-design.md` · plan `docs/superpowers/plans/2026-07-12-onboard-chat-ideate.md`. subagent-driven TDD 7태스크+라이브(태스크별 스펙/품질 2단 검토, 발견 전부 반영).
+- **구현** — `parseDiveSetup` diveProposal.ts 승격(도메인 홈, 응결 검증 재사용, `b9b772d`) · `onboardChat.ts` 순수 모듈(transcript 8·normalize: reply 비면 턴 실패, 손상 setup 은 setup 만 강등, `db82874`) · `buildOnboardChatPrompt` 정본+storyx.mjs 미러·커맨드(**[onboard-mirror] 핀 3줄** — JSON 계약·응결 조건·condense 지시, mock 은 --condense 시 미니 setup, `7905e91`) · 클라이언트+aiStatus 「구상 대화」+vite 브리지+**api/onboard-chat.ts prod Function**(dive-* prod 누락 반복 금지, `9042336`) · HomeFlowStep `'ideate'`+OnboardingDraft 통합 영속(onboardChatMessages·playSeedEntry, clearOnboardingDraft 가 클리어 공짜 처리, `ed2f0f0`) · `OnboardChatPanel`(버블·시드 카드·이걸로 시작, nx-ink 명시, `f422935`) · App 배선(카드 활성화·ideate 상호배타 mount·isSourceBranch 접기·**playseed onBack 진입원 분기(playSeedEntry)**·경과 타이머+새로고침 금지·매체 변경 클리어 이전값 비교 ref[StrictMode 멱등], `34bbc0d`).
+- **검토 반영** — parseDiveSetup 직접 단언 케이스 보강(`ec1c38f`) · busy 중 응결 버튼·컴포저 disabled 단언+주석 현행화(`318862f`) · 죽은 hx-source-soon·:disabled CSS 제거(`1c6c60c`).
+- **라이브 통짜(preview 5175, 빈 상태)** — 소설→소재발굴→함께 구상 활성(「준비 중」 소멸)→실 codex 2턴(파트너가 재료 되받아 질문 하나씩·경과 타이머·busy 비활성)→**2턴째 자발 응결 시드 카드**(막차 역·실종된 누나 — 대화 재료로만 구성)→ideate 중 새로고침 복원(스텝·대화 6·시드 카드 생존)→**「이걸로 시작」 강제 응결**(한 문장 reply+setup 필수 준수)→시드 승인→playseed(응결 setup·상대 누나·핀 문구·프리셋 칩 공존)→**onBack='ideate' 복귀 실측**→「이대로 시작」→dive(제목 myRole 파생·장면 주입·상대 정확)→1턴 실 대화(voiceRules 코헤런트 "죄송하지만 승객님을 아는 사람은 아닙니다"+명부 복선)→clearOnboardingDraft 잔존 0. 회귀 — 프리셋 0콜·onBack='preset' / 자유 서술 「인터뷰로 계속」 / 에세이 단일 CTA·소재발굴 미마운트. 전 구간 콘솔·서버 에러 0.
+- **불변식** — 기존 인터뷰 경로·비소설 무접촉 · 프리셋 갈래 setPlaySeedEntry 1줄만 · handleStartPlay 순서 핀 무변경 · playseed 이후 경로 공유(응결 setup 도 같은 confirmPlaySeed→buildPlayFirstProject) · plan-chat 계열 무접촉·미러 byte-identical · ideate 는 인디케이터 배열 밖(isSourceBranch 로 source 접기).
+- **후속(기록)** — in-flight 응답 중 매체 변경 시 고아 버블(저위험, S3 에서 seq 가드 3줄) · S3 = 적응형 인터뷰(자유 서술 재배선·goToPlaySeed 부활·STORY_PRESETS.keywords 유사-앵커 비교 제안·playSeedEntry 확장) · prod Function 은 배포 후 스모크 필요(기존 계열 갭과 동일).
 
 ## 완료 트랙 — 온보딩 소재발굴 S1: 선택 스텝 + 인기 프리셋 갈래 (`done` · 2026-07-12, 브랜치 `feat/source-discovery-preset`)
 

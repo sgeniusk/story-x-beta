@@ -262,6 +262,23 @@ export default defineConfig({
       '--query',
       String(input.query ?? '')
     ]),
+    storyxBridge('/api/onboard-chat', (input) => [
+      'tools/storyx.mjs',
+      'onboard-chat',
+      '--provider',
+      'codex',
+      '--medium',
+      String(input.medium ?? 'novel'),
+      '--format',
+      String(input.format ?? 'long-novel'),
+      '--freewrite',
+      String(input.freewrite ?? ''),
+      '--dialogue',
+      String(input.dialogue ?? ''),
+      '--query',
+      String(input.query ?? ''),
+      ...(input.condense ? ['--condense'] : [])
+    ]),
     storyxBridge('/api/dive-chat', (input) => [
       'tools/storyx.mjs',
       'dive-chat',

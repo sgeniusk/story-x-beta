@@ -7771,10 +7771,6 @@ body {
   border-color: rgba(100, 72, 211, 0.38);
   box-shadow: var(--nx-sh-card);
 }
-.home-page .hx-source-card:disabled {
-  cursor: default;
-  opacity: 0.55;
-}
 .home-page .hx-source-card strong {
   display: block;
   font-size: 15px;
@@ -7786,16 +7782,6 @@ body {
   font-size: 12.5px;
   color: var(--nx-slate);
   line-height: 1.55;
-}
-.home-page .hx-source-soon {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  font-size: 10.5px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--nx-hairline-strong);
-  color: var(--nx-slate);
 }
 /* 인기 프리셋 카드 (S1) */
 .home-page .hx-preset-grid {
@@ -7855,6 +7841,136 @@ body {
 .home-page .hx-playseed-partner em {
   color: var(--nx-slate);
   font-style: normal;
+}
+/* 함께 구상 대화 패널 (S2) — 홈은 다크 고정, nx 토큰이 co-vary 하므로 토큰만 사용·신규 버튼은 색 명시(UA 검정 상속 금지) */
+.home-page .ocp {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+}
+.home-page .ocp-empty {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--nx-slate);
+  line-height: 1.6;
+}
+.home-page .ocp-log {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  max-height: 46vh;
+}
+.home-page .ocp-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.home-page .ocp-bubble {
+  margin: 0;
+  align-self: flex-start;
+  max-width: 88%;
+  padding: 9px 12px;
+  border-radius: var(--nx-r-lg);
+  background: var(--nx-surface);
+  color: var(--nx-ink);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.home-page .ocp-msg.is-user .ocp-bubble {
+  align-self: flex-end;
+  background: var(--nx-tint-lavender);
+}
+.home-page .ocp-seed {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--nx-hairline);
+  border-radius: var(--nx-r-lg);
+  background: var(--nx-canvas);
+  box-shadow: var(--nx-sh-subtle);
+}
+.home-page .ocp-seed-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--nx-steel);
+  margin-bottom: 5px;
+}
+.home-page .ocp-seed-field p {
+  margin: 0;
+  color: var(--nx-ink);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.home-page .ocp-seed-cast {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 0.86rem;
+  color: var(--nx-ink);
+}
+.home-page .ocp-seed-use {
+  justify-self: start;
+}
+.home-page .ocp-busy,
+.home-page .ocp-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--nx-slate);
+}
+.home-page .ocp-input {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.home-page .ocp-input textarea {
+  flex: 1;
+  resize: none;
+  padding: 9px 12px;
+  border: 1px solid var(--nx-hairline-strong);
+  border-radius: var(--nx-r);
+  background: var(--nx-canvas);
+  color: var(--nx-ink);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.home-page .ocp-input textarea:disabled {
+  opacity: 0.55;
+}
+.home-page .ocp-send {
+  flex: 0 0 auto;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--nx-hairline-strong);
+  border-radius: var(--nx-r);
+  background: var(--nx-canvas);
+  color: var(--nx-ink);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--st-dur-fast) var(--st-ease);
+}
+.home-page .ocp-send:hover:not(:disabled) {
+  background: var(--nx-surface);
+}
+.home-page .ocp-send:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.home-page .ocp-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.home-page .ocp-seed-use:disabled,
+.home-page .ocp-condense:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
 .home-page .hx-fact-note > svg {

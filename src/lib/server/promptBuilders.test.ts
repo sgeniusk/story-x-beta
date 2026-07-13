@@ -452,3 +452,49 @@ describe('buildPlanChatPrompt — PLAN 설계 대화 (설계실 2단계)', () =>
     expect(cli).toContain(PLAN_CHAT_ID_INSTRUCTION);
   });
 });
+
+// 온보딩 구상 대화(함께 구상) 프롬프트 — S2. storyx.mjs 미러 byte-identical — 계약·지시문 전문 양쪽 동시 갱신.
+import { buildOnboardChatPrompt } from './promptBuilders';
+import type { CreativeFormat } from '../projectBlueprint';
+
+describe('buildOnboardChatPrompt', () => {
+  const ONBOARD_CHAT_JSON_CONTRACT =
+    '  "reply": "...", "setup": { "scene": "...", "cast": [{ "name": "...", "role": "...", "desire": "...", "wound": "...", "voiceRules": ["..."] }], "myRole": "..." }';
+  const ONBOARD_CHAT_RIPENESS_INSTRUCTION =
+    '- setup 은 소재가 무르익었을 때만 포함합니다 — 상대 인물, 첫 장면, 작가가 연기할 역할이 대화에서 잡혔을 때. 아직이면 setup 필드를 넣지 않습니다.';
+  const ONBOARD_CHAT_CONDENSE_INSTRUCTION =
+    '- 작가가 이 소재로 시작하기로 했습니다. 이번 턴에는 reply 를 한 문장으로 짧게 하고, 지금까지 나온 재료를 응결한 setup 을 반드시 포함합니다.';
+
+  const baseInput = {
+    medium: 'novel',
+    format: 'long-novel' as CreativeFormat,
+    freewrite: '심야에만 여는 세탁소',
+    dialogue: '작가: 세탁소 얘기',
+    query: '노인이 주인이면 어때?',
+    condense: false
+  };
+
+  it('구상 파트너 역할·시드 섹션·응결 조건·JSON 계약을 담는다', () => {
+    const prompt = buildOnboardChatPrompt(baseInput);
+    expect(prompt).toContain('구상 파트너');
+    expect(prompt).toContain('아직 작품이 없습니다');
+    expect(prompt).toContain('## 먼저 적어둔 자유 서술');
+    expect(prompt).toContain('심야에만 여는 세탁소');
+    expect(prompt).toContain(ONBOARD_CHAT_RIPENESS_INSTRUCTION);
+    expect(prompt).toContain('myRole 에만');
+    expect(prompt).toContain(ONBOARD_CHAT_JSON_CONTRACT);
+    expect(prompt).not.toContain(ONBOARD_CHAT_CONDENSE_INSTRUCTION);
+  });
+
+  it('condense=true 면 강제 응결 지시가 삽입된다', () => {
+    const prompt = buildOnboardChatPrompt({ ...baseInput, condense: true });
+    expect(prompt).toContain(ONBOARD_CHAT_CONDENSE_INSTRUCTION);
+  });
+
+  it('[onboard-mirror] storyx.mjs 미러가 계약·응결 조건·condense 지시와 byte-identical 이다', () => {
+    const cli = readFileSync(resolve(__dirname, '../../../tools/storyx.mjs'), 'utf8');
+    expect(cli).toContain(ONBOARD_CHAT_JSON_CONTRACT);
+    expect(cli).toContain(ONBOARD_CHAT_RIPENESS_INSTRUCTION);
+    expect(cli).toContain(ONBOARD_CHAT_CONDENSE_INSTRUCTION);
+  });
+});

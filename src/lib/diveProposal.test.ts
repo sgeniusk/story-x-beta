@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TWIST_VECTORS, seedFromProposal, isValidProposal, type DiveProposal } from './diveProposal';
+import { TWIST_VECTORS, seedFromProposal, isValidProposal, parseDiveSetup, type DiveProposal } from './diveProposal';
 
 const sample: DiveProposal = {
   hook: '10년 산 가족이 외계인일지 모른다는 쪽지를 받았다',
@@ -53,5 +53,31 @@ describe('diveProposal', () => {
     expect(isValidProposal({ ...sample, cast: [] })).toBe(false);
     expect(isValidProposal({ hook: 'x', scene: 'y' })).toBe(false);
     expect(isValidProposal(null)).toBe(false);
+  });
+});
+
+describe('parseDiveSetup', () => {
+  it('유효 setup 은 통과하고 누락 옵션 필드는 백필된다', () => {
+    const parsed = parseDiveSetup({ scene: '장면', cast: [{ name: '가온' }], myRole: '행인' });
+    expect(parsed).toEqual({
+      scene: '장면',
+      cast: [{ name: '가온', role: '', desire: '', wound: '', voiceRules: [] }],
+      myRole: '행인'
+    });
+  });
+
+  it('손상 shape 은 all-or-nothing 으로 null 강등된다', () => {
+    const broken: unknown[] = [
+      null,
+      {},
+      { scene: '장면', myRole: '' },                        // cast 없음
+      { scene: '장면', cast: [], myRole: '' },              // cast 빈 배열
+      { scene: '장면', cast: [{ role: 'r' }], myRole: '' }, // name 없음
+      { scene: '장면', cast: [{ name: '  ' }], myRole: '' },// name 공백
+      { scene: 7, cast: [{ name: 'a' }], myRole: '' },      // scene 비문자열
+      { scene: '장면', cast: 'not-array', myRole: '' },      // cast 비배열
+      { scene: '장면', cast: [{ name: 'a' }], myRole: 9 }    // myRole 비문자열
+    ];
+    for (const bad of broken) expect(parseDiveSetup(bad)).toBeNull();
   });
 });

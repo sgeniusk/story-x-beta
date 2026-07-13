@@ -193,7 +193,21 @@ describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
         scene: '늦은 밤 편의점, 정전 직후.',
         cast: [{ name: '지호', role: '야간 알바', desire: '가게를 지키고 싶다', wound: '', voiceRules: [] }],
         myRole: '단골'
-      }
+      },
+      onboardChatMessages: [
+        { id: 'm1', role: 'user', text: '복수극인데 주인공이 너무 착해' },
+        {
+          id: 'm2',
+          role: 'partner',
+          text: '그 착함이 무기가 되면 어때요?',
+          setup: {
+            scene: '재판정 복도, 판결 직후.',
+            cast: [{ name: '서린', role: '피해자의 딸', desire: '가해자의 자백', wound: '', voiceRules: [] }],
+            myRole: '변호사'
+          }
+        }
+      ],
+      playSeedEntry: 'ideate'
     };
   }
 
@@ -223,6 +237,65 @@ describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
       const parsed = parseOnboardingDraft(JSON.stringify({ ...fullDraft(), homeFlowStep: step }));
       expect(parsed?.homeFlowStep).toBe(step);
     }
+  });
+
+  it("homeFlowStep 'ideate' 가 복원에서 살아남는다 (medium 롤백 방지)", () => {
+    const parsed = parseOnboardingDraft(JSON.stringify({ ...fullDraft(), homeFlowStep: 'ideate' }));
+    expect(parsed?.homeFlowStep).toBe('ideate');
+  });
+
+  it('onboardChatMessages 는 백필·손상 항목 드랍·setup 가드를 거친다', () => {
+    // 필드 부재 → 빈 배열 백필 (JSON.stringify 가 undefined 키를 지운다)
+    const absent = parseOnboardingDraft(JSON.stringify({ ...fullDraft(), onboardChatMessages: undefined }));
+    expect(absent?.onboardChatMessages).toEqual([]);
+
+    // 유효 user/partner 메시지는 그대로 보존
+    const valid = [
+      { id: 'm1', role: 'user', text: '복수극인데 주인공이 너무 착해' },
+      { id: 'm2', role: 'partner', text: '그 착함이 무기가 되면 어때요?' }
+    ];
+    const kept = parseOnboardingDraft(JSON.stringify({ ...fullDraft(), onboardChatMessages: valid }));
+    expect(kept?.onboardChatMessages).toEqual(valid);
+
+    // 손상 항목(role 오타·text 비문자열·id 없음)은 그 항목만 드랍, 유효 항목은 보존
+    const mixed = [
+      { id: 'm1', role: 'user', text: '유효한 메시지' },
+      { id: 'bad-role', role: 'assistant', text: 'role 오타' },
+      { id: 'bad-text', role: 'partner', text: 7 },
+      { role: 'user', text: 'id 없음' }
+    ];
+    const filtered = parseOnboardingDraft(JSON.stringify({ ...fullDraft(), onboardChatMessages: mixed }));
+    expect(filtered?.onboardChatMessages).toEqual([{ id: 'm1', role: 'user', text: '유효한 메시지' }]);
+
+    // 손상 setup 은 setup 필드만 드랍, 메시지(id·role·text)는 보존 — toStrictEqual 로 setup 키 부재까지 단언
+    const brokenSetup = [{ id: 'm2', role: 'partner', text: '제안 카드', setup: { scene: 's', cast: [], myRole: '' } }];
+    const degraded = parseOnboardingDraft(JSON.stringify({ ...fullDraft(), onboardChatMessages: brokenSetup }));
+    expect(degraded?.onboardChatMessages).toStrictEqual([{ id: 'm2', role: 'partner', text: '제안 카드' }]);
+
+    // 유효 setup 은 백필 형태(role''·desire''·wound''·voiceRules[])로 보존
+    const validSetup = [
+      { id: 'm3', role: 'partner', text: '이 장면 어때요?', setup: { scene: 's', cast: [{ name: '가온' }], myRole: '나' } }
+    ];
+    const restored = parseOnboardingDraft(JSON.stringify({ ...fullDraft(), onboardChatMessages: validSetup }));
+    expect(restored?.onboardChatMessages).toEqual([
+      {
+        id: 'm3',
+        role: 'partner',
+        text: '이 장면 어때요?',
+        setup: { scene: 's', cast: [{ name: '가온', role: '', desire: '', wound: '', voiceRules: [] }], myRole: '나' }
+      }
+    ]);
+  });
+
+  it("playSeedEntry 는 'preset' 백필·'ideate' 복원된다", () => {
+    const absent = parseOnboardingDraft(JSON.stringify({ ...fullDraft(), playSeedEntry: undefined }));
+    expect(absent?.playSeedEntry).toBe('preset');
+
+    const ideate = parseOnboardingDraft(JSON.stringify({ ...fullDraft(), playSeedEntry: 'ideate' }));
+    expect(ideate?.playSeedEntry).toBe('ideate');
+
+    const bogus = parseOnboardingDraft(JSON.stringify({ ...fullDraft(), playSeedEntry: 'bogus' }));
+    expect(bogus?.playSeedEntry).toBe('preset');
   });
 
   it('손상된 playSetup shape 은 null 로 강등된다 (blind-cast 가드)', () => {
@@ -283,6 +356,17 @@ describe('온보딩 자동 복원 영속 (OnboardingDraft)', () => {
     expect(hasMeaningfulOnboardingInput({ ...base, freewriteText: '한 줄' })).toBe(true);
     expect(hasMeaningfulOnboardingInput({ ...base, intakeAnswers: { q1: 'a' } })).toBe(true);
     expect(hasMeaningfulOnboardingInput({ ...base, contractEnding: '자백으로 끝난다' })).toBe(true);
+  });
+
+  it('구상 대화가 있으면 의미 있는 온보딩 입력으로 친다', () => {
+    const base = parseOnboardingDraft(JSON.stringify({ schema: 'storyx/onboarding/v1' })) as OnboardingDraft;
+    expect(hasMeaningfulOnboardingInput(base)).toBe(false);
+    expect(
+      hasMeaningfulOnboardingInput({
+        ...base,
+        onboardChatMessages: [{ id: 'm1', role: 'user', text: '복수극인데 주인공이 너무 착해' }]
+      })
+    ).toBe(true);
   });
 });
 
