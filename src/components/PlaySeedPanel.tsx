@@ -13,12 +13,15 @@ interface PlaySeedPanelProps {
   onPickPreset: (index: number) => void;
   onConfirm: () => void;
   onBack: () => void;
+  // 대화 상대 선택 — cast 중 세션 상대역(기본 cast[0]). 프레젠테이션 전용, 상태는 App 이 쥔다.
+  partnerIndex: number;
+  onPickPartner: (index: number) => void;
   // LLM 대기 안내 — 경과 시간·새로고침 금지 문구(App 이 조립). loading 중에만 렌더한다.
   loadingNote?: string;
 }
 
 export function PlaySeedPanel({
-  setup, loading, error, presets, onPickPreset, onConfirm, onBack, loadingNote
+  setup, loading, error, presets, onPickPreset, onConfirm, onBack, partnerIndex, onPickPartner, loadingNote
 }: PlaySeedPanelProps) {
   return (
     <div className="hx-playseed">
@@ -55,14 +58,23 @@ export function PlaySeedPanel({
               <p>{setup.myRole}</p>
             </div>
           )}
-          <ul className="hx-playseed-cast">
-            {setup.cast.map((c) => (
-              <li key={c.name}>
-                <strong>{c.name}</strong> · {c.role}
-                {c.desire ? <em> — {c.desire}</em> : null}
-              </li>
-            ))}
-          </ul>
+          <div className="hx-playseed-field">
+            <span className="hx-playseed-label">대화 상대</span>
+            <div className="hx-playseed-cast" role="group" aria-label="대화 상대 선택">
+              {setup.cast.map((c, i) => (
+                <button
+                  key={c.name}
+                  type="button"
+                  className={i === partnerIndex ? 'hx-playseed-partner is-selected' : 'hx-playseed-partner'}
+                  aria-pressed={i === partnerIndex}
+                  onClick={() => onPickPartner(i)}
+                >
+                  <strong>{c.name}</strong> · {c.role}
+                  {c.desire ? <em> — {c.desire}</em> : null}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

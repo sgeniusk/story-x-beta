@@ -76,19 +76,22 @@ export function presetToDiveSetup(seed: DiveSeedCharacter): DiveSetup {
  * PLAY-first 온보딩 글루 — 제안/프리셋 setup 에서 최소 프로젝트(회차 0)와
  * 첫 장면이 주입된 DiveState 를 만든다. 옛 seedAndEnter(6a95a52) 규칙 계승.
  * 설정 깊이 상한 — 헌장·결말·회차 구조는 만들지 않는다(스펙 결정 5).
+ * partnerIndex — playseed 카드에서 고른 대화 상대(기본 cast[0], 범위 밖은 폴백).
  */
 export function buildPlayFirstProject(
   setup: DiveSetup,
-  meta: { medium?: CreativeMedium; format?: CreativeFormat }
+  meta: { medium?: CreativeMedium; format?: CreativeFormat },
+  partnerIndex = 0
 ): { project: SeriesProject; diveState: DiveState } | null {
-  const { scene, characters, primaryCharacterId } = seedFromProposal(setup);
-  if (!primaryCharacterId) return null;
+  const { scene, characters } = seedFromProposal(setup);
+  const primary = characters[partnerIndex] ?? characters[0];
+  if (!primary) return null;
   const title = (setup.myRole.trim() || setup.scene.trim()).slice(0, 20) || PLAY_FIRST_FALLBACK_TITLE;
   const project: SeriesProject = {
     ...createEmptyProject({ title, medium: meta.medium, format: meta.format }),
     characters
   };
-  const session = createDiveSession(primaryCharacterId, project.id);
+  const session = createDiveSession(primary.id, project.id);
   return {
     project,
     diveState: {

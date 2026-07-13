@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-07-12 (3차) — 온보딩 소재발굴 S1: 선택 스텝 + 인기 프리셋 갈래 (done·브랜치 `feat/source-discovery-preset`)
+
+> 재설계 brainstorm(결정 6건)→spec→plan→subagent-driven TDD 5태스크+라이브 통짜. progress.md 해당 절 상세. **S1 = 소설류 2단계를 소재발굴 3갈래 선택 스텝으로, 인기 프리셋 갈래를 LLM 0콜로 완주 가능하게** — 프리셋 5종(StoryPreset 구성 단위) → playseed 확인 카드(상대 선택 신설) → dive. 파킹 부품 재배선 완료(단 goToPlaySeed 는 여전히 휴면 — S3 몫).
+
+### brainstorm 확정 (S2·S3 의 입력)
+- **엔진 통합** — "함께 구상"+적응형 인터뷰 = 신규 onboard-chat 한 엔진 두 진입점. **plan-chat 미러**(planChat.ts·planChatClient.ts·buildPlanChatPrompt·api/plan-chat.ts 가 정본 선례 — 멀티턴 transcript 재조립+승인형 제안+카탈로그 그라운딩). **prod Function 필수**(dive-* 의 prod 누락을 반복 금지).
+- **종료 산출** — 대화가 됐다 싶으면 DiveSetup 으로 응결, 마지막 턴에 상대 선택 → playseed → dive.
+- S2 = onboard-chat 엔진 + 「함께 구상」 갈래 활성화(현재 「준비 중」 비활성 카드). S3 = 적응형 인터뷰(자유 서술 재배선·입력 유형 선분석·**STORY_PRESETS.keywords 유사-앵커 비교 제안**·상대 선택 마지막 질문). 기존 requestLlmInterview 는 비소설 전용으로 잔존.
+
+### 다음 세션이 해야 할 한 가지
+- **S2 착수** — onboard-chat 순수 모듈(planChat.ts 미러)+promptBuilders+vite 브리지+storyx.mjs 커맨드+**api/onboard-chat.ts**+「함께 구상」 패널. spec 은 기존 문서(2026-07-12-source-discovery-preset-design.md)의 방향 절 참조하되 S2 전용 brainstorm(종료 판단 기준·제안 스키마) 필요.
+
+### 손대지 말 것 / 유의
+- 갈래 패널(freewrite/preset)은 **조건부 mount 로 source 다음 DOM 슬롯 공유** — homeFlowIndex(슬라이드)와 indicatorIndex(하이라이트·클릭 게이트)가 이원화되어 있다. 갈래에서 indicatorId 를 'source' 로 접지 않으면 인터뷰 전진 스킵 구멍이 열린다.
+- appExperience.test.ts 소재발굴 3갈래 핀·handleStartPlay 순서 핀 유지.
+- goToPlaySeed 재배선 시 playseed 패널 onBack('preset' 고정)을 진입원 분기로 함께 고칠 것(주석에 명시해둠).
+- 홈(hx-*) 신규 버튼은 `color: var(--nx-ink)` 명시 필수 — UA 검정 상속으로 다크에서 비가시(이번 라이브 발견).
+- playPartnerIndex 는 의도적 비영속(새로고침 시 cast[0] 리셋).
+
+---
+
 ## 2026-07-12 (2차) — 플레이 직행 CTA 파킹 + 소재발굴 재설계 방향 확정 (`9f013ac`)
 
 > 사용자가 1차 구현을 직접 dogfooding — CTA 잘림(3버튼 오버플로)·플레이 전 상대 선택 부재·플레이→이전 복귀 불가 발견 + **온보딩 재설계 확정**([[play-first-paradigm]] 메모리 갱신). 이번 턴 조치 = 자유 서술 CTA 를 인터뷰 단일로 복귀(파킹), playseed 부품(글루·패널·영속)은 휴면 보존.

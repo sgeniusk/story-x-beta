@@ -174,17 +174,30 @@ describe('Story X page experience', () => {
   });
 });
 
-describe('PLAY-first 온보딩 (playseed 파킹 상태)', () => {
-  it('자유 서술 CTA 는 인터뷰 단일 — 플레이 직행 버튼은 소재발굴 재설계까지 파킹', () => {
-    expect(app).toContain('인터뷰로 계속');
-    expect(app).not.toContain('플레이로 시작');
-    expect(app).toContain('소재발굴 재설계');
+describe('온보딩 소재발굴 (S1 — 선택 스텝 + 프리셋 갈래)', () => {
+  it('소설류 2단계는 소재발굴 3갈래 카드다 — 자유 서술·함께 구상(준비 중)·인기 프리셋', () => {
+    expect(blueprintSource).toContain("'source'");
+    expect(blueprintSource).toContain("'preset'");
+    expect(app).toContain('소재발굴');
+    expect(app).toContain('함께 구상');
+    expect(app).toContain('인기 프리셋');
+    expect(app).toContain('준비 중'); // 함께 구상은 S2 까지 비활성 노출
+    expect(app).toContain('소재발굴로 계속'); // 소설류 매체 패널 CTA
+    expect(app).toContain('자유 서술로 계속'); // 비소설 CTA 보존
+    expect(app).toContain('인터뷰로 계속'); // 자유 서술 갈래 CTA 보존
+  });
+
+  it('프리셋 갈래는 LLM 0콜로 playseed 확인 카드에 도달한다', () => {
+    expect(app).toContain('STORY_PRESETS');
+    expect(app).toContain('pickStoryPreset');
+    expect(app).toContain("homeFlowStep === 'preset'");
   });
 
   it("HomeFlowStep 에 'playseed' 가 있고 PlaySeedPanel 이 배선된다", () => {
     expect(blueprintSource).toContain("'playseed'");
     expect(app).toContain('PlaySeedPanel');
     expect(app).toContain("homeFlowStep === 'playseed'");
+    expect(app).toContain('partnerIndex'); // 상대 선택 배선
   });
 
   it('플레이 승인 핸들러는 saveProject→saveDiveState→clearOnboardingDraft→dive 순서를 지킨다', () => {
