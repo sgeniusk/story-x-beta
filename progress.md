@@ -1,9 +1,9 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-13 · Branch: `feat/onboard-chat-ideate` (**온보딩 소재발굴 S2 — onboard-chat 엔진+함께 구상 갈래, 구현·라이브 검증 완료·PR 대기. S1 PR #34 도 머지 대기 — 자율 머지가 권한 분류기에 거부되어 사용자 머지 필요**)
+> Last Updated: 2026-07-13 · Branch: `main` (**온보딩 소재발굴 S1(PR #34)·S2(PR #36) 모두 main 머지 완료·머지 후 init.sh 녹색 — 다음 세션은 사용자 직접 테스트 결과로 시작**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-## 완료 트랙 — 온보딩 소재발굴 S2: onboard-chat 엔진 + 「함께 구상」 갈래 (`done` · 2026-07-13, 브랜치 `feat/onboard-chat-ideate`)
+## 완료 트랙 — 온보딩 소재발굴 S2: onboard-chat 엔진 + 「함께 구상」 갈래 (`done` · 2026-07-13, **main 머지** `978d8af` — PR #36)
 
 > 최근 검증(2026-07-13) — `bash init.sh` 통과: `npm test` 952 통과(92 파일) · `npm run build`(tsc+vite) 성공.
 

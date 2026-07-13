@@ -4,13 +4,13 @@
 
 ---
 
-## 2026-07-13 — 온보딩 소재발굴 S2: onboard-chat 엔진 + 함께 구상 갈래 (done·브랜치 `feat/onboard-chat-ideate`)
+## 2026-07-13 — 온보딩 소재발굴 S2: onboard-chat 엔진 + 함께 구상 갈래 (done·**main 머지** `978d8af`)
 
 > S1 인계의 "다음 한 가지" 완주 — brainstorm 3결정(하이브리드 응결·응결 한 방·단일 파트너)→spec→plan→subagent-driven TDD 7태스크+라이브 통짜. progress.md 해당 절 상세. **plan-chat 6층 미러 완성** — 순수 모듈·클라이언트·프롬프트 정본+[onboard-mirror] 핀·dev 브리지·**prod Function(api/onboard-chat.ts)**·영속(OnboardingDraft 통합).
 
-### 머지 대기 2건 (사용자 액션 필요)
-- **PR #34(S1)** — 자율 머지가 권한 분류기에 거부됨(에이전트 작성 PR 사전 리뷰 필요 판정). 사용자가 직접 머지해야 한다.
-- **S2 PR** — base 를 `feat/source-discovery-preset` 으로 쌓아둠(#34 머지 시 GitHub 이 자동으로 main 으로 retarget). #34 먼저, S2 다음 순서로 머지.
+### 머지 기록 (사용자 지시로 완료)
+- S1 = PR #34 머지(`e1e1cf0`) · S2 = **PR #36** 머지(`978d8af`). 원래 S2 는 #35(스택 PR)였으나 **#34 머지 시 base 브랜치 삭제로 GitHub 이 #35 를 자동 close** — retarget 아님, 닫힌 PR 은 base 변경·재오픈 불가라 #36 으로 재생성했다. 교훈 = 스택 PR 은 선행 PR 을 `--delete-branch` 없이 머지하고 브랜치는 후행 retarget 확인 후 지울 것.
+- 머지 후 main 에서 `bash init.sh` 녹색 재확인.
 
 ### 손대지 말 것 / 유의
 - **[onboard-mirror] 핀** — buildOnboardChatPrompt 의 JSON 계약·응결 조건·condense 지시 3줄은 promptBuilders.ts↔storyx.mjs byte-identical. 프롬프트 수정 시 두 곳 동시 + 핀 테스트.
@@ -20,7 +20,7 @@
 - setup 정규화는 클라이언트 normalize(parseDiveSetup 위임) 단일 지점 — CLI·prod Function 은 얕은 통과가 맞다(plan-chat proposals 관례).
 
 ### 다음 세션이 해야 할 한 가지
-- **S3 착수 전 사용자 dogfooding 권장** — 함께 구상 갈래 실사용 체감(응결 타이밍·파트너 톤). 그 다음 **S3 = 적응형 인터뷰** — 자유 서술 재배선(goToPlaySeed 부활+onBack 진입원 추가)·입력 유형 선분석·**STORY_PRESETS.keywords 유사-앵커 비교 제안**·상대 선택 마지막 질문·개수 고정 금지. 기존 requestLlmInterview 는 비소설 전용으로 잔존.
+- **다음 세션은 사용자 직접 테스트 결과로 시작한다(사용자 결정)** — 함께 구상 갈래 dogfooding(응결 타이밍·파트너 톤·S1 프리셋 포함). preview 5175 를 빈 상태로 켜두었다. 발견을 슬라이스로 정리한 뒤 **S3 = 적응형 인터뷰** — 자유 서술 재배선(goToPlaySeed 부활+onBack 진입원 추가)·입력 유형 선분석·**STORY_PRESETS.keywords 유사-앵커 비교 제안**·상대 선택 마지막 질문·개수 고정 금지. 기존 requestLlmInterview 는 비소설 전용으로 잔존.
 - 경미 후속(최종 홀리스틱 리뷰 Minor 3, 전부 비차단) — in-flight 응답 중 매체 변경 고아 버블(seq 가드 3줄, S3 에서) · onboardChatNote 가 갈래 이탈·재진입에 잔존(코스메틱) · 시드 카드 cast key=name 동명 충돌(희귀) · prod 배포 후 api/onboard-chat.ts 스모크.
 
 ---
