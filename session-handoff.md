@@ -13,6 +13,7 @@
 - `docs/superpowers/plans/2026-07-14-storyx-service-direction-development-plan.md` §3.3~3.8 추가 — 라이브 UI 진단, UI/UX 북극성, 결정론적 Agent Router, 단계·행동별 Lead/Specialist/Gatekeeper 표, Hard/Living/Soft 캐논 승인 생애주기, UX-0→MEMORY-1 구현 순서.
 - 핵심 원칙 — 사용자는 에이전트 조직도를 운영하는 사람이 아니라 작가다. 시스템이 필요한 Lead 1명만 앞세우고, 캐논 영향이 있을 때 변경 전/후·영향 회차를 보여 사용자 결정을 요청한다.
 - 기존 엔진 재사용 근거 — `planAgentRuns`, `buildMemoryBankContextPacket`, memory approval queue, canon refactor review order가 있으므로 새 시스템을 처음부터 만들지 않고 선택·가시성·승인 흐름을 제품화한다.
+- 보강 커밋 — `9cd16ae`; `bash init.sh` 녹색(92 files/952 tests, tsc+vite build 성공).
 
 ### 다음 세션이 해야 할 한 가지
 - 사용자가 서비스 방향과 UI/UX·라우팅·캐논 운영안을 승인/수정한 뒤 첫 구현 슬라이스를 선택한다. 신뢰성 계약상 기본 추천은 여전히 P0-a이며, ORCH/CANON 구현은 응결·복구 안정화 뒤 연결한다.
