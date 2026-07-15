@@ -1,6 +1,6 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-15 · Branch: `codex/p0a-condense-job-polling` (**P0-a 로컬 Codex 응결 잡 + 전역 생성 보관함 완료, PR 생성 대기**)
+> Last Updated: 2026-07-15 · Branch: `codex/p0a-condense-job-polling` (**P0-a 로컬 Codex 응결 잡 + 전역 생성 보관함 완료, PR #38 열림·머지 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 > 최근 검증(2026-07-15) — `bash init.sh` 통과: `npm test` 970 통과(96 파일) · `npm run build`(tsc+vite) 성공.

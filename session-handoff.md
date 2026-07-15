@@ -4,7 +4,7 @@
 
 ---
 
-## 2026-07-15 — P0-a 응결 신뢰성: 로컬 Codex 잡 + 전역 생성 보관함 (done·PR 생성 대기)
+## 2026-07-15 — P0-a 응결 신뢰성: 로컬 Codex 잡 + 전역 생성 보관함 (done·PR #38 열림·머지 대기)
 
 > 사용자 확정 순서 brainstorm→spec→plan→TDD로 완료. PLAY의 긴 응결 호출을 로컬 서버 인메모리 잡으로 분리하고 ProjectHub 중심 전역 생성 보관함을 추가했다. 구현 커밋 `f8bddc9`; 최종 `bash init.sh` 녹색(세부 수치는 progress.md 맨 위 최근 검증 참조).
 
