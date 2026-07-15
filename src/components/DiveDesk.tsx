@@ -17,18 +17,25 @@ import {
 } from '../lib/diveSession';
 import { validatePlayTurn, deriveDeviationCandidates, buildPromotedFacts, buildRetconUpdates, type PlayTurnVerdict } from '../lib/playRuntimeValidator';
 import { DeviationReview } from './DeviationReview';
-import { requestDiveChat, requestDiveCondense, requestDiveShowrunner, requestDiveConsolidate, type DiveCondensePayload, type ConsolidationFinding } from '../lib/diveClient';
+import { requestDiveChat, requestDiveShowrunner, requestDiveConsolidate, type DiveCondenseJobRequest, type DiveCondensePayload, type ConsolidationFinding } from '../lib/diveClient';
 import { ConsolidationFindings } from './ConsolidationFindings';
 import { DIVE_SEED_CHARACTERS } from '../lib/diveSeedCharacters';
 import { requestVsCandidates } from '../lib/vsCandidatesClient';
 import { VsCandidatePanel } from './VsCandidatePanel';
 import type { VsCandidate } from '../lib/episodeBriefing';
+import { buildProjectRevision, type GenerationInboxItem } from '../lib/generationInbox';
 
 interface DiveDeskProps {
   session: DiveSession;
   project: SeriesProject;
   onChange: (session: DiveSession, project: SeriesProject) => void;
   onBack: () => void;
+  generationInbox?: GenerationInboxItem[];
+  selectedGeneration?: GenerationInboxItem | null;
+  onStartGeneration?: (request: DiveCondenseJobRequest) => Promise<void>;
+  onCancelGeneration?: (item: GenerationInboxItem) => void;
+  onOpenGenerationInbox?: () => void;
+  onResolveGeneration?: (id: string) => void;
 }
 
 function characterCardText(project: SeriesProject, characterId: string): string {
@@ -73,13 +80,18 @@ function peekText(verdict: PlayTurnVerdict): string {
   return parts.join(' · ');
 }
 
-export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) {
+export function DiveDesk({
+  session, project, onChange, onBack, generationInbox = [], selectedGeneration = null,
+  onStartGeneration, onCancelGeneration, onOpenGenerationInbox, onResolveGeneration
+}: DiveDeskProps) {
+  const selectedResultBlocked = selectedGeneration?.result ? inspectLeak(selectedGeneration.result.prose).blocked : false;
   const [input, setInput] = useState('');
   const [choices, setChoices] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
-  const [pending, setPending] = useState<DiveCondensePayload | null>(null);
-  const [leakWarn, setLeakWarn] = useState<string | null>(null);
-  const [condensing, setCondensing] = useState(false);
+  const [pending, setPending] = useState<DiveCondensePayload | null>(() => selectedResultBlocked ? null : selectedGeneration?.result ?? null);
+  const [pendingGenerationId] = useState<string | null>(() => !selectedResultBlocked && selectedGeneration?.result ? selectedGeneration.id : null);
+  const [leakWarn, setLeakWarn] = useState<string | null>(() => selectedResultBlocked ? '본문에 프롬프트/AI 누수가 감지됐습니다. 이 결과는 승인할 수 없습니다.' : null);
+  const [startingGeneration, setStartingGeneration] = useState(false);
   const [srOpen, setSrOpen] = useState(false);
   const [srInput, setSrInput] = useState('');
   const [srReply, setSrReply] = useState<string | null>(null);
@@ -94,6 +106,10 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
     return c?.name ?? '상대';
   }, [project, session.characterId]);
   const suggest = shouldSuggestCondense(session);
+  const episode = project.chapters.length + 1;
+  const activeGeneration = generationInbox.find((item) => item.projectId === project.id && item.episode === episode && item.status === 'running') ?? null;
+  const projectInboxCount = generationInbox.filter((item) => item.projectId === project.id).length;
+  const selectedGenerationIsStale = Boolean(selectedGeneration && selectedGeneration.baseRevision !== buildProjectRevision(project));
   const turnCounts = useMemo(() => {
     let surprise = 0, anchor = 0, major = 0;
     for (const m of session.chatBuffer) {
@@ -186,30 +202,29 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
   }
 
   async function condense() {
-    if (busy) return;
-    setBusy(true);
-    setCondensing(true);
+    if (busy || startingGeneration || activeGeneration) return;
+    if (!onStartGeneration) {
+      setLeakWarn('이 환경에서는 로컬 생성 잡을 시작할 수 없습니다.');
+      return;
+    }
+    setStartingGeneration(true);
     setChoices([]);
     try {
-      const episode = project.chapters.length + 1;
-      const payload = await requestDiveCondense({
+      await onStartGeneration({
         character: card,
         scene,
         arc: JSON.stringify(session.arc ?? {}),
         context: buildProjectContextDigest(project),
         transcript: buildCondenseTranscript(session),
-        episode
+        episode,
+        projectId: project.id,
+        projectTitle: project.title,
+        baseRevision: buildProjectRevision(project)
       });
-      const leak = inspectLeak(payload.prose);
-      setLeakWarn(leak.blocked ? '본문에 프롬프트/AI 누수가 감지됐습니다. 다시 응결하세요.' : null);
-      setPending(leak.blocked ? null : payload);
     } catch {
-      setLeakWarn('응결 요청에 실패했습니다. 다시 시도하세요.');
-      setPending(null);
+      setLeakWarn('응결 잡을 시작하지 못했습니다. 다시 시도하세요.');
     } finally {
-      // fetch 거절 시에도 busy 가 고착되지 않게 항상 해제.
-      setBusy(false);
-      setCondensing(false);
+      setStartingGeneration(false);
     }
   }
 
@@ -272,6 +287,7 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
     setEdits({});
     setRetconDecisions({});
     setFindings(null);
+    if (pendingGenerationId) onResolveGeneration?.(pendingGenerationId);
     onChange(applyCondenseResult(session), updatedProject);
   }
 
@@ -383,9 +399,23 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
       )}
       {leakWarn && <div className="dx-leak">{leakWarn}</div>}
 
+      {(activeGeneration || projectInboxCount > 0) && (
+        <aside className="dx-generation-receipt" aria-label="생성 보관함 상태">
+          <div>
+            <strong>{activeGeneration ? '백그라운드에서 응결 중' : `생성 보관함에 ${projectInboxCount}개`}</strong>
+            <span>{activeGeneration ? '화면을 떠나도 로컬 Codex가 계속 작업합니다.' : '완료된 결과는 승인 전까지 작품에 반영되지 않습니다.'}</span>
+          </div>
+          <div className="dx-generation-actions">
+            {activeGeneration && onCancelGeneration && <button type="button" onClick={() => onCancelGeneration(activeGeneration)}>생성 취소</button>}
+            {onOpenGenerationInbox && <button type="button" onClick={onOpenGenerationInbox}>생성 보관함</button>}
+          </div>
+        </aside>
+      )}
+
       {pending && (
         <div className="dx-approve" role="dialog">
           <h4>응결된 회차 — {pending.title}</h4>
+          {selectedGenerationIsStale && <p className="dx-stale-warning">이 결과를 만든 뒤 작품 기준이 바뀌었습니다. 승인 전에 정밀 검토와 캐논 후보를 다시 확인하세요.</p>}
           <p className="dx-approve-prose">{pending.prose}</p>
           <DeviationReview
             deviations={deviations}
@@ -411,14 +441,14 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
           </ul>
           <div className="dx-approve-actions">
             <button onClick={approve}>승인 — 캐논으로 고정</button>
-            <button onClick={() => { setPending(null); setDecisions({}); setEdits({}); setRetconDecisions({}); setFindings(null); }}>거절</button>
+            <button onClick={() => { setPending(null); setDecisions({}); setEdits({}); setRetconDecisions({}); setFindings(null); }}>보류 — 보관함에 유지</button>
           </div>
         </div>
       )}
 
       {busy && (
         <div className="dx-status">
-          {condensing ? '이야기를 한 회차로 응결하는 중… 수십 초 걸릴 수 있어요.' : srBusy ? '쇼러너가 연출 중…' : `${charName} 입력 중…`}
+          {srBusy ? '쇼러너가 연출 중…' : `${charName} 입력 중…`}
         </div>
       )}
 
@@ -459,8 +489,8 @@ export function DiveDesk({ session, project, onChange, onBack }: DiveDeskProps) 
           rows={1}
         />
         <button className="dx-send" onClick={() => send()} disabled={busy || pending !== null}>보내기</button>
-        <button className="dx-condense-manual" onClick={condense} disabled={busy || pending !== null || session.chatBuffer.length <= CONDENSE_KEEP_RECENT}>
-          지금 응결
+        <button className="dx-condense-manual" onClick={condense} disabled={busy || startingGeneration || activeGeneration !== null || pending !== null || session.chatBuffer.length <= CONDENSE_KEEP_RECENT}>
+          {startingGeneration ? '잡 등록 중…' : activeGeneration ? '응결 진행 중' : '지금 응결'}
         </button>
         <button className="dx-continue" onClick={() => send('(가만히 지켜본다. 시간이 잠시 흐른다.)')} disabled={busy || pending !== null}>
           ⏳ 계속

@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-07-15 — P0-a 응결 신뢰성: 로컬 Codex 잡 + 전역 생성 보관함 (done·PR #38 열림·머지 대기)
+
+> 사용자 확정 순서 brainstorm→spec→plan→TDD로 완료. PLAY의 긴 응결 호출을 로컬 서버 인메모리 잡으로 분리하고 ProjectHub 중심 전역 생성 보관함을 추가했다. 구현 커밋 `f8bddc9`; 최종 `bash init.sh` 녹색(세부 수치는 progress.md 맨 위 최근 검증 참조).
+
+### 한 것 / 검증
+- `/api/dive-condense-jobs` POST/GET/DELETE, 동일 활성 입력 dedupe, 5분 상한, 명시 취소, 일반 요청 이탈·서버 종료 child cleanup. 완료는 자동 반영하지 않고 기존 누수·정밀검토·캐논 승인 경로로만 들어간다.
+- 전역 localStorage 보관함(20개 상한): running/succeeded/failed/cancelled/timed-out/expired, 손상 성공 결과 실패 강등, ProjectHub 목록과 PLAY 영수증/취소/바로가기.
+- 실제 Codex 성공 `job-mrlu5rrh-qjd74u1`(약 70초, 중복 POST 동일 id), 실제 취소 `job-mrlu7mvp-hs3d0g4`(DELETE 뒤 cancelled 유지). 브라우저 ProjectHub 보관함·현재 작품 공존 및 콘솔 오류 0. 캡처 `/Users/taewookkim/.codex/visualizations/2026/07/13/019f5c20-8b9d-73d2-8aea-50a5ad8aac70/storyx-p0a-generation-inbox.png`.
+
+### 손대지 말 것 / 유의
+- `.agents/skills/story-score/`는 사용자 소유 untracked 폴더다. 추가·수정·스테이징 금지.
+- 완료 잡은 **승인 전 작품/캐논에 반영 금지**. `buildProjectRevision` stale 경고와 `inspectLeak` 차단을 우회하지 말 것.
+- 잡 레지스트리는 의도적으로 서버 프로세스 메모리다. 새로고침은 생존하지만 서버 재시작 뒤 영수증은 `expired`; 서버 영속 큐로 몰래 확대하지 말 것.
+- ChatGPT 구독 사용은 로그인된 로컬 Codex CLI 경로에 한정한다. 호스팅 서비스의 API/OAuth 과금 대체로 설명하지 말 것.
+
+### 다음 세션이 해야 할 한 가지
+- **P0-c 작품 관리 시스템**을 새 brainstorm부터 시작: 임시작 생성→전역 보관→확정 작품 승격→작품별 이어쓰기, 생성 보관함의 projectId 귀속과 삭제/보존 정책 포함. P0-a에 멀티작품 저장소를 뒤섞지 말 것.
+
 ## 2026-07-13 — 온보딩 소재발굴 S2: onboard-chat 엔진 + 함께 구상 갈래 (done·**main 머지** `978d8af`)
 
 > S1 인계의 "다음 한 가지" 완주 — brainstorm 3결정(하이브리드 응결·응결 한 방·단일 파트너)→spec→plan→subagent-driven TDD 7태스크+라이브 통짜. progress.md 해당 절 상세. **plan-chat 6층 미러 완성** — 순수 모듈·클라이언트·프롬프트 정본+[onboard-mirror] 핀·dev 브리지·**prod Function(api/onboard-chat.ts)**·영속(OnboardingDraft 통합).

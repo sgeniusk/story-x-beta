@@ -1,6 +1,46 @@
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { defineConfig, type Connect, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { createLocalGenerationJobRegistry } from './src/lib/server/localGenerationJobs';
+
+interface StoryxProcess {
+  completion: Promise<Record<string, unknown>>;
+  cancel: () => void;
+}
+
+function startStoryxProcess(args: string[]): StoryxProcess {
+  const child = spawn(process.execPath, args, { cwd: process.cwd() });
+  let stdout = '';
+  let settled = false;
+  const completion = new Promise<Record<string, unknown>>((resolve, reject) => {
+    child.stdout.on('data', (chunk) => { stdout += chunk; });
+    child.stderr.resume();
+    child.once('error', (error) => {
+      settled = true;
+      reject(new Error(`브리지 실행 실패: ${error.message}`));
+    });
+    child.once('close', () => {
+      if (settled) return;
+      settled = true;
+      const json = extractJsonObject(stdout);
+      if (!json) {
+        reject(new Error('storyx 출력에서 JSON을 찾지 못했습니다.'));
+        return;
+      }
+      resolve(JSON.parse(json) as Record<string, unknown>);
+    });
+  });
+  return {
+    completion,
+    cancel: () => {
+      if (settled) return;
+      child.kill('SIGTERM');
+      const force = setTimeout(() => { if (!settled) child.kill('SIGKILL'); }, 1_000);
+      force.unref?.();
+    }
+  };
+}
 
 // 로컬 dev 서버에서만 storyx CLI(codex provider)를 실행하는 브리지.
 // 작가진 LLM 호출을 로컬 Codex CLI(codex exec)로 라우팅한다. claude 로 되돌리려면 각 라우트의 '--provider' 값을 'claude' 로 바꾼다.
@@ -29,36 +69,22 @@ function storyxBridge(
         input = {};
       }
 
-      const child = spawn(process.execPath, buildArgs(input), { cwd: process.cwd() });
-      let stdout = '';
-      let stderr = '';
-      child.stdout.on('data', (chunk) => {
-        stdout += chunk;
-      });
-      child.stderr.on('data', (chunk) => {
-        stderr += chunk;
-      });
-      child.on('error', (error) => {
-        res.statusCode = 500;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ status: 'failed', warning: `브리지 실행 실패: ${error.message}` }));
-      });
-      child.on('close', () => {
-        res.setHeader('Content-Type', 'application/json');
-        const json = extractJsonObject(stdout);
-        if (json) {
-          res.end(json);
-        } else {
+      const task = startStoryxProcess(buildArgs(input));
+      const cancelIfAbandoned = () => { if (!res.writableEnded) task.cancel(); };
+      res.on('close', cancelIfAbandoned);
+      task.completion.then(
+        (payload) => {
+          if (res.writableEnded) return;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(payload));
+        },
+        (error: unknown) => {
+          if (res.writableEnded) return;
           res.statusCode = 502;
-          res.end(
-            JSON.stringify({
-              status: 'failed',
-              warning: 'storyx 출력에서 JSON을 찾지 못했습니다.',
-              stderr: stderr.slice(0, 500)
-            })
-          );
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ status: 'failed', warning: error instanceof Error ? error.message : '브리지 실행 실패' }));
         }
-      });
+      );
     });
   };
 
@@ -68,6 +94,76 @@ function storyxBridge(
       server.middlewares.use(route, handler);
     }
   };
+}
+
+function readJsonBody(req: Connect.IncomingMessage, done: (input: Record<string, unknown>) => void): void {
+  let body = '';
+  req.on('data', (chunk) => { body += chunk; });
+  req.on('end', () => {
+    try { done(body ? JSON.parse(body) as Record<string, unknown> : {}); }
+    catch { done({}); }
+  });
+}
+
+function sendJson(res: Connect.ServerResponse, statusCode: number, payload: unknown): void {
+  res.statusCode = statusCode;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(payload));
+}
+
+function localGenerationJobBridge(route: string, buildArgs: (input: Record<string, unknown>) => string[]): Plugin {
+  const registry = createLocalGenerationJobRegistry<Record<string, unknown>, Record<string, unknown>>({
+    run: (input) => startStoryxProcess(buildArgs(input)),
+    timeoutMs: 300_000
+  });
+  const dispose = () => registry.dispose();
+  const handler: Connect.SimpleHandleFunction = (req, res) => {
+    const id = decodeURIComponent((req.url ?? '').split('?')[0].replace(/^\/+/, ''));
+    if (req.method === 'POST' && !id) {
+      readJsonBody(req, (input) => {
+        const projectId = String(input.projectId ?? '').trim();
+        const baseRevision = String(input.baseRevision ?? '').trim();
+        const episode = Number(input.episode ?? 1);
+        if (!projectId || !baseRevision || !Number.isFinite(episode)) {
+          sendJson(res, 400, { status: 'failed', warning: 'projectId·baseRevision·episode이 필요합니다.' });
+          return;
+        }
+        const dedupeKey = createHash('sha256').update(JSON.stringify(input)).digest('hex');
+        sendJson(res, 202, registry.start(input, dedupeKey, { projectId, baseRevision, episode }));
+      });
+      return;
+    }
+    if (req.method === 'GET' && id) {
+      const job = registry.get(id);
+      sendJson(res, job ? 200 : 404, job ?? { status: 'expired', warning: '로컬 서버에서 이 생성 작업을 찾지 못했습니다.' });
+      return;
+    }
+    if (req.method === 'DELETE' && id) {
+      const job = registry.cancel(id);
+      sendJson(res, job ? 200 : 404, job ?? { status: 'expired', warning: '로컬 서버에서 이 생성 작업을 찾지 못했습니다.' });
+      return;
+    }
+    sendJson(res, 405, { status: 'failed', warning: '지원하지 않는 잡 요청입니다.' });
+  };
+  return {
+    name: `storyx-jobs${route.replace(/\//g, '-')}`,
+    configureServer(server) {
+      server.middlewares.use(route, handler);
+      server.httpServer?.once('close', dispose);
+    }
+  };
+}
+
+function buildDiveCondenseArgs(input: Record<string, unknown>): string[] {
+  return [
+    'tools/storyx.mjs', 'dive-condense', '--provider', 'codex',
+    '--character', String(input.character ?? ''),
+    '--scene', String(input.scene ?? ''),
+    '--context', String(input.context ?? ''),
+    '--transcript', String(input.transcript ?? ''),
+    '--arc', String(input.arc ?? ''),
+    '--episode', String(input.episode ?? '1')
+  ];
 }
 
 // storyx 표준출력에서 단일 JSON 객체를 안전하게 추출한다
@@ -297,24 +393,8 @@ export default defineConfig({
       '--query',
       String(input.query ?? '')
     ]),
-    storyxBridge('/api/dive-condense', (input) => [
-      'tools/storyx.mjs',
-      'dive-condense',
-      '--provider',
-      'codex',
-      '--character',
-      String(input.character ?? ''),
-      '--scene',
-      String(input.scene ?? ''),
-      '--context',
-      String(input.context ?? ''),
-      '--transcript',
-      String(input.transcript ?? ''),
-      '--arc',
-      String(input.arc ?? ''),
-      '--episode',
-      String(input.episode ?? '1')
-    ]),
+    localGenerationJobBridge('/api/dive-condense-jobs', buildDiveCondenseArgs),
+    storyxBridge('/api/dive-condense', buildDiveCondenseArgs),
     storyxBridge('/api/dive-showrunner', (input) => [
       'tools/storyx.mjs',
       'dive-showrunner',

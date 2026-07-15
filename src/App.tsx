@@ -100,8 +100,17 @@ import { StoryXDesk } from './StoryXDesk';
 import { flowModes, canonAxes, flowEntryAgents, flowPublishMedia } from './landingFlow';
 import { PlaySeedPanel } from './components/PlaySeedPanel';
 import { DIVE_SEED_CHARACTERS } from './lib/diveSeedCharacters';
-import { requestDiveSetup } from './lib/diveClient';
+import { cancelDiveCondenseJob, DiveCondenseJobError, getDiveCondenseJob, requestDiveSetup, startDiveCondenseJob, type DiveCondenseJobRequest } from './lib/diveClient';
 import type { DiveSetup } from './lib/diveProposal';
+import {
+  appendGenerationInboxItem,
+  isActiveGeneration,
+  loadGenerationInbox,
+  mergeGenerationJob,
+  saveGenerationInbox,
+  type GenerationInboxItem
+} from './lib/generationInbox';
+import { GenerationInboxPanel } from './components/GenerationInboxPanel';
 import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
 import storyXSymbolLight from './assets/brand/story-x-symbol-light.svg';
 
@@ -178,11 +187,23 @@ type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor' | 'publish'
 function DiveStage({
   initial,
   onBack,
-  onWorkingChange
+  onWorkingChange,
+  generationInbox,
+  selectedGeneration,
+  onStartGeneration,
+  onCancelGeneration,
+  onOpenGenerationInbox,
+  onResolveGeneration
 }: {
   initial: DiveState;
   onBack: () => void;
   onWorkingChange: (project: SeriesProject) => void;
+  generationInbox: GenerationInboxItem[];
+  selectedGeneration: GenerationInboxItem | null;
+  onStartGeneration: (request: DiveCondenseJobRequest) => Promise<void>;
+  onCancelGeneration: (item: GenerationInboxItem) => void;
+  onOpenGenerationInbox: () => void;
+  onResolveGeneration: (id: string) => void;
 }) {
   const [state, setState] = useState<DiveState>(initial);
   return (
@@ -190,6 +211,12 @@ function DiveStage({
       session={state.session}
       project={state.project}
       onBack={onBack}
+      generationInbox={generationInbox}
+      selectedGeneration={selectedGeneration}
+      onStartGeneration={onStartGeneration}
+      onCancelGeneration={onCancelGeneration}
+      onOpenGenerationInbox={onOpenGenerationInbox}
+      onResolveGeneration={onResolveGeneration}
       onChange={(session, project) => {
         const next: DiveState = { schema: 'storyx/dive/v1', session, project };
         setState(next);
@@ -207,6 +234,67 @@ function App() {
     () => (typeof window === 'undefined' ? null : loadOnboardingDraft()),
     []
   );
+  const [generationInbox, setGenerationInbox] = useState<GenerationInboxItem[]>(() =>
+    typeof window === 'undefined' ? [] : loadGenerationInbox()
+  );
+  const generationInboxRef = useRef(generationInbox);
+  const [selectedGenerationId, setSelectedGenerationId] = useState<string | null>(null);
+  function commitGenerationInbox(next: GenerationInboxItem[]) {
+    generationInboxRef.current = next;
+    setGenerationInbox(next);
+    saveGenerationInbox(next);
+  }
+  useEffect(() => {
+    let stopped = false;
+    let polling = false;
+    const poll = async () => {
+      if (polling) return;
+      const active = generationInboxRef.current.filter(isActiveGeneration);
+      if (active.length === 0) return;
+      polling = true;
+      let next = generationInboxRef.current;
+      for (const item of active) {
+        try {
+          const job = await getDiveCondenseJob(item.id);
+          next = next.map((candidate) => candidate.id === item.id ? mergeGenerationJob(candidate, job) : candidate);
+        } catch (error) {
+          if (error instanceof DiveCondenseJobError && error.statusCode === 404) {
+            next = next.map((candidate) => candidate.id === item.id
+              ? { ...candidate, status: 'expired' as const, warning: error.message, updatedAt: new Date().toISOString() }
+              : candidate);
+          }
+        }
+      }
+      if (!stopped && next !== generationInboxRef.current) commitGenerationInbox(next);
+      polling = false;
+    };
+    void poll();
+    const timer = window.setInterval(() => { void poll(); }, 1_500);
+    return () => { stopped = true; window.clearInterval(timer); };
+  }, []);
+
+  async function handleStartGeneration(request: DiveCondenseJobRequest): Promise<void> {
+    const job = await startDiveCondenseJob(request);
+    commitGenerationInbox(appendGenerationInboxItem(generationInboxRef.current, {
+      ...job,
+      kind: 'dive-condense',
+      projectTitle: request.projectTitle
+    }));
+  }
+
+  async function handleCancelGeneration(item: GenerationInboxItem): Promise<void> {
+    try {
+      const job = await cancelDiveCondenseJob(item.id);
+      commitGenerationInbox(generationInboxRef.current.map((candidate) => candidate.id === item.id ? mergeGenerationJob(candidate, job) : candidate));
+    } catch {
+      // 폴러가 실제 상태를 다시 동기화한다. 낙관적으로 제거하거나 성공으로 가장하지 않는다.
+    }
+  }
+
+  function discardGeneration(id: string): void {
+    commitGenerationInbox(generationInboxRef.current.filter((item) => item.id !== id));
+    if (selectedGenerationId === id) setSelectedGenerationId(null);
+  }
   const initialStage = useMemo<AppStage>(() => {
     if (typeof window === 'undefined') return 'landing';
     const stageParam = new URLSearchParams(window.location.search).get('stage');
@@ -535,9 +623,16 @@ function App() {
   if (stage === 'projects') {
     return (
       <ProjectHub
+        generationInbox={generationInbox}
         onOpenLanding={() => setStage('landing')}
         onOpenNewProject={() => setStage('home')}
         onOpenProject={() => setStage('editor')}
+        onReviewGeneration={(item) => {
+          setSelectedGenerationId(item.id);
+          setStage('dive');
+        }}
+        onCancelGeneration={(item) => { void handleCancelGeneration(item); }}
+        onDiscardGeneration={(item) => discardGeneration(item.id)}
       />
     );
   }
@@ -576,12 +671,13 @@ function App() {
       </>
     );
     const restored = loadDiveState();
+    const selectedGeneration = generationInbox.find((item) => item.id === selectedGenerationId) ?? null;
     if (restored) {
       // 슬라이스 B — working(diveKey) 이 진실. 미반영 PLAY 작업을 loadProject 로 덮지 않는다(⟳최신화로만 머지).
-      return <>{bar}<DiveStage initial={restored} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} /></>;
+      return <>{bar}<DiveStage initial={restored} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={() => setStage('projects')} onResolveGeneration={discardGeneration} /></>;
     }
     if (diveInit) {
-      return <>{bar}<DiveStage initial={diveInit} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} /></>;
+      return <>{bar}<DiveStage initial={diveInit} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={() => setStage('projects')} onResolveGeneration={discardGeneration} /></>;
     }
     // PLAY 첫 진입 — 현 작품에 인물이 없으면 안내. 있으면 위 useEffect 가 diveInit 을 채워 다음 렌더에서 진입.
     if (!seedPlayFromProject(loadProject())) {
@@ -1087,13 +1183,21 @@ function LoginScreen({ onBack, onContinue }: { onBack: () => void; onContinue: (
 }
 
 function ProjectHub({
+  generationInbox,
   onOpenLanding,
   onOpenNewProject,
-  onOpenProject
+  onOpenProject,
+  onReviewGeneration,
+  onCancelGeneration,
+  onDiscardGeneration
 }: {
+  generationInbox: GenerationInboxItem[];
   onOpenLanding: () => void;
   onOpenNewProject: () => void;
   onOpenProject: () => void;
+  onReviewGeneration: (item: GenerationInboxItem) => void;
+  onCancelGeneration: (item: GenerationInboxItem) => void;
+  onDiscardGeneration: (item: GenerationInboxItem) => void;
 }) {
   const project = loadProject();
   const projectMeta = `소설 / 웹소설 · ${project.currentEpisode}화 · 캐논 ${project.canonFacts.length}개 · 캐릭터 ${project.characters.length}명`;
@@ -1134,6 +1238,14 @@ function ProjectHub({
           </div>
         </button>
       </section>
+      <div className="pjx-inbox-wrap">
+        <GenerationInboxPanel
+          items={generationInbox}
+          onReview={onReviewGeneration}
+          onCancel={onCancelGeneration}
+          onDiscard={onDiscardGeneration}
+        />
+      </div>
     </div>
   );
 }
