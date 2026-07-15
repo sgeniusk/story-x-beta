@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
   appendSnapshot,
   buildProjectSnapshot,
@@ -11,6 +11,16 @@ import {
   loadPlanPatches,
   savePlanPatches,
   clearPlanPatches,
+  clearProject,
+  activateProject,
+  confirmLibraryProject,
+  loadDiveState,
+  loadProject,
+  loadProjectLibrary,
+  loadProjectSnapshots,
+  pushProjectSnapshot,
+  saveDiveState,
+  saveTemporaryProject,
   type OnboardingDraft,
   type ProjectSnapshot,
   type DiveState
@@ -19,6 +29,95 @@ import type { PlanPatch } from './planStage';
 import { createSeedProject, createEmptyProject, buildStoryEditorWorkspace } from './storyEngine';
 import { createDiveSession } from './diveSession';
 import { importanceBand } from './canonImportance';
+
+describe('P0-c 작품 라이브러리 storage bridge', () => {
+  const makeProject = (id: string, title: string) => ({ ...createEmptyProject({ title }), id });
+
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('migrates an actually saved legacy project as the active confirmed work', () => {
+    const legacy = makeProject('legacy', '기존 작품');
+    window.localStorage.setItem('serial-story-studio/project', JSON.stringify(legacy));
+
+    expect(loadProjectLibrary()).toEqual([
+      expect.objectContaining({ projectId: 'legacy', lifecycle: 'confirmed', project: expect.objectContaining({ title: '기존 작품' }) })
+    ]);
+    expect(loadProject().id).toBe('legacy');
+    expect(window.localStorage.getItem('serial-story-studio/active-project-id')).toBe('legacy');
+  });
+
+  it('does not register the unsaved demo seed as a real work', () => {
+    expect(loadProjectLibrary()).toEqual([]);
+    expect(loadProject().title).toBeTruthy();
+    expect(loadProjectLibrary()).toEqual([]);
+  });
+
+  it('keeps a new temporary work beside the migrated project and makes it active', () => {
+    const legacy = makeProject('legacy', '기존 작품');
+    window.localStorage.setItem('serial-story-studio/project', JSON.stringify(legacy));
+    loadProjectLibrary();
+
+    saveTemporaryProject(makeProject('draft', '임시 작품'));
+
+    expect(loadProject().id).toBe('draft');
+    expect(loadProjectLibrary().map((entry) => [entry.projectId, entry.lifecycle])).toEqual([
+      ['draft', 'temporary'],
+      ['legacy', 'confirmed']
+    ]);
+  });
+
+  it('restores each project PLAY working copy when switching back and forth', () => {
+    const a = makeProject('a', 'A');
+    const b = makeProject('b', 'B');
+    saveTemporaryProject(a);
+    saveDiveState({ schema: 'storyx/dive/v1', session: createDiveSession('char-a', 'a'), project: { ...a, tone: 'A working' } });
+    saveTemporaryProject(b);
+    saveDiveState({ schema: 'storyx/dive/v1', session: createDiveSession('char-b', 'b'), project: { ...b, tone: 'B working' } });
+
+    expect(activateProject('a')).toBe(true);
+    expect(loadDiveState()?.project.tone).toBe('A working');
+    expect(activateProject('b')).toBe(true);
+    expect(loadDiveState()?.project.tone).toBe('B working');
+  });
+
+  it('isolates PLAN patches and snapshots while switching works', () => {
+    const a = makeProject('a', 'A');
+    const b = makeProject('b', 'B');
+    const patchA: PlanPatch = { kind: 'canon', id: 'a', label: 'A 패치', before: '', after: 'A' };
+    const patchB: PlanPatch = { kind: 'canon', id: 'b', label: 'B 패치', before: '', after: 'B' };
+    saveTemporaryProject(a);
+    savePlanPatches([patchA]);
+    pushProjectSnapshot(a, 'A 스냅샷');
+    saveTemporaryProject(b);
+    savePlanPatches([patchB]);
+    pushProjectSnapshot(b, 'B 스냅샷');
+
+    activateProject('a');
+    expect(loadPlanPatches()).toEqual([patchA]);
+    expect(loadProjectSnapshots().map((snapshot) => snapshot.label)).toEqual(['A 스냅샷']);
+    activateProject('b');
+    expect(loadPlanPatches()).toEqual([patchB]);
+    expect(loadProjectSnapshots().map((snapshot) => snapshot.label)).toEqual(['B 스냅샷']);
+  });
+
+  it('persists explicit temporary-to-confirmed promotion', () => {
+    saveTemporaryProject(makeProject('draft', '임시 작품'));
+    expect(confirmLibraryProject('draft')).toBe(true);
+    expect(loadProjectLibrary()[0].lifecycle).toBe('confirmed');
+    expect(loadProject().title).toBe('임시 작품');
+  });
+
+  it('keeps legacy reset semantics without resurrecting the cleared active work', () => {
+    saveTemporaryProject(makeProject('a', 'A'));
+    saveTemporaryProject(makeProject('b', 'B'));
+    clearProject();
+
+    expect(loadProjectLibrary().map((entry) => entry.projectId)).toEqual(['a']);
+    expect(loadProject().id).toBe('a');
+  });
+});
 
 describe('project snapshots', () => {
   it('builds a snapshot capturing episode, counts, and the project', () => {

@@ -339,6 +339,8 @@ interface StoryXDeskProps {
   initialMedium?: CreativeMedium;
   initialFormat?: CreativeFormat;
   initialDraftPayload?: DraftChapterPayload | null;
+  /** 새 온보딩 초안을 처음 저장할 때의 작품 lifecycle. 기존 작품 편집에는 영향 없음. */
+  initialProjectLifecycle?: 'temporary' | 'confirmed';
   onOpenProjects?: () => void;
   onOpenLanding?: () => void;
   /** 출간 버튼을 누르면 4파트 중 마지막 퍼블리시 stage 로 빠진다. */
@@ -377,6 +379,7 @@ export function StoryXDesk({
   initialMedium = 'novel',
   initialFormat = 'long-novel',
   initialDraftPayload = null,
+  initialProjectLifecycle = 'confirmed',
   onOpenProjects,
   onOpenLanding,
   onOpenPublish,
@@ -1392,14 +1395,14 @@ export function StoryXDesk({
     };
     const result = chapterFromDraftPayload(seed, initialDraftPayload, bootRequest);
     setProject(result.updatedProject);
-    saveProject(result.updatedProject);
+    saveProject(result.updatedProject, { lifecycle: initialProjectLifecycle, activate: true });
     setLatestChapter(result.chapter);
     setDraftFallbackNotice(initialDraftPayload.isFallback === true);
     setActiveTrack('draft');
     setIsPublishingMode(false);
     void runAiReview(result.chapter.prose, buildProjectContextDigest(result.updatedProject));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialDraftPayload]);
+  }, [initialDraftPayload, initialProjectLifecycle]);
 
   function selectMedium(nextMedium: CreativeMedium) {
     // #10 — 기존 회차·헌장이 있는데 매체를 바꾸면 작가진·생성/검토 기준이 조용히 전환된다. 무음 전환을 막기 위해 영향을 알리고 확인받는다.
