@@ -1,7 +1,39 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-13 · Branch: `main` (**온보딩 소재발굴 S1(PR #34)·S2(PR #36) 모두 main 머지 완료·머지 후 init.sh 녹색 — 다음 세션은 사용자 직접 테스트 결과로 시작**)
+> Last Updated: 2026-07-15 · Branch: `codex/storyx-service-direction-plan` (**서비스 방향 계획에 사용자 발화 기반 Voice DNA·content-skills 능력 모듈 적용안을 확정 — 첫 구현 슬라이스 선택 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
+
+## 현재 트랙 — Story X 서비스 지향점 및 개발 계획 (`planning` · 2026-07-15)
+
+> 최근 검증(2026-07-15) — `bash init.sh` 통과: `npm test` 952 통과(92 파일) · `npm run build`(tsc+vite) 성공.
+
+Codex 이관 패킷과 신규 사용자 실플레이 5 페르소나 5/5 차단 결과를 기존 북극성·Dive X 시장 방향·M7 외부 시장증명 계약과 합쳐, 기능 수가 아니라 사용자 산출물 기준의 개발 계획을 `docs/superpowers/plans/2026-07-14-storyx-service-direction-development-plan.md`에 작성했다.
+- **서비스 정의** — Story X는 캐릭터챗이나 범용 생성기가 아니라, PLAY 경험을 읽히는 한국어 연재 회차로 응결하고 승인된 캐논으로 다음 화까지 이어 주는 개인 연재 스튜디오.
+- **1차 쐐기 사용자** — 한국어 장르 웹소설 입문자·연재 실무자. 장기 다매체 OS 비전은 유지하되 텍스트 폐루프의 외부 시장증명 뒤로 실행 순서를 고정.
+- **북극성** — 주간 `반출 가능한 회차` 완성 수. Phase 0 신뢰 바닥→Phase 1 한 회차 완성→Phase 2 쉬운 진입→Phase 3 장편 해자→Phase 4 외부 10화 실증→Phase 5 매체 브리지.
+- **검토 원칙 반영** — `storyx-persona-review`의 차단 신호 우선 원칙에 따라 응결 유실·무정보 대기·반출 부재를 Phase 0 서비스 계약으로 승격.
+- **라이브 UI 확인** — 로컬 5175에서 랜딩→온보딩→프리셋→PLAY→WRITE→PLAN→작가실→캐논을 직접 관찰. 철학 전달은 강하지만, 현재 리드·선택 이유·캐논 후보/승인/영향 흐름이 사용자에게 보이지 않는 문제를 계획에 반영.
+- **에이전트 운영안** — `stage × medium × intent × artifactState × riskFlags` 결정론적 라우터가 Lead 1명+전문가 최대 2명+필요 시 게이트를 선택. 6명 전체 검토는 기본이 아니라 사용자 명시의 깊은 검토로 강등.
+- **캐논 운영안** — 새 사실 후보→Hard/Living/Soft 분류→충돌·영향 미리보기→사용자 승인/수정/거절→승인 항목만 memory bank/context packet 재생성의 생애주기를 명시.
+- **사용자 목소리 계약** — PLAY·인터뷰·자유 서술의 의미와 표현 지문을 보존하면서 어색한 한국어만 최소 보정해 작품 문장으로 옮기고, 새 캐논 후보는 분리한다.
+- **Voice DNA 구조** — User/Work/Character 3층 프로필에 근거 발화·신뢰도·승인 상태를 기록한다. 원문은 private raw source로 두고 승인된 파생 프로필만 다음 생성에 사용한다.
+- **content-skills 적용안** — storytelling·viral-hooks·dumbify·anti-ai·voice-dna를 새 에이전트 5명이 아니라 기존 작가진의 선택적 편집 능력으로 흡수하고, VOICE-0/1→CRAFT-1→VOICE-2/CLARITY-1 순서로 배치한다.
+
+### Current State
+- 계획 문서에 실제 UI 관찰, UX-0→ORCH-1/2→CANON-1/2→MEMORY-1 순서, 사용자 발화의 작품화 계약과 content-skills 재구성안을 반영. 제품 코드 변경 없음.
+- 기존 사용자 소유 미커밋 변경(`docs/handoff/2026-07-14-codex-handoff.md`, 실플레이 검토 문서, `.agents/skills/story-score/`)은 보존.
+
+### Recommended Next Step
+- 첫 구현 슬라이스를 사용자가 선택한다. 계획상 첫 후보는 **P0-a 응결 신뢰성**이며, 선택되면 서버측 잡+폴링/SSE/타임아웃+계측을 brainstorm 질문으로 비교한 뒤 새 feature 브랜치에서 spec→plan→TDD로 진행한다.
+- Voice 관련 첫 슬라이스는 Phase 0을 앞지르지 않으며, **VOICE-0 한국어 비교 평가 파일럿**부터 시작해 자동 수정 없이 실제 회차에서 보존성과 자연스러움을 검증한다.
+
+### Verification Evidence
+- `bash init.sh` — 2026-07-15 녹색: tsc · vitest(92 files/952 tests) · vite build 전체 통과.
+- 계획 문서 — `docs/superpowers/plans/2026-07-14-storyx-service-direction-development-plan.md`.
+- 계획·이관 증거 커밋 — `fe2b03a`.
+- 라이브 UI 캡처 — `/Users/taewookkim/.codex/visualizations/2026/07/13/019f5c20-8b9d-73d2-8aea-50a5ad8aac70/storyx-live-audit/` (랜딩·온보딩·소재·PLAY·WRITE·PLAN·작가실·캐논).
+- UI/UX·에이전트·캐논 계획 보강 커밋 — `9cd16ae`.
+- Voice DNA·content-skills 적용 계획 커밋 — `a5a093c`.
 
 ## 완료 트랙 — 온보딩 소재발굴 S2: onboard-chat 엔진 + 「함께 구상」 갈래 (`done` · 2026-07-13, **main 머지** `978d8af` — PR #36)
 
