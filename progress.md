@@ -1,7 +1,17 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-13 · Branch: `main` (**온보딩 소재발굴 S1(PR #34)·S2(PR #36) 모두 main 머지 완료·머지 후 init.sh 녹색 — 다음 세션은 사용자 직접 테스트 결과로 시작**)
+> Last Updated: 2026-07-15 · Branch: `codex/p0a-condense-job-polling` (**P0-a 로컬 Codex 응결 잡 + 전역 생성 보관함 완료, PR 생성 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
+
+> 최근 검증(2026-07-15) — `bash init.sh` 통과: `npm test` 970 통과(96 파일) · `npm run build`(tsc+vite) 성공.
+
+## 완료 트랙 — P0-a 응결 신뢰성: 로컬 잡 + 폴링 + 전역 생성 보관함 (`done` · 2026-07-15, 구현 커밋 `f8bddc9`)
+
+PLAY 응결을 긴 HTTP 요청에서 **서버 프로세스 인메모리 잡**으로 분리하고, 전역 localStorage 생성 보관함에서 실행·완료·실패·취소·시간초과·서버 재시작 만료 영수증을 관리한다. 완료 원고는 자동 반영하지 않고 기존 누수 검사→정밀 검토→캐논 승인 게이트를 그대로 통과해야 한다. 로컬 Codex CLI 로그인/ChatGPT 구독 한도 안에서 동작하며 배포형 API 인증은 범위 밖이다. spec `docs/superpowers/specs/2026-07-15-p0a-condense-job-inbox-design.md` · plan `docs/superpowers/plans/2026-07-15-p0a-condense-job-inbox.md`.
+- **구현** — `localGenerationJobs.ts`(동일 입력 활성 잡 재연결·5분 상한·취소·서버 종료 정리) + `/api/dive-condense-jobs` POST/GET/DELETE + `diveClient.ts` 잡 계약 + `generationInbox.ts` 전역 영속/손상 복구/20개 상한 + ProjectHub `GenerationInboxPanel` + PLAY 진행 영수증·취소·보관함 바로가기·완료 검토 재진입.
+- **안전 불변식** — 완료 결과 자동 커밋 금지 · 기준 revision 변경 경고 · 성공 영수증의 결과 누락/손상은 실패로 강등 · CLI stderr 사용자 노출 금지 · 일반 브리지 연결 이탈과 서버 종료도 자식 프로세스 정리 · 사용자 소유 `.agents/skills/story-score/` 무접촉.
+- **실동작 증거** — 실제 Codex 잡 `job-mrlu5rrh-qjd74u1` 약 70초 후 성공, 동일 POST가 같은 id 반환, 원고/outline/beats/newCanonFacts 반환 확인. `job-mrlu7mvp-hs3d0g4` DELETE 후 cancelled 유지 확인. 브라우저 `?stage=projects`에서 생성 보관함 빈 상태·현재 작품 공존, 콘솔 오류 0. 캡처 `/Users/taewookkim/.codex/visualizations/2026/07/13/019f5c20-8b9d-73d2-8aea-50a5ad8aac70/storyx-p0a-generation-inbox.png`.
+- **Files To Touch(후속)** — P0-c 착수 시 멀티 작품 저장소/프로젝트 허브/생성 보관함 projectId 라우팅을 새 spec으로 확정한 뒤 지정. **Recommended Next Step** = P0-c 작품 관리 시스템(임시작 생성→전역 보관→확정 작품 승격→작품별 이어쓰기). P0-a 인메모리 잡의 서버 재시작 생존은 의도적 비목표이며 영수증은 `expired`로 정직하게 표시한다.
 
 ## 완료 트랙 — 온보딩 소재발굴 S2: onboard-chat 엔진 + 「함께 구상」 갈래 (`done` · 2026-07-13, **main 머지** `978d8af` — PR #36)
 
