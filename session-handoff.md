@@ -12,6 +12,7 @@
 - `docs/superpowers/plans/2026-07-14-storyx-service-direction-development-plan.md` §3.9~3.10 — 의미·표현 지문·자연스러움·작품 문장 4층 변환 계약과 User/Work/Character Voice Profile을 명시.
 - `artemnovitckii/content-skills`의 storytelling·viral-hooks·dumbify·anti-ai·voice-dna를 새 에이전트가 아닌 기존 작가진의 편집 능력으로 재구성. 원본의 SNS·영어권 규칙은 그대로 이식하지 않고 한국어 연재·캐논 승인 계약에 맞춘다.
 - 도입 백로그를 VOICE-0 한국어 비교 평가→VOICE-1 3층 프로필→CRAFT-1 구조·후크 감사→VOICE-2 한국어 anti-AI 권고/CLARITY-1 조건부 이해 부담 점검으로 배치.
+- 적용 계획 커밋 — `a5a093c`.
 - `bash init.sh` 녹색(92 files/952 tests, tsc+vite build 성공).
 
 ### 다음 세션이 해야 할 한 가지
