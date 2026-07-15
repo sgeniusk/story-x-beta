@@ -131,4 +131,16 @@ describe('DiveDesk', () => {
     expect(html).toContain('dx-vs-request');
     expect(html).toContain('✦ 전개 후보');
   });
+
+  it('진행 중 응결 잡과 전역 보관함 바로가기를 렌더한다', () => {
+    const project = createEmptyProject({ title: 't' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {},
+      generationInbox: [{ id: 'job-1', kind: 'dive-condense', projectId: project.id, projectTitle: 't', baseRevision: 'r1', episode: 1, status: 'running', createdAt: 'x', updatedAt: 'x' }],
+      onOpenGenerationInbox: () => {}
+    }));
+    expect(html).toContain('백그라운드에서 응결 중');
+    expect(html).toContain('생성 보관함');
+  });
 });
