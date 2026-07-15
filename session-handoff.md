@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-07-15 — 사용자 발화 기반 Voice DNA·content-skills 적용 계획 확정
+
+> 사용자는 자신의 목소리를 별도 스타일 흉내가 아니라, PLAY·인터뷰에서 한 말을 자연스럽게 보정해 작품에 남기는 방향으로 승인했다. 제품 코드는 변경하지 않고 기존 서비스 방향 계획과 백로그에 반영했다.
+
+### 이번 세션이 만든 것
+- `docs/superpowers/plans/2026-07-14-storyx-service-direction-development-plan.md` §3.9~3.10 — 의미·표현 지문·자연스러움·작품 문장 4층 변환 계약과 User/Work/Character Voice Profile을 명시.
+- `artemnovitckii/content-skills`의 storytelling·viral-hooks·dumbify·anti-ai·voice-dna를 새 에이전트가 아닌 기존 작가진의 편집 능력으로 재구성. 원본의 SNS·영어권 규칙은 그대로 이식하지 않고 한국어 연재·캐논 승인 계약에 맞춘다.
+- 도입 백로그를 VOICE-0 한국어 비교 평가→VOICE-1 3층 프로필→CRAFT-1 구조·후크 감사→VOICE-2 한국어 anti-AI 권고/CLARITY-1 조건부 이해 부담 점검으로 배치.
+- `bash init.sh` 녹색(92 files/952 tests, tsc+vite build 성공).
+
+### 다음 세션이 해야 할 한 가지
+- 사용자가 첫 구현 슬라이스를 선택한다. 기본 추천은 **P0-a 응결 신뢰성**이며, 선택 즉시 brainstorm에서 잡+폴링/SSE/타임아웃+계측의 범위를 결정한 뒤 새 feature 브랜치에서 spec→plan→TDD로 진행한다.
+
+### 손대지 말 것 / 유의
+- 사용자 발화는 의미를 바꾸거나 없던 사실을 보충하지 않는다. 새 캐논과 새 Voice 규칙은 별도 후보로 보내고 사용자 승인 전 다음 생성 컨텍스트에 넣지 않는다.
+- 원문 대화·인터뷰는 `private/raw-sources`에 두며 승인된 파생 Voice Profile만 동기화한다.
+- content-skills 원본 폴더는 레포 밖 참고 자료다. 코드·문구를 직접 가져올 경우 라이선스를 다시 확인한다.
+- Phase 0 응결·복구 신뢰성이 Voice 자동 적용보다 우선이다. `.agents/skills/story-score/`는 사용자 소유 미추적 변경으로 계속 제외한다.
+
+---
+
 ## 2026-07-14 — 서비스 방향 계획 보강: 라이브 UI/UX·에이전트 라우팅·캐논 승인
 
 > 사용자의 “UI/UX, 캐논 유지, 구체적인 에이전트 선택, 실제 웹페이지 확인” 질문에 따라 로컬 서비스를 직접 탐색하고 기존 서비스 방향 계획의 빈 부분을 보강했다. 제품 코드는 변경하지 않았다.
