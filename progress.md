@@ -1,11 +1,11 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-15 · Branch: `codex/p0c-work-library` (**P0-c 작품 보관함 구현 완료, PR 생성 준비**)
+> Last Updated: 2026-07-16 · Branch: `codex/p0c-work-library` (**P0-c 작품 보관함 완료, Draft PR #39 열림·머지 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-> 최근 검증(2026-07-15) — `bash init.sh` 통과: `npm test` 988 통과(98 파일) · `npm run build`(tsc+vite) 성공.
+> 최근 검증(2026-07-16) — `bash init.sh` 통과: `npm test` 988 통과(98 파일) · `npm run build`(tsc+vite) 성공.
 
-## 완료 트랙 — P0-c 작품 관리 시스템: 임시작 보관·확정·이어쓰기 (`done` · 2026-07-15, 구현 커밋 `b9e578e`)
+## 완료 트랙 — P0-c 작품 관리 시스템: 임시작 보관·확정·이어쓰기 (`done` · 2026-07-16, 구현 커밋 `b9e578e` · Draft PR #39)
 
 전역 작품 보관함을 신설해 PLAY-first 온보딩에서 만든 작업을 `temporary`로 저장하고, 사용자가 명시적으로 `confirmed`로 승격한 뒤 재시작해 이어갈 수 있게 했다. 기존 단일 저장 작품은 `confirmed`로 안전 마이그레이션하며, 저장되지 않은 seed 데모는 보관함에 등록하지 않는다. 작품별 PLAY working copy·PLAN staged patches/chat·스냅샷 캐시를 격리하고, 생성 보관함 검토 진입 시 해당 `projectId`를 먼저 활성화한다. spec `docs/superpowers/specs/2026-07-15-p0c-work-library-design.md` · plan `docs/superpowers/plans/2026-07-15-p0c-work-library.md`.
 - **구현** — `projectLibrary.ts` lifecycle 순수 도메인 + `storage.ts` 다중 작품 저장/활성화/레거시 마이그레이션/작품별 캐시 스왑 + ProjectHub `ProjectLibraryCard`(임시작·연재 작품·최근 작업·이어쓰기·작품으로 확정) + 온보딩 임시 저장 + 생성 보관함 projectId 라우팅.
