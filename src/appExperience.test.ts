@@ -6,6 +6,7 @@ const app = readFileSync(resolve(__dirname, 'App.tsx'), 'utf8');
 const css = readFileSync(resolve(__dirname, 'styles.css'), 'utf8');
 const blueprintSource = readFileSync(resolve(__dirname, 'lib/projectBlueprint.ts'), 'utf8');
 const projectCardSource = readFileSync(resolve(__dirname, 'components/ProjectLibraryCard.tsx'), 'utf8');
+const diveDeskSource = readFileSync(resolve(__dirname, 'components/DiveDesk.tsx'), 'utf8');
 
 describe('Story X page experience', () => {
   it('separates the product into landing, login, projects, new-project, and editor stages', () => {
@@ -253,5 +254,41 @@ describe('P0-c 작품 라이브러리 배선', () => {
   it('초안 부트와 PLAY-first 모두 새 작품을 temporary lifecycle로 저장한다', () => {
     expect(app).toContain('saveTemporaryProject(project)');
     expect(app).toContain('initialProjectLifecycle="temporary"');
+  });
+});
+
+describe('P0-b PLAY 기록 복구 배선', () => {
+  it('잡 요청과 별도로 전체 PLAY recovery snapshot을 생성 영수증에 보존한다', () => {
+    expect(diveDeskSource).toContain('buildPlayRecoverySnapshot(session, project)');
+    expect(app).toMatch(/handleStartGeneration[\s\S]{0,500}?recovery/);
+    expect(app).toMatch(/appendGenerationInboxItem[\s\S]{0,300}?recovery/);
+  });
+
+  it('TXT 다운로드는 복구 포맷터와 안전 파일명을 사용한다', () => {
+    expect(app).toContain('formatPlayRecoveryText(recovery)');
+    expect(app).toContain('buildPlayRecoveryFilename(recovery)');
+  });
+
+  it('WRITE 복구는 대상 작품 활성화 후에만 저장하고 전송 완료를 영수증에 기록한다', () => {
+    const handler = app.match(/function handleSendRecoveryToDraft[\s\S]{0,2200}?\n  \}/)?.[0] ?? '';
+    const order = [
+      'activateProject(recovery.projectId)',
+      'loadProject()',
+      'loadDiveState()',
+      'planPlayRecoveryWrite(',
+      'saveProject(',
+      'saveDiveState(',
+      'const recoveredAt = new Date()',
+      'refreshActiveProjectState()',
+      "setStage('editor')"
+    ];
+    const indexes = order.map((token) => handler.indexOf(token));
+    expect(indexes.every((index) => index >= 0)).toBe(true);
+    expect(indexes).toEqual([...indexes].sort((left, right) => left - right));
+  });
+
+  it('생성 영수증 저장 실패를 잡 시작 실패로 전파하지 않고 메모리 상태를 유지한다', () => {
+    expect(app).toContain('persistGenerationInboxState(next)');
+    expect(app).toContain('generationInboxRef.current = visible');
   });
 });

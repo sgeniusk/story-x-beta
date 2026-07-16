@@ -135,6 +135,32 @@ describe('storyEngine', () => {
     expect(result.chapter.stakesLedger ?? []).toEqual([]);
   });
 
+  it('빈 intent와 canon 후보로 만든 복구 초안은 기존 캐논·인물 성장 상태를 바꾸지 않는다', () => {
+    const project = createSeedProject();
+    const canonBefore = project.canonFacts;
+    const charactersBefore = project.characters;
+    const growthBefore = project.growthLedger;
+
+    const result = chapterFromDraftPayload(
+      project,
+      {
+        title: 'PLAY 기록 복구본',
+        hook: '응결 실패 뒤 보존한 원문',
+        outline: [],
+        beats: [],
+        prose: '나: 문을 열었다.\n상대: 아직 늦지 않았어.',
+        newCanonFacts: []
+      },
+      { genre: project.genre, intent: '', pressure: '' }
+    );
+
+    expect(result.chapter.newCanonFacts).toEqual([]);
+    expect(result.chapter.locked).not.toBe(true);
+    expect(result.updatedProject.canonFacts).toEqual(canonBefore);
+    expect(result.updatedProject.characters).toEqual(charactersBefore);
+    expect(result.updatedProject.growthLedger).toEqual(growthBefore);
+  });
+
   it('commitChapterProse 가 지정 회차의 prose 만 갱신하고 다른 필드·회차는 보존, 없는 id·동일 prose 는 무변경', () => {
     // 버그(2026-06-14 베타테스트 #1) — editorText 를 chapter.prose 로 commit 하는 경로가 0개라
     // 편집 본문이 saveProject 로 영속되지 않고 회차 전환·새로고침 시 소실됐다.

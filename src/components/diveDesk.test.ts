@@ -1,9 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createElement } from 'react';
+import { act, createElement } from 'react';
+import { createRoot } from 'react-dom/client';
 import { DiveDesk } from './DiveDesk';
 import { createDiveSession } from '../lib/diveSession';
 import { createEmptyProject } from '../lib/storyEngine';
+import type { PlayRecoverySnapshot } from '../lib/playRecovery';
+
+(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 describe('DiveDesk', () => {
   it('연대기 회차와 채팅 버블을 렌더한다', () => {
@@ -142,5 +146,87 @@ describe('DiveDesk', () => {
     }));
     expect(html).toContain('백그라운드에서 응결 중');
     expect(html).toContain('생성 보관함');
+  });
+
+  it('실패 영수증이 PLAY에 도착하면 그 자리에서 원문 복구 행동을 렌더한다', () => {
+    const project = createEmptyProject({ title: 't' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const recovery: PlayRecoverySnapshot = {
+      schema: 'storyx/play-recovery/v1', projectId: project.id, projectTitle: 't', episode: 1,
+      scene: '', transcript: '나: 기록', capturedAt: '2026-07-16T00:00:00Z'
+    };
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {},
+      generationInbox: [{ id: 'job-1', kind: 'dive-condense', projectId: project.id, projectTitle: 't', baseRevision: 'r1', episode: 1, status: 'cancelled', createdAt: 'x', updatedAt: 'x', recovery }],
+      onDownloadRecovery: () => {}, onSendRecoveryToDraft: () => {}, onOpenGenerationInbox: () => {}
+    }));
+    expect(html).toContain('PLAY 기록은 안전합니다');
+    expect(html).toContain('PLAY 기록 TXT');
+    expect(html).toContain('WRITE 초안으로 보내기');
+    expect(html).toContain('생성 보관함');
+    expect(html).toContain('role="region"');
+    expect(html).toContain('role="status"');
+    expect(html).not.toContain('dx-generation-receipt');
+  });
+
+  it('실행 잡 영속화가 실패하면 PLAY에서 새로고침 전 TXT 행동을 제공한다', () => {
+    const project = createEmptyProject({ title: 't' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const recovery: PlayRecoverySnapshot = {
+      schema: 'storyx/play-recovery/v1', projectId: project.id, projectTitle: 't', episode: 1,
+      scene: '', transcript: '나: 기록', capturedAt: '2026-07-16T00:00:00Z'
+    };
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {},
+      generationInbox: [{ id: 'job-1', kind: 'dive-condense', projectId: project.id, projectTitle: 't', baseRevision: 'r1', episode: 1, status: 'running', createdAt: 'x', updatedAt: 'x', recovery, localPersistenceFailed: true }],
+      onCancelGeneration: () => {}, onDownloadRecovery: () => {}, onOpenGenerationInbox: () => {}
+    }));
+    expect(html).toContain('PLAY 기록 보관 필요');
+    expect(html).toContain('새로고침 전에 TXT');
+    expect(html).toContain('PLAY 기록 TXT');
+  });
+
+  it('잡 등록 실패 전에 전체 PLAY를 캡처하고 인라인 TXT/WRITE 구제를 제공한다', async () => {
+    const project = { ...createEmptyProject({ title: '실패 복구' }), currentEpisode: 5 };
+    const session = {
+      ...createDiveSession('seed-childhood', project.id),
+      scene: '옥상',
+      chatBuffer: [
+        { id: 'm1', role: 'user' as const, text: '첫 문장', turn: 1 },
+        { id: 'm2', role: 'character' as const, text: '둘째 문장', turn: 2 },
+        { id: 'm3', role: 'user' as const, text: '셋째 문장', turn: 3 }
+      ]
+    };
+    const onStartGeneration = vi.fn().mockRejectedValue(new Error('offline'));
+    const onDownloadRecovery = vi.fn();
+    const onSendRecoveryToDraft = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {},
+      onStartGeneration, onDownloadRecovery, onSendRecoveryToDraft
+    })));
+    const condense = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '지금 응결');
+    await act(async () => { condense?.click(); await Promise.resolve(); });
+
+    expect(onStartGeneration).toHaveBeenCalledTimes(1);
+    const [request, captured] = onStartGeneration.mock.calls[0] as [Record<string, string>, PlayRecoverySnapshot];
+    expect(request.transcript).toBe('나: 첫 문장');
+    expect(request.episode).toBe(6);
+    expect(captured.episode).toBe(6);
+    expect(captured.transcript).toContain('나: 첫 문장');
+    expect(captured.transcript).toContain('상대: 둘째 문장');
+    expect(captured.transcript).toContain('나: 셋째 문장');
+    expect(host.textContent).toContain('응결은 멈췄지만 PLAY 기록은 안전합니다');
+
+    const buttons = Array.from(host.querySelectorAll('button'));
+    act(() => buttons.find((button) => button.textContent === 'PLAY 기록 TXT')?.click());
+    act(() => buttons.find((button) => button.textContent === 'WRITE 초안으로 보내기')?.click());
+    expect(onDownloadRecovery).toHaveBeenCalledWith(captured);
+    expect(onSendRecoveryToDraft).toHaveBeenCalledWith(captured, undefined);
+    act(() => root.unmount());
+    host.remove();
   });
 });

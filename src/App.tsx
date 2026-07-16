@@ -112,12 +112,18 @@ import {
   isActiveGeneration,
   loadGenerationInbox,
   mergeGenerationJob,
-  saveGenerationInbox,
+  persistGenerationInboxState,
   type GenerationInboxItem
 } from './lib/generationInbox';
 import { GenerationInboxPanel } from './components/GenerationInboxPanel';
 import { ProjectLibraryCard } from './components/ProjectLibraryCard';
 import type { ProjectLibraryEntry } from './lib/projectLibrary';
+import {
+  buildPlayRecoveryFilename,
+  formatPlayRecoveryText,
+  planPlayRecoveryWrite,
+  type PlayRecoverySnapshot
+} from './lib/playRecovery';
 import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
 import storyXSymbolLight from './assets/brand/story-x-symbol-light.svg';
 
@@ -200,17 +206,21 @@ function DiveStage({
   onStartGeneration,
   onCancelGeneration,
   onOpenGenerationInbox,
-  onResolveGeneration
+  onResolveGeneration,
+  onDownloadRecovery,
+  onSendRecoveryToDraft
 }: {
   initial: DiveState;
   onBack: () => void;
   onWorkingChange: (project: SeriesProject) => void;
   generationInbox: GenerationInboxItem[];
   selectedGeneration: GenerationInboxItem | null;
-  onStartGeneration: (request: DiveCondenseJobRequest) => Promise<void>;
+  onStartGeneration: (request: DiveCondenseJobRequest, recovery: PlayRecoverySnapshot) => Promise<void>;
   onCancelGeneration: (item: GenerationInboxItem) => void;
   onOpenGenerationInbox: () => void;
   onResolveGeneration: (id: string) => void;
+  onDownloadRecovery: (recovery: PlayRecoverySnapshot) => void;
+  onSendRecoveryToDraft: (recovery: PlayRecoverySnapshot, generationId?: string) => void;
 }) {
   const [state, setState] = useState<DiveState>(initial);
   return (
@@ -224,6 +234,8 @@ function DiveStage({
       onCancelGeneration={onCancelGeneration}
       onOpenGenerationInbox={onOpenGenerationInbox}
       onResolveGeneration={onResolveGeneration}
+      onDownloadRecovery={onDownloadRecovery}
+      onSendRecoveryToDraft={onSendRecoveryToDraft}
       onChange={(session, project) => {
         const next: DiveState = { schema: 'storyx/dive/v1', session, project };
         setState(next);
@@ -250,9 +262,9 @@ function App() {
   const generationInboxRef = useRef(generationInbox);
   const [selectedGenerationId, setSelectedGenerationId] = useState<string | null>(null);
   function commitGenerationInbox(next: GenerationInboxItem[]) {
-    generationInboxRef.current = next;
-    setGenerationInbox(next);
-    saveGenerationInbox(next);
+    const visible = persistGenerationInboxState(next);
+    generationInboxRef.current = visible;
+    setGenerationInbox(visible);
   }
   useEffect(() => {
     let stopped = false;
@@ -283,13 +295,29 @@ function App() {
     return () => { stopped = true; window.clearInterval(timer); };
   }, []);
 
-  async function handleStartGeneration(request: DiveCondenseJobRequest): Promise<void> {
+  async function handleStartGeneration(
+    request: DiveCondenseJobRequest,
+    recovery: PlayRecoverySnapshot
+  ): Promise<void> {
     const job = await startDiveCondenseJob(request);
     commitGenerationInbox(appendGenerationInboxItem(generationInboxRef.current, {
       ...job,
       kind: 'dive-condense',
-      projectTitle: request.projectTitle
+      projectTitle: request.projectTitle,
+      recovery
     }));
+  }
+
+  function handleDownloadRecovery(recovery: PlayRecoverySnapshot): void {
+    const blob = new Blob([formatPlayRecoveryText(recovery)], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = buildPlayRecoveryFilename(recovery);
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
   }
 
   async function handleCancelGeneration(item: GenerationInboxItem): Promise<void> {
@@ -400,6 +428,44 @@ function App() {
     setPendingSync(countPendingSync(loadDiveState()?.project, loadProject()));
     setPendingPlan(loadPlanPatches().length);
     setSyncVersion((version) => version + 1);
+  }
+  function handleSendRecoveryToDraft(recovery: PlayRecoverySnapshot, generationId?: string): void {
+    if (generationId) {
+      const receipt = generationInboxRef.current.find((item) => item.id === generationId);
+      if (receipt?.recoveredAt) return;
+    }
+    if (!activateProject(recovery.projectId)) {
+      window.alert('원래 작품을 찾지 못했습니다. PLAY 기록 TXT로 먼저 보관해 주세요.');
+      return;
+    }
+    const project = loadProject();
+    const workingState = loadDiveState();
+    const plan = planPlayRecoveryWrite(project, workingState?.project, recovery);
+    if (plan.status === 'project-mismatch') {
+      window.alert('복구 기록과 작품이 일치하지 않습니다. PLAY 기록 TXT로 먼저 보관해 주세요.');
+      return;
+    }
+    if (plan.status === 'pending-sync') {
+      setPendingSync(plan.pending);
+      setDiveInit(workingState);
+      setStage('dive');
+      window.alert('PLAY에 아직 본편으로 최신화하지 않은 회차나 캐논이 있습니다. 먼저 ⟳최신화한 뒤 WRITE 복구를 다시 실행해 주세요.');
+      return;
+    }
+    saveProject(plan.committedProject);
+    if (workingState && plan.workingProject) {
+      saveDiveState({ ...workingState, project: plan.workingProject });
+    }
+    if (generationId) {
+      const recoveredAt = new Date().toISOString();
+      commitGenerationInbox(generationInboxRef.current.map((item) => item.id === generationId
+        ? { ...item, recoveredAt, recoveredChapterId: plan.chapter.id }
+        : item));
+    }
+    refreshActiveProjectState();
+    setSelectedGenerationId(null);
+    setStudioView('editor');
+    setStage('editor');
   }
   function handleOpenLibraryProject(entry: ProjectLibraryEntry): void {
     if (!activateProject(entry.projectId)) return;
@@ -672,6 +738,8 @@ function App() {
         }}
         onCancelGeneration={(item) => { void handleCancelGeneration(item); }}
         onDiscardGeneration={(item) => discardGeneration(item.id)}
+        onDownloadRecovery={(item) => { if (item.recovery) handleDownloadRecovery(item.recovery); }}
+        onSendRecoveryToDraft={(item) => { if (item.recovery) handleSendRecoveryToDraft(item.recovery, item.id); }}
       />
     );
   }
@@ -714,10 +782,10 @@ function App() {
     const selectedGeneration = generationInbox.find((item) => item.id === selectedGenerationId) ?? null;
     if (restored) {
       // 슬라이스 B — working(diveKey) 이 진실. 미반영 PLAY 작업을 loadProject 로 덮지 않는다(⟳최신화로만 머지).
-      return <>{bar}<DiveStage initial={restored} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={openProjectHub} onResolveGeneration={discardGeneration} /></>;
+      return <>{bar}<DiveStage initial={restored} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={openProjectHub} onResolveGeneration={discardGeneration} onDownloadRecovery={handleDownloadRecovery} onSendRecoveryToDraft={handleSendRecoveryToDraft} /></>;
     }
     if (diveInit) {
-      return <>{bar}<DiveStage initial={diveInit} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={openProjectHub} onResolveGeneration={discardGeneration} /></>;
+      return <>{bar}<DiveStage initial={diveInit} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={openProjectHub} onResolveGeneration={discardGeneration} onDownloadRecovery={handleDownloadRecovery} onSendRecoveryToDraft={handleSendRecoveryToDraft} /></>;
     }
     // PLAY 첫 진입 — 현 작품에 인물이 없으면 안내. 있으면 위 useEffect 가 diveInit 을 채워 다음 렌더에서 진입.
     if (!seedPlayFromProject(loadProject())) {
@@ -1232,7 +1300,9 @@ function ProjectHub({
   onConfirmProject,
   onReviewGeneration,
   onCancelGeneration,
-  onDiscardGeneration
+  onDiscardGeneration,
+  onDownloadRecovery,
+  onSendRecoveryToDraft
 }: {
   projectLibrary: ProjectLibraryEntry[];
   activeProjectId: string | null;
@@ -1244,6 +1314,8 @@ function ProjectHub({
   onReviewGeneration: (item: GenerationInboxItem) => void;
   onCancelGeneration: (item: GenerationInboxItem) => void;
   onDiscardGeneration: (item: GenerationInboxItem) => void;
+  onDownloadRecovery: (item: GenerationInboxItem) => void;
+  onSendRecoveryToDraft: (item: GenerationInboxItem) => void;
 }) {
   const temporaryCount = projectLibrary.filter((entry) => entry.lifecycle === 'temporary').length;
 
@@ -1290,6 +1362,8 @@ function ProjectHub({
           onReview={onReviewGeneration}
           onCancel={onCancelGeneration}
           onDiscard={onDiscardGeneration}
+          onDownloadRecovery={onDownloadRecovery}
+          onSendRecoveryToDraft={onSendRecoveryToDraft}
         />
       </div>
     </div>

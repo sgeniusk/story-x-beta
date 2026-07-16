@@ -1,10 +1,12 @@
-import type { GenerationInboxItem } from '../lib/generationInbox';
+import { canRecoverGeneration, type GenerationInboxItem } from '../lib/generationInbox';
 
 interface GenerationInboxPanelProps {
   items: GenerationInboxItem[];
   onReview: (item: GenerationInboxItem) => void;
   onCancel: (item: GenerationInboxItem) => void;
   onDiscard: (item: GenerationInboxItem) => void;
+  onDownloadRecovery: (item: GenerationInboxItem) => void;
+  onSendRecoveryToDraft: (item: GenerationInboxItem) => void;
 }
 
 const STATUS_LABEL: Record<GenerationInboxItem['status'], string> = {
@@ -16,7 +18,14 @@ const STATUS_LABEL: Record<GenerationInboxItem['status'], string> = {
   expired: '연결 만료'
 };
 
-export function GenerationInboxPanel({ items, onReview, onCancel, onDiscard }: GenerationInboxPanelProps) {
+export function GenerationInboxPanel({
+  items,
+  onReview,
+  onCancel,
+  onDiscard,
+  onDownloadRecovery,
+  onSendRecoveryToDraft
+}: GenerationInboxPanelProps) {
   return (
     <section className="gix-panel" aria-labelledby="generation-inbox-title">
       <header className="gix-head">
@@ -33,20 +42,61 @@ export function GenerationInboxPanel({ items, onReview, onCancel, onDiscard }: G
         </div>
       ) : (
         <div className="gix-list">
-          {items.map((item) => (
-            <article key={item.id} className={`gix-item is-${item.status}`}>
-              <div className="gix-item-copy">
-                <span className="gix-status">{STATUS_LABEL[item.status]}</span>
-                <h3>{item.result?.title || `${item.projectTitle} · ${item.episode}화`}</h3>
-                <p>{item.warning || `${item.projectTitle}에서 시작한 응결 작업`}</p>
-              </div>
-              <div className="gix-actions">
-                {item.status === 'running' && <button type="button" onClick={() => onCancel(item)}>생성 취소</button>}
-                {item.status === 'succeeded' && item.result && <button type="button" className="is-primary" onClick={() => onReview(item)}>작품에서 검토</button>}
-                {item.status !== 'running' && <button type="button" onClick={() => onDiscard(item)}>폐기</button>}
-              </div>
-            </article>
-          ))}
+          {items.map((item) => {
+            const recoverable = canRecoverGeneration(item);
+            const needsImmediateDownload = Boolean(item.localPersistenceFailed && item.recovery);
+            const discard = () => {
+              if (recoverable && !item.recoveredAt && !window.confirm('이 항목을 지우면 Story X 보관함에서 다시 복구할 수 없습니다. 계속할까요?')) {
+                return;
+              }
+              onDiscard(item);
+            };
+            return (
+              <article key={item.id} className={`gix-item is-${item.status}`}>
+                <div className="gix-item-copy">
+                  <span className="gix-status">{STATUS_LABEL[item.status]}</span>
+                  <h3>{item.result?.title || `${item.projectTitle} · ${item.episode}화`}</h3>
+                  <p>{item.warning || `${item.projectTitle}에서 시작한 응결 작업`}</p>
+                  {recoverable && (
+                    <p className="gix-recovery-note" role="status">
+                      {item.recoveredAt
+                        ? 'WRITE 초안으로 보냈습니다. 캐논에는 자동 반영되지 않았습니다.'
+                        : 'PLAY 기록은 안전합니다. WRITE로 보내도 캐논에는 자동 반영되지 않습니다.'}
+                    </p>
+                  )}
+                  {needsImmediateDownload && !recoverable && (
+                    <p className="gix-recovery-note" role="alert">
+                      로컬 보관공간이 부족합니다. 새로고침 전에 PLAY 기록 TXT를 먼저 받아 주세요.
+                    </p>
+                  )}
+                </div>
+                <div className="gix-actions">
+                  {item.status === 'running' && <button type="button" onClick={() => onCancel(item)}>생성 취소</button>}
+                  {item.status === 'succeeded' && item.result && <button type="button" className="is-primary" onClick={() => onReview(item)}>작품에서 검토</button>}
+                  {(recoverable || needsImmediateDownload) && item.recovery && (
+                    <>
+                      <button type="button" onClick={() => onDownloadRecovery(item)}>PLAY 기록 TXT</button>
+                      {recoverable && (
+                        <button
+                          type="button"
+                          className="is-primary"
+                          disabled={Boolean(item.recoveredAt)}
+                          onClick={() => onSendRecoveryToDraft(item)}
+                        >
+                          {item.recoveredAt ? 'WRITE로 보냄' : 'WRITE 초안으로 보내기'}
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {item.status !== 'running' && (
+                    <button type="button" className="is-discard" onClick={discard}>
+                      {item.recoveredAt ? '보관함에서 지우기' : '폐기'}
+                    </button>
+                  )}
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
     </section>

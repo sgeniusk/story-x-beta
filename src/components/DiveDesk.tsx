@@ -1,7 +1,7 @@
 // Dive X 얇은 표면 — 채팅·응결 제안·승인 다이얼로그·연대기. 엔진은 재사용.
 import { useMemo, useState } from 'react';
 import type { SeriesProject, ProductionRequest } from '../lib/storyEngine';
-import { chapterFromDraftPayload, buildProjectContextDigest, applyRetcons } from '../lib/storyEngine';
+import { chapterFromDraftPayload, buildProjectContextDigest, applyRetcons, nextEpisodeNumber } from '../lib/storyEngine';
 import { inspectLeak } from '../lib/leakGate';
 import {
   type DiveSession,
@@ -23,7 +23,8 @@ import { DIVE_SEED_CHARACTERS } from '../lib/diveSeedCharacters';
 import { requestVsCandidates } from '../lib/vsCandidatesClient';
 import { VsCandidatePanel } from './VsCandidatePanel';
 import type { VsCandidate } from '../lib/episodeBriefing';
-import { buildProjectRevision, type GenerationInboxItem } from '../lib/generationInbox';
+import { buildProjectRevision, canRecoverGeneration, type GenerationInboxItem } from '../lib/generationInbox';
+import { buildPlayRecoverySnapshot, type PlayRecoverySnapshot } from '../lib/playRecovery';
 
 interface DiveDeskProps {
   session: DiveSession;
@@ -32,10 +33,12 @@ interface DiveDeskProps {
   onBack: () => void;
   generationInbox?: GenerationInboxItem[];
   selectedGeneration?: GenerationInboxItem | null;
-  onStartGeneration?: (request: DiveCondenseJobRequest) => Promise<void>;
+  onStartGeneration?: (request: DiveCondenseJobRequest, recovery: PlayRecoverySnapshot) => Promise<void>;
   onCancelGeneration?: (item: GenerationInboxItem) => void;
   onOpenGenerationInbox?: () => void;
   onResolveGeneration?: (id: string) => void;
+  onDownloadRecovery?: (recovery: PlayRecoverySnapshot) => void;
+  onSendRecoveryToDraft?: (recovery: PlayRecoverySnapshot, generationId?: string) => void;
 }
 
 function characterCardText(project: SeriesProject, characterId: string): string {
@@ -82,7 +85,8 @@ function peekText(verdict: PlayTurnVerdict): string {
 
 export function DiveDesk({
   session, project, onChange, onBack, generationInbox = [], selectedGeneration = null,
-  onStartGeneration, onCancelGeneration, onOpenGenerationInbox, onResolveGeneration
+  onStartGeneration, onCancelGeneration, onOpenGenerationInbox, onResolveGeneration,
+  onDownloadRecovery, onSendRecoveryToDraft
 }: DiveDeskProps) {
   const selectedResultBlocked = selectedGeneration?.result ? inspectLeak(selectedGeneration.result.prose).blocked : false;
   const [input, setInput] = useState('');
@@ -90,7 +94,9 @@ export function DiveDesk({
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<DiveCondensePayload | null>(() => selectedResultBlocked ? null : selectedGeneration?.result ?? null);
   const [pendingGenerationId] = useState<string | null>(() => !selectedResultBlocked && selectedGeneration?.result ? selectedGeneration.id : null);
-  const [leakWarn, setLeakWarn] = useState<string | null>(() => selectedResultBlocked ? '본문에 프롬프트/AI 누수가 감지됐습니다. 이 결과는 승인할 수 없습니다.' : null);
+  const [leakWarn] = useState<string | null>(() => selectedResultBlocked ? '본문에 프롬프트/AI 누수가 감지됐습니다. 이 결과는 승인할 수 없습니다.' : null);
+  const [generationStartError, setGenerationStartError] = useState<string | null>(null);
+  const [failedRecovery, setFailedRecovery] = useState<PlayRecoverySnapshot | null>(null);
   const [startingGeneration, setStartingGeneration] = useState(false);
   const [srOpen, setSrOpen] = useState(false);
   const [srInput, setSrInput] = useState('');
@@ -106,9 +112,17 @@ export function DiveDesk({
     return c?.name ?? '상대';
   }, [project, session.characterId]);
   const suggest = shouldSuggestCondense(session);
-  const episode = project.chapters.length + 1;
+  const episode = nextEpisodeNumber(project);
   const activeGeneration = generationInbox.find((item) => item.projectId === project.id && item.episode === episode && item.status === 'running') ?? null;
   const projectInboxCount = generationInbox.filter((item) => item.projectId === project.id).length;
+  const recoverableGeneration = generationInbox.find((item) =>
+    item.projectId === project.id && canRecoverGeneration(item) && !item.recoveredAt
+  ) ?? null;
+  const inlineRecovery = failedRecovery
+    ? { recovery: failedRecovery, generationId: undefined }
+    : recoverableGeneration?.recovery
+      ? { recovery: recoverableGeneration.recovery, generationId: recoverableGeneration.id }
+      : null;
   const selectedGenerationIsStale = Boolean(selectedGeneration && selectedGeneration.baseRevision !== buildProjectRevision(project));
   const turnCounts = useMemo(() => {
     let surprise = 0, anchor = 0, major = 0;
@@ -203,8 +217,12 @@ export function DiveDesk({
 
   async function condense() {
     if (busy || startingGeneration || activeGeneration) return;
+    const recovery = buildPlayRecoverySnapshot(session, project);
+    setGenerationStartError(null);
+    setFailedRecovery(null);
     if (!onStartGeneration) {
-      setLeakWarn('이 환경에서는 로컬 생성 잡을 시작할 수 없습니다.');
+      setGenerationStartError('이 환경에서는 로컬 생성 잡을 시작할 수 없습니다.');
+      setFailedRecovery(recovery);
       return;
     }
     setStartingGeneration(true);
@@ -220,9 +238,10 @@ export function DiveDesk({
         projectId: project.id,
         projectTitle: project.title,
         baseRevision: buildProjectRevision(project)
-      });
+      }, recovery);
     } catch {
-      setLeakWarn('응결 잡을 시작하지 못했습니다. 다시 시도하세요.');
+      setGenerationStartError('응결 잡을 시작하지 못했습니다. 아래에서 기록을 먼저 보존할 수 있습니다.');
+      setFailedRecovery(recovery);
     } finally {
       setStartingGeneration(false);
     }
@@ -398,15 +417,45 @@ export function DiveDesk({
         </button>
       )}
       {leakWarn && <div className="dx-leak">{leakWarn}</div>}
+      {generationStartError && <div className="dx-generation-error" role="alert">{generationStartError}</div>}
 
-      {(activeGeneration || projectInboxCount > 0) && (
+      {inlineRecovery && (
+        <aside className="dx-recovery" role="region" aria-labelledby="dx-recovery-title" aria-describedby="dx-recovery-description">
+          <div className="dx-recovery-copy" role="status" aria-live="polite">
+            <strong id="dx-recovery-title">응결은 멈췄지만 PLAY 기록은 안전합니다.</strong>
+            <span id="dx-recovery-description">원문 그대로 받거나 WRITE 초안으로 보내세요. 캐논에는 자동 반영되지 않습니다.</span>
+          </div>
+          <div className="dx-recovery-actions">
+            {onDownloadRecovery && (
+              <button type="button" onClick={() => onDownloadRecovery(inlineRecovery.recovery)}>PLAY 기록 TXT</button>
+            )}
+            {onSendRecoveryToDraft && (
+              <button
+                type="button"
+                className="is-write"
+                onClick={() => onSendRecoveryToDraft(inlineRecovery.recovery, inlineRecovery.generationId)}
+              >
+                WRITE 초안으로 보내기
+              </button>
+            )}
+            {onOpenGenerationInbox && (
+              <button type="button" onClick={onOpenGenerationInbox}>생성 보관함</button>
+            )}
+          </div>
+        </aside>
+      )}
+
+      {(activeGeneration || (projectInboxCount > 0 && !inlineRecovery)) && (
         <aside className="dx-generation-receipt" aria-label="생성 보관함 상태">
           <div>
-            <strong>{activeGeneration ? '백그라운드에서 응결 중' : `생성 보관함에 ${projectInboxCount}개`}</strong>
-            <span>{activeGeneration ? '화면을 떠나도 로컬 Codex가 계속 작업합니다.' : '완료된 결과는 승인 전까지 작품에 반영되지 않습니다.'}</span>
+            <strong>{activeGeneration?.localPersistenceFailed ? '응결 중 · PLAY 기록 보관 필요' : activeGeneration ? '백그라운드에서 응결 중' : `생성 보관함에 ${projectInboxCount}개`}</strong>
+            <span>{activeGeneration?.localPersistenceFailed ? '로컬 보관공간이 부족합니다. 새로고침 전에 TXT를 받아 주세요.' : activeGeneration ? '화면을 떠나도 로컬 Codex가 계속 작업합니다.' : '완료된 결과는 승인 전까지 작품에 반영되지 않습니다.'}</span>
           </div>
           <div className="dx-generation-actions">
             {activeGeneration && onCancelGeneration && <button type="button" onClick={() => onCancelGeneration(activeGeneration)}>생성 취소</button>}
+            {activeGeneration?.localPersistenceFailed && activeGeneration.recovery && onDownloadRecovery && (
+              <button type="button" onClick={() => onDownloadRecovery(activeGeneration.recovery!)}>PLAY 기록 TXT</button>
+            )}
             {onOpenGenerationInbox && <button type="button" onClick={onOpenGenerationInbox}>생성 보관함</button>}
           </div>
         </aside>
