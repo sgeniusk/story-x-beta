@@ -4,6 +4,66 @@
 
 ---
 
+## 2026-07-17 00:53 — P0-b 복구 원문/작업본 분리 교정 완료, 사용자 테스트 대기
+
+> Last Updated: 2026-07-17 00:53 KST
+
+### Current Objective
+
+사용자가 발견한 “PLAY 기록 복구본이 일반 WRITE 본문과 1화로 보이는” 결함을 교정했다. 복구 기록은 본편 밖 전용 작업본으로 열리고, 사용자가 직접 쓴 본문을 명시 저장하기 전까지 회차·캐논·지표를 바꾸지 않는다. 수정 구현 커밋은 `8bd10ab`이며 Draft PR #40을 갱신한다. 머지는 사용자에게 남긴다.
+
+### Recommended Next Step
+
+인앱 브라우저의 `http://127.0.0.1:5175/?stage=projects`에서 생성 보관함 취소 항목의 `작업본 열기`를 누른다. 빈 제목/본문, 별도 `PLAY 원문 보기`, 비활성 `회차로 저장`을 확인하고 한 문장을 쓴 뒤 새로고침→다시 `작업본 열기`로 복원을 확인한다. 수용 후 스택 순서대로 #39를 먼저 머지하고 #40을 main으로 retarget한다.
+
+### Branch · Commit · Verification
+
+- Branch — `codex/p0b-failure-recovery` (origin tracking, `codex/p0c-work-library` 위 스택)
+- Correction implementation — `8bd10ab` (`P0-b: separate PLAY recovery work drafts`)
+- Draft PR — https://github.com/sgeniusk/story-x-beta/pull/40 (base `codex/p0c-work-library`)
+- Verification — 2026-07-17 00:53 `bash init.sh` 녹색: 101 files / 1048 tests, tsc+vite build 성공
+- Browser — legacy 오염 1화→0화 환원, 빈 작업본/source 분리, 작성→reload→재열기 복원, 검증 입력 제거, 320/375px overflow 0, 최종 reload 이후 콘솔 오류 0
+- Live handoff — `http://127.0.0.1:5175/?stage=projects`
+
+### What the Last Session Did
+
+1. 일반 Chapter로 들어가던 PLAY 원문을 프로젝트별 `PlayRecoveryWorkDraft`와 전용 `RecoveryDraftWorkspace`로 분리했다.
+2. `회차로 저장` 전에는 본편·PLAY working·캐논·인물·지표를 변경하지 않고, source는 접이식 참고 패널에만 표시했다.
+3. 초기 구현의 오염 회차를 엄격 조건에서만 작업본으로 환원하고, 저장 직전 최신 본편/PLAY를 다시 읽어 다중 탭 편집을 보호했다.
+4. receipt 연결·commit/repair journal·다중 탭 완료 확인·보호 cap으로 재시작/부분 성공/동시 탭 중복 저장을 차단했다.
+5. 작은 안내 대비와 320px 상단 작업바를 보강하고, 독립 거래·UI·spec/test 감사에서 나온 P0/P1을 모두 TDD로 닫았다.
+
+### Files To Touch (next milestone)
+
+- 사용자 수용 테스트에서 결함이 나오면 P0-b spec 수용 기준 안에서 실패 테스트를 먼저 추가하고 최소 수정한다.
+- 수용 뒤 다음 기능 슬라이스는 새 brainstorm에서 범위를 다시 지정한다.
+
+### Files NOT To Touch
+
+- `.agents/skills/story-score/` — 사용자 소유 untracked 폴더. 추가·수정·스테이징 금지.
+- 복구 source를 일반 Chapter prose로 자동 주입하거나 회차/캐논/인물/지표를 자동 변경하는 경로.
+- `commitIntent`·`legacyRepair`·receipt 영속 확인을 우회하는 정리, 미완료/작성 작업본·영수증을 cap으로 조용히 삭제하는 변경.
+- 완료 생성물 자동 반영, 누수·stale revision·사용자 승인 게이트 우회.
+- #40을 main으로 retarget하기 전 #39의 base 브랜치 삭제.
+
+### Blockers
+
+없음. 자동·실브라우저 검증은 끝났고 현재는 사용자 직접 수용 테스트 시점이다.
+
+### Known Issues
+
+- `gh auth status`의 CLI 토큰은 만료 상태다. git credential과 GitHub 연결 앱 경로로 기존 Draft PR 갱신은 가능하지만, CLI 전용 작업 전에는 `gh auth login`이 필요하다.
+- 잡 레지스트리는 P0-a 계약대로 서버 프로세스 메모리다. 서버 재시작 뒤 영수증은 `expired`가 되지만 recovery snapshot과 작업본은 로컬에 남는다.
+- 기존 `storyx-p0b-failure-recovery.png`는 폐기된 “원문을 즉시 1화로 만든” 화면이므로 이번 교정의 수용 증거로 사용하지 않는다.
+
+### Reference Documents
+
+- `docs/superpowers/specs/2026-07-16-p0b-play-recovery-design.md`
+- `docs/superpowers/plans/2026-07-16-p0b-play-recovery.md`
+- `progress.md` 맨 위 P0-b 완료 트랙
+
+---
+
 ## 2026-07-16 23:02 — P0-b PLAY 원문 복구 완료, 사용자 테스트 대기
 
 > Last Updated: 2026-07-16 23:02 KST

@@ -1,19 +1,20 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-16 23:02 KST · Branch: `codex/p0b-failure-recovery` (**P0-b PLAY 기록 복구 완료, Draft PR #40 열림·사용자 테스트 대기**)
+> Last Updated: 2026-07-17 00:53 KST · Branch: `codex/p0b-failure-recovery` (**P0-b 복구 작업본 분리 수정 완료, Draft PR #40 갱신·사용자 테스트 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-> 최근 검증(2026-07-16 23:02 KST) — `bash init.sh` 녹색: `npm test` 1011 통과(99 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+> 최근 검증(2026-07-17 00:53 KST) — `bash init.sh` 녹색: `npm test` 1048 통과(101 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
 
-## 완료 트랙 — P0-b 응결 실패 구제: PLAY 원문 TXT·WRITE 복구 (`done` · 2026-07-16, 구현 커밋 `cdd009c` · Draft PR #40)
+## 완료 트랙 — P0-b 응결 실패 구제: PLAY 원문 TXT·분리 복구 작업본 (`done` · 2026-07-17, 수정 커밋 `8bd10ab` · Draft PR #40)
 
-응결 잡을 시작하는 순간의 **전체 PLAY 원문**을 생성 영수증에 함께 보존하고, 잡 시작 실패·생성 실패·취소·시간 초과·연결 만료 뒤 `PLAY 기록 TXT` 또는 원래 작품의 편집 가능한 WRITE 초안으로 구제한다. 복구는 생성 성공이나 캐논 승인이 아니며, 사용자가 만든 원문을 잃지 않고 다음 편집 행동으로 이동시키는 계층이다. spec `docs/superpowers/specs/2026-07-16-p0b-play-recovery-design.md` · plan `docs/superpowers/plans/2026-07-16-p0b-play-recovery.md`.
-- **구현** — `playRecovery.ts` 전체 transcript snapshot·결정론적 TXT/파일명·멱등 WRITE draft·본편/PLAY pending-sync 차단 + `generationInbox.ts` recovery 영속/손상 호환/폴링 메타 유지/실패 상태 판정 + ProjectHub와 PLAY 현장 복구 카드·다운로드·WRITE 라우팅.
-- **안전 불변식** — 원래 `projectId` 불일치 시 WRITE 금지 · `newCanonFacts=[]`/빈 intent·pressure로 캐논·인물·성장 상태 무변경 · 앵커 위반 턴도 원문에는 보존하되 캐논 자동 승격 금지 · 완료 결과 자동 반영/누수 검사/stale revision 게이트 우회 금지.
-- **저장 내구성** — localStorage 용량 실패를 서버 잡 시작 실패로 오인하지 않는다. 성공 영수증 결과는 버리지 않고 중복 recovery만 줄여 한 번 재시도하며, 실패가 이어지면 기존·신규 미영속 영수증 모두 새로고침 전 TXT 구제 표식을 유지한다. 성공 저장 때만 로컬 표식을 해제한다.
-- **실동작 증거** — 브라우저에서 PLAY 표식 `P0B-ALPHA`·`P0B-BETA` 2턴→응결→취소→TXT 실제 다운로드→WRITE 1화 복구→ProjectHub/새로고침에서 `1화 · 캐논 0개`와 `WRITE로 보냄` 지속 확인. 콘솔 오류 0, 390×844 가로 넘침 0. 캡처 `/Users/taewookkim/.codex/visualizations/2026/07/13/019f5c20-8b9d-73d2-8aea-50a5ad8aac70/storyx-p0b-failure-recovery.png`; TXT `/Users/taewookkim/Downloads/storyx-회귀-전-기억을-가진-신입-—-오늘-1화-play-record.txt`.
+사용자 실화면에서 PLAY 원문 TXT가 일반 WRITE 회차 본문으로 바로 들어가던 결함을 교정했다. 응결 실패 기록은 이제 **본편 밖의 복구 작업본**으로 열리고, PLAY 원문은 접이식 참고 패널에만 보존된다. 사용자가 빈 원고지에 직접 쓴 문장을 `회차로 저장`할 때만 Chapter·회차 수·지표에 반영한다. spec `docs/superpowers/specs/2026-07-16-p0b-play-recovery-design.md` · plan `docs/superpowers/plans/2026-07-16-p0b-play-recovery.md`.
+- **도메인·UI** — `PlayRecoveryWorkDraft`/프로젝트별 저장소 + `RecoveryDraftWorkspace`를 일반 회차 편집기와 분리했다. 제목·본문은 빈 값, source는 별도 `<aside>`이며 작업본 자동 저장과 명시 저장만 허용한다. 기존 오염 회차는 제목·본문·구조·잠금·최신 회차·PLAY working까지 전부 시스템 생성과 정확히 일치할 때만 자동 환원한다.
+- **거래 안전성** — `commitIntent`·`legacyRepair` write-ahead journal로 project→PLAY working→receipt→draft 정리의 부분 성공을 재개한다. receipt의 `recoveryDraftId` 우선 재열기, 다중 탭 stale journal 강등/완료 뒤 중복 회차 차단, local receipt 영속 실패 이탈 차단, legacy 저장 직전 최신본 재판정을 고정했다.
+- **보존 정책** — active·작성 본문·journal 작업본과 미완료 draft-linked 영수증은 20개 cap을 넘어도 보존한다. 빈 비활성 작업본과 일반/완료 영수증만 먼저 정리한다. 완료 receipt가 실제 영속되고 draft 제거까지 성공한 뒤에만 일반 WRITE로 돌아간다.
+- **UI/접근성** — 저장 상태·본편 반영 안내 대비를 약 5.1:1로 올리고, 560px 이하 공통 상단 바를 2행 grid로 바꿔 제목·PLAY/WRITE/PLAN·더 보기/최신화 행동을 보존했다.
+- **실동작 증거** — 기존 잘못 생성된 1화가 엄격 환원되어 ProjectHub에서 **0화·캐논 0개** 유지. 생성 보관함 `작업본 열기`→빈 제목/본문·분리 PLAY 원문→임시 문장 작성→새로고침→같은 문장 복원→검증 문장 제거를 확인했다. 375px/320px 문서·source 가로 넘침 0, 320px 상단 바 좌우 경계 내, 최종 reload 이후 콘솔 오류 0. 인앱 브라우저는 `http://127.0.0.1:5175/?stage=projects`에 테스트 시작 화면으로 인계했다.
 - **게시/의존** — Draft PR #40 `https://github.com/sgeniusk/story-x-beta/pull/40`은 P0-c Draft PR #39 위의 스택이다. 머지 순서는 **#39 → #40**이며 #39 base 브랜치는 #40을 main으로 retarget하기 전에 삭제하지 않는다.
-- **Recommended Next Step** — 사용자가 실제 PLAY에서 응결 취소 후 TXT/WRITE 복구를 직접 확인한다. 수용되면 #39를 먼저 머지하고 #40 base를 main으로 바꿔 고유 diff를 재확인한 뒤 머지는 사용자에게 남긴다. 테스트 피드백 전에는 다음 기능 슬라이스를 섞지 않는다.
+- **Recommended Next Step** — 사용자가 생성 보관함의 기존 취소 항목에서 `작업본 열기`를 눌러 빈 원고지·PLAY 원문 분리·재시작 복원을 직접 확인한다. 수용되면 #39를 먼저 머지하고 #40 base를 main으로 바꿔 고유 diff를 재확인한 뒤 머지는 사용자에게 남긴다. 테스트 피드백 전에는 다음 기능 슬라이스를 섞지 않는다.
 
 ## 완료 트랙 — P0-c 작품 관리 시스템: 임시작 보관·확정·이어쓰기 (`done` · 2026-07-16, 구현 커밋 `b9e578e` · Draft PR #39)
 
