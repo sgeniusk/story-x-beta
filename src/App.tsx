@@ -69,15 +69,20 @@ import {
 import {
   clearOnboardingDraft,
   clearPlanPatches,
+  activateProject,
+  confirmLibraryProject,
   exportAllData,
+  getActiveProjectId,
   hasMeaningfulOnboardingInput,
   importAllData,
   loadDiveState,
   loadOnboardingDraft,
   loadPlanPatches,
   loadProject,
+  loadProjectLibrary,
   saveDiveState,
   saveProject,
+  saveTemporaryProject,
   saveOnboardingDraft,
   type DiveState,
   type OnboardingDraft,
@@ -111,6 +116,8 @@ import {
   type GenerationInboxItem
 } from './lib/generationInbox';
 import { GenerationInboxPanel } from './components/GenerationInboxPanel';
+import { ProjectLibraryCard } from './components/ProjectLibraryCard';
+import type { ProjectLibraryEntry } from './lib/projectLibrary';
 import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
 import storyXSymbolLight from './assets/brand/story-x-symbol-light.svg';
 
@@ -236,6 +243,9 @@ function App() {
   );
   const [generationInbox, setGenerationInbox] = useState<GenerationInboxItem[]>(() =>
     typeof window === 'undefined' ? [] : loadGenerationInbox()
+  );
+  const [projectLibrary, setProjectLibrary] = useState<ProjectLibraryEntry[]>(() =>
+    typeof window === 'undefined' ? [] : loadProjectLibrary()
   );
   const generationInboxRef = useRef(generationInbox);
   const [selectedGenerationId, setSelectedGenerationId] = useState<string | null>(null);
@@ -382,9 +392,32 @@ function App() {
     setWorkTitle(next);
     saveProject({ ...loadProject(), title: next });
   }
+  function refreshActiveProjectState(): void {
+    setProjectLibrary(loadProjectLibrary());
+    setWorkTitle(loadProject().title);
+    setDiveInit(null);
+    setPendingDraft(null);
+    setPendingSync(countPendingSync(loadDiveState()?.project, loadProject()));
+    setPendingPlan(loadPlanPatches().length);
+    setSyncVersion((version) => version + 1);
+  }
+  function handleOpenLibraryProject(entry: ProjectLibraryEntry): void {
+    if (!activateProject(entry.projectId)) return;
+    refreshActiveProjectState();
+    setStage('editor');
+  }
+  function handleConfirmLibraryProject(entry: ProjectLibraryEntry): void {
+    if (!confirmLibraryProject(entry.projectId)) return;
+    setProjectLibrary(loadProjectLibrary());
+  }
+  function openProjectHub(): void {
+    setProjectLibrary(loadProjectLibrary());
+    setStage('projects');
+  }
   // PLAY-first 온보딩 — 플레이 승인 시 최소 프로젝트를 본편으로 커밋하고 시드 DiveState 로 바로 dive 진입.
   function handleStartPlay(project: SeriesProject, diveState: DiveState) {
-    saveProject(project);          // committed 본편 생성 — 온보딩 졸업 관할
+    saveTemporaryProject(project); // 새 작품은 먼저 임시작으로 보관 — ProjectHub에서 명시 확정
+    setProjectLibrary(loadProjectLibrary());
     setWorkTitle(project.title);   // 공통 셸 제목 재동기화 — 마운트 시점 옛 프로젝트 제목이 남지 않게
     saveDiveState(diveState);      // working 시드
     clearOnboardingDraft();        // 다음 새 프로젝트 복원 오염 방지
@@ -581,12 +614,13 @@ function App() {
           initialMedium={medium}
           initialFormat={format}
           initialDraftPayload={pendingDraft}
+          initialProjectLifecycle="temporary"
           initialStudioView={studioView}
           studioView={studioView}
           title={workTitle}
           onBibleAlertChange={setBibleAlert}
           onStudioViewChange={setStudioView}
-          onOpenProjects={() => setStage('projects')}
+          onOpenProjects={openProjectHub}
           onOpenLanding={() => setStage('landing')}
           onOpenPublish={() => setStage('publish')}
           onPlanPatchesChange={setPendingPlan}
@@ -617,17 +651,22 @@ function App() {
   }
 
   if (stage === 'login') {
-    return <LoginScreen onBack={() => setStage('landing')} onContinue={() => setStage('projects')} />;
+    return <LoginScreen onBack={() => setStage('landing')} onContinue={openProjectHub} />;
   }
 
   if (stage === 'projects') {
     return (
       <ProjectHub
+        projectLibrary={projectLibrary}
+        activeProjectId={getActiveProjectId()}
         generationInbox={generationInbox}
         onOpenLanding={() => setStage('landing')}
         onOpenNewProject={() => setStage('home')}
-        onOpenProject={() => setStage('editor')}
+        onOpenProject={handleOpenLibraryProject}
+        onConfirmProject={handleConfirmLibraryProject}
         onReviewGeneration={(item) => {
+          if (!activateProject(item.projectId)) return;
+          refreshActiveProjectState();
           setSelectedGenerationId(item.id);
           setStage('dive');
         }}
@@ -650,6 +689,7 @@ function App() {
           // 작품 생성 졸업 — 온보딩 draft 청소(다음 새 프로젝트 복원 오염 방지).
           clearOnboardingDraft();
           setPendingDraft(draft ?? null);
+          if (draft?.title) setWorkTitle(draft.title);
           setStage('editor');
         }}
         onStartPlay={handleStartPlay}
@@ -674,10 +714,10 @@ function App() {
     const selectedGeneration = generationInbox.find((item) => item.id === selectedGenerationId) ?? null;
     if (restored) {
       // 슬라이스 B — working(diveKey) 이 진실. 미반영 PLAY 작업을 loadProject 로 덮지 않는다(⟳최신화로만 머지).
-      return <>{bar}<DiveStage initial={restored} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={() => setStage('projects')} onResolveGeneration={discardGeneration} /></>;
+      return <>{bar}<DiveStage initial={restored} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={openProjectHub} onResolveGeneration={discardGeneration} /></>;
     }
     if (diveInit) {
-      return <>{bar}<DiveStage initial={diveInit} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={() => setStage('projects')} onResolveGeneration={discardGeneration} /></>;
+      return <>{bar}<DiveStage initial={diveInit} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={openProjectHub} onResolveGeneration={discardGeneration} /></>;
     }
     // PLAY 첫 진입 — 현 작품에 인물이 없으면 안내. 있으면 위 useEffect 가 diveInit 을 채워 다음 렌더에서 진입.
     if (!seedPlayFromProject(loadProject())) {
@@ -696,7 +736,7 @@ function App() {
     return <>{bar}</>;
   }
 
-  return <MarketingLanding onOpenHome={() => setStage('home')} onOpenProjects={() => setStage('projects')} />;
+  return <MarketingLanding onOpenHome={() => setStage('home')} onOpenProjects={openProjectHub} />;
 }
 
 function buildAcademicPublishText(project: SeriesProject): string {
@@ -1183,24 +1223,29 @@ function LoginScreen({ onBack, onContinue }: { onBack: () => void; onContinue: (
 }
 
 function ProjectHub({
+  projectLibrary,
+  activeProjectId,
   generationInbox,
   onOpenLanding,
   onOpenNewProject,
   onOpenProject,
+  onConfirmProject,
   onReviewGeneration,
   onCancelGeneration,
   onDiscardGeneration
 }: {
+  projectLibrary: ProjectLibraryEntry[];
+  activeProjectId: string | null;
   generationInbox: GenerationInboxItem[];
   onOpenLanding: () => void;
   onOpenNewProject: () => void;
-  onOpenProject: () => void;
+  onOpenProject: (entry: ProjectLibraryEntry) => void;
+  onConfirmProject: (entry: ProjectLibraryEntry) => void;
   onReviewGeneration: (item: GenerationInboxItem) => void;
   onCancelGeneration: (item: GenerationInboxItem) => void;
   onDiscardGeneration: (item: GenerationInboxItem) => void;
 }) {
-  const project = loadProject();
-  const projectMeta = `소설 / 웹소설 · ${project.currentEpisode}화 · 캐논 ${project.canonFacts.length}개 · 캐릭터 ${project.characters.length}명`;
+  const temporaryCount = projectLibrary.filter((entry) => entry.lifecycle === 'temporary').length;
 
   return (
     <div className="projects-page">
@@ -1219,6 +1264,7 @@ function ProjectHub({
       <header className="pjx-head">
         <p className="pjx-eyebrow">Projects</p>
         <h1 className="pjx-title">작품을 골라 이어가세요.</h1>
+        <p className="pjx-library-summary">작품 {projectLibrary.length} · 임시작 {temporaryCount}</p>
       </header>
 
       <section className="pjx-grid" aria-label="프로젝트 목록">
@@ -1228,15 +1274,15 @@ function ProjectHub({
           <span>소설, 웹툰, 에세이, 오디오북, 학술 중에서 선택</span>
         </button>
 
-        <button type="button" className="pjx-card" onClick={onOpenProject}>
-          <div className="pjx-card-meta">{projectMeta}</div>
-          <div className="pjx-card-title">{project.title}</div>
-          <p className="pjx-card-logline">{project.logline}</p>
-          <div className="pjx-card-status">
-            <span className="pjx-dot" />
-            원고 작업 중
-          </div>
-        </button>
+        {projectLibrary.map((entry) => (
+          <ProjectLibraryCard
+            key={entry.projectId}
+            entry={entry}
+            active={entry.projectId === activeProjectId}
+            onOpen={onOpenProject}
+            onConfirm={onConfirmProject}
+          />
+        ))}
       </section>
       <div className="pjx-inbox-wrap">
         <GenerationInboxPanel

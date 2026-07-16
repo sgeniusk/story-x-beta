@@ -22,12 +22,114 @@ import type { OnboardChatMessage } from './onboardChat';
 import type { ProjectIntakeQuestion } from './projectIntake';
 import type { PlanPatch } from './planStage';
 import type { PlanChatMessage } from './planChat';
+import {
+  confirmProjectEntry,
+  migrateLegacyProject,
+  parseProjectLibrary,
+  upsertProjectEntry,
+  type ProjectLibraryEntry,
+  type ProjectLifecycle
+} from './projectLibrary';
 
 const storageKey = 'serial-story-studio/project';
 const snapshotsKey = 'serial-story-studio/snapshots';
+const projectLibraryKey = 'serial-story-studio/project-library/v1';
+const activeProjectIdKey = 'serial-story-studio/active-project-id';
+const diveKey = 'serial-story-studio/dive';
+const planStageKey = 'serial-story-studio/plan-stage';
+const planChatKey = 'serial-story-studio/plan-chat';
+const diveByProjectKey = 'serial-story-studio/dive-by-project/v1';
+const planStageByProjectKey = 'serial-story-studio/plan-stage-by-project/v1';
+const planChatByProjectKey = 'serial-story-studio/plan-chat-by-project/v1';
+const snapshotsByProjectKey = 'serial-story-studio/snapshots-by-project/v1';
 const MAX_SNAPSHOTS = 20;
 
+function readRawCacheMap(key: string): Record<string, string> {
+  try {
+    const value = JSON.parse(window.localStorage.getItem(key) ?? '{}');
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+    return Object.fromEntries(Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
+  } catch {
+    return {};
+  }
+}
+
+function writeRawCacheMap(key: string, value: Record<string, string>): void {
+  window.localStorage.setItem(key, JSON.stringify(value));
+}
+
+function captureLegacyCache(projectId: string, legacyKey: string, mapKey: string): void {
+  const map = readRawCacheMap(mapKey);
+  const raw = window.localStorage.getItem(legacyKey);
+  if (raw === null) delete map[projectId];
+  else map[projectId] = raw;
+  writeRawCacheMap(mapKey, map);
+}
+
+function restoreLegacyCache(projectId: string, legacyKey: string, mapKey: string): void {
+  const raw = readRawCacheMap(mapKey)[projectId];
+  if (raw === undefined) window.localStorage.removeItem(legacyKey);
+  else window.localStorage.setItem(legacyKey, raw);
+}
+
+function syncProjectCacheContext(previousId: string | null, nextId: string): void {
+  const caches = [
+    [diveKey, diveByProjectKey],
+    [planStageKey, planStageByProjectKey],
+    [planChatKey, planChatByProjectKey],
+    [snapshotsKey, snapshotsByProjectKey]
+  ] as const;
+  if (previousId && previousId !== nextId) {
+    for (const [legacyKey, mapKey] of caches) captureLegacyCache(previousId, legacyKey, mapKey);
+  }
+  if (previousId !== nextId) {
+    for (const [legacyKey, mapKey] of caches) restoreLegacyCache(nextId, legacyKey, mapKey);
+  }
+}
+
+function saveProjectLibrary(entries: ProjectLibraryEntry[]): void {
+  window.localStorage.setItem(projectLibraryKey, JSON.stringify(entries));
+}
+
+export function loadProjectLibrary(): ProjectLibraryEntry[] {
+  if (typeof window === 'undefined') return [];
+  const stored = parseProjectLibrary(window.localStorage.getItem(projectLibraryKey))
+    .map((entry) => ({ ...entry, project: normalizeProject(entry.project) }));
+  if (stored.length > 0) {
+    const activeId = window.localStorage.getItem(activeProjectIdKey);
+    if (!activeId || !stored.some((entry) => entry.projectId === activeId)) {
+      window.localStorage.setItem(activeProjectIdKey, stored[0].projectId);
+      window.localStorage.setItem(storageKey, JSON.stringify(stored[0].project));
+    }
+    return stored;
+  }
+
+  const legacyRaw = window.localStorage.getItem(storageKey);
+  if (!legacyRaw) return [];
+  try {
+    const legacy = normalizeProject(JSON.parse(legacyRaw) as SeriesProject);
+    const migrated = [migrateLegacyProject(legacy)];
+    saveProjectLibrary(migrated);
+    window.localStorage.setItem(activeProjectIdKey, legacy.id);
+    return migrated;
+  } catch {
+    return [];
+  }
+}
+
+export function getActiveProjectId(): string | null {
+  if (typeof window === 'undefined') return null;
+  const entries = loadProjectLibrary();
+  const activeId = window.localStorage.getItem(activeProjectIdKey);
+  return entries.some((entry) => entry.projectId === activeId) ? activeId : entries[0]?.projectId ?? null;
+}
+
 export function loadProject(): SeriesProject {
+  const entries = loadProjectLibrary();
+  const activeId = getActiveProjectId();
+  const libraryProject = entries.find((entry) => entry.projectId === activeId)?.project;
+  if (libraryProject) return normalizeProject(libraryProject);
+
   const saved = window.localStorage.getItem(storageKey);
 
   if (!saved) {
@@ -41,8 +143,43 @@ export function loadProject(): SeriesProject {
   }
 }
 
-export function saveProject(project: SeriesProject) {
-  window.localStorage.setItem(storageKey, JSON.stringify(project));
+export function saveProject(
+  project: SeriesProject,
+  options: { lifecycle?: ProjectLifecycle; activate?: boolean } = {}
+) {
+  const normalized = normalizeProject(project);
+  const currentId = getActiveProjectId();
+  const next = upsertProjectEntry(loadProjectLibrary(), normalized, { lifecycle: options.lifecycle });
+  saveProjectLibrary(next);
+  const shouldActivate = options.activate !== false && (!currentId || currentId === normalized.id || options.activate === true);
+  if (shouldActivate) {
+    syncProjectCacheContext(currentId, normalized.id);
+    window.localStorage.setItem(activeProjectIdKey, normalized.id);
+    window.localStorage.setItem(storageKey, JSON.stringify(normalized));
+  }
+}
+
+export function saveTemporaryProject(project: SeriesProject): void {
+  saveProject(project, { lifecycle: 'temporary', activate: true });
+}
+
+export function activateProject(projectId: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const entries = loadProjectLibrary();
+  const target = entries.find((entry) => entry.projectId === projectId);
+  if (!target) return false;
+  const previousId = getActiveProjectId();
+  syncProjectCacheContext(previousId, projectId);
+  window.localStorage.setItem(activeProjectIdKey, projectId);
+  window.localStorage.setItem(storageKey, JSON.stringify(target.project));
+  return true;
+}
+
+export function confirmLibraryProject(projectId: string): boolean {
+  const entries = loadProjectLibrary();
+  if (!entries.some((entry) => entry.projectId === projectId)) return false;
+  saveProjectLibrary(confirmProjectEntry(entries, projectId));
+  return true;
 }
 
 // 융합 셸 브리지 — 진짜 저장된 project 가 있는지(loadProject 는 없으면 seed 를 반환하므로 구분 필요).
@@ -51,6 +188,32 @@ export function hasSavedProject(): boolean {
 }
 
 export function clearProject() {
+  const activeId = getActiveProjectId();
+  if (activeId) {
+    const remaining = loadProjectLibrary().filter((entry) => entry.projectId !== activeId);
+    saveProjectLibrary(remaining);
+    for (const mapKey of [diveByProjectKey, planStageByProjectKey, planChatByProjectKey, snapshotsByProjectKey]) {
+      const map = readRawCacheMap(mapKey);
+      delete map[activeId];
+      writeRawCacheMap(mapKey, map);
+    }
+    window.localStorage.removeItem(activeProjectIdKey);
+    for (const legacyKey of [storageKey, diveKey, planStageKey, planChatKey, snapshotsKey]) {
+      window.localStorage.removeItem(legacyKey);
+    }
+    const fallback = remaining[0];
+    if (fallback) {
+      window.localStorage.setItem(activeProjectIdKey, fallback.projectId);
+      window.localStorage.setItem(storageKey, JSON.stringify(fallback.project));
+      for (const [legacyKey, mapKey] of [
+        [diveKey, diveByProjectKey],
+        [planStageKey, planStageByProjectKey],
+        [planChatKey, planChatByProjectKey],
+        [snapshotsKey, snapshotsByProjectKey]
+      ] as const) restoreLegacyCache(fallback.projectId, legacyKey, mapKey);
+    }
+    return;
+  }
   window.localStorage.removeItem(storageKey);
 }
 
@@ -109,6 +272,8 @@ export function pushProjectSnapshot(project: SeriesProject, label: string): Proj
   while (candidate.length > 0) {
     try {
       window.localStorage.setItem(snapshotsKey, JSON.stringify(candidate));
+      const activeId = getActiveProjectId();
+      if (activeId) captureLegacyCache(activeId, snapshotsKey, snapshotsByProjectKey);
       return candidate;
     } catch {
       candidate = candidate.slice(0, candidate.length - 1);
@@ -120,6 +285,8 @@ export function pushProjectSnapshot(project: SeriesProject, label: string): Proj
 
 export function clearProjectSnapshots() {
   window.localStorage.removeItem(snapshotsKey);
+  const activeId = getActiveProjectId();
+  if (activeId) captureLegacyCache(activeId, snapshotsKey, snapshotsByProjectKey);
 }
 
 // 전체 작품 데이터를 한 파일로 묶는 export 페이로드.
@@ -182,7 +349,7 @@ export function importAllData(input: unknown): ImportOutcome {
   const preferences = isRecord(payload.preferences) ? payload.preferences : {};
 
   try {
-    saveProject(normalizeProject(payload.project as unknown as SeriesProject));
+    saveProject(normalizeProject(payload.project as unknown as SeriesProject), { lifecycle: 'confirmed', activate: true });
     window.localStorage.setItem(snapshotsKey, JSON.stringify(snapshots));
     writePreference('storyx.landingTheme', preferences.landingTheme);
     writePreference('storyx.studio.accent', preferences.studioAccent);
@@ -500,8 +667,6 @@ export function hasMeaningfulOnboardingInput(draft: OnboardingDraft): boolean {
 
 // Dive X 활성 연대기(채팅 세션 + 작품)를 작업 중에도 영속한다.
 // 순수 함수(serialize/parse)는 window 에 접근하지 않는다.
-const diveKey = 'serial-story-studio/dive';
-
 export interface DiveState {
   schema: 'storyx/dive/v1';
   session: DiveSession;
@@ -532,21 +697,28 @@ export function parseDiveState(raw: string | null): DiveState | null {
 export function saveDiveState(state: DiveState): void {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(diveKey, serializeDiveState(state));
+  const map = readRawCacheMap(diveByProjectKey);
+  map[state.project.id] = serializeDiveState(state);
+  writeRawCacheMap(diveByProjectKey, map);
 }
 
 export function loadDiveState(): DiveState | null {
   if (typeof window === 'undefined') return null;
-  return parseDiveState(window.localStorage.getItem(diveKey));
+  const parsed = parseDiveState(window.localStorage.getItem(diveKey));
+  const activeId = getActiveProjectId();
+  if (!parsed || (activeId && parsed.project.id !== activeId)) return null;
+  if (activeId) captureLegacyCache(activeId, diveKey, diveByProjectKey);
+  return parsed;
 }
 
 export function clearDiveState(): void {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(diveKey);
+  const activeId = getActiveProjectId();
+  if (activeId) captureLegacyCache(activeId, diveKey, diveByProjectKey);
 }
 
 // PLAN staged — 설계실 패치 목록 영속(spec 2026-07-04). 본편(storageKey)과 분리된 수정 목록.
-const planStageKey = 'serial-story-studio/plan-stage';
-
 export function loadPlanPatches(): PlanPatch[] {
   if (typeof window === 'undefined') return [];
   const raw = window.localStorage.getItem(planStageKey);
@@ -562,15 +734,18 @@ export function loadPlanPatches(): PlanPatch[] {
 export function savePlanPatches(patches: PlanPatch[]): void {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(planStageKey, JSON.stringify(patches));
+  const activeId = getActiveProjectId();
+  if (activeId) captureLegacyCache(activeId, planStageKey, planStageByProjectKey);
 }
 
 export function clearPlanPatches(): void {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(planStageKey);
+  const activeId = getActiveProjectId();
+  if (activeId) captureLegacyCache(activeId, planStageKey, planStageByProjectKey);
 }
 
 // PLAN 설계 대화 버퍼 — syncVersion remount·새로고침 생존(spec 2026-07-07). 패치(plan-stage)와 별개 키.
-const planChatKey = 'serial-story-studio/plan-chat';
 const PLAN_CHAT_MAX_MESSAGES = 40;
 
 export interface PlanChatState {
@@ -598,11 +773,15 @@ export function savePlanChatMessages(messages: PlanChatMessage[]): void {
     messages: messages.slice(-PLAN_CHAT_MAX_MESSAGES)
   };
   window.localStorage.setItem(planChatKey, JSON.stringify(state));
+  const activeId = getActiveProjectId();
+  if (activeId) captureLegacyCache(activeId, planChatKey, planChatByProjectKey);
 }
 
 export function clearPlanChatMessages(): void {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(planChatKey);
+  const activeId = getActiveProjectId();
+  if (activeId) captureLegacyCache(activeId, planChatKey, planChatByProjectKey);
 }
 
 function isStringRecord(value: unknown): value is Record<string, string> {

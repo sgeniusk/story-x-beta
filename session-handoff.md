@@ -4,6 +4,113 @@
 
 ---
 
+## 2026-07-16 20:46 — P0-c 게시 완료, Draft PR #39 머지 대기
+
+> Last Updated: 2026-07-16 20:46 KST
+
+### Current Objective
+
+P0-c 구현·실브라우저 검증·전체 게이트·원격 푸시·Draft PR 생성까지 완료했다. PR #39는 `main` 대상이며 머지는 사용자에게 남긴다.
+
+### Recommended Next Step
+
+사용자가 PR #39를 검토·머지한 뒤 **P0-b 실패 구제 경로**를 brainstorm→spec→plan→TDD로 시작한다.
+
+### Branch · Commit · Verification
+
+- Branch — `codex/p0c-work-library` (origin tracking)
+- Commits — `b9e578e` 구현 · `b402b0c` 검증/인계
+- Draft PR — https://github.com/sgeniusk/story-x-beta/pull/39
+- Verification — 2026-07-16 `bash init.sh` 녹색: 98 files / 988 tests, tsc+vite build 성공
+
+### What the Last Session Did
+
+1. 만료된 `gh` 토큰과 별개로 승인된 git 자격 증명 경로를 사용해 기존 로컬 커밋을 그대로 origin에 푸시했다.
+2. GitHub 연결 앱으로 `main` 대상 Draft PR #39를 생성하고 본문에 변경 이유·사용자 영향·검증 증거를 기록했다.
+3. 사용자 소유 `.agents/skills/story-score/`는 계속 무접촉·미스테이징 상태로 보존했다.
+
+### Files To Touch (next milestone)
+
+- PR #39 머지 뒤 P0-b brainstorm/spec에서 새 범위를 지정한다.
+
+### Files NOT To Touch
+
+- `.agents/skills/story-score/` — 사용자 소유 untracked 폴더.
+- 완료 생성물 자동 반영 및 캐논 승인/누수/stale revision 게이트 우회.
+- P0-a 잡의 서버 영속 큐·호스팅 OAuth 확장, P0-c 작품별 캐시의 전역 단일화.
+
+### Blockers
+
+없음. 다음 개발 슬라이스는 PR #39 머지 결정만 기다린다.
+
+### Known Issues
+
+- `gh auth status`의 CLI 토큰은 만료 상태지만 git push와 GitHub 연결 앱 PR 작업은 성공했다. CLI 전용 작업 전에는 재로그인이 필요할 수 있다.
+
+### Reference Documents
+
+- `docs/superpowers/specs/2026-07-15-p0c-work-library-design.md`
+- `docs/superpowers/plans/2026-07-15-p0c-work-library.md`
+- `progress.md` 맨 위 P0-c 완료 트랙
+
+---
+
+## 2026-07-15 20:22 — P0-c 작품 보관함: 임시작→확정→이어쓰기 완료
+
+> Last Updated: 2026-07-15 20:22 KST
+
+### Current Objective
+
+P0-c 구현은 완료됐다. 전역 보관함에서 여러 작품을 보존하고, PLAY-first 신규 작업을 임시작으로 저장한 뒤 명시적으로 연재 작품으로 확정하고 재시작해 이어갈 수 있다.
+
+### Recommended Next Step
+
+이관 백로그의 다음 P0인 **P0-b 실패 구제 경로**를 brainstorm→spec→plan→TDD로 시작한다. P0-c에 삭제/보관/검색·정렬/클라우드 동기화를 섞지 않는다.
+
+### Branch · Commit · Verification
+
+- Branch — `codex/p0c-work-library`
+- Implementation — `b9e578e` (`P0-c: add temporary work library`)
+- Verification — `bash init.sh` 녹색: 98 files / 988 tests, tsc+vite build 성공
+- Browser — 기존 확정작+새 임시작 공존→새로고침 복원→확정 승격→재시작 유지→이어쓰기; 콘솔 오류 0
+- Capture — `/Users/taewookkim/.codex/visualizations/2026/07/13/019f5c20-8b9d-73d2-8aea-50a5ad8aac70/storyx-p0c-work-library.png`
+
+### What the Last Session Did
+
+1. PR #38을 main에 머지(`0df4cfa`)하고 P0-c feature branch를 만들었다.
+2. `projectLibrary.ts` lifecycle 도메인과 `storage.ts` 다중 작품/작품별 PLAY·PLAN·snapshot 격리를 TDD로 구현했다.
+3. ProjectHub에 임시작/연재 작품/최근 작업/이어쓰기/작품으로 확정 UI를 연결했다.
+4. 기존 단일 저장 작품은 확정작으로 마이그레이션하고, 저장 전 seed는 보관함에서 제외했다.
+5. 생성 보관함 결과 검토는 item의 `projectId` 작품을 먼저 활성화하도록 고정했다.
+
+### Files To Touch (next milestone)
+
+- P0-b brainstorm에서 실패 상태·구제 CTA·재시도 계약을 확정한 뒤 새 spec에 지정.
+
+### Files NOT To Touch
+
+- `.agents/skills/story-score/` — 사용자 소유 untracked 폴더. 추가·수정·스테이징 금지.
+- 완료 생성물 자동 반영, 캐논 승인/누수/stale revision 게이트 우회 금지.
+- P0-a 인메모리 잡을 서버 영속 큐나 호스팅 OAuth 흐름으로 확대 금지.
+- P0-c의 작품별 캐시 키(`*-by-project/v1`)를 단일 전역 캐시로 되돌리지 말 것.
+
+### Blockers
+
+없음.
+
+### Known Issues
+
+- 기존 작품과 프리셋 신규작의 제목이 같을 수 있다. 이번 슬라이스는 식별자를 `projectId`로 보장하며 제목 변경/중복 제목 UX는 후속 범위다.
+- 작품 삭제/보관/검색·정렬/클라우드 동기화는 의도적 비목표다.
+
+### Reference Documents
+
+- `docs/superpowers/specs/2026-07-15-p0c-work-library-design.md`
+- `docs/superpowers/plans/2026-07-15-p0c-work-library.md`
+- `progress.md` 맨 위 P0-c 완료 트랙
+
+---
+
 ## 2026-07-15 — P0-a 응결 신뢰성: 로컬 Codex 잡 + 전역 생성 보관함 (done·PR #38 열림·머지 대기)
 
 > 사용자 확정 순서 brainstorm→spec→plan→TDD로 완료. PLAY의 긴 응결 호출을 로컬 서버 인메모리 잡으로 분리하고 ProjectHub 중심 전역 생성 보관함을 추가했다. 구현 커밋 `f8bddc9`; 최종 `bash init.sh` 녹색(세부 수치는 progress.md 맨 위 최근 검증 참조).

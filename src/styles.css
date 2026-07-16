@@ -7154,6 +7154,12 @@ body {
   color: var(--nx-ink);
   margin: 0;
 }
+.projects-page .pjx-library-summary {
+  margin: 12px 0 0;
+  color: var(--nx-steel);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
 .projects-page .pjx-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -7206,6 +7212,72 @@ body {
 .projects-page .pjx-card:hover {
   box-shadow: var(--nx-sh-card);
   border-color: rgba(100, 72, 211, 0.28);
+}
+.projects-page .pjx-library-card {
+  cursor: default;
+  position: relative;
+}
+.projects-page .pjx-library-card.is-active {
+  border-color: color-mix(in srgb, var(--nx-primary) 42%, var(--nx-hairline));
+  box-shadow: inset 3px 0 0 var(--nx-primary), var(--nx-sh-subtle);
+}
+.projects-page .pjx-card-kicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 22px;
+  margin-bottom: 13px;
+}
+.projects-page .pjx-lifecycle,
+.projects-page .pjx-active-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+.projects-page .pjx-lifecycle.is-temporary {
+  background: var(--nx-tint-peach);
+  color: var(--nx-charcoal);
+}
+.projects-page .pjx-lifecycle.is-confirmed {
+  background: var(--nx-tint-lavender);
+  color: var(--nx-primary);
+}
+.projects-page .pjx-active-label {
+  padding: 0;
+  color: var(--nx-steel);
+}
+.projects-page .pjx-library-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+.projects-page .pjx-library-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--nx-hairline-strong);
+  border-radius: var(--nx-r);
+  background: var(--nx-canvas);
+  color: var(--nx-ink);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--st-dur-fast) var(--st-ease), background var(--st-dur-fast) var(--st-ease);
+}
+.projects-page .pjx-library-actions .pjx-open-work {
+  border-color: var(--nx-primary);
+  background: var(--nx-primary);
+  color: var(--nx-on-primary);
+}
+.projects-page .pjx-library-actions .pjx-confirm-work:hover {
+  border-color: var(--nx-primary);
+  background: var(--nx-tint-lavender);
 }
 .projects-page .pjx-card-meta {
   font-size: 12px;

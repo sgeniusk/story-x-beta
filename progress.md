@@ -1,9 +1,17 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-15 · Branch: `codex/p0a-condense-job-polling` (**P0-a 로컬 Codex 응결 잡 + 전역 생성 보관함 완료, PR #38 열림·머지 대기**)
+> Last Updated: 2026-07-16 · Branch: `codex/p0c-work-library` (**P0-c 작품 보관함 완료, Draft PR #39 열림·머지 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-> 최근 검증(2026-07-15) — `bash init.sh` 통과: `npm test` 970 통과(96 파일) · `npm run build`(tsc+vite) 성공.
+> 최근 검증(2026-07-16) — `bash init.sh` 통과: `npm test` 988 통과(98 파일) · `npm run build`(tsc+vite) 성공.
+
+## 완료 트랙 — P0-c 작품 관리 시스템: 임시작 보관·확정·이어쓰기 (`done` · 2026-07-16, 구현 커밋 `b9e578e` · Draft PR #39)
+
+전역 작품 보관함을 신설해 PLAY-first 온보딩에서 만든 작업을 `temporary`로 저장하고, 사용자가 명시적으로 `confirmed`로 승격한 뒤 재시작해 이어갈 수 있게 했다. 기존 단일 저장 작품은 `confirmed`로 안전 마이그레이션하며, 저장되지 않은 seed 데모는 보관함에 등록하지 않는다. 작품별 PLAY working copy·PLAN staged patches/chat·스냅샷 캐시를 격리하고, 생성 보관함 검토 진입 시 해당 `projectId`를 먼저 활성화한다. spec `docs/superpowers/specs/2026-07-15-p0c-work-library-design.md` · plan `docs/superpowers/plans/2026-07-15-p0c-work-library.md`.
+- **구현** — `projectLibrary.ts` lifecycle 순수 도메인 + `storage.ts` 다중 작품 저장/활성화/레거시 마이그레이션/작품별 캐시 스왑 + ProjectHub `ProjectLibraryCard`(임시작·연재 작품·최근 작업·이어쓰기·작품으로 확정) + 온보딩 임시 저장 + 생성 보관함 projectId 라우팅.
+- **안전 불변식** — 임시작도 모든 창작 기능 사용 가능 · 확정은 명시적 승격일 뿐 자동 캐논 승인 아님 · 기존 저장 작품은 유실 없이 확정작으로 이동 · 활성 작품 삭제 시 다른 작품/작품별 캐시 보존 · 사용자 소유 `.agents/skills/story-score/` 무접촉.
+- **실동작 증거** — 브라우저에서 기존 확정작 1개와 새 임시작 1개 공존(`작품 2 · 임시작 1`)→새로고침 생존→`작품으로 확정` 후 `임시작 0`→재시작 뒤 확정 유지→최근 작업 `이어쓰기` 복귀. 콘솔 오류 0. 캡처 `/Users/taewookkim/.codex/visualizations/2026/07/13/019f5c20-8b9d-73d2-8aea-50a5ad8aac70/storyx-p0c-work-library.png`(확정), `storyx-p0c-work-library-temporary.png`(확정 전).
+- **Recommended Next Step** — 이관 백로그의 다음 P0인 **P0-b 실패 구제 경로**를 새 brainstorm부터 시작. P0-c 범위를 삭제/보관/검색·정렬·클라우드 동기화로 확장하지 말 것.
 
 ## 완료 트랙 — P0-a 응결 신뢰성: 로컬 잡 + 폴링 + 전역 생성 보관함 (`done` · 2026-07-15, 구현 커밋 `f8bddc9`)
 
