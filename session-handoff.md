@@ -4,6 +4,65 @@
 
 ---
 
+## 2026-07-16 23:02 — P0-b PLAY 원문 복구 완료, 사용자 테스트 대기
+
+> Last Updated: 2026-07-16 23:02 KST
+
+### Current Objective
+
+P0-b 구현·독립 P0/P1 검토·실브라우저 인수·전체 게이트·원격 푸시·Draft PR #40 생성까지 완료했다. 응결이 실패하거나 취소돼도 당시 PLAY 전체 원문을 TXT로 받거나 원래 작품의 WRITE 초안으로 이어갈 수 있다. 머지는 사용자에게 남긴다.
+
+### Recommended Next Step
+
+사용자가 preview 5175의 기존 테스트 작품에서 PLAY→응결→취소→`PLAY 기록 TXT`→`WRITE 초안으로 보내기`를 직접 확인한다. 수용되면 스택 순서대로 **P0-c #39를 먼저 머지하되 base 브랜치를 삭제하지 않고**, #40을 main으로 retarget해 고유 diff 확인 후 머지한다.
+
+### Branch · Commit · Verification
+
+- Branch — `codex/p0b-failure-recovery` (origin tracking, `codex/p0c-work-library` 위 스택)
+- Implementation — `cdd009c` (`P0-b: add PLAY failure recovery`)
+- Draft PR — https://github.com/sgeniusk/story-x-beta/pull/40 (base `codex/p0c-work-library`)
+- Verification — 2026-07-16 23:02 `bash init.sh` 녹색: 99 files / 1011 tests, tsc+vite build 성공
+- Browser — `P0B-ALPHA`·`P0B-BETA` 전체 원문 실제 TXT 다운로드, 취소 영수증→WRITE 1화, 새로고침 지속, 캐논 0, 콘솔 오류 0, 390×844 overflow 0
+- Capture — `/Users/taewookkim/.codex/visualizations/2026/07/13/019f5c20-8b9d-73d2-8aea-50a5ad8aac70/storyx-p0b-failure-recovery.png`
+
+### What the Last Session Did
+
+1. 잡 시작 전에 전체 PLAY transcript·장면·작품·예정 회차를 `PlayRecoverySnapshot`으로 캡처하고 생성 영수증에 영속했다.
+2. 실패·취소·시간 초과·연결 만료와 잡 등록 실패에서 TXT/WRITE 두 구제 행동을 PLAY 현장과 전역 생성 보관함에 연결했다.
+3. WRITE 복구를 원래 작품에만 멱등 생성하고, 미반영 PLAY가 있으면 ⟳최신화를 먼저 요구해 캐논 승인 우회를 막았다.
+4. localStorage quota 실패가 서버 잡 실패로 전파되지 않게 했고, 연속 실패 중 모든 미영속 영수증의 긴급 TXT 표식을 보존했다.
+5. UX·테스트 독립 리뷰에서 나온 P0/P1을 전부 TDD로 닫고 Draft PR #40만 생성했다. 사용자 소유 `.agents/skills/story-score/`는 무접촉·미스테이징 상태다.
+
+### Files To Touch (next milestone)
+
+- 사용자 테스트에서 결함이 나오면 P0-b spec의 수용 기준 안에서 해당 테스트를 먼저 추가한 뒤 최소 수정한다.
+- 수용 뒤 다음 기능 슬라이스는 새 brainstorm에서 범위를 다시 지정한다.
+
+### Files NOT To Touch
+
+- `.agents/skills/story-score/` — 사용자 소유 untracked 폴더. 추가·수정·스테이징 금지.
+- 완료 생성물 자동 반영, recovery의 캐논/인물/성장 상태 자동 변경, 누수·stale revision·사용자 승인 게이트 우회.
+- P0-a 인메모리 잡을 서버 영속 큐/호스팅 OAuth로 확대하거나 P0-c 작품별 캐시를 전역 단일 캐시로 되돌리는 변경.
+- #40을 main으로 retarget하기 전 #39의 base 브랜치 삭제.
+
+### Blockers
+
+없음. 현재는 사용자 직접 수용 테스트 시점이다.
+
+### Known Issues
+
+- `gh auth status`의 CLI 토큰은 만료 상태지만 git push와 GitHub 연결 앱 Draft PR 생성은 성공했다. CLI 전용 작업 전에는 재로그인이 필요할 수 있다.
+- 잡 레지스트리는 P0-a 계약대로 서버 프로세스 메모리다. 서버 재시작 뒤 영수증은 `expired`가 되지만 P0-b recovery snapshot이 있으면 TXT/WRITE 구제가 가능하다.
+- TXT 증거 파일은 `/Users/taewookkim/Downloads/`에 남아 있다.
+
+### Reference Documents
+
+- `docs/superpowers/specs/2026-07-16-p0b-play-recovery-design.md`
+- `docs/superpowers/plans/2026-07-16-p0b-play-recovery.md`
+- `progress.md` 맨 위 P0-b 완료 트랙
+
+---
+
 ## 2026-07-16 20:46 — P0-c 게시 완료, Draft PR #39 머지 대기
 
 > Last Updated: 2026-07-16 20:46 KST

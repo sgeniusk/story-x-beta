@@ -1,9 +1,19 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-16 · Branch: `codex/p0c-work-library` (**P0-c 작품 보관함 완료, Draft PR #39 열림·머지 대기**)
+> Last Updated: 2026-07-16 23:02 KST · Branch: `codex/p0b-failure-recovery` (**P0-b PLAY 기록 복구 완료, Draft PR #40 열림·사용자 테스트 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-> 최근 검증(2026-07-16) — `bash init.sh` 통과: `npm test` 988 통과(98 파일) · `npm run build`(tsc+vite) 성공.
+> 최근 검증(2026-07-16 23:02 KST) — `bash init.sh` 녹색: `npm test` 1011 통과(99 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+
+## 완료 트랙 — P0-b 응결 실패 구제: PLAY 원문 TXT·WRITE 복구 (`done` · 2026-07-16, 구현 커밋 `cdd009c` · Draft PR #40)
+
+응결 잡을 시작하는 순간의 **전체 PLAY 원문**을 생성 영수증에 함께 보존하고, 잡 시작 실패·생성 실패·취소·시간 초과·연결 만료 뒤 `PLAY 기록 TXT` 또는 원래 작품의 편집 가능한 WRITE 초안으로 구제한다. 복구는 생성 성공이나 캐논 승인이 아니며, 사용자가 만든 원문을 잃지 않고 다음 편집 행동으로 이동시키는 계층이다. spec `docs/superpowers/specs/2026-07-16-p0b-play-recovery-design.md` · plan `docs/superpowers/plans/2026-07-16-p0b-play-recovery.md`.
+- **구현** — `playRecovery.ts` 전체 transcript snapshot·결정론적 TXT/파일명·멱등 WRITE draft·본편/PLAY pending-sync 차단 + `generationInbox.ts` recovery 영속/손상 호환/폴링 메타 유지/실패 상태 판정 + ProjectHub와 PLAY 현장 복구 카드·다운로드·WRITE 라우팅.
+- **안전 불변식** — 원래 `projectId` 불일치 시 WRITE 금지 · `newCanonFacts=[]`/빈 intent·pressure로 캐논·인물·성장 상태 무변경 · 앵커 위반 턴도 원문에는 보존하되 캐논 자동 승격 금지 · 완료 결과 자동 반영/누수 검사/stale revision 게이트 우회 금지.
+- **저장 내구성** — localStorage 용량 실패를 서버 잡 시작 실패로 오인하지 않는다. 성공 영수증 결과는 버리지 않고 중복 recovery만 줄여 한 번 재시도하며, 실패가 이어지면 기존·신규 미영속 영수증 모두 새로고침 전 TXT 구제 표식을 유지한다. 성공 저장 때만 로컬 표식을 해제한다.
+- **실동작 증거** — 브라우저에서 PLAY 표식 `P0B-ALPHA`·`P0B-BETA` 2턴→응결→취소→TXT 실제 다운로드→WRITE 1화 복구→ProjectHub/새로고침에서 `1화 · 캐논 0개`와 `WRITE로 보냄` 지속 확인. 콘솔 오류 0, 390×844 가로 넘침 0. 캡처 `/Users/taewookkim/.codex/visualizations/2026/07/13/019f5c20-8b9d-73d2-8aea-50a5ad8aac70/storyx-p0b-failure-recovery.png`; TXT `/Users/taewookkim/Downloads/storyx-회귀-전-기억을-가진-신입-—-오늘-1화-play-record.txt`.
+- **게시/의존** — Draft PR #40 `https://github.com/sgeniusk/story-x-beta/pull/40`은 P0-c Draft PR #39 위의 스택이다. 머지 순서는 **#39 → #40**이며 #39 base 브랜치는 #40을 main으로 retarget하기 전에 삭제하지 않는다.
+- **Recommended Next Step** — 사용자가 실제 PLAY에서 응결 취소 후 TXT/WRITE 복구를 직접 확인한다. 수용되면 #39를 먼저 머지하고 #40 base를 main으로 바꿔 고유 diff를 재확인한 뒤 머지는 사용자에게 남긴다. 테스트 피드백 전에는 다음 기능 슬라이스를 섞지 않는다.
 
 ## 완료 트랙 — P0-c 작품 관리 시스템: 임시작 보관·확정·이어쓰기 (`done` · 2026-07-16, 구현 커밋 `b9e578e` · Draft PR #39)
 
