@@ -162,7 +162,7 @@ describe('DiveDesk', () => {
     }));
     expect(html).toContain('PLAY 기록은 안전합니다');
     expect(html).toContain('PLAY 기록 TXT');
-    expect(html).toContain('WRITE 초안으로 보내기');
+    expect(html).toContain('WRITE에서 이어쓰기');
     expect(html).toContain('생성 보관함');
     expect(html).toContain('role="region"');
     expect(html).toContain('role="status"');
@@ -184,6 +184,26 @@ describe('DiveDesk', () => {
     expect(html).toContain('PLAY 기록 보관 필요');
     expect(html).toContain('새로고침 전에 TXT');
     expect(html).toContain('PLAY 기록 TXT');
+  });
+
+  it('이미 연 복구 작업본은 PLAY에서도 새 작업이 아니라 재열기로 표시한다', () => {
+    const project = createEmptyProject({ title: 't' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const recovery: PlayRecoverySnapshot = {
+      schema: 'storyx/play-recovery/v1', projectId: project.id, projectTitle: 't', episode: 1,
+      scene: '', transcript: '나: 기록', capturedAt: '2026-07-16T00:00:00Z'
+    };
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {},
+      generationInbox: [{
+        id: 'job-1', kind: 'dive-condense', projectId: project.id, projectTitle: 't', baseRevision: 'r1',
+        episode: 1, status: 'failed', createdAt: 'x', updatedAt: 'x', recovery,
+        recoveryDraftOpenedAt: '2026-07-16T01:00:00Z', recoveryDraftId: 'draft-1'
+      }],
+      onSendRecoveryToDraft: () => {}
+    }));
+    expect(html).toContain('작업본 열기');
+    expect(html).not.toContain('WRITE에서 이어쓰기');
   });
 
   it('잡 등록 실패 전에 전체 PLAY를 캡처하고 인라인 TXT/WRITE 구제를 제공한다', async () => {
@@ -223,7 +243,7 @@ describe('DiveDesk', () => {
 
     const buttons = Array.from(host.querySelectorAll('button'));
     act(() => buttons.find((button) => button.textContent === 'PLAY 기록 TXT')?.click());
-    act(() => buttons.find((button) => button.textContent === 'WRITE 초안으로 보내기')?.click());
+    act(() => buttons.find((button) => button.textContent === 'WRITE에서 이어쓰기')?.click());
     expect(onDownloadRecovery).toHaveBeenCalledWith(captured);
     expect(onSendRecoveryToDraft).toHaveBeenCalledWith(captured, undefined);
     act(() => root.unmount());

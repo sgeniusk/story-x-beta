@@ -116,12 +116,16 @@ export function DiveDesk({
   const activeGeneration = generationInbox.find((item) => item.projectId === project.id && item.episode === episode && item.status === 'running') ?? null;
   const projectInboxCount = generationInbox.filter((item) => item.projectId === project.id).length;
   const recoverableGeneration = generationInbox.find((item) =>
-    item.projectId === project.id && canRecoverGeneration(item) && !item.recoveredAt
+    item.projectId === project.id && canRecoverGeneration(item) && !(item.recoveredAt && item.recoveredChapterId)
   ) ?? null;
   const inlineRecovery = failedRecovery
-    ? { recovery: failedRecovery, generationId: undefined }
+    ? { recovery: failedRecovery, generationId: undefined, hasRecoveryDraft: false }
     : recoverableGeneration?.recovery
-      ? { recovery: recoverableGeneration.recovery, generationId: recoverableGeneration.id }
+      ? {
+          recovery: recoverableGeneration.recovery,
+          generationId: recoverableGeneration.id,
+          hasRecoveryDraft: Boolean(recoverableGeneration.recoveryDraftOpenedAt && recoverableGeneration.recoveryDraftId)
+        }
       : null;
   const selectedGenerationIsStale = Boolean(selectedGeneration && selectedGeneration.baseRevision !== buildProjectRevision(project));
   const turnCounts = useMemo(() => {
@@ -423,7 +427,7 @@ export function DiveDesk({
         <aside className="dx-recovery" role="region" aria-labelledby="dx-recovery-title" aria-describedby="dx-recovery-description">
           <div className="dx-recovery-copy" role="status" aria-live="polite">
             <strong id="dx-recovery-title">응결은 멈췄지만 PLAY 기록은 안전합니다.</strong>
-            <span id="dx-recovery-description">원문 그대로 받거나 WRITE 초안으로 보내세요. 캐논에는 자동 반영되지 않습니다.</span>
+            <span id="dx-recovery-description">원문 그대로 받거나 별도 WRITE 작업본에서 다듬으세요. 회차로 저장하기 전에는 본편·캐논에 반영되지 않습니다.</span>
           </div>
           <div className="dx-recovery-actions">
             {onDownloadRecovery && (
@@ -435,7 +439,7 @@ export function DiveDesk({
                 className="is-write"
                 onClick={() => onSendRecoveryToDraft(inlineRecovery.recovery, inlineRecovery.generationId)}
               >
-                WRITE 초안으로 보내기
+                {inlineRecovery.hasRecoveryDraft ? '작업본 열기' : 'WRITE에서 이어쓰기'}
               </button>
             )}
             {onOpenGenerationInbox && (

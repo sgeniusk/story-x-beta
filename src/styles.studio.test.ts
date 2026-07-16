@@ -38,6 +38,19 @@ describe('Story X studio shared tokens (--st-*)', () => {
     expect(css).toMatch(/\.wm-btn\s*\{[^}]*transition:[^}]*var\(--st-dur-fast\)/);
   });
 
+  it('복구 작업본의 저장 상태·본편 반영 안내는 작은 글씨에서도 읽히는 토큰을 쓴다', () => {
+    expect(css).toMatch(/\.fc-recovery-save-line\{[^}]*color:var\(--ink-dim\)/);
+    expect(css).toMatch(/\.fc-recovery-impact\{[^}]*color:var\(--ink-dim\)/);
+  });
+
+  it('320px 셀에서 제목·모드·최신화 행동을 2행 grid에 배치해 가로 overflow를 막는다', () => {
+    expect(css).toMatch(/@media \(max-width: 560px\)\{[\s\S]*?\.wm-bar\{[^}]*display:grid[^}]*grid-template-columns:minmax\(0,1fr\) auto/);
+    expect(css).toMatch(/@media \(max-width: 560px\)\{[\s\S]*?\.wm-toggle\{[^}]*grid-column:1\/-1[^}]*width:100%/);
+    expect(css).toMatch(/@media \(max-width: 560px\)\{[\s\S]*?\.wm-title-input\{[^}]*min-width:0[^}]*max-width:none/);
+    expect(css).toMatch(/@media \(max-width: 560px\)\{[\s\S]*?\.wm-actions\{[^}]*grid-column:2[^}]*max-width:100%/);
+    expect(css).toMatch(/@media \(max-width: 560px\)\{[\s\S]*?\.sync-pending\{[^}]*display:none/);
+  });
+
   it('PLAY 표면이 공통 토큰을 소비하고 등장 모션 keyframes 가 있다', () => {
     expect(css).toMatch(/\.dx-desk\s*\{[^}]*var\(--st-bg\)/);
     expect(css).toContain('@keyframes st-rise');

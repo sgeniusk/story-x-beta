@@ -30,6 +30,7 @@ import {
   type ProjectLibraryEntry,
   type ProjectLifecycle
 } from './projectLibrary';
+import { clearPlayRecoveryWorkDraftProject } from './playRecoveryStore';
 
 const storageKey = 'serial-story-studio/project';
 const snapshotsKey = 'serial-story-studio/snapshots';
@@ -192,6 +193,7 @@ export function clearProject() {
   if (activeId) {
     const remaining = loadProjectLibrary().filter((entry) => entry.projectId !== activeId);
     saveProjectLibrary(remaining);
+    clearPlayRecoveryWorkDraftProject(activeId);
     for (const mapKey of [diveByProjectKey, planStageByProjectKey, planChatByProjectKey, snapshotsByProjectKey]) {
       const map = readRawCacheMap(mapKey);
       delete map[activeId];
@@ -695,11 +697,20 @@ export function parseDiveState(raw: string | null): DiveState | null {
 }
 
 export function saveDiveState(state: DiveState): void {
+  saveDiveStateForProject(state);
+}
+
+// 프로젝트 라이브러리의 비활성 작품도 active 전환 없이 PLAY working copy를 안전하게 읽고 쓴다.
+// legacy diveKey는 현재 활성 작품일 때만 갱신해 다른 작품의 화면 상태를 덮지 않는다.
+export function saveDiveStateForProject(state: DiveState): void {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(diveKey, serializeDiveState(state));
+  const serialized = serializeDiveState(state);
   const map = readRawCacheMap(diveByProjectKey);
-  map[state.project.id] = serializeDiveState(state);
+  map[state.project.id] = serialized;
   writeRawCacheMap(diveByProjectKey, map);
+  if (getActiveProjectId() === state.project.id) {
+    window.localStorage.setItem(diveKey, serialized);
+  }
 }
 
 export function loadDiveState(): DiveState | null {
@@ -709,6 +720,13 @@ export function loadDiveState(): DiveState | null {
   if (!parsed || (activeId && parsed.project.id !== activeId)) return null;
   if (activeId) captureLegacyCache(activeId, diveKey, diveByProjectKey);
   return parsed;
+}
+
+export function loadDiveStateForProject(projectId: string): DiveState | null {
+  if (typeof window === 'undefined' || !projectId) return null;
+  if (getActiveProjectId() === projectId) return loadDiveState();
+  const parsed = parseDiveState(readRawCacheMap(diveByProjectKey)[projectId] ?? null);
+  return parsed?.project.id === projectId ? parsed : null;
 }
 
 export function clearDiveState(): void {

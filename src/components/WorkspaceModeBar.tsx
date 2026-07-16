@@ -53,7 +53,7 @@ export function WorkspaceModeBar({
           </button>
         ))}
       </div>
-      {rightSlot}
+      {rightSlot ? <div className="wm-actions">{rightSlot}</div> : null}
     </div>
   );
 }

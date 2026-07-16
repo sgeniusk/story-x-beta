@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { appendMessage, createDiveSession } from './diveSession';
-import { createSeedProject } from './storyEngine';
+import { chapterFromDraftPayload, createSeedProject } from './storyEngine';
 import {
   buildPlayRecoveryFilename,
   buildPlayRecoverySnapshot,
+  createPlayRecoveryWorkDraft,
   formatPlayRecoveryText,
-  planPlayRecoveryWrite,
-  recoverPlaySnapshotToDraft
+  inspectPlayRecoveryCommitIntent,
+  planPlayRecoveryCommit,
+  preparePlayRecoveryCommitIntent,
+  repairLegacyPlayRecoveryChapter
 } from './playRecovery';
 
 describe('PLAY recovery', () => {
@@ -60,7 +63,7 @@ describe('PLAY recovery', () => {
     expect(filename).not.toMatch(/[\\/:?*"<>|]/);
   });
 
-  it('원래 작품에만 편집 가능한 회차를 추가하고 캐논·인물·성장 상태를 보존한다', () => {
+  it('복구 작업본은 빈 본문과 분리된 PLAY source로 시작하고 프로젝트를 바꾸지 않는다', () => {
     const project = { ...createSeedProject(), id: 'p1', title: '달의 문서고' };
     const session = {
       ...createDiveSession(project.characters[0].id, project.id),
@@ -68,47 +71,139 @@ describe('PLAY recovery', () => {
       chatBuffer: [{ id: 'm1', role: 'user' as const, text: '원문 한 줄', turn: 1 }]
     };
     const snapshot = buildPlayRecoverySnapshot(session, project, '2026-07-16T12:34:56.000Z');
-    const canonBefore = project.canonFacts;
-    const charactersBefore = project.characters;
-    const growthBefore = project.growthLedger;
+    const before = JSON.stringify(project);
 
-    expect(recoverPlaySnapshotToDraft({ ...project, id: 'other' }, snapshot)).toBeNull();
+    const draft = createPlayRecoveryWorkDraft(snapshot, 'job-1', '2026-07-16T13:00:00.000Z');
 
-    const recovered = recoverPlaySnapshotToDraft(project, snapshot);
-    expect(recovered).not.toBeNull();
-    expect(recovered?.created).toBe(true);
-    expect(recovered?.chapter.title).toBe('PLAY 기록 복구본 · 당시 1화');
-    expect(recovered?.chapter.prose).toContain('나: 원문 한 줄');
-    expect(recovered?.chapter.newCanonFacts).toEqual([]);
-    expect(recovered?.chapter.locked).not.toBe(true);
-    expect(recovered?.updatedProject.canonFacts).toEqual(canonBefore);
-    expect(recovered?.updatedProject.characters).toEqual(charactersBefore);
-    expect(recovered?.updatedProject.growthLedger).toEqual(growthBefore);
-
-    const again = recoverPlaySnapshotToDraft(recovered!.updatedProject, snapshot);
-    expect(again?.created).toBe(false);
-    expect(again?.updatedProject.chapters).toHaveLength(recovered!.updatedProject.chapters.length);
-    expect(again?.chapter.id).toBe(recovered?.chapter.id);
+    expect(draft).toEqual(expect.objectContaining({
+      schema: 'storyx/play-recovery-work-draft/v1',
+      projectId: project.id,
+      generationId: 'job-1',
+      episodeHint: 1,
+      title: '',
+      body: '',
+      createdAt: '2026-07-16T13:00:00.000Z',
+      updatedAt: '2026-07-16T13:00:00.000Z'
+    }));
+    expect(draft.source).toEqual(snapshot);
+    expect(draft.source.transcript).toContain('나: 원문 한 줄');
+    expect(JSON.stringify(project)).toBe(before);
+    expect(project.chapters).toHaveLength(0);
   });
 
-  it('미반영 PLAY가 있으면 WRITE 복구를 막고, 없으면 본편과 PLAY 작업본을 같은 회차로 맞춘다', () => {
+  it('명시 저장 때만 작성 본문을 한 회차로 만들고 캐논·인물·성장을 보존한다', () => {
     const committed = { ...createSeedProject(), id: 'p1', title: '달의 문서고' };
     const session = {
       ...createDiveSession(committed.characters[0].id, committed.id),
       chatBuffer: [{ id: 'm1', role: 'user' as const, text: '복구할 기록', turn: 1 }]
     };
-    const firstSnapshot = buildPlayRecoverySnapshot(session, committed, '2026-07-16T12:34:56.000Z');
-    const pendingWorking = recoverPlaySnapshotToDraft(committed, firstSnapshot)!.updatedProject;
-    const blockedSnapshot = { ...firstSnapshot, episode: 2, transcript: '나: 다음 기록' };
+    const snapshot = buildPlayRecoverySnapshot(session, committed, '2026-07-16T12:34:56.000Z');
+    const emptyDraft = createPlayRecoveryWorkDraft(snapshot, 'job-1', '2026-07-16T13:00:00.000Z');
+    expect(planPlayRecoveryCommit(committed, committed, emptyDraft)).toEqual({ status: 'empty-body' });
+    expect(planPlayRecoveryCommit({ ...committed, id: 'other' }, undefined, { ...emptyDraft, body: '문장' }))
+      .toEqual({ status: 'project-mismatch' });
 
-    const blocked = planPlayRecoveryWrite(committed, pendingWorking, blockedSnapshot);
+    const pendingChapter = chapterFromDraftPayload(committed, {
+      title: 'PLAY 미반영 회차', hook: '', outline: [], beats: [], prose: '미반영 본문', newCanonFacts: []
+    }, { genre: committed.genre, intent: '', pressure: '' }).updatedProject;
+    const authoredDraft = { ...emptyDraft, title: '문 뒤의 목소리', body: '문 너머에서 내 이름을 부르는 소리가 났다.' };
+    const blocked = planPlayRecoveryCommit(committed, pendingChapter, authoredDraft);
     expect(blocked).toEqual({ status: 'pending-sync', pending: { chapters: 1, canon: 0, total: 1 } });
 
-    const ready = planPlayRecoveryWrite(pendingWorking, { ...pendingWorking }, blockedSnapshot);
+    const canonBefore = committed.canonFacts;
+    const charactersBefore = committed.characters;
+    const growthBefore = committed.growthLedger;
+    const ready = planPlayRecoveryCommit(committed, { ...committed }, authoredDraft);
     expect(ready.status).toBe('ready');
     if (ready.status !== 'ready') throw new Error('ready recovery plan expected');
-    expect(ready.committedProject.chapters.at(-1)?.episode).toBe(2);
+    expect(ready.committedProject.chapters).toHaveLength(committed.chapters.length + 1);
+    expect(ready.chapter.title).toBe('문 뒤의 목소리');
+    expect(ready.chapter.prose).toBe(authoredDraft.body);
+    expect(ready.chapter.prose).not.toContain('Story X PLAY 기록 복구본');
+    expect(ready.chapter.prose).not.toContain('보존 시각');
+    expect(ready.chapter.newCanonFacts).toEqual([]);
+    expect(ready.committedProject.canonFacts).toEqual(canonBefore);
+    expect(ready.committedProject.characters).toEqual(charactersBefore);
+    expect(ready.committedProject.growthLedger).toEqual(growthBefore);
     expect(ready.workingProject).toEqual(ready.committedProject);
     expect(ready.chapter.id).toBe(ready.workingProject?.chapters.at(-1)?.id);
+  });
+
+  it('이전 구현의 정확한 최신 시스템 회차만 제거하고 사용자 수정본은 건드리지 않는다', () => {
+    const base = { ...createSeedProject(), id: 'p1', title: '달의 문서고' };
+    const session = {
+      ...createDiveSession(base.characters[0].id, base.id),
+      chatBuffer: [{ id: 'm1', role: 'user' as const, text: '복구할 기록', turn: 1 }]
+    };
+    const snapshot = buildPlayRecoverySnapshot(session, base, '2026-07-16T12:34:56.000Z');
+    const legacy = chapterFromDraftPayload(base, {
+      title: 'PLAY 기록 복구본 · 당시 1화',
+      hook: '응결 실패 뒤 보존한 PLAY 원문',
+      outline: [],
+      beats: [],
+      prose: formatPlayRecoveryText(snapshot),
+      newCanonFacts: []
+    }, { genre: base.genre, intent: '', pressure: '' });
+
+    const repaired = repairLegacyPlayRecoveryChapter(legacy.updatedProject, snapshot, legacy.chapter.id);
+    expect(repaired?.removedChapter.id).toBe(legacy.chapter.id);
+    expect(repaired?.updatedProject.chapters).toEqual(base.chapters);
+    expect(repaired?.updatedProject.currentEpisode).toBe(0);
+    expect(legacy.updatedProject.chapters).toHaveLength(1);
+
+    const edited = {
+      ...legacy.updatedProject,
+      chapters: legacy.updatedProject.chapters.map((chapter) => ({ ...chapter, prose: `${chapter.prose}\n사용자 수정` }))
+    };
+    expect(repairLegacyPlayRecoveryChapter(edited, snapshot, legacy.chapter.id)).toBeNull();
+    expect(repairLegacyPlayRecoveryChapter({
+      ...legacy.updatedProject,
+      chapters: legacy.updatedProject.chapters.map((chapter) => ({ ...chapter, locked: true }))
+    }, snapshot, legacy.chapter.id)).toBeNull();
+
+    const later = chapterFromDraftPayload(legacy.updatedProject, {
+      title: '2화', hook: '', outline: [], beats: [], prose: '사용자가 이어 쓴 2화', newCanonFacts: []
+    }, { genre: base.genre, intent: '', pressure: '' }).updatedProject;
+    expect(repairLegacyPlayRecoveryChapter(later, snapshot, legacy.chapter.id)).toBeNull();
+  });
+
+  it('회차 저장 의도를 작업본에 먼저 기록하고 부분 성공 재시도에서 같은 회차를 식별한다', () => {
+    const project = { ...createSeedProject(), id: 'p1', title: '달의 문서고' };
+    const snapshot = buildPlayRecoverySnapshot(
+      createDiveSession(project.characters[0].id, project.id),
+      project,
+      '2026-07-16T12:34:56.000Z'
+    );
+    const draft = {
+      ...createPlayRecoveryWorkDraft(snapshot, 'job-1', '2026-07-16T13:00:00.000Z'),
+      title: '문 뒤의 목소리',
+      body: '문 너머에서 내 이름을 부르는 소리가 났다.'
+    };
+    const plan = planPlayRecoveryCommit(project, project, draft);
+    if (plan.status !== 'ready') throw new Error('ready recovery plan expected');
+
+    const prepared = preparePlayRecoveryCommitIntent(
+      draft,
+      plan.chapter,
+      '2026-07-16T13:01:00.000Z'
+    );
+    expect(prepared.commitIntent).toEqual({
+      chapterId: plan.chapter.id,
+      chapterTitle: plan.chapter.title,
+      requestedAt: '2026-07-16T13:01:00.000Z'
+    });
+    expect(inspectPlayRecoveryCommitIntent(project, prepared)).toEqual({ status: 'prepared' });
+    expect(inspectPlayRecoveryCommitIntent(plan.committedProject, prepared)).toEqual({
+      status: 'committed',
+      chapter: plan.chapter
+    });
+
+    const collided = {
+      ...plan.committedProject,
+      chapters: plan.committedProject.chapters.map((chapter) => chapter.id === plan.chapter.id
+        ? { ...chapter, prose: '다른 탭이 저장한 본문' }
+        : chapter)
+    };
+    expect(inspectPlayRecoveryCommitIntent(collided, prepared)).toEqual({ status: 'conflict' });
   });
 });

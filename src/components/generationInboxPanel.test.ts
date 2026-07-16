@@ -38,7 +38,7 @@ describe('GenerationInboxPanel', () => {
     expect(html).toContain('생성 실패');
   });
 
-  it('복구 가능한 실패 영수증에서 TXT와 WRITE 행동을 실행하고 전송 완료는 비활성화한다', () => {
+  it('복구 가능한 실패 영수증은 처음엔 WRITE 작업본을 만들고 연 뒤엔 다시 열 수 있다', () => {
     const onDownloadRecovery = vi.fn();
     const onSendRecoveryToDraft = vi.fn();
     const host = document.createElement('div');
@@ -51,19 +51,43 @@ describe('GenerationInboxPanel', () => {
       onDownloadRecovery, onSendRecoveryToDraft
     })));
     expect(host.textContent).toContain('PLAY 기록은 안전합니다');
+    expect(host.textContent).toContain('본편 회차나 캐논에는 자동 반영되지 않습니다');
     const buttons = Array.from(host.querySelectorAll('button'));
     act(() => buttons.find((button) => button.textContent === 'PLAY 기록 TXT')?.click());
-    act(() => buttons.find((button) => button.textContent === 'WRITE 초안으로 보내기')?.click());
+    act(() => buttons.find((button) => button.textContent === 'WRITE에서 이어쓰기')?.click());
     expect(onDownloadRecovery).toHaveBeenCalledWith(failed);
     expect(onSendRecoveryToDraft).toHaveBeenCalledWith(failed);
 
     act(() => root.render(createElement(GenerationInboxPanel, {
-      items: [{ ...failed, recoveredAt: '2026-07-16T00:00:00Z', recoveredChapterId: 'episode-1' }],
+      items: [{
+        ...failed,
+        recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
+        recoveryDraftId: 'recovery-draft-1'
+      }],
       onReview: () => {}, onCancel: () => {}, onDiscard: () => {}, onDownloadRecovery, onSendRecoveryToDraft
     })));
-    expect(host.textContent).toContain('WRITE 초안으로 보냈습니다');
-    const sentButton = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === 'WRITE로 보냄');
-    expect(sentButton?.hasAttribute('disabled')).toBe(true);
+    expect(host.textContent).toContain('WRITE에 복구 작업본이 있습니다');
+    expect(host.textContent).toContain('아직 본편 회차나 캐논에 반영되지 않았습니다');
+    const reopenButton = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '작업본 열기');
+    expect(reopenButton?.hasAttribute('disabled')).toBe(false);
+    act(() => reopenButton?.click());
+    expect(onSendRecoveryToDraft).toHaveBeenCalledTimes(2);
+    expect(onSendRecoveryToDraft).toHaveBeenLastCalledWith(expect.objectContaining({ recoveryDraftId: 'recovery-draft-1' }));
+
+    act(() => root.render(createElement(GenerationInboxPanel, {
+      items: [{
+        ...failed,
+        recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
+        recoveryDraftId: 'recovery-draft-1',
+        recoveredAt: '2026-07-16T01:00:00Z',
+        recoveredChapterId: 'episode-1'
+      }],
+      onReview: () => {}, onCancel: () => {}, onDiscard: () => {}, onDownloadRecovery, onSendRecoveryToDraft
+    })));
+    expect(host.textContent).toContain('회차로 저장했습니다');
+    expect(host.textContent).toContain('캐논에는 자동 반영되지 않았습니다');
+    const savedButton = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '회차로 저장됨');
+    expect(savedButton?.hasAttribute('disabled')).toBe(true);
     act(() => root.unmount());
     host.remove();
   });
@@ -100,7 +124,7 @@ describe('GenerationInboxPanel', () => {
       onDownloadRecovery: () => {}, onSendRecoveryToDraft: () => {}
     }));
     expect(html).not.toContain('PLAY 기록 TXT');
-    expect(html).not.toContain('WRITE 초안으로 보내기');
+    expect(html).not.toContain('WRITE에서 이어쓰기');
   });
 
   it('영속화 실패 중인 실행 잡은 TXT만 즉시 제공하고 WRITE는 열지 않는다', () => {
@@ -111,6 +135,6 @@ describe('GenerationInboxPanel', () => {
     }));
     expect(html).toContain('새로고침 전에 PLAY 기록 TXT');
     expect(html).toContain('PLAY 기록 TXT');
-    expect(html).not.toContain('WRITE 초안으로 보내기');
+    expect(html).not.toContain('WRITE에서 이어쓰기');
   });
 });

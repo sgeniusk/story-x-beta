@@ -21,6 +21,8 @@ export interface GenerationInboxItem extends Omit<GenerationJobSnapshot, 'status
   projectTitle: string;
   status: GenerationStatus;
   recovery?: PlayRecoverySnapshot;
+  recoveryDraftOpenedAt?: string;
+  recoveryDraftId?: string;
   recoveredAt?: string;
   recoveredChapterId?: string;
   localPersistenceFailed?: boolean;
@@ -29,6 +31,27 @@ export interface GenerationInboxItem extends Omit<GenerationJobSnapshot, 'status
 const STORAGE_KEY = 'serial-story-studio/generation-inbox';
 export const MAX_GENERATION_INBOX_ITEMS = 20;
 const STATUSES = new Set<GenerationStatus>(['running', 'succeeded', 'failed', 'cancelled', 'timed-out', 'expired']);
+
+function needsInboxRetention(item: GenerationInboxItem): boolean {
+  return Boolean(
+    item.recoveryDraftOpenedAt &&
+    item.recoveryDraftId &&
+    !(item.recoveredAt && item.recoveredChapterId)
+  );
+}
+
+function retainGenerationInboxItems(items: GenerationInboxItem[]): GenerationInboxItem[] {
+  let remainingOverflow = Math.max(0, items.length - MAX_GENERATION_INBOX_ITEMS);
+  if (remainingOverflow === 0) return items;
+  const retained = [...items];
+  for (let index = retained.length - 1; index >= 0 && remainingOverflow > 0; index -= 1) {
+    if (needsInboxRetention(retained[index])) continue;
+    retained.splice(index, 1);
+    remainingOverflow -= 1;
+  }
+  // 미완료 작업본만으로 cap을 넘으면 작가 본문을 고립시키는 대신 영수증을 더 보존한다.
+  return retained;
+}
 
 interface GenerationInboxStorage {
   setItem(key: string, value: string): void;
@@ -77,6 +100,18 @@ function parseItem(value: unknown): GenerationInboxItem | null {
   const recovery = parsedRecovery?.projectId === value.projectId && parsedRecovery.episode === value.episode
     ? parsedRecovery
     : undefined;
+  const recoveryDraftOpenedAt = recovery && typeof value.recoveryDraftOpenedAt === 'string' && value.recoveryDraftOpenedAt
+    ? value.recoveryDraftOpenedAt
+    : undefined;
+  const recoveryDraftId = recovery && typeof value.recoveryDraftId === 'string' && value.recoveryDraftId
+    ? value.recoveryDraftId
+    : undefined;
+  const recoveredAt = recovery && typeof value.recoveredAt === 'string' && value.recoveredAt
+    ? value.recoveredAt
+    : undefined;
+  const recoveredChapterId = recovery && typeof value.recoveredChapterId === 'string' && value.recoveredChapterId
+    ? value.recoveredChapterId
+    : undefined;
   const lostSucceededResult = value.status === 'succeeded' && !result;
   return {
     id: value.id,
@@ -90,8 +125,10 @@ function parseItem(value: unknown): GenerationInboxItem | null {
     updatedAt: value.updatedAt,
     result,
     recovery,
-    recoveredAt: recovery && typeof value.recoveredAt === 'string' ? value.recoveredAt : undefined,
-    recoveredChapterId: recovery && typeof value.recoveredChapterId === 'string' ? value.recoveredChapterId : undefined,
+    recoveryDraftOpenedAt: recoveryDraftOpenedAt && recoveryDraftId ? recoveryDraftOpenedAt : undefined,
+    recoveryDraftId: recoveryDraftOpenedAt && recoveryDraftId ? recoveryDraftId : undefined,
+    recoveredAt: recoveredAt && recoveredChapterId ? recoveredAt : undefined,
+    recoveredChapterId: recoveredAt && recoveredChapterId ? recoveredChapterId : undefined,
     warning: lostSucceededResult
       ? '완료 결과를 복구하지 못했습니다.'
       : typeof value.warning === 'string' ? value.warning : undefined
@@ -103,14 +140,16 @@ export function parseGenerationInbox(raw: string | null): GenerationInboxItem[] 
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.map(parseItem).filter((item): item is GenerationInboxItem => item !== null).slice(0, MAX_GENERATION_INBOX_ITEMS);
+    return retainGenerationInboxItems(
+      parsed.map(parseItem).filter((item): item is GenerationInboxItem => item !== null)
+    );
   } catch {
     return [];
   }
 }
 
 export function serializeGenerationInbox(items: GenerationInboxItem[]): string {
-  return JSON.stringify(items.slice(0, MAX_GENERATION_INBOX_ITEMS));
+  return JSON.stringify(retainGenerationInboxItems(items));
 }
 
 export function loadGenerationInbox(): GenerationInboxItem[] {
@@ -134,7 +173,14 @@ export function saveGenerationInbox(
     const compactedItems = items.map((item) => {
       if (item.status !== 'succeeded' || !item.recovery) return item;
       changed = true;
-      const { recovery: _recovery, recoveredAt: _recoveredAt, recoveredChapterId: _recoveredChapterId, ...kept } = item;
+      const {
+        recovery: _recovery,
+        recoveryDraftOpenedAt: _recoveryDraftOpenedAt,
+        recoveryDraftId: _recoveryDraftId,
+        recoveredAt: _recoveredAt,
+        recoveredChapterId: _recoveredChapterId,
+        ...kept
+      } = item;
       return kept;
     });
     if (!changed) {
@@ -169,7 +215,7 @@ export function persistGenerationInboxState(
 }
 
 export function appendGenerationInboxItem(items: GenerationInboxItem[], item: GenerationInboxItem): GenerationInboxItem[] {
-  return [item, ...items.filter((candidate) => candidate.id !== item.id)].slice(0, MAX_GENERATION_INBOX_ITEMS);
+  return retainGenerationInboxItems([item, ...items.filter((candidate) => candidate.id !== item.id)]);
 }
 
 export function mergeGenerationJob(item: GenerationInboxItem, job: GenerationJobSnapshot): GenerationInboxItem {
@@ -186,6 +232,26 @@ export function canRecoverGeneration(item: GenerationInboxItem): boolean {
     item.status === 'cancelled' ||
     item.status === 'timed-out' ||
     item.status === 'expired'
+  );
+}
+
+/**
+ * 작업본을 비활성화해도 전역 보관함에서 다시 찾을 수 있는지 판정한다.
+ * localPersistenceFailed는 setItem 실패 뒤 메모리에만 남은 영수증이므로 영속 연결로 보지 않는다.
+ */
+export function hasDurableRecoveryDraftReceipt(
+  items: GenerationInboxItem[],
+  generationId: string | undefined,
+  draftId: string
+): boolean {
+  if (!generationId || !draftId) return false;
+  const receipt = items.find((item) => item.id === generationId);
+  return Boolean(
+    receipt &&
+    !receipt.localPersistenceFailed &&
+    receipt.recovery &&
+    receipt.recoveryDraftOpenedAt &&
+    receipt.recoveryDraftId === draftId
   );
 }
 

@@ -45,8 +45,10 @@ export function GenerationInboxPanel({
           {items.map((item) => {
             const recoverable = canRecoverGeneration(item);
             const needsImmediateDownload = Boolean(item.localPersistenceFailed && item.recovery);
+            const hasRecoveryDraft = Boolean(item.recoveryDraftOpenedAt && item.recoveryDraftId);
+            const savedAsChapter = Boolean(item.recoveredAt && item.recoveredChapterId);
             const discard = () => {
-              if (recoverable && !item.recoveredAt && !window.confirm('이 항목을 지우면 Story X 보관함에서 다시 복구할 수 없습니다. 계속할까요?')) {
+              if (recoverable && !savedAsChapter && !window.confirm('이 항목을 지우면 Story X 보관함에서 다시 복구할 수 없습니다. 계속할까요?')) {
                 return;
               }
               onDiscard(item);
@@ -59,9 +61,11 @@ export function GenerationInboxPanel({
                   <p>{item.warning || `${item.projectTitle}에서 시작한 응결 작업`}</p>
                   {recoverable && (
                     <p className="gix-recovery-note" role="status">
-                      {item.recoveredAt
-                        ? 'WRITE 초안으로 보냈습니다. 캐논에는 자동 반영되지 않았습니다.'
-                        : 'PLAY 기록은 안전합니다. WRITE로 보내도 캐논에는 자동 반영되지 않습니다.'}
+                      {savedAsChapter
+                        ? 'WRITE에서 회차로 저장했습니다. 캐논에는 자동 반영되지 않았습니다.'
+                        : hasRecoveryDraft
+                          ? 'WRITE에 복구 작업본이 있습니다. 아직 본편 회차나 캐논에 반영되지 않았습니다.'
+                          : 'PLAY 기록은 안전합니다. WRITE에서 작업본을 열어도 본편 회차나 캐논에는 자동 반영되지 않습니다.'}
                     </p>
                   )}
                   {needsImmediateDownload && !recoverable && (
@@ -80,17 +84,17 @@ export function GenerationInboxPanel({
                         <button
                           type="button"
                           className="is-primary"
-                          disabled={Boolean(item.recoveredAt)}
+                          disabled={savedAsChapter}
                           onClick={() => onSendRecoveryToDraft(item)}
                         >
-                          {item.recoveredAt ? 'WRITE로 보냄' : 'WRITE 초안으로 보내기'}
+                          {savedAsChapter ? '회차로 저장됨' : hasRecoveryDraft ? '작업본 열기' : 'WRITE에서 이어쓰기'}
                         </button>
                       )}
                     </>
                   )}
                   {item.status !== 'running' && (
                     <button type="button" className="is-discard" onClick={discard}>
-                      {item.recoveredAt ? '보관함에서 지우기' : '폐기'}
+                      {savedAsChapter ? '보관함에서 지우기' : '폐기'}
                     </button>
                   )}
                 </div>

@@ -76,11 +76,13 @@ import {
   hasMeaningfulOnboardingInput,
   importAllData,
   loadDiveState,
+  loadDiveStateForProject,
   loadOnboardingDraft,
   loadPlanPatches,
   loadProject,
   loadProjectLibrary,
   saveDiveState,
+  saveDiveStateForProject,
   saveProject,
   saveTemporaryProject,
   saveOnboardingDraft,
@@ -109,6 +111,7 @@ import { cancelDiveCondenseJob, DiveCondenseJobError, getDiveCondenseJob, reques
 import type { DiveSetup } from './lib/diveProposal';
 import {
   appendGenerationInboxItem,
+  hasDurableRecoveryDraftReceipt,
   isActiveGeneration,
   loadGenerationInbox,
   mergeGenerationJob,
@@ -120,10 +123,22 @@ import { ProjectLibraryCard } from './components/ProjectLibraryCard';
 import type { ProjectLibraryEntry } from './lib/projectLibrary';
 import {
   buildPlayRecoveryFilename,
+  createPlayRecoveryWorkDraft,
   formatPlayRecoveryText,
-  planPlayRecoveryWrite,
-  type PlayRecoverySnapshot
+  inspectPlayRecoveryCommitIntent,
+  planPlayRecoveryCommit,
+  preparePlayRecoveryCommitIntent,
+  repairLegacyPlayRecoveryChapter,
+  type PlayRecoverySnapshot,
+  type PlayRecoveryWorkDraft
 } from './lib/playRecovery';
+import {
+  deactivatePlayRecoveryWorkDraft,
+  getActivePlayRecoveryWorkDraft,
+  listPlayRecoveryWorkDrafts,
+  removePlayRecoveryWorkDraft,
+  savePlayRecoveryWorkDraft
+} from './lib/playRecoveryStore';
 import storyXSymbol from './assets/brand/story-x-symbol-mono.svg';
 import storyXSymbolLight from './assets/brand/story-x-symbol-light.svg';
 
@@ -196,6 +211,27 @@ const mediaBridgeRoutes = [
 
 type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor' | 'publish' | 'dive';
 
+function buildLocalRecoveryReceipt(
+  draft: PlayRecoveryWorkDraft,
+  openedAt = draft.createdAt
+): GenerationInboxItem {
+  return {
+    id: draft.generationId ?? `local-${draft.id}`,
+    kind: 'dive-condense',
+    projectId: draft.projectId,
+    projectTitle: draft.source.projectTitle,
+    baseRevision: 'local-recovery',
+    episode: draft.source.episode,
+    status: 'failed',
+    createdAt: openedAt,
+    updatedAt: openedAt,
+    warning: '응결 잡 시작 전에 멈춰 PLAY 원문만 보존했습니다.',
+    recovery: draft.source,
+    recoveryDraftOpenedAt: openedAt,
+    recoveryDraftId: draft.id
+  };
+}
+
 // Dive X 세션 상태를 소유하고 변경 시 localStorage에 영속하는 래퍼 컴포넌트.
 function DiveStage({
   initial,
@@ -259,12 +295,40 @@ function App() {
   const [projectLibrary, setProjectLibrary] = useState<ProjectLibraryEntry[]>(() =>
     typeof window === 'undefined' ? [] : loadProjectLibrary()
   );
+  // P0-b — PLAY 원문은 본편 Chapter가 아니라 프로젝트별 복구 작업본으로 먼저 열린다.
+  const [activeRecoveryWorkDraft, setActiveRecoveryWorkDraft] = useState<PlayRecoveryWorkDraft | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const activeProjectId = getActiveProjectId();
+    return activeProjectId ? getActivePlayRecoveryWorkDraft(activeProjectId) : null;
+  });
+  const [recoveryDraftSaveStatus, setRecoveryDraftSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
+  const [recoveryDraftSaveError, setRecoveryDraftSaveError] = useState<string | null>(null);
+  const committedRecoveryDraftIdsRef = useRef(new Set<string>());
+  const legacyRecoveryMigrationRanRef = useRef(false);
   const generationInboxRef = useRef(generationInbox);
   const [selectedGenerationId, setSelectedGenerationId] = useState<string | null>(null);
-  function commitGenerationInbox(next: GenerationInboxItem[]) {
+  function commitGenerationInbox(next: GenerationInboxItem[]): GenerationInboxItem[] {
     const visible = persistGenerationInboxState(next);
     generationInboxRef.current = visible;
     setGenerationInbox(visible);
+    return visible;
+  }
+  function persistRecoveryDraftReceipt(
+    draft: PlayRecoveryWorkDraft,
+    openedAt = draft.createdAt
+  ): boolean {
+    const generationId = draft.generationId ?? `local-${draft.id}`;
+    const linkedDraft = draft.generationId ? draft : { ...draft, generationId };
+    const currentReceipt = generationInboxRef.current.find((item) => item.id === generationId);
+    const receipt: GenerationInboxItem = currentReceipt
+      ? {
+          ...currentReceipt,
+          recoveryDraftOpenedAt: currentReceipt.recoveryDraftOpenedAt ?? openedAt,
+          recoveryDraftId: draft.id
+        }
+      : buildLocalRecoveryReceipt(linkedDraft, openedAt);
+    const visible = commitGenerationInbox(appendGenerationInboxItem(generationInboxRef.current, receipt));
+    return hasDurableRecoveryDraftReceipt(visible, generationId, draft.id);
   }
   useEffect(() => {
     let stopped = false;
@@ -330,6 +394,18 @@ function App() {
   }
 
   function discardGeneration(id: string): void {
+    const discarded = generationInboxRef.current.find((item) => item.id === id);
+    if (discarded?.recoveryDraftId) {
+      const storedDraftExists = listPlayRecoveryWorkDrafts(discarded.projectId)
+        .some((draft) => draft.id === discarded.recoveryDraftId);
+      if (storedDraftExists && !removePlayRecoveryWorkDraft(discarded.projectId, discarded.recoveryDraftId)) {
+        window.alert('복구 작업본을 정리하지 못해 보관함 항목을 유지했습니다.');
+        return;
+      }
+      if (activeRecoveryWorkDraft?.id === discarded.recoveryDraftId) {
+        setActiveRecoveryWorkDraft(null);
+      }
+    }
     commitGenerationInbox(generationInboxRef.current.filter((item) => item.id !== id));
     if (selectedGenerationId === id) setSelectedGenerationId(null);
   }
@@ -406,8 +482,60 @@ function App() {
   useEffect(() => {
     setWorkTitle(loadProject().title);
   }, [syncVersion]);
+  const activeRecoveryReceipt = activeRecoveryWorkDraft?.generationId
+    ? generationInbox.find((item) => item.id === activeRecoveryWorkDraft.generationId)
+    : undefined;
+  const activeRecoveryReceiptIsDurable = activeRecoveryWorkDraft
+    ? hasDurableRecoveryDraftReceipt(
+        generationInbox,
+        activeRecoveryWorkDraft.generationId,
+        activeRecoveryWorkDraft.id
+      )
+    : true;
+  const legacyRecoveryRepairPending = Boolean(
+    activeRecoveryWorkDraft?.legacyRepair && (
+      !activeRecoveryReceiptIsDurable ||
+      (activeRecoveryReceipt?.recoveredAt && activeRecoveryReceipt.recoveredChapterId)
+    )
+  );
+  const recoveryExitGuardActive = Boolean(
+    activeRecoveryWorkDraft && (
+      recoveryDraftSaveStatus === 'error' ||
+      !activeRecoveryReceiptIsDurable ||
+      activeRecoveryWorkDraft.commitIntent ||
+      legacyRecoveryRepairPending
+    )
+  );
+  useEffect(() => {
+    if (!activeRecoveryWorkDraft || !recoveryExitGuardActive) return;
+    const warnUnsavedRecovery = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warnUnsavedRecovery);
+    return () => window.removeEventListener('beforeunload', warnUnsavedRecovery);
+  }, [activeRecoveryWorkDraft, recoveryExitGuardActive]);
+  useEffect(() => {
+    if (!activeRecoveryWorkDraft || activeRecoveryReceiptIsDurable || recoveryDraftSaveStatus === 'error') return;
+    setRecoveryDraftSaveStatus('error');
+    setRecoveryDraftSaveError('전역 보관함 연결을 저장하지 못했습니다. 이 화면을 유지하고 입력하면 다시 저장합니다.');
+  }, [activeRecoveryReceiptIsDurable, activeRecoveryWorkDraft, recoveryDraftSaveStatus]);
   const workspaceMode: WorkspaceMode = stage === 'dive' ? 'play' : studioView === 'data' ? 'plan' : 'write';
+  function canLeaveRecoveryWorkDraft(): boolean {
+    if (!activeRecoveryWorkDraft || !recoveryExitGuardActive) return true;
+    if (activeRecoveryWorkDraft.commitIntent) {
+      window.alert('부분 저장된 회차의 중복을 막기 위해 먼저 저장 마무리를 완료해 주세요.');
+      return false;
+    }
+    if (legacyRecoveryRepairPending) {
+      window.alert('이전 PLAY 복구 회차를 안전하게 환원하는 중입니다. 보관함 연결이 완료될 때까지 이 화면을 유지합니다.');
+      return false;
+    }
+    window.alert('저장되지 않은 복구 작업본 또는 보관함 연결이 있습니다. 입력을 복사하거나 저장 공간을 확보한 뒤 다시 시도해 주세요.');
+    return false;
+  }
   function selectWorkspaceMode(next: WorkspaceMode) {
+    if (!canLeaveRecoveryWorkDraft()) return;
     if (next === 'play') {
       setStage('dive');
     } else {
@@ -421,53 +549,336 @@ function App() {
     saveProject({ ...loadProject(), title: next });
   }
   function refreshActiveProjectState(): void {
+    const activeProject = loadProject();
     setProjectLibrary(loadProjectLibrary());
-    setWorkTitle(loadProject().title);
+    setWorkTitle(activeProject.title);
+    setActiveRecoveryWorkDraft(getActivePlayRecoveryWorkDraft(activeProject.id));
+    setRecoveryDraftSaveStatus('saved');
+    setRecoveryDraftSaveError(null);
     setDiveInit(null);
     setPendingDraft(null);
-    setPendingSync(countPendingSync(loadDiveState()?.project, loadProject()));
+    setPendingSync(countPendingSync(loadDiveState()?.project, activeProject));
     setPendingPlan(loadPlanPatches().length);
     setSyncVersion((version) => version + 1);
   }
-  function handleSendRecoveryToDraft(recovery: PlayRecoverySnapshot, generationId?: string): void {
+
+  function handleOpenRecoveryWorkDraft(recovery: PlayRecoverySnapshot, generationId?: string): void {
     if (generationId) {
       const receipt = generationInboxRef.current.find((item) => item.id === generationId);
-      if (receipt?.recoveredAt) return;
+      if (receipt?.recoveredAt && receipt.recoveredChapterId) return;
     }
-    if (!activateProject(recovery.projectId)) {
+    if (!loadProjectLibrary().some((entry) => entry.projectId === recovery.projectId)) {
       window.alert('원래 작품을 찾지 못했습니다. PLAY 기록 TXT로 먼저 보관해 주세요.');
       return;
     }
-    const project = loadProject();
-    const workingState = loadDiveState();
-    const plan = planPlayRecoveryWrite(project, workingState?.project, recovery);
-    if (plan.status === 'project-mismatch') {
-      window.alert('복구 기록과 작품이 일치하지 않습니다. PLAY 기록 TXT로 먼저 보관해 주세요.');
+    const openedAt = new Date().toISOString();
+    const candidate = createPlayRecoveryWorkDraft(recovery, generationId, openedAt);
+    const receiptId = generationId ?? `local-${candidate.id}`;
+    const previousReceipt = generationInboxRef.current.find((item) => item.id === receiptId);
+    const preferredDraftId = previousReceipt?.recoveryDraftId ?? candidate.id;
+    const previousDraft = listPlayRecoveryWorkDrafts(recovery.projectId)
+      .find((item) => item.id === preferredDraftId);
+    const draft = previousDraft
+      ? previousDraft.generationId ? previousDraft : { ...previousDraft, generationId: receiptId }
+      : { ...candidate, generationId: receiptId };
+    if (previousReceipt?.recoveredAt && previousReceipt.recoveredChapterId) return;
+    if (!savePlayRecoveryWorkDraft(draft, true)) {
+      setRecoveryDraftSaveStatus('error');
+      setRecoveryDraftSaveError('복구 작업본 저장 공간을 열지 못했습니다. PLAY 기록 TXT로 먼저 보관해 주세요.');
+      window.alert('복구 작업본을 저장하지 못했습니다. PLAY 기록 TXT로 먼저 보관해 주세요.');
       return;
     }
-    if (plan.status === 'pending-sync') {
-      setPendingSync(plan.pending);
-      setDiveInit(workingState);
-      setStage('dive');
-      window.alert('PLAY에 아직 본편으로 최신화하지 않은 회차나 캐논이 있습니다. 먼저 ⟳최신화한 뒤 WRITE 복구를 다시 실행해 주세요.');
+    const receiptPersisted = persistRecoveryDraftReceipt(draft, openedAt);
+    if (!activateProject(recovery.projectId)) {
+      window.alert('작업본은 생성 보관함에 저장했지만 원래 작품을 열지 못했습니다.');
       return;
-    }
-    saveProject(plan.committedProject);
-    if (workingState && plan.workingProject) {
-      saveDiveState({ ...workingState, project: plan.workingProject });
-    }
-    if (generationId) {
-      const recoveredAt = new Date().toISOString();
-      commitGenerationInbox(generationInboxRef.current.map((item) => item.id === generationId
-        ? { ...item, recoveredAt, recoveredChapterId: plan.chapter.id }
-        : item));
     }
     refreshActiveProjectState();
+    if (!receiptPersisted) {
+      setRecoveryDraftSaveStatus('error');
+      setRecoveryDraftSaveError('작업본은 저장했지만 전역 보관함 연결을 저장하지 못했습니다. 이 화면에서 입력하면 다시 저장합니다.');
+    }
     setSelectedGenerationId(null);
     setStudioView('editor');
     setStage('editor');
   }
+
+  function handleRecoveryWorkDraftChange(draft: PlayRecoveryWorkDraft): void {
+    if (draft.commitIntent) return;
+    setActiveRecoveryWorkDraft(draft);
+    setRecoveryDraftSaveStatus('saving');
+    if (savePlayRecoveryWorkDraft(draft, true)) {
+      if (persistRecoveryDraftReceipt(draft)) {
+        setRecoveryDraftSaveStatus('saved');
+        setRecoveryDraftSaveError(null);
+      } else {
+        setRecoveryDraftSaveStatus('error');
+        setRecoveryDraftSaveError('작업본은 저장했지만 전역 보관함 연결을 저장하지 못했습니다.');
+      }
+      return;
+    }
+    setRecoveryDraftSaveStatus('error');
+    setRecoveryDraftSaveError('작업본을 저장하지 못했습니다. 입력한 내용은 이 화면에 남아 있습니다.');
+  }
+
+  function handleCloseRecoveryWorkDraft(): void {
+    if (!activeRecoveryWorkDraft) return;
+    if (!canLeaveRecoveryWorkDraft()) return;
+    if (!deactivatePlayRecoveryWorkDraft(activeRecoveryWorkDraft.projectId)) {
+      setRecoveryDraftSaveStatus('error');
+      setRecoveryDraftSaveError('작업본 상태를 저장하지 못해 본편으로 돌아가지 않았습니다.');
+      return;
+    }
+    setActiveRecoveryWorkDraft(null);
+    setRecoveryDraftSaveStatus('saved');
+    setRecoveryDraftSaveError(null);
+    setSyncVersion((version) => version + 1);
+  }
+
+  function handleCommitRecoveryWorkDraft(draft: PlayRecoveryWorkDraft): void {
+    if (committedRecoveryDraftIdsRef.current.has(draft.id)) return;
+    const requestedDraft = draft.generationId
+      ? draft
+      : { ...draft, generationId: `local-${draft.id}` };
+    const latestStoredDraft = listPlayRecoveryWorkDrafts(requestedDraft.projectId)
+      .find((candidate) => candidate.id === requestedDraft.id);
+    const durableCompletedReceipt = loadGenerationInbox()
+      .find((item) => item.id === requestedDraft.generationId);
+    if (
+      durableCompletedReceipt?.recoveredAt &&
+      durableCompletedReceipt.recoveredChapterId &&
+      !latestStoredDraft?.commitIntent
+    ) {
+      commitGenerationInbox(appendGenerationInboxItem(generationInboxRef.current, durableCompletedReceipt));
+      setRecoveryDraftSaveStatus('saved');
+      setRecoveryDraftSaveError(null);
+      window.alert('이 작업본은 다른 화면에서 이미 회차로 저장했습니다. 새 회차를 만들지 않았습니다.');
+      return;
+    }
+    if (!savePlayRecoveryWorkDraft(requestedDraft, true)) {
+      setRecoveryDraftSaveStatus('error');
+      setRecoveryDraftSaveError('작업본을 저장하지 못해 회차 저장을 멈췄습니다.');
+      return;
+    }
+    const persistedDraft = listPlayRecoveryWorkDrafts(requestedDraft.projectId)
+      .find((candidate) => candidate.id === requestedDraft.id);
+    if (!persistedDraft) {
+      setRecoveryDraftSaveStatus('error');
+      setRecoveryDraftSaveError('저장한 작업본을 다시 확인하지 못해 회차 저장을 멈췄습니다.');
+      return;
+    }
+    const receiptLinkedDraft = persistedDraft;
+    if (!activateProject(receiptLinkedDraft.projectId)) {
+      window.alert('원래 작품을 찾지 못했습니다. 작업본은 별도 보관함에 남아 있습니다.');
+      return;
+    }
+    const committedProject = loadProject();
+    const workingState = loadDiveState();
+    const intentInspection = inspectPlayRecoveryCommitIntent(committedProject, receiptLinkedDraft);
+    if (intentInspection.status === 'conflict') {
+      window.alert('같은 회차 자리에 다른 원고가 있어 자동 마무리를 멈췄습니다. 작업본은 그대로 보존했습니다.');
+      return;
+    }
+
+    let preparedDraft = receiptLinkedDraft;
+    let nextCommittedProject = committedProject;
+    let recoveredChapterId: string;
+    if (intentInspection.status === 'committed') {
+      recoveredChapterId = intentInspection.chapter.id;
+    } else {
+      const plan = planPlayRecoveryCommit(committedProject, workingState?.project, receiptLinkedDraft);
+      if (plan.status === 'project-mismatch') {
+        window.alert('복구 작업본과 작품이 일치하지 않습니다. 작업본은 그대로 보존했습니다.');
+        return;
+      }
+      if (plan.status === 'empty-body') {
+        window.alert('작품으로 남길 본문을 먼저 작성해 주세요.');
+        return;
+      }
+      if (plan.status === 'pending-sync') {
+        setPendingSync(plan.pending);
+        setDiveInit(workingState);
+        setStage('dive');
+        window.alert('PLAY에 아직 본편으로 최신화하지 않은 회차나 캐논이 있습니다. 먼저 ⟳최신화한 뒤 회차로 저장해 주세요.');
+        return;
+      }
+      if (
+        receiptLinkedDraft.commitIntent && (
+          receiptLinkedDraft.commitIntent.chapterId !== plan.chapter.id ||
+          receiptLinkedDraft.commitIntent.chapterTitle !== plan.chapter.title
+        )
+      ) {
+        window.alert('저장 준비 후 회차 위치가 바뀌어 중복 저장을 멈췄습니다. 작업본은 그대로 보존했습니다.');
+        return;
+      }
+      preparedDraft = preparePlayRecoveryCommitIntent(receiptLinkedDraft, plan.chapter);
+      if (!savePlayRecoveryWorkDraft(preparedDraft, true)) {
+        setRecoveryDraftSaveStatus('error');
+        setRecoveryDraftSaveError('회차 저장 준비 상태를 보존하지 못해 본편 반영을 멈췄습니다.');
+        return;
+      }
+      setActiveRecoveryWorkDraft(preparedDraft);
+      nextCommittedProject = plan.committedProject;
+      recoveredChapterId = plan.chapter.id;
+    }
+
+    committedRecoveryDraftIdsRef.current.add(receiptLinkedDraft.id);
+    try {
+      if (intentInspection.status !== 'committed') saveProject(nextCommittedProject);
+      if (workingState) {
+        const syncedWorking = reconcileWorkingIntoCommitted(nextCommittedProject, workingState.project);
+        saveDiveState({
+          ...workingState,
+          project: {
+            ...syncedWorking,
+            currentEpisode: Math.max(syncedWorking.currentEpisode, nextCommittedProject.currentEpisode)
+          }
+        });
+      }
+      const recoveredAt = new Date().toISOString();
+      if (preparedDraft.generationId) {
+        const currentReceipt = generationInboxRef.current.find((item) => item.id === preparedDraft.generationId)
+          ?? buildLocalRecoveryReceipt(preparedDraft);
+        const visibleInbox = commitGenerationInbox(appendGenerationInboxItem(
+          generationInboxRef.current,
+          { ...currentReceipt, recoveredAt, recoveredChapterId }
+        ));
+        const persistedReceipt = visibleInbox.find((item) => item.id === preparedDraft.generationId);
+        if (
+          !persistedReceipt ||
+          persistedReceipt.localPersistenceFailed ||
+          !persistedReceipt.recoveredAt ||
+          persistedReceipt.recoveredChapterId !== recoveredChapterId
+        ) {
+          throw new Error('본편 회차는 저장됐지만 완료 영수증을 보존하지 못했습니다. 저장 마무리를 다시 눌러 주세요.');
+        }
+      }
+      if (!removePlayRecoveryWorkDraft(preparedDraft.projectId, preparedDraft.id)) {
+        throw new Error('본편 회차는 저장됐지만 작업본 정리를 마치지 못했습니다. 저장 마무리를 다시 눌러 주세요.');
+      }
+      refreshActiveProjectState();
+      setSelectedGenerationId(null);
+      setStudioView('editor');
+      setStage('editor');
+    } catch (error) {
+      committedRecoveryDraftIdsRef.current.delete(receiptLinkedDraft.id);
+      setActiveRecoveryWorkDraft(preparedDraft);
+      setRecoveryDraftSaveStatus('error');
+      setRecoveryDraftSaveError(error instanceof Error ? error.message : '회차로 저장하지 못했습니다.');
+    }
+  }
+
+  function migrateLegacyRecoveryDrafts(): void {
+    let nextInbox = generationInboxRef.current;
+    let changed = false;
+    for (const item of generationInboxRef.current) {
+      if (!item.recovery || !item.recoveredAt || !item.recoveredChapterId) continue;
+      const libraryEntry = loadProjectLibrary().find((entry) => entry.projectId === item.projectId);
+      if (!libraryEntry) continue;
+
+      const candidate = createPlayRecoveryWorkDraft(
+        item.recovery,
+        item.id,
+        item.recoveryDraftOpenedAt ?? item.recoveredAt
+      );
+      const storedDraft = listPlayRecoveryWorkDrafts(item.projectId)
+        .find((stored) => stored.id === candidate.id);
+      const canResumeRepair = storedDraft?.legacyRepair?.chapterId === item.recoveredChapterId;
+      const committedContainsLegacy = libraryEntry.project.chapters
+        .some((chapter) => chapter.id === item.recoveredChapterId);
+      const committedRepair = committedContainsLegacy
+        ? repairLegacyPlayRecoveryChapter(libraryEntry.project, item.recovery, item.recoveredChapterId)
+        : null;
+      if (committedContainsLegacy && !committedRepair) continue;
+      if (!committedContainsLegacy && !canResumeRepair) continue;
+
+      const workingState = loadDiveStateForProject(item.projectId);
+      const workingContainsLegacy = workingState?.project.chapters
+        .some((chapter) => chapter.id === item.recoveredChapterId) ?? false;
+      const workingRepair = workingState && workingContainsLegacy
+        ? repairLegacyPlayRecoveryChapter(workingState.project, item.recovery, item.recoveredChapterId)
+        : null;
+      if (workingContainsLegacy && !workingRepair) continue;
+
+      const draft: PlayRecoveryWorkDraft = storedDraft?.legacyRepair
+        ? storedDraft
+        : {
+            ...(storedDraft ?? candidate),
+            legacyRepair: {
+              chapterId: item.recoveredChapterId,
+              startedAt: new Date().toISOString()
+            }
+          };
+      const isActiveProject = getActiveProjectId() === item.projectId;
+      if (!savePlayRecoveryWorkDraft(draft, isActiveProject)) continue;
+
+      // journal 영속 뒤 최신 저장본을 다시 읽고 엄격 판정을 재실행한다. 다른 탭이
+      // 검사와 저장 사이에 편집한 회차를 오래된 snapshot으로 덮어쓰지 않는다.
+      const latestLibraryEntry = loadProjectLibrary()
+        .find((entry) => entry.projectId === item.projectId);
+      if (!latestLibraryEntry) continue;
+      const latestCommittedContainsLegacy = latestLibraryEntry.project.chapters
+        .some((chapter) => chapter.id === item.recoveredChapterId);
+      const latestCommittedRepair = latestCommittedContainsLegacy
+        ? repairLegacyPlayRecoveryChapter(
+            latestLibraryEntry.project,
+            item.recovery,
+            item.recoveredChapterId
+          )
+        : null;
+      if (latestCommittedContainsLegacy && !latestCommittedRepair) continue;
+
+      const latestWorkingState = loadDiveStateForProject(item.projectId);
+      const latestWorkingContainsLegacy = latestWorkingState?.project.chapters
+        .some((chapter) => chapter.id === item.recoveredChapterId) ?? false;
+      const latestWorkingRepair = latestWorkingState && latestWorkingContainsLegacy
+        ? repairLegacyPlayRecoveryChapter(
+            latestWorkingState.project,
+            item.recovery,
+            item.recoveredChapterId
+          )
+        : null;
+      if (latestWorkingContainsLegacy && !latestWorkingRepair) continue;
+
+      try {
+        if (latestWorkingState && latestWorkingRepair) {
+          saveDiveStateForProject({
+            ...latestWorkingState,
+            project: latestWorkingRepair.updatedProject
+          });
+        }
+        if (latestCommittedRepair) {
+          saveProject(latestCommittedRepair.updatedProject, { activate: isActiveProject });
+        }
+      } catch {
+        continue;
+      }
+
+      nextInbox = nextInbox.map((candidateItem) => candidateItem.id === item.id
+        ? {
+            ...candidateItem,
+            recoveryDraftOpenedAt: item.recoveryDraftOpenedAt ?? item.recoveredAt,
+            recoveryDraftId: draft.id,
+            recoveredAt: undefined,
+            recoveredChapterId: undefined
+          }
+        : candidateItem);
+      changed = true;
+    }
+    if (!changed) return;
+    commitGenerationInbox(nextInbox);
+    refreshActiveProjectState();
+  }
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || legacyRecoveryMigrationRanRef.current) return;
+    legacyRecoveryMigrationRanRef.current = true;
+    migrateLegacyRecoveryDrafts();
+    // 이 마이그레이션은 시작 시 저장본에 대해 한 번만 실행한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   function handleOpenLibraryProject(entry: ProjectLibraryEntry): void {
+    if (!canLeaveRecoveryWorkDraft()) return;
     if (!activateProject(entry.projectId)) return;
     refreshActiveProjectState();
     setStage('editor');
@@ -477,6 +888,7 @@ function App() {
     setProjectLibrary(loadProjectLibrary());
   }
   function openProjectHub(): void {
+    if (!canLeaveRecoveryWorkDraft()) return;
     setProjectLibrary(loadProjectLibrary());
     setStage('projects');
   }
@@ -645,7 +1057,7 @@ function App() {
           {syncConsoleNode}
           <OverflowMenu
             items={[
-              { id: 'publish', label: '출간', onSelect: () => setStage('publish') },
+              { id: 'publish', label: '출간', onSelect: () => { if (canLeaveRecoveryWorkDraft()) setStage('publish'); } },
               { id: 'export', label: 'JSON 내보내기', onSelect: handleExportProject },
               { id: 'import', label: 'JSON 가져오기', onSelect: handleImportClick }
             ]}
@@ -687,9 +1099,15 @@ function App() {
           onBibleAlertChange={setBibleAlert}
           onStudioViewChange={setStudioView}
           onOpenProjects={openProjectHub}
-          onOpenLanding={() => setStage('landing')}
-          onOpenPublish={() => setStage('publish')}
+          onOpenLanding={() => { if (canLeaveRecoveryWorkDraft()) setStage('landing'); }}
+          onOpenPublish={() => { if (canLeaveRecoveryWorkDraft()) setStage('publish'); }}
           onPlanPatchesChange={setPendingPlan}
+          recoveryWorkDraft={activeRecoveryWorkDraft}
+          onRecoveryWorkDraftChange={handleRecoveryWorkDraftChange}
+          onCommitRecoveryWorkDraft={handleCommitRecoveryWorkDraft}
+          onCloseRecoveryWorkDraft={handleCloseRecoveryWorkDraft}
+          recoveryDraftSaveStatus={recoveryDraftSaveStatus}
+          recoveryDraftSaveError={recoveryDraftSaveError}
         />
         {reconcileDialog}
         {planApplyDialog}
@@ -739,7 +1157,7 @@ function App() {
         onCancelGeneration={(item) => { void handleCancelGeneration(item); }}
         onDiscardGeneration={(item) => discardGeneration(item.id)}
         onDownloadRecovery={(item) => { if (item.recovery) handleDownloadRecovery(item.recovery); }}
-        onSendRecoveryToDraft={(item) => { if (item.recovery) handleSendRecoveryToDraft(item.recovery, item.id); }}
+        onSendRecoveryToDraft={(item) => { if (item.recovery) handleOpenRecoveryWorkDraft(item.recovery, item.id); }}
       />
     );
   }
@@ -782,10 +1200,10 @@ function App() {
     const selectedGeneration = generationInbox.find((item) => item.id === selectedGenerationId) ?? null;
     if (restored) {
       // 슬라이스 B — working(diveKey) 이 진실. 미반영 PLAY 작업을 loadProject 로 덮지 않는다(⟳최신화로만 머지).
-      return <>{bar}<DiveStage initial={restored} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={openProjectHub} onResolveGeneration={discardGeneration} onDownloadRecovery={handleDownloadRecovery} onSendRecoveryToDraft={handleSendRecoveryToDraft} /></>;
+      return <>{bar}<DiveStage initial={restored} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={openProjectHub} onResolveGeneration={discardGeneration} onDownloadRecovery={handleDownloadRecovery} onSendRecoveryToDraft={handleOpenRecoveryWorkDraft} /></>;
     }
     if (diveInit) {
-      return <>{bar}<DiveStage initial={diveInit} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={openProjectHub} onResolveGeneration={discardGeneration} onDownloadRecovery={handleDownloadRecovery} onSendRecoveryToDraft={handleSendRecoveryToDraft} /></>;
+      return <>{bar}<DiveStage initial={diveInit} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={openProjectHub} onResolveGeneration={discardGeneration} onDownloadRecovery={handleDownloadRecovery} onSendRecoveryToDraft={handleOpenRecoveryWorkDraft} /></>;
     }
     // PLAY 첫 진입 — 현 작품에 인물이 없으면 안내. 있으면 위 useEffect 가 diveInit 을 채워 다음 렌더에서 진입.
     if (!seedPlayFromProject(loadProject())) {

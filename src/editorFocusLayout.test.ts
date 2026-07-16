@@ -121,6 +121,7 @@ describe('Story X focused editor layout', () => {
     // 제목 인라인 편집(wm-title-input)·⋯ 메뉴(OverflowMenu)는 App 셸로 이관됐다
     expect(app).toContain('className="wm-title-input"');
     expect(app).toContain('<OverflowMenu');
+    expect(componentSrc('WorkspaceModeBar')).toContain('className="wm-actions"');
     expect(desk).not.toContain('className="wm-title-input"');
     // StoryXDesk 는 회차/캐논 컨텍스트를 dx-desk-context 하위 줄로 렌더한다
     expect(desk).toContain('const deskContextLine =');
@@ -596,9 +597,9 @@ describe('B2 — 활동일 기록 배선 (편집·생성·확정)', () => {
     expect(desk).toMatch(/function withWritingDay\(/);
   });
 
-  it('withWritingDay 가 편집·생성·확정 3지점에서 활동일을 합성한다', () => {
+  it('withWritingDay 가 편집·언마운트 flush·생성·확정 4지점에서 활동일을 합성한다', () => {
     const calls = desk.match(/withWritingDay\([^;]*todayStr\(\)/g) ?? [];
-    expect(calls.length).toBe(3);
+    expect(calls.length).toBe(4);
   });
 
   it('floatingEditorProps 가 retention(stats+target)을 주입한다', () => {

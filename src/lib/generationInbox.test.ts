@@ -4,6 +4,7 @@ import {
   appendGenerationInboxItem,
   buildProjectRevision,
   canRecoverGeneration,
+  hasDurableRecoveryDraftReceipt,
   isActiveGeneration,
   mergeGenerationJob,
   parseGenerationInbox,
@@ -60,8 +61,32 @@ describe('generation inbox', () => {
     expect(list[0].id).toBe('24');
   });
 
+  it('20개 cap을 넘어도 미완료 작업본이 연결된 영수증은 보존하고 오래된 일반 영수증을 정리한다', () => {
+    const protectedReceipt: GenerationInboxItem = {
+      ...item('protected', 'failed'),
+      recovery,
+      recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
+      recoveryDraftId: 'draft-protected'
+    };
+    let list: GenerationInboxItem[] = [protectedReceipt];
+    for (let index = 0; index < 20; index += 1) {
+      list = appendGenerationInboxItem(list, item(`ordinary-${index}`, 'failed'));
+    }
+
+    expect(list).toHaveLength(20);
+    expect(list.some((candidate) => candidate.id === protectedReceipt.id)).toBe(true);
+    expect(parseGenerationInbox(serializeGenerationInbox(list))).toContainEqual(protectedReceipt);
+  });
+
   it('merges polled terminal result without losing client metadata', () => {
-    const merged = mergeGenerationJob({ ...item('1'), recovery, recoveredAt: '2026-07-16T00:00:00Z', recoveredChapterId: 'episode-1' }, {
+    const merged = mergeGenerationJob({
+      ...item('1'),
+      recovery,
+      recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
+      recoveryDraftId: 'recovery-draft-1',
+      recoveredAt: '2026-07-16T01:00:00Z',
+      recoveredChapterId: 'episode-1'
+    }, {
       id: '1', projectId: 'p1', baseRevision: 'rev-1', episode: 1,
       status: 'succeeded', createdAt: 'x', updatedAt: 'y', result: { title: '1화', prose: '본문' }
     });
@@ -69,16 +94,65 @@ describe('generation inbox', () => {
     expect(merged.status).toBe('succeeded');
     expect(merged.result?.prose).toBe('본문');
     expect(merged.recovery).toEqual(recovery);
-    expect(merged.recoveredAt).toBe('2026-07-16T00:00:00Z');
+    expect(merged.recoveryDraftOpenedAt).toBe('2026-07-16T00:00:00Z');
+    expect(merged.recoveryDraftId).toBe('recovery-draft-1');
+    expect(merged.recoveredAt).toBe('2026-07-16T01:00:00Z');
     expect(merged.recoveredChapterId).toBe('episode-1');
   });
 
-  it('recovery와 WRITE 전송 메타를 직렬화하고 구버전 영수증도 그대로 읽는다', () => {
-    const recoverable = { ...item('1', 'failed'), recovery, recoveredAt: '2026-07-16T00:00:00Z', recoveredChapterId: 'episode-1' };
+  it('복구 작업본과 명시적 회차 저장 메타를 구분해 직렬화하고 구버전 영수증도 읽는다', () => {
+    const recoverable = {
+      ...item('1', 'failed'),
+      recovery,
+      recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
+      recoveryDraftId: 'recovery-draft-1',
+      recoveredAt: '2026-07-16T01:00:00Z',
+      recoveredChapterId: 'episode-1'
+    };
     expect(parseGenerationInbox(serializeGenerationInbox([recoverable, item('2', 'failed')]))).toEqual([
       recoverable,
       item('2', 'failed')
     ]);
+  });
+
+  it('복구 원문이 없으면 작업본·회차 저장 메타도 유효하지 않은 것으로 본다', () => {
+    const [parsed] = parseGenerationInbox(JSON.stringify([{
+      ...item('1', 'failed'),
+      recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
+      recoveryDraftId: 'recovery-draft-1',
+      recoveredAt: '2026-07-16T01:00:00Z',
+      recoveredChapterId: 'episode-1'
+    }]));
+
+    expect(parsed).toEqual(item('1', 'failed'));
+  });
+
+  it('작업본·회차 영수증 메타는 각 쌍이 모두 있을 때만 유효하다', () => {
+    const [parsed] = parseGenerationInbox(JSON.stringify([{
+      ...item('1', 'failed'),
+      recovery,
+      recoveryDraftId: 'orphan-draft-id',
+      recoveredAt: '2026-07-16T01:00:00Z'
+    }]));
+    expect(parsed).toEqual({ ...item('1', 'failed'), recovery });
+  });
+
+  it('작업본 이탈을 허용할 영속 영수증은 generation·draft 연결이 일치하고 저장 실패 표식이 없어야 한다', () => {
+    const linked = {
+      ...item('local-draft-1', 'failed'),
+      recovery,
+      recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
+      recoveryDraftId: 'draft-1'
+    };
+
+    expect(hasDurableRecoveryDraftReceipt([linked], linked.id, 'draft-1')).toBe(true);
+    expect(hasDurableRecoveryDraftReceipt(
+      [{ ...linked, localPersistenceFailed: true }],
+      linked.id,
+      'draft-1'
+    )).toBe(false);
+    expect(hasDurableRecoveryDraftReceipt([linked], linked.id, 'other-draft')).toBe(false);
+    expect(hasDurableRecoveryDraftReceipt([], linked.id, 'draft-1')).toBe(false);
   });
 
   it('손상 recovery만 버리고 영수증 자체는 보존한다', () => {
@@ -100,6 +174,8 @@ describe('generation inbox', () => {
     const oldSuccess = {
       ...item('2', 'succeeded'),
       recovery,
+      recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
+      recoveryDraftId: 'recovery-draft-2',
       result: { title: '완료 회차', prose: '승인 전 성공 결과' }
     };
     const writes: string[] = [];
@@ -121,6 +197,8 @@ describe('generation inbox', () => {
     expect(saved.items[0]).toEqual(newest);
     expect(saved.items[1]).toEqual(expect.objectContaining({ id: '2', result: oldSuccess.result }));
     expect(saved.items[1]).not.toHaveProperty('recovery');
+    expect(saved.items[1]).not.toHaveProperty('recoveryDraftOpenedAt');
+    expect(saved.items[1]).not.toHaveProperty('recoveryDraftId');
     expect(storage.setItem).toHaveBeenCalledTimes(2);
   });
 

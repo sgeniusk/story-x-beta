@@ -269,22 +269,105 @@ describe('P0-b PLAY 기록 복구 배선', () => {
     expect(app).toContain('buildPlayRecoveryFilename(recovery)');
   });
 
-  it('WRITE 복구는 대상 작품 활성화 후에만 저장하고 전송 완료를 영수증에 기록한다', () => {
-    const handler = app.match(/function handleSendRecoveryToDraft[\s\S]{0,2200}?\n  \}/)?.[0] ?? '';
+  it('WRITE 작업본 열기는 대상 작품만 활성화하고 본편 Chapter를 만들지 않는다', () => {
+    const handler = app.match(/function handleOpenRecoveryWorkDraft[\s\S]{0,3000}?\n  \}/)?.[0] ?? '';
+    expect(handler).toContain('activateProject(recovery.projectId)');
+    expect(handler).toContain('createPlayRecoveryWorkDraft(');
+    expect(handler).toContain('savePlayRecoveryWorkDraft(');
+    expect(handler).toContain('persistRecoveryDraftReceipt(');
+    expect(app).toContain('buildLocalRecoveryReceipt(');
+    expect(app).toContain('appendGenerationInboxItem(');
+    expect(app).toContain('recoveryDraftOpenedAt');
+    expect(handler).toContain("setStage('editor')");
+    expect(handler).not.toContain('saveProject(');
+    expect(handler).not.toContain('chapterFromDraftPayload(');
+    expect(handler).not.toContain('planPlayRecoveryCommit(');
+  });
+
+  it('local 영수증을 다시 열 때 계산한 새 id보다 영수증의 recoveryDraftId를 우선해 기존 본문을 재개한다', () => {
+    const handler = app.match(/function handleOpenRecoveryWorkDraft[\s\S]{0,3500}?\n  \}/)?.[0] ?? '';
+    expect(handler).toContain('previousReceipt?.recoveryDraftId');
+    expect(handler.indexOf('const previousReceipt')).toBeLessThan(handler.indexOf('const previousDraft'));
+  });
+
+  it('명시적 회차 저장에서만 pending-sync를 검사하고 본편·영수증을 완료 처리한다', () => {
+    const handler = app.match(/function handleCommitRecoveryWorkDraft[\s\S]{0,7500}?\n  \}/)?.[0] ?? '';
     const order = [
-      'activateProject(recovery.projectId)',
-      'loadProject()',
-      'loadDiveState()',
-      'planPlayRecoveryWrite(',
+      'savePlayRecoveryWorkDraft(',
+      'activateProject(receiptLinkedDraft.projectId)',
+      'inspectPlayRecoveryCommitIntent(',
+      'planPlayRecoveryCommit(',
+      'preparePlayRecoveryCommitIntent(',
       'saveProject(',
       'saveDiveState(',
       'const recoveredAt = new Date()',
+      'commitGenerationInbox(',
+      'removePlayRecoveryWorkDraft(',
       'refreshActiveProjectState()',
       "setStage('editor')"
     ];
-    const indexes = order.map((token) => handler.indexOf(token));
+    let cursor = 0;
+    const indexes = order.map((token) => {
+      const index = handler.indexOf(token, cursor);
+      if (index >= 0) cursor = index + token.length;
+      return index;
+    });
     expect(indexes.every((index) => index >= 0)).toBe(true);
     expect(indexes).toEqual([...indexes].sort((left, right) => left - right));
+    expect(handler).toContain('localPersistenceFailed');
+  });
+
+  it('회차 저장 시 저장소의 최신 draft를 다시 읽은 뒤 commit intent를 판정한다', () => {
+    const handler = app.match(/function handleCommitRecoveryWorkDraft[\s\S]{0,7500}?\n  \}/)?.[0] ?? '';
+    expect(handler).toContain('const persistedDraft = listPlayRecoveryWorkDrafts(');
+    expect(handler.indexOf('savePlayRecoveryWorkDraft(')).toBeLessThan(handler.indexOf('const persistedDraft'));
+    expect(handler.indexOf('const persistedDraft')).toBeLessThan(handler.indexOf('inspectPlayRecoveryCommitIntent('));
+  });
+
+  it('다른 탭이 이미 영수증·draft 정리를 완료했으면 stale 화면에서 새 draft를 만들지 않는다', () => {
+    const handler = app.match(/function handleCommitRecoveryWorkDraft[\s\S]{0,7500}?\n  \}/)?.[0] ?? '';
+    expect(handler).toContain('const durableCompletedReceipt = loadGenerationInbox()');
+    expect(handler.indexOf('const durableCompletedReceipt')).toBeLessThan(handler.indexOf('savePlayRecoveryWorkDraft('));
+    expect(handler).toContain('durableCompletedReceipt.recoveredChapterId');
+  });
+
+  it('local 영수증 영속에 실패한 작업본은 닫기·전역 이탈·beforeunload를 막고 재저장을 시도한다', () => {
+    expect(app).toContain('hasDurableRecoveryDraftReceipt(');
+    expect(app).toContain('recoveryExitGuardActive');
+    expect(app).toMatch(/function canLeaveRecoveryWorkDraft[\s\S]{0,1000}?recoveryExitGuardActive/);
+    expect(app).toMatch(/beforeunload[\s\S]{0,500}?recoveryExitGuardActive|recoveryExitGuardActive[\s\S]{0,500}?beforeunload/);
+    const changeHandler = app.match(/function handleRecoveryWorkDraftChange[\s\S]{0,1800}?\n  \}/)?.[0] ?? '';
+    expect(changeHandler).toContain('persistRecoveryDraftReceipt(');
+  });
+
+  it('이전 오염 회차는 엄격한 도메인 판정과 PLAY working copy 동시 수리 뒤에만 작업본으로 환원한다', () => {
+    expect(app).toContain('repairLegacyPlayRecoveryChapter(');
+    expect(app).toContain('loadDiveStateForProject(item.projectId)');
+    expect(app).toContain('saveDiveStateForProject(');
+    expect(app).toContain('recoveryDraftId: draft.id');
+    expect(app).toContain('recoveredAt: undefined');
+    expect(app).toContain('recoveredChapterId: undefined');
+  });
+
+  it('legacy 환원 journal을 남긴 뒤 최신 본편·PLAY를 다시 읽고 엄격 판정을 재실행한다', () => {
+    const migration = app.match(/function migrateLegacyRecoveryDrafts[\s\S]{0,8000}?\n  \}/)?.[0] ?? '';
+    const journalIndex = migration.indexOf('savePlayRecoveryWorkDraft(draft, isActiveProject)');
+    const latestLibraryIndex = migration.indexOf('const latestLibraryEntry = loadProjectLibrary()');
+    const latestWorkingIndex = migration.indexOf('const latestWorkingState = loadDiveStateForProject');
+    const saveProjectIndex = migration.indexOf('saveProject(latestCommittedRepair.updatedProject');
+    expect(journalIndex).toBeGreaterThanOrEqual(0);
+    expect(latestLibraryIndex).toBeGreaterThan(journalIndex);
+    expect(latestWorkingIndex).toBeGreaterThan(latestLibraryIndex);
+    expect(saveProjectIndex).toBeGreaterThan(latestWorkingIndex);
+    expect(migration).toContain('if (latestCommittedContainsLegacy && !latestCommittedRepair) continue;');
+    expect(migration).toContain('if (latestWorkingContainsLegacy && !latestWorkingRepair) continue;');
+  });
+
+  it('StoryXDesk에 프로젝트 밖 복구 작업본과 저장·닫기 콜백을 전달한다', () => {
+    expect(app).toContain('recoveryWorkDraft={activeRecoveryWorkDraft}');
+    expect(app).toContain('onRecoveryWorkDraftChange={handleRecoveryWorkDraftChange}');
+    expect(app).toContain('onCommitRecoveryWorkDraft={handleCommitRecoveryWorkDraft}');
+    expect(app).toContain('onCloseRecoveryWorkDraft={handleCloseRecoveryWorkDraft}');
   });
 
   it('생성 영수증 저장 실패를 잡 시작 실패로 전파하지 않고 메모리 상태를 유지한다', () => {
