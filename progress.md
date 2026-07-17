@@ -1,9 +1,20 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-17 14:42 KST · Branch: `codex/p0b-failure-recovery` (**P0-b PLAY 재개/직접 쓰기 의미 교정 완료, Draft PR #40 갱신·사용자 테스트 대기**)
+> Last Updated: 2026-07-17 20:34 KST · Branch: `codex/p0a-condense-quality-contract` (**승인 응결본 WRITE 연결 + 응결 장면화·보이스 품질 계약 완료, Draft PR #41 사용자 테스트 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-> 최근 검증(2026-07-17 14:42 KST) — `bash init.sh` 녹색: `npm test` 1057 통과(101 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+> 최근 검증(2026-07-17 20:33 KST) — `bash init.sh` 녹색: `npm test` 1114 통과(102 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+
+## 완료 트랙 — P0-a 후속: PLAY 응결 장면화·보이스 품질 계약 (`done` · 2026-07-17, 구현 `aad8872` · Draft PR #41)
+
+사용자 dogfooding에서 확인한 두 결함을 분리해 닫았다. 승인한 응결 1화가 WRITE에 나타나지 않던 저장 경계는 P0-b 직렬화 보강 `f40e811`/Draft PR #40에서 해결했고, 사용자가 실화면에서 동작을 확인했다. 이어서 1,122자 요약체·직접 대사 0·추상 후크·QA 표식 작품화로 나타난 결과 품질을 후처리로 숨기지 않고 응결 입력과 생성 계약에서 교정했다. spec `docs/superpowers/specs/2026-07-17-p0a-condense-quality-contract-design.md` · plan `docs/superpowers/plans/2026-07-17-p0a-condense-quality-contract.md`.
+- **장면화 계약** — 최종 1,800~2,700자(생성 목표 1,900~2,600자), 서로 다른 압력의 현재 장면 2~3개, 직접 갈등 대사, 실제 대가, 같은 장면 합리적 봉합 금지, 답→더 날카로운 질문, 구체 행동·위협·시한 후크를 실제 로컬 CLI와 TypeScript 빌더에 byte-identical하게 고정했다.
+- **보이스·캐논 입력** — tone/rhythm/vocab을 `한국어 문체·보이스 규칙`으로 실제 digest에 전달하고, 인물 카드에 욕망·상처·현재 상태·말투·캐논 앵커를 넣는다. 감정명 재설명·금지어·호칭 드리프트·기능적 선택 해설·캐릭터 카드 이행 보고를 최종 문장 패스에서 막는다.
+- **메타·발명 경계** — 테스트·QA·복구·UI·스키마·타임스탬프는 명시적 작품 고유명사가 아니면 6개 출력 필드 전체에서 제외하고, `newCanonFacts`는 명시 사실과 장면 성립에 꼭 필요한 최소 추론으로 제한한다. 기존 누수·stale revision·사용자 승인 게이트는 바꾸지 않았다.
+- **실생성 증거** — 합성 PLAY를 실제 로컬 Codex로 응결한 「23시 58분의 원본」은 본문 1,855자·현재 장면 3개·직접 대사 20문단·작품 밖 메타 0. critic-reviewer와 voice-curator가 각각 P0/P1 0으로 PASS했다. 증거 `/Users/taewookkim/.codex/visualizations/2026/07/13/019f5c20-8b9d-73d2-8aea-50a5ad8aac70/storyx-p0a-condense-quality-sample.md`.
+- **독립 감사·검증** — 집중 4파일/172테스트, 최종 코드 감사 P0/P1 0, 로컬 프로젝트 보관함 렌더·오류 로그 0, 전체 `bash init.sh` 102파일/1114테스트·tsc·vite build 녹색.
+- **게시/의존** — Draft PR #41 `https://github.com/sgeniusk/story-x-beta/pull/41`은 #40 위의 스택이다. 머지 순서는 **#39 → #40 → #41**이며 각 단계에서 다음 PR을 main으로 retarget하고 고유 diff를 확인한 뒤, 실제 머지는 사용자에게 남긴다.
+- **Recommended Next Step** — 기존의 약한 1화는 자동으로 덮어쓰지 않았다. 사용자가 새 PLAY 재료에서 `지금 응결` 또는 `응결 다시 시도`를 눌러 새 결과를 검토하고, 장면성·대사·목소리를 주관적으로 비교 판정한다. 승인하면 WRITE에는 #40의 정확한 chapter 직렬화 경로로 나타난다. 품질 편차가 남으면 결과 후처리/자동 거부를 섞지 말고 별도 readiness 경고 슬라이스로 설계한다.
 
 ## 완료 트랙 — P0-b 응결 실패 구제: PLAY 재개·원문 TXT·분리 복구 작업본 (`done` · 2026-07-17, 분리 수정 `8bd10ab` · 의미 교정 `c4aabb9` · Draft PR #40)
 

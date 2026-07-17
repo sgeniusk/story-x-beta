@@ -60,7 +60,17 @@ function characterCardText(project: SeriesProject, characterId: string): string 
   const c = project.characters.find((x) => x.id === characterId)
     ?? DIVE_SEED_CHARACTERS.find((s) => s.character.id === characterId)?.character;
   if (!c) return '';
-  return `${c.name} — ${c.role}. 욕망: ${c.desire}. 말투: ${c.voiceRules.join(', ')}`;
+  const header = [c.name.trim(), c.role.trim()].filter(Boolean).join(' — ');
+  const voiceRules = c.voiceRules.map((rule) => rule.trim()).filter(Boolean);
+  const canonAnchors = c.canonAnchors.map((anchor) => anchor.trim()).filter(Boolean);
+  return [
+    header,
+    c.desire.trim() ? `욕망: ${c.desire.trim()}` : '',
+    c.wound.trim() ? `상처: ${c.wound.trim()}` : '',
+    c.currentState.trim() ? `현재 상태: ${c.currentState.trim()}` : '',
+    voiceRules.length > 0 ? `말투 규칙: ${voiceRules.join(' / ')}` : '',
+    canonAnchors.length > 0 ? `캐논 앵커(위반 금지): ${canonAnchors.join(' / ')}` : ''
+  ].filter(Boolean).join('\n');
 }
 
 // 대사 속 *행동·묘사*를 기울임으로 분리 렌더(제타류 관례) — 대사는 그대로, 별표 구간은 지문처럼.

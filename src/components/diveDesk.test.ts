@@ -317,6 +317,58 @@ describe('DiveDesk', () => {
     expect(html).not.toContain('원문으로 직접 쓰기');
   });
 
+  it('응결 요청 인물 카드에 상처·현재 상태·캐논 앵커를 담고 빈 필드는 생략한다', async () => {
+    const base = createEmptyProject({ title: '인물 카드' });
+    const project = {
+      ...base,
+      characters: [{
+        id: 'character-seoyun',
+        name: '서윤',
+        role: '',
+        desire: '사라진 오빠를 찾는다',
+        wound: '자신이 기록을 고친 탓에 가족의 기억이 어긋났다고 믿는다',
+        currentState: '왕립 문서고에서 해임된 뒤 비공식 의뢰를 받았다',
+        voiceRules: ['감정을 사물의 상태로 우회한다', '결정적인 순간에는 짧게 말한다'],
+        canonAnchors: ['서윤은 오빠를 찾고 있다', '서윤은 기록을 수선할 수 있다'],
+        forbiddenContradictions: [],
+        relations: []
+      }]
+    };
+    const session = {
+      ...createDiveSession('character-seoyun', project.id),
+      chatBuffer: [
+        { id: 'm1', role: 'user' as const, text: '문을 연다', turn: 1 },
+        { id: 'm2', role: 'character' as const, text: '안쪽은 어둡다', turn: 2 },
+        { id: 'm3', role: 'user' as const, text: '들어간다', turn: 3 }
+      ]
+    };
+    const onStartGeneration = vi.fn().mockResolvedValue(undefined);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, onStartGeneration
+    })));
+    const condense = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '지금 응결');
+    await act(async () => { condense?.click(); await Promise.resolve(); });
+
+    expect(onStartGeneration).toHaveBeenCalledTimes(1);
+    const [request] = onStartGeneration.mock.calls[0] as [Record<string, string>];
+    expect(request.character).toBe([
+      '서윤',
+      '욕망: 사라진 오빠를 찾는다',
+      '상처: 자신이 기록을 고친 탓에 가족의 기억이 어긋났다고 믿는다',
+      '현재 상태: 왕립 문서고에서 해임된 뒤 비공식 의뢰를 받았다',
+      '말투 규칙: 감정을 사물의 상태로 우회한다 / 결정적인 순간에는 짧게 말한다',
+      '캐논 앵커(위반 금지): 서윤은 오빠를 찾고 있다 / 서윤은 기록을 수선할 수 있다'
+    ].join('\n'));
+    expect(request.character).not.toContain('역할:');
+
+    act(() => root.unmount());
+    host.remove();
+  });
+
   it('잡 등록 실패 전에 전체 PLAY를 캡처하고 인라인 TXT/WRITE 구제를 제공한다', async () => {
     const project = { ...createEmptyProject({ title: '실패 복구' }), currentEpisode: 5 };
     const session = {
