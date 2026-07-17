@@ -1,7 +1,7 @@
 // Dive X 얇은 표면 — 채팅·응결 제안·승인 다이얼로그·연대기. 엔진은 재사용.
 import { useMemo, useState } from 'react';
-import type { SeriesProject, ProductionRequest } from '../lib/storyEngine';
-import { chapterFromDraftPayload, buildProjectContextDigest, applyRetcons } from '../lib/storyEngine';
+import type { Chapter, SeriesProject, ProductionRequest } from '../lib/storyEngine';
+import { chapterFromDraftPayload, buildProjectContextDigest, applyRetcons, nextEpisodeNumber } from '../lib/storyEngine';
 import { inspectLeak } from '../lib/leakGate';
 import {
   type DiveSession,
@@ -11,11 +11,12 @@ import {
   buildCondenseTranscript,
   buildRecentDialogue,
   applyCondenseResult,
+  applyCondenseCheckpoint,
   parseSceneSegments,
   buildVsCandidatesInput,
   buildPlayDirectionSeed
 } from '../lib/diveSession';
-import { validatePlayTurn, deriveDeviationCandidates, buildPromotedFacts, buildRetconUpdates, type PlayTurnVerdict } from '../lib/playRuntimeValidator';
+import { validatePlayTurn, deriveDeviationCandidates, buildPromotedFacts, type PlayTurnVerdict } from '../lib/playRuntimeValidator';
 import { DeviationReview } from './DeviationReview';
 import { requestDiveChat, requestDiveShowrunner, requestDiveConsolidate, type DiveCondenseJobRequest, type DiveCondensePayload, type ConsolidationFinding } from '../lib/diveClient';
 import { ConsolidationFindings } from './ConsolidationFindings';
@@ -23,7 +24,21 @@ import { DIVE_SEED_CHARACTERS } from '../lib/diveSeedCharacters';
 import { requestVsCandidates } from '../lib/vsCandidatesClient';
 import { VsCandidatePanel } from './VsCandidatePanel';
 import type { VsCandidate } from '../lib/episodeBriefing';
-import { buildProjectRevision, type GenerationInboxItem } from '../lib/generationInbox';
+import { buildProjectRevision, canRecoverGeneration, findLatestGenerationAttempt, type GenerationInboxItem } from '../lib/generationInbox';
+import { buildPlayRecoverySnapshot, type PlayRecoverySnapshot } from '../lib/playRecovery';
+import type { ApprovedCondenseRetcon } from '../lib/syncConsole';
+
+export type CondenseApprovalResolution = 'committed' | 'pending-conflict' | 'failed';
+
+export interface CondenseApprovalRequest {
+  session: DiveSession;
+  sessionBeforeApproval: DiveSession;
+  project: SeriesProject;
+  workingBeforeApproval: SeriesProject;
+  chapter: Chapter;
+  retcons: ApprovedCondenseRetcon[];
+  generationId: string;
+}
 
 interface DiveDeskProps {
   session: DiveSession;
@@ -32,10 +47,13 @@ interface DiveDeskProps {
   onBack: () => void;
   generationInbox?: GenerationInboxItem[];
   selectedGeneration?: GenerationInboxItem | null;
-  onStartGeneration?: (request: DiveCondenseJobRequest) => Promise<void>;
+  onStartGeneration?: (request: DiveCondenseJobRequest, recovery: PlayRecoverySnapshot) => Promise<void>;
   onCancelGeneration?: (item: GenerationInboxItem) => void;
   onOpenGenerationInbox?: () => void;
   onResolveGeneration?: (id: string) => void;
+  onApproveGeneration?: (approval: CondenseApprovalRequest) => CondenseApprovalResolution;
+  onDownloadRecovery?: (recovery: PlayRecoverySnapshot) => void;
+  onSendRecoveryToDraft?: (recovery: PlayRecoverySnapshot, generationId?: string) => void;
 }
 
 function characterCardText(project: SeriesProject, characterId: string): string {
@@ -82,7 +100,8 @@ function peekText(verdict: PlayTurnVerdict): string {
 
 export function DiveDesk({
   session, project, onChange, onBack, generationInbox = [], selectedGeneration = null,
-  onStartGeneration, onCancelGeneration, onOpenGenerationInbox, onResolveGeneration
+  onStartGeneration, onCancelGeneration, onOpenGenerationInbox, onResolveGeneration,
+  onApproveGeneration, onDownloadRecovery, onSendRecoveryToDraft
 }: DiveDeskProps) {
   const selectedResultBlocked = selectedGeneration?.result ? inspectLeak(selectedGeneration.result.prose).blocked : false;
   const [input, setInput] = useState('');
@@ -90,7 +109,9 @@ export function DiveDesk({
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<DiveCondensePayload | null>(() => selectedResultBlocked ? null : selectedGeneration?.result ?? null);
   const [pendingGenerationId] = useState<string | null>(() => !selectedResultBlocked && selectedGeneration?.result ? selectedGeneration.id : null);
-  const [leakWarn, setLeakWarn] = useState<string | null>(() => selectedResultBlocked ? '본문에 프롬프트/AI 누수가 감지됐습니다. 이 결과는 승인할 수 없습니다.' : null);
+  const [leakWarn] = useState<string | null>(() => selectedResultBlocked ? '본문에 프롬프트/AI 누수가 감지됐습니다. 이 결과는 승인할 수 없습니다.' : null);
+  const [generationStartError, setGenerationStartError] = useState<string | null>(null);
+  const [failedRecovery, setFailedRecovery] = useState<PlayRecoverySnapshot | null>(null);
   const [startingGeneration, setStartingGeneration] = useState(false);
   const [srOpen, setSrOpen] = useState(false);
   const [srInput, setSrInput] = useState('');
@@ -106,9 +127,30 @@ export function DiveDesk({
     return c?.name ?? '상대';
   }, [project, session.characterId]);
   const suggest = shouldSuggestCondense(session);
-  const episode = project.chapters.length + 1;
-  const activeGeneration = generationInbox.find((item) => item.projectId === project.id && item.episode === episode && item.status === 'running') ?? null;
+  const episode = nextEpisodeNumber(project);
+  // UI 갱신으로 영수증 배열 순서가 바뀌어도 현재 회차의 최신 생성 시도 하나만 PLAY를 대표해야
+  // 재시도 성공 뒤 과거 실패가 되살아나거나 지난 회차 실패를 다시 실행하지 않는다.
+  const currentEpisodeGeneration = findLatestGenerationAttempt(generationInbox, project.id, episode);
+  const activeGeneration = currentEpisodeGeneration?.status === 'running' ? currentEpisodeGeneration : null;
+  const currentGenerationNeedsImmediateDownload = Boolean(
+    currentEpisodeGeneration?.localPersistenceFailed && currentEpisodeGeneration.recovery
+  );
   const projectInboxCount = generationInbox.filter((item) => item.projectId === project.id).length;
+  const recoverableGeneration = currentEpisodeGeneration &&
+    canRecoverGeneration(currentEpisodeGeneration) &&
+    !(currentEpisodeGeneration.recoveredAt && currentEpisodeGeneration.recoveredChapterId)
+      ? currentEpisodeGeneration
+      : null;
+  const inlineRecovery = activeGeneration ? null : failedRecovery
+    ? { recovery: failedRecovery, generationId: undefined, hasRecoveryDraft: false, needsImmediateDownload: false }
+    : recoverableGeneration?.recovery
+      ? {
+          recovery: recoverableGeneration.recovery,
+          generationId: recoverableGeneration.id,
+          hasRecoveryDraft: Boolean(recoverableGeneration.recoveryDraftOpenedAt && recoverableGeneration.recoveryDraftId),
+          needsImmediateDownload: Boolean(recoverableGeneration.localPersistenceFailed)
+        }
+      : null;
   const selectedGenerationIsStale = Boolean(selectedGeneration && selectedGeneration.baseRevision !== buildProjectRevision(project));
   const turnCounts = useMemo(() => {
     let surprise = 0, anchor = 0, major = 0;
@@ -203,8 +245,12 @@ export function DiveDesk({
 
   async function condense() {
     if (busy || startingGeneration || activeGeneration) return;
+    const recovery = buildPlayRecoverySnapshot(session, project);
+    setGenerationStartError(null);
+    setFailedRecovery(null);
     if (!onStartGeneration) {
-      setLeakWarn('이 환경에서는 로컬 생성 잡을 시작할 수 없습니다.');
+      setGenerationStartError('이 환경에서는 로컬 생성 잡을 시작할 수 없습니다.');
+      setFailedRecovery(recovery);
       return;
     }
     setStartingGeneration(true);
@@ -220,9 +266,10 @@ export function DiveDesk({
         projectId: project.id,
         projectTitle: project.title,
         baseRevision: buildProjectRevision(project)
-      });
+      }, recovery);
     } catch {
-      setLeakWarn('응결 잡을 시작하지 못했습니다. 다시 시도하세요.');
+      setGenerationStartError('응결 잡을 시작하지 못했습니다. 아래에서 기록을 먼저 보존할 수 있습니다.');
+      setFailedRecovery(recovery);
     } finally {
       setStartingGeneration(false);
     }
@@ -264,31 +311,79 @@ export function DiveDesk({
 
   function approve() {
     if (!pending) return;
+    const resumeCheckpoint = pendingGenerationId === selectedGeneration?.id
+      ? selectedGeneration.approvedCondenseCheckpoint
+      : undefined;
+    const generationCondenseBoundary = pendingGenerationId === selectedGeneration?.id
+      ? selectedGeneration.recovery?.condensedThroughTurn ?? 0
+      : undefined;
     // intent·pressure 는 의도적으로 빈 값 — 본문은 응결 payload 에서 오지, intent/pressure 로 생성하지 않는다.
     const request: ProductionRequest = { genre: project.genre, intent: '', pressure: '' };
     const promoted = buildPromotedFacts(deviations.surprises, decisions, edits, pending.newCanonFacts);
-    // retcon 결정된 충돌은 옛 fact statement 를 새 전개로 교체한 project 위에 커밋.
-    const base = applyRetcons(project, buildRetconUpdates(deviations.conflicts, retconDecisions));
-    const { updatedProject } = chapterFromDraftPayload(
-      base,
-      {
-        title: pending.title,
-        hook: pending.hook,
-        outline: pending.outline,
-        beats: pending.beats,
-        prose: pending.prose,
-        newCanonFacts: [...pending.newCanonFacts, ...promoted]
-      },
-      request
-    );
+    const approvedRetcons: ApprovedCondenseRetcon[] = deviations.conflicts
+      .filter((conflict) => retconDecisions[conflict.id] === 'retcon')
+      .map((conflict) => ({
+        factId: conflict.factId,
+        previousStatement: conflict.oldCanon,
+        statement: conflict.newClaim
+      }));
+    let updatedProject: SeriesProject;
+    let chapter: Chapter;
+    let retconsForCommit = approvedRetcons;
+    if (resumeCheckpoint) {
+      // PLAY/WRITE 부분 성공 뒤 재시작하면 project의 nextEpisodeNumber로 새 2화를 만들지 않는다.
+      // 영수증에 먼저 남긴 exact resolved 회차·retcon을 App의 멱등 재개 게이트로 되돌린다.
+      updatedProject = project;
+      chapter = resumeCheckpoint.chapter;
+      retconsForCommit = resumeCheckpoint.retcons;
+    } else {
+      // retcon 결정된 충돌은 옛 fact statement 를 새 전개로 교체한 project 위에 커밋.
+      const base = applyRetcons(project, approvedRetcons.map((retcon) => ({
+        factId: retcon.factId,
+        statement: retcon.statement
+      })));
+      ({ updatedProject, chapter } = chapterFromDraftPayload(
+        base,
+        {
+          title: pending.title,
+          hook: pending.hook,
+          outline: pending.outline,
+          beats: pending.beats,
+          prose: pending.prose,
+          newCanonFacts: [...pending.newCanonFacts, ...promoted]
+        },
+        request
+      ));
+    }
     // chapterFromDraftPayload가 내부에서 commitChapter까지 수행 → updatedProject를 그대로 쓴다(이중 커밋 금지).
+    const nextSession = resumeCheckpoint
+      ? applyCondenseCheckpoint(session, resumeCheckpoint.condensedThroughTurn)
+      : generationCondenseBoundary !== undefined
+        ? applyCondenseCheckpoint(session, generationCondenseBoundary)
+        : applyCondenseResult(session);
+    if (pendingGenerationId && onApproveGeneration) {
+      // 성공 결과 승인은 App이 최신 본편과 충돌을 다시 확인하고 PLAY·WRITE를 함께 영속한다.
+      // 충돌 검토나 저장 실패 동안에는 결과/영수증을 그대로 둬 재검토·재시도가 가능해야 한다.
+      const resolution = onApproveGeneration({
+        session: nextSession,
+        sessionBeforeApproval: session,
+        project: updatedProject,
+        workingBeforeApproval: project,
+        chapter,
+        retcons: retconsForCommit,
+        generationId: pendingGenerationId
+      });
+      if (resolution !== 'committed') return;
+    } else {
+      // 구형/임베드 표면의 호환 경로도 작업본 저장 뒤에만 영수증을 정리한다.
+      onChange(nextSession, updatedProject);
+      if (pendingGenerationId) onResolveGeneration?.(pendingGenerationId);
+    }
     setPending(null);
     setDecisions({});
     setEdits({});
     setRetconDecisions({});
     setFindings(null);
-    if (pendingGenerationId) onResolveGeneration?.(pendingGenerationId);
-    onChange(applyCondenseResult(session), updatedProject);
   }
 
   return (
@@ -398,15 +493,72 @@ export function DiveDesk({
         </button>
       )}
       {leakWarn && <div className="dx-leak">{leakWarn}</div>}
+      {generationStartError && <div className="dx-generation-error" role="alert">{generationStartError}</div>}
 
-      {(activeGeneration || projectInboxCount > 0) && (
-        <aside className="dx-generation-receipt" aria-label="생성 보관함 상태">
+      {inlineRecovery && (
+        <aside className="dx-recovery" role="region" aria-labelledby="dx-recovery-title" aria-describedby="dx-recovery-description">
+          <div className="dx-recovery-copy" role={inlineRecovery.needsImmediateDownload ? 'alert' : 'status'} aria-live={inlineRecovery.needsImmediateDownload ? 'assertive' : 'polite'}>
+            <strong id="dx-recovery-title">
+              {inlineRecovery.needsImmediateDownload
+                ? 'PLAY 기록이 아직 보관함에 저장되지 않았습니다.'
+                : '응결은 멈췄지만 PLAY 기록은 안전합니다.'}
+            </strong>
+            <span id="dx-recovery-description">
+              {inlineRecovery.needsImmediateDownload
+                ? '새로고침 전에 TXT를 먼저 받은 뒤 저장 공간을 확보해 주세요.'
+                : '응결 원고는 만들어지지 않았습니다. 다시 시도하거나 PLAY 원문을 참고해 직접 쓸 수 있습니다.'}
+            </span>
+          </div>
+          <div className="dx-recovery-actions">
+            <button type="button" className="is-retry" onClick={condense} disabled={busy || startingGeneration}>
+              {startingGeneration ? '다시 등록 중…' : '응결 다시 시도'}
+            </button>
+            {onDownloadRecovery && (
+              <button type="button" onClick={() => onDownloadRecovery(inlineRecovery.recovery)}>PLAY 기록 TXT</button>
+            )}
+            {onSendRecoveryToDraft && (
+              <button
+                type="button"
+                className="is-write"
+                onClick={() => onSendRecoveryToDraft(inlineRecovery.recovery, inlineRecovery.generationId)}
+              >
+                {inlineRecovery.hasRecoveryDraft ? '직접 쓰던 작업본 열기' : '원문으로 직접 쓰기'}
+              </button>
+            )}
+            {onOpenGenerationInbox && (
+              <button type="button" onClick={onOpenGenerationInbox}>생성 보관함</button>
+            )}
+          </div>
+        </aside>
+      )}
+
+      {(activeGeneration || (projectInboxCount > 0 && !inlineRecovery)) && (
+        <aside
+          className="dx-generation-receipt"
+          aria-label="생성 보관함 상태"
+          role={currentGenerationNeedsImmediateDownload ? 'alert' : undefined}
+        >
           <div>
-            <strong>{activeGeneration ? '백그라운드에서 응결 중' : `생성 보관함에 ${projectInboxCount}개`}</strong>
-            <span>{activeGeneration ? '화면을 떠나도 로컬 Codex가 계속 작업합니다.' : '완료된 결과는 승인 전까지 작품에 반영되지 않습니다.'}</span>
+            <strong>{activeGeneration?.localPersistenceFailed
+              ? '응결 중 · PLAY 기록 보관 필요'
+              : currentGenerationNeedsImmediateDownload
+                ? '응결 결과 보관 필요'
+                : activeGeneration
+                  ? '백그라운드에서 응결 중'
+                  : `생성 보관함에 ${projectInboxCount}개`}</strong>
+            <span>{activeGeneration?.localPersistenceFailed
+              ? '로컬 보관공간이 부족합니다. 새로고침 전에 TXT를 받아 주세요.'
+              : currentGenerationNeedsImmediateDownload
+                ? '응결 결과가 보관함에 저장되지 않았습니다. 새로고침 전에 결과를 검토하거나 TXT를 받아 주세요.'
+                : activeGeneration
+                  ? '화면을 떠나도 로컬 Codex가 계속 작업합니다.'
+                  : '완료된 결과는 승인 전까지 작품에 반영되지 않습니다.'}</span>
           </div>
           <div className="dx-generation-actions">
             {activeGeneration && onCancelGeneration && <button type="button" onClick={() => onCancelGeneration(activeGeneration)}>생성 취소</button>}
+            {currentGenerationNeedsImmediateDownload && currentEpisodeGeneration?.recovery && onDownloadRecovery && (
+              <button type="button" onClick={() => onDownloadRecovery(currentEpisodeGeneration.recovery!)}>PLAY 기록 TXT</button>
+            )}
             {onOpenGenerationInbox && <button type="button" onClick={onOpenGenerationInbox}>생성 보관함</button>}
           </div>
         </aside>

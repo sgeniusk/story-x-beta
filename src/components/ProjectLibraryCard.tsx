@@ -32,7 +32,7 @@ export function ProjectLibraryCard({ entry, active, onOpen, onConfirm }: Project
       <h2 className="pjx-card-title">{project.title}</h2>
       <p className="pjx-card-logline">{project.logline || '아직 작품 소개가 없습니다.'}</p>
       <div className="pjx-library-actions">
-        <button type="button" className="pjx-open-work" onClick={() => onOpen(entry)}>이어쓰기</button>
+        <button type="button" className="pjx-open-work" onClick={() => onOpen(entry)}>작업 계속하기</button>
         {entry.lifecycle === 'temporary' && (
           <button type="button" className="pjx-confirm-work" onClick={() => onConfirm(entry)}>작품으로 확정</button>
         )}

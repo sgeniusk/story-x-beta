@@ -6,6 +6,7 @@ const app = readFileSync(resolve(__dirname, 'App.tsx'), 'utf8');
 const css = readFileSync(resolve(__dirname, 'styles.css'), 'utf8');
 const blueprintSource = readFileSync(resolve(__dirname, 'lib/projectBlueprint.ts'), 'utf8');
 const projectCardSource = readFileSync(resolve(__dirname, 'components/ProjectLibraryCard.tsx'), 'utf8');
+const diveDeskSource = readFileSync(resolve(__dirname, 'components/DiveDesk.tsx'), 'utf8');
 
 describe('Story X page experience', () => {
   it('separates the product into landing, login, projects, new-project, and editor stages', () => {
@@ -240,9 +241,19 @@ describe('P0-c 작품 라이브러리 배선', () => {
     expect(projectCardSource).toContain('작품으로 확정');
   });
 
-  it('작품 이어쓰기는 해당 projectId를 활성화한 뒤 editor로 들어간다', () => {
+  it('작품 계속하기는 최신 project·PLAY·작성 복구본을 판정하고 안전한 모드로 들어간다', () => {
     expect(app).toContain('activateProject(entry.projectId)');
     expect(app).toContain('handleOpenLibraryProject');
+    const handler = app.match(/function handleOpenLibraryProject[\s\S]{0,1800}?\n  \}/)?.[0] ?? '';
+    expect(handler).toContain('resolveProjectResumeStage(');
+    expect(handler).toContain('loadProject()');
+    expect(handler).toContain('loadDiveState()');
+    expect(handler).toContain('shouldResumePlayRecoveryWorkDraft(');
+    expect(handler).toContain('hasDurableRecoveryDraftReceipt(');
+    expect(handler).toContain('deactivatePlayRecoveryWorkDraft(');
+    expect(handler).toContain('setSelectedGenerationId(null)');
+    expect(handler).toContain("setStudioView('editor')");
+    expect(handler).toContain('setStage(resumeStage)');
   });
 
   it('생성 결과 검토도 결과의 projectId 활성화에 성공한 뒤에만 dive로 들어간다', () => {
@@ -253,5 +264,276 @@ describe('P0-c 작품 라이브러리 배선', () => {
   it('초안 부트와 PLAY-first 모두 새 작품을 temporary lifecycle로 저장한다', () => {
     expect(app).toContain('saveTemporaryProject(project)');
     expect(app).toContain('initialProjectLifecycle="temporary"');
+  });
+});
+
+describe('P0-b PLAY 기록 복구 배선', () => {
+  it('잡 요청과 별도로 전체 PLAY recovery snapshot을 생성 영수증에 보존한다', () => {
+    expect(diveDeskSource).toContain('buildPlayRecoverySnapshot(session, project)');
+    expect(app).toMatch(/handleStartGeneration[\s\S]{0,500}?recovery/);
+    expect(app).toMatch(/appendGenerationInboxItem[\s\S]{0,300}?recovery/);
+  });
+
+  it('TXT 다운로드는 복구 포맷터와 안전 파일명을 사용한다', () => {
+    expect(app).toContain('formatPlayRecoveryText(recovery)');
+    expect(app).toContain('buildPlayRecoveryFilename(recovery)');
+  });
+
+  it('수동 복구 작업본 열기는 대상 작품만 활성화하고 본편 Chapter를 만들지 않는다', () => {
+    const handler = app.match(/function handleOpenRecoveryWorkDraft[\s\S]{0,3000}?\n  \}/)?.[0] ?? '';
+    expect(handler).toContain('activateProject(recovery.projectId)');
+    expect(handler).toContain('createPlayRecoveryWorkDraft(');
+    expect(handler).toContain('savePlayRecoveryWorkDraft(');
+    expect(handler).toContain('persistRecoveryDraftReceipt(');
+    expect(app).toContain('buildLocalRecoveryReceipt(');
+    expect(app).toContain('appendGenerationInboxItem(');
+    expect(app).toContain('recoveryDraftOpenedAt');
+    expect(handler).toContain("setStage('editor')");
+    expect(handler).not.toContain('saveProject(');
+    expect(handler).not.toContain('chapterFromDraftPayload(');
+    expect(handler).not.toContain('planPlayRecoveryCommit(');
+  });
+
+  it('local 영수증을 다시 열 때 계산한 새 id보다 영수증의 recoveryDraftId를 우선해 기존 본문을 재개한다', () => {
+    const handler = app.match(/function handleOpenRecoveryWorkDraft[\s\S]{0,3500}?\n  \}/)?.[0] ?? '';
+    expect(handler).toContain('previousReceipt?.recoveryDraftId');
+    expect(handler.indexOf('const previousReceipt')).toBeLessThan(handler.indexOf('const previousDraft'));
+  });
+
+  it('명시적 회차 저장에서만 pending-sync를 검사하고 본편·영수증을 완료 처리한다', () => {
+    const handler = app.match(/function handleCommitRecoveryWorkDraft[\s\S]{0,7500}?\n  \}/)?.[0] ?? '';
+    const order = [
+      'savePlayRecoveryWorkDraft(',
+      'activateProject(receiptLinkedDraft.projectId)',
+      'inspectPlayRecoveryCommitIntent(',
+      'planPlayRecoveryCommit(',
+      'preparePlayRecoveryCommitIntent(',
+      'saveProject(',
+      'saveDiveState(',
+      'const recoveredAt = new Date()',
+      'commitGenerationInboxMutation(',
+      'removePlayRecoveryWorkDraft(',
+      'refreshActiveProjectState()',
+      "setStage('editor')"
+    ];
+    let cursor = 0;
+    const indexes = order.map((token) => {
+      const index = handler.indexOf(token, cursor);
+      if (index >= 0) cursor = index + token.length;
+      return index;
+    });
+    expect(indexes.every((index) => index >= 0)).toBe(true);
+    expect(indexes).toEqual([...indexes].sort((left, right) => left - right));
+    expect(handler).toContain('localPersistenceFailed');
+  });
+
+  it('회차 저장 시 저장소의 최신 draft를 다시 읽은 뒤 commit intent를 판정한다', () => {
+    const handler = app.match(/function handleCommitRecoveryWorkDraft[\s\S]{0,7500}?\n  \}/)?.[0] ?? '';
+    expect(handler).toContain('const persistedDraft = listPlayRecoveryWorkDrafts(');
+    expect(handler.indexOf('savePlayRecoveryWorkDraft(')).toBeLessThan(handler.indexOf('const persistedDraft'));
+    expect(handler.indexOf('const persistedDraft')).toBeLessThan(handler.indexOf('inspectPlayRecoveryCommitIntent('));
+  });
+
+  it('다른 탭이 이미 영수증·draft 정리를 완료했으면 stale 화면에서 새 draft를 만들지 않는다', () => {
+    const handler = app.match(/function handleCommitRecoveryWorkDraft[\s\S]{0,7500}?\n  \}/)?.[0] ?? '';
+    expect(handler).toContain('const durableCompletedReceipt = loadGenerationInbox()');
+    expect(handler.indexOf('const durableCompletedReceipt')).toBeLessThan(handler.indexOf('savePlayRecoveryWorkDraft('));
+    expect(handler).toContain('durableCompletedReceipt.recoveredChapterId');
+  });
+
+  it('local 영수증 영속에 실패한 작업본은 닫기·전역 이탈·beforeunload를 막고 재저장을 시도한다', () => {
+    expect(app).toContain('hasDurableRecoveryDraftReceipt(');
+    expect(app).toContain('recoveryExitGuardActive');
+    expect(app).toMatch(/function canLeaveRecoveryWorkDraft[\s\S]{0,1000}?recoveryExitGuardActive/);
+    expect(app).toMatch(/beforeunload[\s\S]{0,500}?recoveryExitGuardActive|recoveryExitGuardActive[\s\S]{0,500}?beforeunload/);
+    const changeHandler = app.match(/function handleRecoveryWorkDraftChange[\s\S]{0,1800}?\n  \}/)?.[0] ?? '';
+    expect(changeHandler).toContain('persistRecoveryDraftReceipt(');
+  });
+
+  it('이전 오염 회차는 엄격한 도메인 판정과 PLAY working copy 동시 수리 뒤에만 작업본으로 환원한다', () => {
+    expect(app).toContain('repairLegacyPlayRecoveryChapter(');
+    expect(app).toContain('loadDiveStateForProject(item.projectId)');
+    expect(app).toContain('saveDiveStateForProject(');
+    expect(app).toContain('recoveryDraftId: draft.id');
+    expect(app).toContain('recoveredAt: undefined');
+    expect(app).toContain('recoveredChapterId: undefined');
+  });
+
+  it('legacy 환원 journal을 남긴 뒤 최신 본편·PLAY를 다시 읽고 엄격 판정을 재실행한다', () => {
+    const migration = app.match(/function migrateLegacyRecoveryDrafts[\s\S]{0,8000}?\n  \}/)?.[0] ?? '';
+    const journalIndex = migration.indexOf('savePlayRecoveryWorkDraft(draft, isActiveProject)');
+    const latestLibraryIndex = migration.indexOf('const latestLibraryEntry = loadProjectLibrary()');
+    const latestWorkingIndex = migration.indexOf('const latestWorkingState = loadDiveStateForProject');
+    const saveProjectIndex = migration.indexOf('saveProject(latestCommittedRepair.updatedProject');
+    expect(journalIndex).toBeGreaterThanOrEqual(0);
+    expect(latestLibraryIndex).toBeGreaterThan(journalIndex);
+    expect(latestWorkingIndex).toBeGreaterThan(latestLibraryIndex);
+    expect(saveProjectIndex).toBeGreaterThan(latestWorkingIndex);
+    expect(migration).toContain('if (latestCommittedContainsLegacy && !latestCommittedRepair) continue;');
+    expect(migration).toContain('if (latestWorkingContainsLegacy && !latestWorkingRepair) continue;');
+  });
+
+  it('StoryXDesk에 프로젝트 밖 복구 작업본과 저장·닫기 콜백을 전달한다', () => {
+    expect(app).toContain('recoveryWorkDraft={activeRecoveryWorkDraft}');
+    expect(app).toContain('onRecoveryWorkDraftChange={handleRecoveryWorkDraftChange}');
+    expect(app).toContain('onCommitRecoveryWorkDraft={handleCommitRecoveryWorkDraft}');
+    expect(app).toContain('onCloseRecoveryWorkDraft={handleCloseRecoveryWorkDraft}');
+  });
+
+  it('생성 영수증 저장 실패를 잡 시작 실패로 전파하지 않고 메모리 상태를 유지한다', () => {
+    expect(app).toContain('persistGenerationInboxState(next)');
+    expect(app).toContain('generationInboxRef.current = visible');
+  });
+
+  it('성공 응결 승인은 최신 본편 충돌을 먼저 판정하고 PLAY·본편 저장 뒤 영수증을 정리해 WRITE로 보낸다', () => {
+    const handler = app.match(/function handleApproveGeneration[\s\S]{0,5000}?\n  \}/)?.[0] ?? '';
+    expect(handler).toContain('planApprovedCondenseCommit(');
+    expect(handler).toContain('setPendingCondenseApproval(');
+
+    const commit = app.match(/function commitApprovedCondense[\s\S]{0,6000}?\n  \}/)?.[0] ?? '';
+    const order = [
+      'persistApprovedCondenseCheckpoint(',
+      'saveDiveState(',
+      'saveProject(',
+      'verifyApprovedCondensePersistence(',
+      'deactivateEmptyRecoveryAfterApproval(',
+      'resolveApprovedGenerationReceipt(',
+      "setStudioView('editor')",
+      "setStage('editor')"
+    ];
+    const indexes = order.map((token) => commit.indexOf(token));
+    expect(indexes.every((index) => index >= 0)).toBe(true);
+    expect(indexes).toEqual([...indexes].sort((left, right) => left - right));
+  });
+
+  it('부분 성공 재시도는 영수증의 resolved checkpoint를 사용해 충돌 결정을 다시 묻지 않는다', () => {
+    const handler = app.match(/function handleApproveGeneration[\s\S]{0,6500}?\n  \}/)?.[0] ?? '';
+    expect(handler).toContain('approvedCondenseCheckpoint');
+    expect(handler).toContain('planResolvedApprovedCondenseCommit(');
+    expect(handler).toContain('commitApprovedCondense(');
+  });
+
+  it('승인 read-back은 exact 회차뿐 아니라 checkpoint retcon을 PLAY와 WRITE 양쪽에서 확인한다', () => {
+    const verify = app.match(/function verifyApprovedCondensePersistence[\s\S]{0,4200}?\n  \}/)?.[0] ?? '';
+    expect(verify).toContain('checkpoint.retcons.every(');
+    expect(verify).toContain('persistedCommitted.canonFacts');
+    expect(verify).toContain('persistedWorking.canonFacts');
+  });
+
+  it('승인 저장 직전에는 계획을 만든 exact 본편 snapshot이 여전히 최신인지 다시 확인한다', () => {
+    const commit = app.match(/function commitApprovedCondense[\s\S]{0,9000}?\n  \}/)?.[0] ?? '';
+    expect(commit).toContain('baseProject: SeriesProject');
+    expect(commit).toContain('sameProjectSnapshot(context.committed, baseProject)');
+    const checkpointIndex = commit.indexOf('persistApprovedCondenseCheckpoint(');
+    const recheckIndex = commit.indexOf('sameProjectSnapshot(loadProject(), baseProject)');
+    const saveProjectIndex = commit.indexOf('saveProject(committedProject)');
+    expect(checkpointIndex).toBeGreaterThanOrEqual(0);
+    expect(recheckIndex).toBeGreaterThan(checkpointIndex);
+    expect(saveProjectIndex).toBeGreaterThan(recheckIndex);
+  });
+
+  it('승인 부분 저장 실패는 durable PLAY를 다시 읽도록 DiveStage를 remount해 같은 화면 재시도를 연다', () => {
+    const commit = app.match(/function commitApprovedCondense[\s\S]{0,9000}?return 'committed';\n  \}/)?.[0] ?? '';
+    const catchBlock = commit.match(/catch \(error\) \{[\s\S]{0,900}?return 'failed';\n    \}/)?.[0] ?? '';
+    expect(catchBlock).toContain('approvedCondenseCheckpoint');
+    expect(catchBlock).toContain('setDiveStateVersion((version) => version + 1)');
+
+    const diveBranch = app.slice(app.indexOf("if (stage === 'dive')"), app.indexOf("if (stage === 'dive')") + 6_000);
+    expect(diveBranch.match(/<DiveStage key=\{/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(diveBranch).toContain('diveStateVersion');
+    expect(diveBranch).not.toMatch(/<DiveStage key=\{`[^`]*syncVersion/);
+  });
+
+  it('승인·checkpoint 재개는 durable receipt와 exact PLAY 전체 state snapshot을 함께 검증한다', () => {
+    const validationStart = app.indexOf('function validateCondenseApprovalContext');
+    const validation = validationStart >= 0 ? app.slice(validationStart, validationStart + 4_200) : '';
+    expect(validation).toContain('const receipt = durableReceipt ?? memoryReceipt');
+    expect(validation).toContain('const workingState = loadDiveState()');
+    expect(validation).toContain('sameProjectSnapshot(workingState.project, approval.workingBeforeApproval)');
+    expect(validation).toContain('sameDiveSessionSnapshot(workingState.session, approval.sessionBeforeApproval)');
+
+    const commitStart = app.indexOf('function commitApprovedCondense');
+    const commit = commitStart >= 0 ? app.slice(commitStart, commitStart + 7_000) : '';
+    expect(commit).toContain('const latestWorkingState = loadDiveState()');
+    expect(commit).toContain('sameProjectSnapshot(latestWorkingState.project, approval.workingBeforeApproval)');
+    expect(commit).toContain('sameDiveSessionSnapshot(latestWorkingState.session, approval.sessionBeforeApproval)');
+    expect(commit).toContain('session: applyCondenseCheckpoint(');
+    expect(commit).toContain('latestWorkingState.session');
+    expect(commit).toContain('checkpoint.condensedThroughTurn');
+    expect(
+      app.match(/workingBeforeApproval:\s*(?:approval|pendingCondenseApproval)\.workingBeforeApproval/g)?.length ?? 0
+    ).toBeGreaterThanOrEqual(2);
+  });
+
+  it('느린 404 poll도 mutation 시점의 terminal 영수증을 expired로 역행시키지 않는다', () => {
+    const poll = app.match(/const poll = async \(\) => \{[\s\S]{0,4200}?polling = false;/)?.[0] ?? '';
+    expect(poll).toContain('expireGenerationJob(candidate, warning, updatedAt)');
+    expect(poll).not.toContain("status: 'expired' as const");
+  });
+
+  it('승인 checkpoint·receipt와 비동기 poll은 mutation 직전 durable inbox에 대상 변경만 합친다', () => {
+    const mutationBaseIndex = app.indexOf('function loadGenerationInboxMutationBase');
+    const mutationBase = mutationBaseIndex >= 0
+      ? app.slice(mutationBaseIndex, mutationBaseIndex + 2_400)
+      : '';
+    expect(mutationBase).toContain('loadGenerationInbox()');
+    expect(mutationBase).toContain('localPersistenceFailed');
+
+    const checkpoint = app.match(/function persistApprovedCondenseCheckpoint[\s\S]{0,2800}?\n  \}/)?.[0] ?? '';
+    expect(checkpoint).toContain('loadGenerationInboxMutationBase(');
+    const resolver = app.match(/function resolveApprovedGenerationReceipt[\s\S]{0,3600}?\n  \}/)?.[0] ?? '';
+    expect(resolver).toContain('loadGenerationInboxMutationBase(');
+
+    const poll = app.match(/const poll = async \(\) => \{[\s\S]{0,4200}?polling = false;/)?.[0] ?? '';
+    expect(poll).toContain('const updates = new Map');
+    expect(poll).toContain('loadGenerationInboxMutationBase(');
+    expect(poll).not.toContain('let next = generationInboxRef.current');
+  });
+
+  it('생성 시작·취소·복구·폐기·마이그레이션도 stale ref 전체를 저장하지 않는다', () => {
+    expect(app).toContain('function commitGenerationInboxMutation');
+    expect(app).not.toMatch(
+      /commitGenerationInbox\(appendGenerationInboxItem\(\s*generationInboxRef\.current/
+    );
+    expect(app).not.toContain('commitGenerationInbox(generationInboxRef.current.map');
+    expect(app).not.toContain('commitGenerationInbox(generationInboxRef.current.filter');
+    expect(app).not.toContain('let nextInbox = generationInboxRef.current');
+
+    for (const functionName of [
+      'persistRecoveryDraftReceipt',
+      'handleStartGeneration',
+      'handleCancelGeneration',
+      'discardGeneration',
+      'handleCommitRecoveryWorkDraft',
+      'migrateLegacyRecoveryDrafts'
+    ]) {
+      const start = app.indexOf(`function ${functionName}`);
+      expect(start, `${functionName} source`).toBeGreaterThanOrEqual(0);
+      expect(app.slice(start, start + 12_000), functionName)
+        .toContain('commitGenerationInboxMutation(');
+    }
+  });
+
+  it('승인 뒤에는 내용 없는 복구 작업본만 durable 보관함 연결을 확인하고 삭제 없이 비활성화한다', () => {
+    const helper = app.match(/function deactivateEmptyRecoveryAfterApproval[\s\S]{0,2200}?\n  \}/)?.[0] ?? '';
+    expect(helper).toContain('shouldResumePlayRecoveryWorkDraft(');
+    expect(helper).toContain('hasDurableRecoveryDraftReceipt(');
+    expect(helper).toContain('deactivatePlayRecoveryWorkDraft(');
+    expect(helper).not.toContain('removePlayRecoveryWorkDraft(');
+  });
+
+  it('충돌 승인 확인 시 active 작품·durable 영수증·최신 충돌 집합을 다시 검증한다', () => {
+    const contextStart = app.indexOf('function validateCondenseApprovalContext');
+    const contextEnd = app.indexOf('function buildApprovedCondenseCheckpoint', contextStart);
+    const contextGuard = app.slice(contextStart, contextEnd);
+    expect(contextGuard).toContain('getActiveProjectId()');
+    expect(contextGuard).toContain('loadGenerationInbox()');
+    expect(contextGuard).toContain("receipt.status !== 'succeeded'");
+
+    const confirm = app.match(/function confirmReconcile[\s\S]{0,4200}?\n  \}/)?.[0] ?? '';
+    expect(confirm).toContain('validateCondenseApprovalContext(');
+    expect(confirm).toContain('planApprovedCondenseCommit(');
+    expect(confirm).toContain('sameReconcileConflicts(');
+    expect(confirm).toContain('applyApprovedCondenseDecisions(');
   });
 });

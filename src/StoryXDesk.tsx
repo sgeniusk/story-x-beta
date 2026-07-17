@@ -12,6 +12,7 @@ import { MemoryBankStudio } from './components/MemoryBankStudio';
 import { FloatingEditor } from './components/FloatingEditor';
 import { FloatingDataWorkspace } from './components/FloatingDataWorkspace';
 import { FloatingPublishWorkspace } from './components/FloatingPublishWorkspace';
+import { RecoveryDraftWorkspace, type RecoveryDraftSaveStatus } from './components/RecoveryDraftWorkspace';
 import { CommandPalette, type DeskCommand } from './components/CommandPalette';
 import { useMarginReview } from './hooks/useMarginReview';
 import { findPersona } from './lib/extendedPersonas';
@@ -81,6 +82,7 @@ import { applyPlanPatches, patchKey, upsertPlanPatch, type PlanPatch } from './l
 import { buildPlanChatCatalog, buildPlanChatTranscript, type PlanChatMessage } from './lib/planChat';
 import { requestPlanChat } from './lib/planChatClient';
 import { PlanChatPanel } from './components/PlanChatPanel';
+import type { PlayRecoveryWorkDraft } from './lib/playRecovery';
 
 type DeskTrack = 'draft' | 'bible';
 type ApprovalDecision = MemoryApprovalDecision;
@@ -357,6 +359,13 @@ interface StoryXDeskProps {
   title?: string;
   /** 공통 셸 — PLAN 충돌 dot 용. StoryXDesk 가 실제 count 를 App(셸)에 보고. */
   onBibleAlertChange?: (count: number) => void;
+  /** P0-b — 본편 Chapter와 분리된 PLAY 복구 작업본. 존재하면 일반 회차 편집기를 열지 않는다. */
+  recoveryWorkDraft?: PlayRecoveryWorkDraft | null;
+  onRecoveryWorkDraftChange?: (draft: PlayRecoveryWorkDraft) => void;
+  onCommitRecoveryWorkDraft?: (draft: PlayRecoveryWorkDraft) => void | Promise<void>;
+  onCloseRecoveryWorkDraft?: () => void;
+  recoveryDraftSaveStatus?: RecoveryDraftSaveStatus;
+  recoveryDraftSaveError?: string | null;
 }
 
 // B2 — 활동일 기록 헬퍼. todayStr 는 작가 로컬 '오늘'(UI 레이어라 Date 허용),
@@ -388,7 +397,13 @@ export function StoryXDesk({
   onPlanPatchesChange,
   studioView,
   title,
-  onBibleAlertChange
+  onBibleAlertChange,
+  recoveryWorkDraft = null,
+  onRecoveryWorkDraftChange,
+  onCommitRecoveryWorkDraft,
+  onCloseRecoveryWorkDraft,
+  recoveryDraftSaveStatus = 'saved',
+  recoveryDraftSaveError = null
 }: StoryXDeskProps) {
   // 기본 회차 의도는 빈 값 — 의도 메모를 비워두면 produceEpisode 가 캐논 digest 만으로 다음 회차를 만든다.
   // 데모 장르 문구를 박으면 사용자가 안 건드릴 때 다음 회차 intent(freewrite)로 새어 오염된다 (P3, #2 로판 2화 "용사와 외계인" 사고).
@@ -426,8 +441,12 @@ export function StoryXDesk({
   const [agentRuns, setAgentRuns] = useState<AgentRun[]>(defaultRuns);
   const [leakBlock, setLeakBlock] = useState<LeakReport | null>(null);
   const [latestChapter, setLatestChapter] = useState<Chapter | null>(
-    project.chapters.length > 0 ? project.chapters[project.chapters.length - 1] : null
+    recoveryWorkDraft ? null : project.chapters.length > 0 ? project.chapters[project.chapters.length - 1] : null
   );
+  const latestChapterRef = useRef<Chapter | null>(latestChapter);
+  latestChapterRef.current = latestChapter;
+  const recoveryWorkDraftRef = useRef<PlayRecoveryWorkDraft | null>(recoveryWorkDraft);
+  recoveryWorkDraftRef.current = recoveryWorkDraft;
   const [activeTrack, setActiveTrack] = useState<DeskTrack>(initialStudioView === 'data' ? 'bible' : 'draft');
   const [isWorkbenchFading, setIsWorkbenchFading] = useState(false);
   // 데이터 모드 — 가운데 캔버스가 보여줄 것. 기본은 인물 관계도. 바이블 작업장 진입점도 여기로 표현한다.
@@ -1317,7 +1336,7 @@ export function StoryXDesk({
   // 본문 자동 저장(베타테스트 #1) — 타이핑이 멈추면 현재 회차 prose 로 commit → 위 saveProject effect 가 영속한다.
   // commitChapterProse 는 prose 가 동일하면 no-op(참조 동일)이라 불필요한 저장을 막는다.
   useEffect(() => {
-    if (!latestChapter) return;
+    if (recoveryWorkDraft || !latestChapter) return;
     const chapterId = latestChapter.id;
     const timer = setTimeout(() => {
       setProject((prev) => {
@@ -1327,11 +1346,12 @@ export function StoryXDesk({
       });
     }, 800);
     return () => clearTimeout(timer);
-  }, [editorText, latestChapter]);
+  }, [editorText, latestChapter, recoveryWorkDraft]);
 
   useEffect(() => {
     function handleGlobalShortcut(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        if (recoveryWorkDraft) return;
         event.preventDefault();
         // F-006 — draft(floating) 모드도 같은 명령 팔레트를 연다(이전 spotlight 분기는 미렌더 죽은 코드였다).
         setCommandQuery('');
@@ -1347,11 +1367,26 @@ export function StoryXDesk({
     window.addEventListener('keydown', handleGlobalShortcut);
 
     return () => window.removeEventListener('keydown', handleGlobalShortcut);
-  }, [isDraftMode]);
+  }, [isDraftMode, recoveryWorkDraft]);
 
   // 회차 전환·새 초안 로드 시 — 이전 회차에 미커밋 편집을 먼저 flush 한 뒤 새 회차 본문을 시드한다(베타테스트 #1).
   const loadedChapterIdRef = useRef<string | null>(latestChapter?.id ?? null);
   useEffect(() => {
+    return function flushLatestChapterOnUnmount() {
+      if (recoveryWorkDraftRef.current) return;
+      const chapterId = latestChapterRef.current?.id;
+      if (!chapterId) return;
+      const persisted = loadProject();
+      if (!persisted.chapters.some((chapter) => chapter.id === chapterId)) return;
+      const committed = commitChapterProse(persisted, chapterId, editorTextRef.current);
+      if (committed !== persisted) saveProject(withWritingDay(committed, todayStr()));
+    };
+  }, []);
+  useEffect(() => {
+    if (recoveryWorkDraft) {
+      loadedChapterIdRef.current = null;
+      return;
+    }
     const prevId = loadedChapterIdRef.current;
     const nextId = latestChapter?.id ?? null;
     if (prevId && prevId !== nextId) {
@@ -1367,7 +1402,7 @@ export function StoryXDesk({
     setEditedSinceReview(false);
     setActiveBeatId(null);
     setBodyVersion((v) => v + 1); // 외부 변경(회차 로드·새 초안 생성) — floating 본문 재시드
-  }, [latestChapter]);
+  }, [latestChapter, recoveryWorkDraft]);
 
   // 새 프로젝트 플로우에서 만든 첫 초안으로 에디터를 시작하고, 작가진 검토를 자동 시작한다.
   // 빈 프로젝트(createEmptyProject)에서 시작하므로 샘플 작품의 인물·장소·열린 질문이 새지 않는다.
@@ -2250,6 +2285,27 @@ export function StoryXDesk({
         onOpenBible={openPublishingBible}
         onReviewDraft={reviewDraft}
         onConfirmChapterLock={confirmChapterLock}
+      />
+    );
+  }
+
+  if (isDraftMode && recoveryWorkDraft) {
+    const updateRecoveryWorkDraft = (patch: Partial<Pick<PlayRecoveryWorkDraft, 'title' | 'body'>>) => {
+      onRecoveryWorkDraftChange?.({
+        ...recoveryWorkDraft,
+        ...patch,
+        updatedAt: new Date().toISOString()
+      });
+    };
+    return (
+      <RecoveryDraftWorkspace
+        draft={recoveryWorkDraft}
+        onTitleChange={(nextTitle) => updateRecoveryWorkDraft({ title: nextTitle })}
+        onBodyChange={(nextBody) => updateRecoveryWorkDraft({ body: nextBody })}
+        onCommit={() => onCommitRecoveryWorkDraft?.(recoveryWorkDraft)}
+        onBack={() => onCloseRecoveryWorkDraft?.()}
+        saveStatus={recoveryDraftSaveStatus}
+        saveError={recoveryDraftSaveError}
       />
     );
   }

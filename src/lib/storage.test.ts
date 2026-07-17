@@ -15,11 +15,13 @@ import {
   activateProject,
   confirmLibraryProject,
   loadDiveState,
+  loadDiveStateForProject,
   loadProject,
   loadProjectLibrary,
   loadProjectSnapshots,
   pushProjectSnapshot,
   saveDiveState,
+  saveDiveStateForProject,
   saveTemporaryProject,
   type OnboardingDraft,
   type ProjectSnapshot,
@@ -29,6 +31,8 @@ import type { PlanPatch } from './planStage';
 import { createSeedProject, createEmptyProject, buildStoryEditorWorkspace } from './storyEngine';
 import { createDiveSession } from './diveSession';
 import { importanceBand } from './canonImportance';
+import { createPlayRecoveryWorkDraft } from './playRecovery';
+import { getActivePlayRecoveryWorkDraft, savePlayRecoveryWorkDraft } from './playRecoveryStore';
 
 describe('P0-c 작품 라이브러리 storage bridge', () => {
   const makeProject = (id: string, title: string) => ({ ...createEmptyProject({ title }), id });
@@ -82,6 +86,34 @@ describe('P0-c 작품 라이브러리 storage bridge', () => {
     expect(loadDiveState()?.project.tone).toBe('B working');
   });
 
+  it('repairs an inactive project PLAY copy without switching the active work', () => {
+    const a = makeProject('a', 'A');
+    const b = makeProject('b', 'B');
+    const stateA: DiveState = {
+      schema: 'storyx/dive/v1',
+      session: createDiveSession('char-a', 'a'),
+      project: { ...a, tone: 'A working' }
+    };
+    const stateB: DiveState = {
+      schema: 'storyx/dive/v1',
+      session: createDiveSession('char-b', 'b'),
+      project: { ...b, tone: 'B working' }
+    };
+    saveTemporaryProject(a);
+    saveDiveState(stateA);
+    saveTemporaryProject(b);
+    saveDiveState(stateB);
+
+    expect(loadDiveStateForProject('a')?.project.tone).toBe('A working');
+    saveDiveStateForProject({ ...stateA, project: { ...stateA.project, tone: 'A repaired' } });
+
+    expect(loadProject().id).toBe('b');
+    expect(loadDiveState()?.project.tone).toBe('B working');
+    expect(loadDiveStateForProject('a')?.project.tone).toBe('A repaired');
+    expect(activateProject('a')).toBe(true);
+    expect(loadDiveState()?.project.tone).toBe('A repaired');
+  });
+
   it('isolates PLAN patches and snapshots while switching works', () => {
     const a = makeProject('a', 'A');
     const b = makeProject('b', 'B');
@@ -110,12 +142,19 @@ describe('P0-c 작품 라이브러리 storage bridge', () => {
   });
 
   it('keeps legacy reset semantics without resurrecting the cleared active work', () => {
-    saveTemporaryProject(makeProject('a', 'A'));
-    saveTemporaryProject(makeProject('b', 'B'));
+    const a = makeProject('a', 'A');
+    const b = makeProject('b', 'B');
+    saveTemporaryProject(a);
+    saveTemporaryProject(b);
+    savePlayRecoveryWorkDraft(createPlayRecoveryWorkDraft({
+      schema: 'storyx/play-recovery/v1', projectId: 'b', projectTitle: 'B', episode: 1,
+      scene: '', transcript: '나: 보존할 기록', capturedAt: '2026-07-16T00:00:00.000Z'
+    }));
     clearProject();
 
     expect(loadProjectLibrary().map((entry) => entry.projectId)).toEqual(['a']);
     expect(loadProject().id).toBe('a');
+    expect(getActivePlayRecoveryWorkDraft('b')).toBeNull();
   });
 });
 
