@@ -366,4 +366,203 @@ describe('DiveDesk', () => {
     act(() => root.unmount());
     host.remove();
   });
+
+  it('성공 응결 승인은 완성된 PLAY 후보를 App 소유 커밋 게이트에 넘긴 뒤에만 검토창을 닫는다', () => {
+    const project = createEmptyProject({ title: '승인 합류' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const onChange = vi.fn();
+    const onResolveGeneration = vi.fn();
+    const onApproveGeneration = vi.fn().mockReturnValue('committed');
+    const selectedGeneration = {
+      id: 'job-approved', kind: 'dive-condense' as const, projectId: project.id,
+      projectTitle: project.title, baseRevision: 'r1', episode: 1, status: 'succeeded' as const,
+      createdAt: '2026-07-17T00:00:00Z', updatedAt: '2026-07-17T00:01:00Z',
+      result: {
+        status: 'complete' as const,
+        title: '옥상의 약속', hook: '익명 문자', outline: ['옥상으로 간다'], beats: ['문이 잠긴다'],
+        prose: '문이 잠긴 뒤에야 서진은 휴대전화를 내밀었다.',
+        newCanonFacts: [{ owner: 'plot' as const, statement: '서진은 익명 문자를 받았다.' }]
+      }
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange, onBack: () => {}, selectedGeneration,
+      onResolveGeneration, onApproveGeneration
+    })));
+    const approve = Array.from(host.querySelectorAll('button'))
+      .find((button) => button.textContent === '승인 — 캐논으로 고정');
+    act(() => approve?.click());
+
+    expect(onApproveGeneration).toHaveBeenCalledTimes(1);
+    const [approval] = onApproveGeneration.mock.calls[0];
+    expect(approval.generationId).toBe('job-approved');
+    expect(approval.project.chapters).toHaveLength(1);
+    expect(approval.chapter).toMatchObject({ id: 'episode-1', episode: 1, title: '옥상의 약속' });
+    expect(approval.chapter.newCanonFacts.some((fact: { statement: string }) => fact.statement === '서진은 익명 문자를 받았다.')).toBe(true);
+    expect(approval.session.chatBuffer).toEqual([]);
+    expect(approval.sessionBeforeApproval).toBe(session);
+    expect(approval.workingBeforeApproval).toBe(project);
+    expect(approval.retcons).toEqual([]);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(onResolveGeneration).not.toHaveBeenCalled();
+    expect(host.textContent).not.toContain('응결된 회차 — 옥상의 약속');
+
+    act(() => root.unmount());
+    host.remove();
+  });
+
+  it('승인 후보가 최신 본편과 충돌하면 응결 결과와 영수증을 그대로 유지한다', () => {
+    const project = createEmptyProject({ title: '충돌 보존' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const onChange = vi.fn();
+    const onResolveGeneration = vi.fn();
+    const onApproveGeneration = vi.fn().mockReturnValue('pending-conflict');
+    const selectedGeneration = {
+      id: 'job-conflict', kind: 'dive-condense' as const, projectId: project.id,
+      projectTitle: project.title, baseRevision: 'r1', episode: 1, status: 'succeeded' as const,
+      createdAt: '2026-07-17T00:00:00Z', updatedAt: '2026-07-17T00:01:00Z',
+      result: {
+        status: 'complete' as const,
+        title: '충돌 회차', hook: '', outline: [], beats: [], prose: '서준은 이미 죽었어.',
+        newCanonFacts: []
+      }
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange, onBack: () => {}, selectedGeneration,
+      onResolveGeneration, onApproveGeneration
+    })));
+    act(() => Array.from(host.querySelectorAll('button'))
+      .find((button) => button.textContent === '승인 — 캐논으로 고정')?.click());
+
+    expect(onApproveGeneration).toHaveBeenCalledTimes(1);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(onResolveGeneration).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('응결된 회차 — 충돌 회차');
+
+    act(() => root.unmount());
+    host.remove();
+  });
+
+  it('부분 성공 뒤 재시작한 승인은 이미 저장된 다음 회차가 아니라 영수증 checkpoint의 정확한 회차를 재개한다', () => {
+    const base = createEmptyProject({ title: '부분 성공 재개' });
+    const checkpointChapter = {
+      id: 'episode-1', episode: 1, title: '옥상의 약속', hook: '익명 문자',
+      outline: ['옥상으로 간다'], beats: [],
+      prose: '문이 잠긴 뒤에야 서진은 휴대전화를 내밀었다.',
+      memoryAnchors: [], newCanonFacts: []
+    };
+    const project = { ...base, currentEpisode: 1, chapters: [checkpointChapter] };
+    const session = {
+      ...createDiveSession('seed-childhood', project.id),
+      chatBuffer: Array.from({ length: 8 }, (_, index) => ({
+        id: `m${index + 1}`,
+        role: index % 2 === 0 ? 'user' as const : 'character' as const,
+        text: `대화 ${index + 1}`,
+        turn: index + 1
+      }))
+    };
+    const onApproveGeneration = vi.fn().mockReturnValue('committed');
+    const selectedGeneration = {
+      id: 'job-checkpoint', kind: 'dive-condense' as const, projectId: project.id,
+      projectTitle: project.title, baseRevision: 'r1', episode: 1, status: 'succeeded' as const,
+      createdAt: '2026-07-17T00:00:00Z', updatedAt: '2026-07-17T00:01:00Z',
+      result: {
+        status: 'complete' as const,
+        title: checkpointChapter.title,
+        hook: checkpointChapter.hook,
+        outline: checkpointChapter.outline,
+        beats: [],
+        prose: checkpointChapter.prose,
+        newCanonFacts: []
+      },
+      approvedCondenseCheckpoint: {
+        chapter: checkpointChapter,
+        retcons: [],
+        condensedThroughTurn: 4,
+        baseProjectRevision: 'approval-rev-base',
+        committedProjectRevision: 'approval-rev-committed'
+      }
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, selectedGeneration,
+      onApproveGeneration
+    })));
+    act(() => Array.from(host.querySelectorAll('button'))
+      .find((button) => button.textContent === '승인 — 캐논으로 고정')?.click());
+
+    const [approval] = onApproveGeneration.mock.calls[0];
+    expect(approval.chapter).toEqual(checkpointChapter);
+    expect(approval.project).toBe(project);
+    expect(approval.retcons).toEqual([]);
+    expect(approval.session.chatBuffer.map((message: { turn: number }) => message.turn))
+      .toEqual([5, 6, 7, 8]);
+
+    act(() => root.unmount());
+    host.remove();
+  });
+
+  it('성공 결과를 보류한 뒤 PLAY를 이어도 생성 당시 응결 경계 이후 대화는 승인에서 보존한다', () => {
+    const project = createEmptyProject({ title: '보류 뒤 이어진 대화' });
+    const session = {
+      ...createDiveSession('seed-childhood', project.id),
+      chatBuffer: Array.from({ length: 8 }, (_, index) => ({
+        id: `m${index + 1}`,
+        role: index % 2 === 0 ? 'user' as const : 'character' as const,
+        text: `대화 ${index + 1}`,
+        turn: index + 1
+      }))
+    };
+    const onApproveGeneration = vi.fn().mockReturnValue('committed');
+    const selectedGeneration = {
+      id: 'job-delayed-approval', kind: 'dive-condense' as const, projectId: project.id,
+      projectTitle: project.title, baseRevision: 'r1', episode: 1, status: 'succeeded' as const,
+      createdAt: '2026-07-17T00:00:00Z', updatedAt: '2026-07-17T00:01:00Z',
+      recovery: {
+        schema: 'storyx/play-recovery/v1' as const,
+        projectId: project.id,
+        projectTitle: project.title,
+        episode: 1,
+        scene: '',
+        transcript: '생성 당시 1~6턴',
+        condensedThroughTurn: 4,
+        capturedAt: '2026-07-17T00:00:00Z'
+      },
+      result: {
+        status: 'complete' as const,
+        title: '생성 당시 응결본',
+        hook: '', outline: [], beats: [],
+        prose: '이 본문은 생성 당시 1턴부터 4턴까지만 재료로 썼다.',
+        newCanonFacts: []
+      }
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, selectedGeneration,
+      onApproveGeneration
+    })));
+    act(() => Array.from(host.querySelectorAll('button'))
+      .find((button) => button.textContent === '승인 — 캐논으로 고정')?.click());
+
+    const [approval] = onApproveGeneration.mock.calls[0];
+    expect(approval.session.chatBuffer.map((message: { turn: number }) => message.turn))
+      .toEqual([5, 6, 7, 8]);
+    expect(approval.session.lastCondensedTurn).toBe(4);
+
+    act(() => root.unmount());
+    host.remove();
+  });
 });

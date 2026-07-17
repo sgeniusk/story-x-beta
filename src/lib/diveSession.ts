@@ -88,6 +88,23 @@ export function applyCondenseResult(session: DiveSession): DiveSession {
   };
 }
 
+// write-ahead checkpoint 재개는 현재 버퍼를 다시 N-2 방식으로 자르지 않는다.
+// 최초 승인 때 실제로 응결한 turn 경계까지만 제거해, 부분 성공 뒤 이어진 PLAY 대화를 보존한다.
+export function applyCondenseCheckpoint(
+  session: DiveSession,
+  condensedThroughTurn: number
+): DiveSession {
+  const boundary = Number.isInteger(condensedThroughTurn) && condensedThroughTurn >= 0
+    ? condensedThroughTurn
+    : session.lastCondensedTurn;
+  return {
+    ...session,
+    chatBuffer: session.chatBuffer.filter((message) => message.turn > boundary),
+    lastCondensedTurn: Math.max(session.lastCondensedTurn, boundary),
+    pendingCondenseSuggested: false
+  };
+}
+
 function labelFor(role: DiveRole): string {
   return role === 'user' ? '나' : '상대';
 }

@@ -118,6 +118,13 @@ interface GenerationInboxItem {
   recoveryDraftId?: string;
   recoveredAt?: string;
   recoveredChapterId?: string;
+  approvedCondenseCheckpoint?: {
+    chapter: Chapter; // 충돌 선택까지 반영한 실제 저장 회차
+    retcons: Array<{ factId: string; previousStatement: string; statement: string }>;
+    condensedThroughTurn: number; // 최초 승인 때 실제로 응결한 PLAY turn 경계
+    baseProjectRevision: string; // 승인 결정을 만든 직전 본편의 전체 상태 지문
+    committedProjectRevision: string; // 승인 결과가 반영된 직후 본편의 전체 상태 지문
+  };
   localPersistenceFailed?: boolean; // 메모리 전용, localStorage에는 기록하지 않음
 }
 ```
@@ -170,10 +177,27 @@ interface GenerationInboxItem {
 
 이 수정은 성공 응결→검토→승인→WRITE 흐름과 실패 원문→수동 복구 흐름을 언어와 라우팅에서 분리한다. 빈 복구 작업본은 삭제하지 않고 보관함 재열기 연결을 확인한 뒤 active 표시만 해제한다. 회차가 있거나 PLAY가 없거나 작성/저장 중인 복구본이 있으면 WRITE로 안전하게 폴백한다.
 
+## 사용자 테스트 3차 결정 — 승인 결과의 WRITE 합류
+
+- 사용자 관찰: `승인 — 캐논으로 고정`을 눌렀는데 PLAY에는 1화가 보이고 WRITE에는 빈 원고가 보였다. 이전 실패에서 연 빈 복구 작업본도 WRITE를 먼저 가렸다.
+- 확인된 원인: 승인은 `DiveState.project`에만 회차를 넣고, 본편 `loadProject()`에는 `⟳ 최신화`를 한 번 더 눌러야 했다. 버튼 언어는 최종 승인인데 저장 계약은 숨은 2단계였다.
+- 질문 1 — 승인과 본편 반영을 계속 두 행동으로 둘 것인가?
+  - <AI>아니다. 성공 결과 검토 화면의 명시적 승인은 이미 사용자 캐논 게이트다. 승인 후보를 App이 받아 최신 본편과 기존 `deriveReconcilePlan`으로 다시 비교하고, 충돌이 없으면 PLAY working과 본편을 같은 합류 결과로 영속한 뒤 WRITE로 이동한다.</AI>
+- 질문 2 — 승인 후보가 최신 본편과 충돌하면 자동으로 덮어쓸 것인가?
+  - <AI>아니다. 후보는 아직 영속하지 않고 기존 `ReconcileReview`를 연다. 사용자가 retcon/keep을 확정할 때만 PLAY working·본편을 함께 저장한다. 취소하면 응결 검토 화면과 생성 영수증을 그대로 유지한다.</AI>
+- 질문 3 — 생성 영수증은 언제 제거하는가?
+  - <AI>충돌 선택까지 반영한 정확한 회차·retcon checkpoint를 영수증에 먼저 영속하고, PLAY working과 본편 영속이 성공한 뒤 마지막에 제거한다. 중간 실패에서는 원본 후보로 재계산하지 않고 checkpoint를 멱등 재개한다. 저장 실패나 충돌 검토 취소 전에는 승인 원문을 보관함에서 잃지 않는다.</AI>
+- 질문 4 — 이전 실패의 빈 복구 작업본은 어떻게 하는가?
+  - <AI>본문·제목·journal이 비어 있고 전역 보관함으로 재열 수 있을 때만 active 표시를 해제한다. 작업본 자체와 원문 영수증은 삭제하지 않는다. 작성 내용이나 부분 저장 상태는 계속 WRITE를 우선한다.</AI>
+- 질문 5 — 승인·폴링 사이 다른 탭의 변경은 어떻게 보호하는가?
+  - <AI>승인 요청에는 project뿐 아니라 승인 직전의 전체 PLAY session을 함께 담는다. checkpoint 영속 전과 실제 PLAY 저장 직전에 durable `DiveState`의 session·project가 모두 정확히 같은지 확인하고, 최신 session에 최초 응결 turn 경계만 적용한다. 느린 running 응답과 404는 mutation 시점 영수증이 여전히 running일 때만 반영해 성공 결과·checkpoint를 terminal 상태에서 역행시키지 않는다.</AI>
+
+이 결정은 `성공 결과 자동 반영`이 아니다. 결과 생성만으로는 아무것도 바꾸지 않으며, 사용자가 본문·캐논 후보를 본 뒤 누르는 명시적 승인 한 번을 안전한 최종 커밋으로 만든다.
+
 ## 비목표
 
 - 생성 자동 재시도, 다른 모델 폴백, 서버 영속 큐.
-- 성공 결과 자동 반영 또는 캐논 자동 승인.
+- 사용자 승인 전 성공 결과 자동 반영 또는 캐논 자동 승인.
 - 복구본 비교/자동 요약/자동 소설화, 별도 휴지통.
 - 클라우드 업로드·공유 링크·OAuth/API 과금 구조 변경.
 - 구버전 영수증의 원문을 현재 DiveState에서 추정 복원.
@@ -204,4 +228,15 @@ interface GenerationInboxItem {
 - 실패 구제 CTA와 작업실은 응결 결과가 아닌 수동 작성임을 명시하고, PLAY 현장 재시도는 사용자 클릭으로만 새 잡을 시작한다.
 - PLAY 현장은 배열 위치가 아니라 `createdAt` 기준 현재 회차의 최신 생성 시도만 반영해 재시도 실행·성공 뒤 옛 실패 카드를 되살리지 않고, 지난 회차 실패를 현재 응결로 오인하지 않는다.
 - 복구 가능 실패뿐 아니라 성공 영수증도 `localPersistenceFailed`이면 안전 문구 대신 새로고침 전 결과 검토·TXT 경고를 표시한다.
+- 성공 결과 승인은 후보를 먼저 최신 본편과 대조하고, 충돌이 없을 때 PLAY working·본편을 같은 회차로 영속한 뒤 WRITE에 표시한다.
+- 충돌 승인 후보는 기존 retcon/keep 검토를 통과하기 전 영속·영수증 제거를 하지 않으며, 검토 취소 뒤 응결 결과를 다시 볼 수 있다.
+- 실제 resolved 회차·retcon checkpoint를 본편보다 먼저 영속하고, PLAY/WRITE 저장·빈 작업본 비활성화·영수증 제거 어느 단계가 실패해도 exact checkpoint로 재개한다.
+- checkpoint 재개는 현재 본편이 저장된 직전/직후 상태 지문 중 하나와 정확히 맞을 때만 허용한다. 이후 WRITE·캐논 변경은 stale로 차단해 과거 승인이 새 편집을 우회하지 못하게 한다.
+- checkpoint 이후 이어진 PLAY 대화는 다시 N-2 방식으로 자르지 않는다. 최초 승인 때 저장한 turn 경계까지만 제거해 새 대화를 다음 응결 재료로 보존한다.
+- 최초 승인도 승인 시점에 응결 범위를 다시 계산하지 않는다. 생성 시작 recovery 영수증에 실제 payload의 마지막 turn을 기록하고, 결과를 보류한 사이 이어진 대화는 그대로 남긴다. 경계가 없는 구버전 영수증은 0으로 취급해 대화 삭제보다 중복 보존을 택한다.
+- poll·checkpoint·receipt 정리는 mutation 직전 durable inbox를 다시 읽어 대상 ID만 합치며, 실행 중 잡과 미완료 checkpoint는 일반 cap을 넘어도 유실하지 않는다.
+- 승인 직전과 저장 직전에는 전체 PLAY session·working project를 exact 비교한다. 같은 작품에서 다른 탭이 새 대화를 추가했으면 stale 승인을 중단하고, 최신 session을 오래된 snapshot으로 덮지 않는다.
+- running poll과 404 만료는 mutation 시점의 최신 영수증이 여전히 running일 때만 적용한다. 이미 succeeded/checkpoint가 된 영수증은 상태·결과·checkpoint를 그대로 보존한다.
+- read-back은 exact 회차와 새 캐논뿐 아니라 승인 retcon statement를 PLAY working·본편 양쪽에서 확인한 뒤에만 영수증을 제거한다.
+- 제목·본문·journal이 빈 복구 작업본은 성공 승인 뒤 삭제하지 않고 안전하게 비활성화해 일반 WRITE를 가리지 않는다.
 - 전체 `bash init.sh`와 브라우저 실사용 흐름이 녹색이며 콘솔 오류가 없다.

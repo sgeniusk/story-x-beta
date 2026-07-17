@@ -1,6 +1,6 @@
 // Dive X 얇은 표면 — 채팅·응결 제안·승인 다이얼로그·연대기. 엔진은 재사용.
 import { useMemo, useState } from 'react';
-import type { SeriesProject, ProductionRequest } from '../lib/storyEngine';
+import type { Chapter, SeriesProject, ProductionRequest } from '../lib/storyEngine';
 import { chapterFromDraftPayload, buildProjectContextDigest, applyRetcons, nextEpisodeNumber } from '../lib/storyEngine';
 import { inspectLeak } from '../lib/leakGate';
 import {
@@ -11,11 +11,12 @@ import {
   buildCondenseTranscript,
   buildRecentDialogue,
   applyCondenseResult,
+  applyCondenseCheckpoint,
   parseSceneSegments,
   buildVsCandidatesInput,
   buildPlayDirectionSeed
 } from '../lib/diveSession';
-import { validatePlayTurn, deriveDeviationCandidates, buildPromotedFacts, buildRetconUpdates, type PlayTurnVerdict } from '../lib/playRuntimeValidator';
+import { validatePlayTurn, deriveDeviationCandidates, buildPromotedFacts, type PlayTurnVerdict } from '../lib/playRuntimeValidator';
 import { DeviationReview } from './DeviationReview';
 import { requestDiveChat, requestDiveShowrunner, requestDiveConsolidate, type DiveCondenseJobRequest, type DiveCondensePayload, type ConsolidationFinding } from '../lib/diveClient';
 import { ConsolidationFindings } from './ConsolidationFindings';
@@ -25,6 +26,19 @@ import { VsCandidatePanel } from './VsCandidatePanel';
 import type { VsCandidate } from '../lib/episodeBriefing';
 import { buildProjectRevision, canRecoverGeneration, findLatestGenerationAttempt, type GenerationInboxItem } from '../lib/generationInbox';
 import { buildPlayRecoverySnapshot, type PlayRecoverySnapshot } from '../lib/playRecovery';
+import type { ApprovedCondenseRetcon } from '../lib/syncConsole';
+
+export type CondenseApprovalResolution = 'committed' | 'pending-conflict' | 'failed';
+
+export interface CondenseApprovalRequest {
+  session: DiveSession;
+  sessionBeforeApproval: DiveSession;
+  project: SeriesProject;
+  workingBeforeApproval: SeriesProject;
+  chapter: Chapter;
+  retcons: ApprovedCondenseRetcon[];
+  generationId: string;
+}
 
 interface DiveDeskProps {
   session: DiveSession;
@@ -37,6 +51,7 @@ interface DiveDeskProps {
   onCancelGeneration?: (item: GenerationInboxItem) => void;
   onOpenGenerationInbox?: () => void;
   onResolveGeneration?: (id: string) => void;
+  onApproveGeneration?: (approval: CondenseApprovalRequest) => CondenseApprovalResolution;
   onDownloadRecovery?: (recovery: PlayRecoverySnapshot) => void;
   onSendRecoveryToDraft?: (recovery: PlayRecoverySnapshot, generationId?: string) => void;
 }
@@ -86,7 +101,7 @@ function peekText(verdict: PlayTurnVerdict): string {
 export function DiveDesk({
   session, project, onChange, onBack, generationInbox = [], selectedGeneration = null,
   onStartGeneration, onCancelGeneration, onOpenGenerationInbox, onResolveGeneration,
-  onDownloadRecovery, onSendRecoveryToDraft
+  onApproveGeneration, onDownloadRecovery, onSendRecoveryToDraft
 }: DiveDeskProps) {
   const selectedResultBlocked = selectedGeneration?.result ? inspectLeak(selectedGeneration.result.prose).blocked : false;
   const [input, setInput] = useState('');
@@ -296,31 +311,79 @@ export function DiveDesk({
 
   function approve() {
     if (!pending) return;
+    const resumeCheckpoint = pendingGenerationId === selectedGeneration?.id
+      ? selectedGeneration.approvedCondenseCheckpoint
+      : undefined;
+    const generationCondenseBoundary = pendingGenerationId === selectedGeneration?.id
+      ? selectedGeneration.recovery?.condensedThroughTurn ?? 0
+      : undefined;
     // intent·pressure 는 의도적으로 빈 값 — 본문은 응결 payload 에서 오지, intent/pressure 로 생성하지 않는다.
     const request: ProductionRequest = { genre: project.genre, intent: '', pressure: '' };
     const promoted = buildPromotedFacts(deviations.surprises, decisions, edits, pending.newCanonFacts);
-    // retcon 결정된 충돌은 옛 fact statement 를 새 전개로 교체한 project 위에 커밋.
-    const base = applyRetcons(project, buildRetconUpdates(deviations.conflicts, retconDecisions));
-    const { updatedProject } = chapterFromDraftPayload(
-      base,
-      {
-        title: pending.title,
-        hook: pending.hook,
-        outline: pending.outline,
-        beats: pending.beats,
-        prose: pending.prose,
-        newCanonFacts: [...pending.newCanonFacts, ...promoted]
-      },
-      request
-    );
+    const approvedRetcons: ApprovedCondenseRetcon[] = deviations.conflicts
+      .filter((conflict) => retconDecisions[conflict.id] === 'retcon')
+      .map((conflict) => ({
+        factId: conflict.factId,
+        previousStatement: conflict.oldCanon,
+        statement: conflict.newClaim
+      }));
+    let updatedProject: SeriesProject;
+    let chapter: Chapter;
+    let retconsForCommit = approvedRetcons;
+    if (resumeCheckpoint) {
+      // PLAY/WRITE 부분 성공 뒤 재시작하면 project의 nextEpisodeNumber로 새 2화를 만들지 않는다.
+      // 영수증에 먼저 남긴 exact resolved 회차·retcon을 App의 멱등 재개 게이트로 되돌린다.
+      updatedProject = project;
+      chapter = resumeCheckpoint.chapter;
+      retconsForCommit = resumeCheckpoint.retcons;
+    } else {
+      // retcon 결정된 충돌은 옛 fact statement 를 새 전개로 교체한 project 위에 커밋.
+      const base = applyRetcons(project, approvedRetcons.map((retcon) => ({
+        factId: retcon.factId,
+        statement: retcon.statement
+      })));
+      ({ updatedProject, chapter } = chapterFromDraftPayload(
+        base,
+        {
+          title: pending.title,
+          hook: pending.hook,
+          outline: pending.outline,
+          beats: pending.beats,
+          prose: pending.prose,
+          newCanonFacts: [...pending.newCanonFacts, ...promoted]
+        },
+        request
+      ));
+    }
     // chapterFromDraftPayload가 내부에서 commitChapter까지 수행 → updatedProject를 그대로 쓴다(이중 커밋 금지).
+    const nextSession = resumeCheckpoint
+      ? applyCondenseCheckpoint(session, resumeCheckpoint.condensedThroughTurn)
+      : generationCondenseBoundary !== undefined
+        ? applyCondenseCheckpoint(session, generationCondenseBoundary)
+        : applyCondenseResult(session);
+    if (pendingGenerationId && onApproveGeneration) {
+      // 성공 결과 승인은 App이 최신 본편과 충돌을 다시 확인하고 PLAY·WRITE를 함께 영속한다.
+      // 충돌 검토나 저장 실패 동안에는 결과/영수증을 그대로 둬 재검토·재시도가 가능해야 한다.
+      const resolution = onApproveGeneration({
+        session: nextSession,
+        sessionBeforeApproval: session,
+        project: updatedProject,
+        workingBeforeApproval: project,
+        chapter,
+        retcons: retconsForCommit,
+        generationId: pendingGenerationId
+      });
+      if (resolution !== 'committed') return;
+    } else {
+      // 구형/임베드 표면의 호환 경로도 작업본 저장 뒤에만 영수증을 정리한다.
+      onChange(nextSession, updatedProject);
+      if (pendingGenerationId) onResolveGeneration?.(pendingGenerationId);
+    }
     setPending(null);
     setDecisions({});
     setEdits({});
     setRetconDecisions({});
     setFindings(null);
-    if (pendingGenerationId) onResolveGeneration?.(pendingGenerationId);
-    onChange(applyCondenseResult(session), updatedProject);
   }
 
   return (

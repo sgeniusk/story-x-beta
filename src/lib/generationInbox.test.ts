@@ -4,6 +4,7 @@ import {
   appendGenerationInboxItem,
   buildProjectRevision,
   canRecoverGeneration,
+  expireGenerationJob,
   findLatestGenerationAttempt,
   hasDurableRecoveryDraftReceipt,
   isActiveGeneration,
@@ -12,8 +13,11 @@ import {
   persistGenerationInboxState,
   saveGenerationInbox,
   serializeGenerationInbox,
+  upsertApprovedCondenseCheckpoint,
+  type ApprovedCondenseCheckpoint,
   type GenerationInboxItem
 } from './generationInbox';
+import type { Chapter } from './storyEngine';
 import type { PlayRecoverySnapshot } from './playRecovery';
 
 const recovery: PlayRecoverySnapshot = {
@@ -23,6 +27,7 @@ const recovery: PlayRecoverySnapshot = {
   episode: 1,
   scene: '서고',
   transcript: '나: 기록',
+  condensedThroughTurn: 4,
   capturedAt: '2026-07-15T00:00:00Z'
 };
 
@@ -38,11 +43,163 @@ const item = (id: string, status: GenerationInboxItem['status'] = 'running'): Ge
   updatedAt: `2026-07-15T00:00:${id.padStart(2, '0')}Z`
 });
 
+const approvedChapter: Chapter = {
+  id: 'episode-1',
+  episode: 1,
+  title: '옥상에 가지 않는 첫날',
+  hook: '전화가 다시 울렸다.',
+  outline: ['옥상 문 앞에서 멈춘다.'],
+  beats: [{ id: 'episode-1-beat-1', no: 1, label: '멈춤', summary: '문을 열지 않는다.', tension: 72 }],
+  prose: '나는 손잡이에서 손을 뗐다.',
+  memoryAnchors: ['선배의 죽음을 혼자 기억한다.'],
+  newCanonFacts: [{ id: 'canon-001-llm-01', episode: 1, owner: 'plot', statement: '주인공은 옥상 문을 열지 않았다.' }],
+  rewardArc: [{ promise: '옥상 문을 열 것인가', payoff: '열지 않는다.', intensity: 70 }],
+  stakesLedger: [{ stake: '선배의 죽음에 관한 진실', atRisk: '주인공', resolution: 'deferred' }]
+};
+
+const approvedCheckpoint: ApprovedCondenseCheckpoint = {
+  baseProjectRevision: 'approval-rev-base',
+  committedProjectRevision: 'approval-rev-committed',
+  condensedThroughTurn: 4,
+  chapter: approvedChapter,
+  retcons: [{ factId: 'canon-old', previousStatement: '선배는 살아 있다.', statement: '선배는 죽었다.' }]
+};
+
 describe('generation inbox', () => {
   it('round-trips valid items and drops damaged entries', () => {
     const raw = JSON.stringify([item('1'), { id: '', status: 'running' }, null]);
     expect(parseGenerationInbox(raw)).toEqual([item('1')]);
     expect(parseGenerationInbox(serializeGenerationInbox([item('1')]))).toEqual([item('1')]);
+  });
+
+  it('생성 시작 때 보존한 응결 turn 경계를 recovery 영수증에서 왕복한다', () => {
+    const receipt = { ...item('boundary', 'failed'), recovery };
+    expect(parseGenerationInbox(serializeGenerationInbox([receipt]))[0].recovery)
+      .toHaveProperty('condensedThroughTurn', 4);
+  });
+
+  it('승인된 응결 체크포인트는 유효한 Chapter·retcon만 왕복하고 손상 데이터는 해당 영수증에서 제거한다', () => {
+    const valid = {
+      ...item('1', 'succeeded'),
+      result: { title: approvedChapter.title, prose: approvedChapter.prose },
+      approvedCondenseCheckpoint: approvedCheckpoint
+    };
+    const malformedChapter = {
+      ...item('2', 'succeeded'),
+      result: { title: '2화', prose: '본문' },
+      approvedCondenseCheckpoint: {
+        ...approvedCheckpoint,
+        chapter: { ...approvedChapter, beats: [{ id: 'bad', no: '1', label: 'x', summary: 'y', tension: 1 }] },
+      }
+    };
+    const malformedRetcon = {
+      ...item('3', 'succeeded'),
+      result: { title: '3화', prose: '본문' },
+      approvedCondenseCheckpoint: {
+        ...approvedCheckpoint,
+        retcons: [{ factId: 'canon-old', previousStatement: 42, statement: '선배는 죽었다.' }]
+      }
+    };
+    const wrongEpisode = {
+      ...item('4', 'succeeded'),
+      result: { title: '4화', prose: '본문' },
+      approvedCondenseCheckpoint: { ...approvedCheckpoint, chapter: { ...approvedChapter, episode: 2 } }
+    };
+    const missingRevision = {
+      ...item('5', 'succeeded'),
+      result: { title: '5화', prose: '본문' },
+      approvedCondenseCheckpoint: {
+        chapter: approvedChapter,
+        retcons: []
+      }
+    };
+    const blankRevision = {
+      ...item('6', 'succeeded'),
+      result: { title: '6화', prose: '본문' },
+      approvedCondenseCheckpoint: {
+        ...approvedCheckpoint,
+        baseProjectRevision: '   '
+      }
+    };
+    const blankCommittedRevision = {
+      ...item('7', 'succeeded'),
+      result: { title: '7화', prose: '본문' },
+      approvedCondenseCheckpoint: {
+        ...approvedCheckpoint,
+        committedProjectRevision: ''
+      }
+    };
+    const invalidCondenseBoundary = {
+      ...item('8', 'succeeded'),
+      result: { title: '8화', prose: '본문' },
+      approvedCondenseCheckpoint: {
+        ...approvedCheckpoint,
+        condensedThroughTurn: -1
+      }
+    };
+    const {
+      condensedThroughTurn: _legacyBoundary,
+      ...legacyCheckpoint
+    } = approvedCheckpoint;
+    const legacyWithoutBoundary = {
+      ...item('9', 'succeeded'),
+      result: { title: approvedChapter.title, prose: approvedChapter.prose },
+      approvedCondenseCheckpoint: legacyCheckpoint
+    };
+
+    const [roundTripped] = parseGenerationInbox(serializeGenerationInbox([valid]));
+    expect(roundTripped).toEqual(expect.objectContaining({
+      id: valid.id,
+      approvedCondenseCheckpoint: approvedCheckpoint
+    }));
+    expect(parseGenerationInbox(JSON.stringify([legacyWithoutBoundary]))[0])
+      .toHaveProperty('approvedCondenseCheckpoint.condensedThroughTurn', 0);
+    const parsed = parseGenerationInbox(JSON.stringify([
+      malformedChapter,
+      malformedRetcon,
+      wrongEpisode,
+      missingRevision,
+      blankRevision,
+      blankCommittedRevision,
+      invalidCondenseBoundary
+    ]));
+    expect(parsed).toHaveLength(7);
+    expect(parsed.every((receipt) => !receipt.approvedCondenseCheckpoint)).toBe(true);
+  });
+
+  it('성공 영수증에 승인 체크포인트를 불변 upsert하고 기존 recovery 메타를 보존한다', () => {
+    const receipt = {
+      ...item('1', 'succeeded'),
+      result: { title: approvedChapter.title, prose: approvedChapter.prose },
+      recovery,
+      recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
+      recoveryDraftId: 'recovery-draft-1'
+    };
+    const original = [item('other', 'failed'), receipt];
+
+    const updated = upsertApprovedCondenseCheckpoint(original, receipt.id, approvedCheckpoint);
+
+    expect(updated).not.toBe(original);
+    expect(updated[0]).toBe(original[0]);
+    expect(updated[1]).toEqual({ ...receipt, approvedCondenseCheckpoint: approvedCheckpoint });
+    expect(original[1]).not.toHaveProperty('approvedCondenseCheckpoint');
+    expect(upsertApprovedCondenseCheckpoint(original, 'missing', approvedCheckpoint)).toBe(original);
+    expect(upsertApprovedCondenseCheckpoint([item('1', 'failed')], '1', approvedCheckpoint)).toEqual([item('1', 'failed')]);
+  });
+
+  it('다른 탭이 먼저 남긴 checkpoint와 다른 승인 결정은 덮어쓰지 않는다', () => {
+    const receipt = {
+      ...item('1', 'succeeded'),
+      result: { title: approvedChapter.title, prose: approvedChapter.prose },
+      approvedCondenseCheckpoint: approvedCheckpoint
+    };
+    const original = [receipt];
+    const divergent = {
+      ...approvedCheckpoint,
+      retcons: [{ factId: 'canon-old', previousStatement: '선배는 살아 있다.', statement: '선배는 해외에 있다.' }]
+    };
+
+    expect(upsertApprovedCondenseCheckpoint(original, receipt.id, divergent)).toBe(original);
   });
 
   it('downgrades a persisted success receipt when its result payload is missing or malformed', () => {
@@ -57,7 +214,9 @@ describe('generation inbox', () => {
 
   it('keeps newest items first and caps at 20', () => {
     let list: GenerationInboxItem[] = [];
-    for (let index = 0; index < 25; index += 1) list = appendGenerationInboxItem(list, item(String(index)));
+    for (let index = 0; index < 25; index += 1) {
+      list = appendGenerationInboxItem(list, item(String(index), 'failed'));
+    }
     expect(list).toHaveLength(20);
     expect(list[0].id).toBe('24');
   });
@@ -88,6 +247,23 @@ describe('generation inbox', () => {
     expect(parseGenerationInbox(serializeGenerationInbox(list))).toContainEqual(protectedReceipt);
   });
 
+  it('20개 보호 checkpoint가 cap을 채워도 새 running 생성은 버리지 않고 overflow로 함께 보존한다', () => {
+    const protectedReceipts = Array.from({ length: 20 }, (_, index): GenerationInboxItem => ({
+      ...item(`checkpoint-${index}`, 'succeeded'),
+      result: { title: approvedChapter.title, prose: approvedChapter.prose },
+      approvedCondenseCheckpoint: {
+        ...approvedCheckpoint,
+        baseProjectRevision: `approval-rev-base-${index}`,
+        committedProjectRevision: `approval-rev-committed-${index}`
+      }
+    }));
+
+    const next = appendGenerationInboxItem(protectedReceipts, item('new-running'));
+
+    expect(next).toHaveLength(21);
+    expect(next[0]).toEqual(item('new-running'));
+  });
+
   it('merges polled terminal result without losing client metadata', () => {
     const merged = mergeGenerationJob({
       ...item('1'),
@@ -108,6 +284,25 @@ describe('generation inbox', () => {
     expect(merged.recoveryDraftId).toBe('recovery-draft-1');
     expect(merged.recoveredAt).toBe('2026-07-16T01:00:00Z');
     expect(merged.recoveredChapterId).toBe('episode-1');
+  });
+
+  it('느린 poll 응답은 이미 terminal/checkpoint가 된 최신 영수증을 running·expired로 역행시키지 않는다', () => {
+    const terminal = {
+      ...item('1', 'succeeded'),
+      result: { title: approvedChapter.title, prose: approvedChapter.prose },
+      approvedCondenseCheckpoint: approvedCheckpoint
+    };
+    const staleRunning = {
+      id: '1', projectId: 'p1', baseRevision: 'rev-1', episode: 1,
+      status: 'running' as const, createdAt: 'x', updatedAt: 'later'
+    };
+    expect(mergeGenerationJob(terminal, staleRunning)).toBe(terminal);
+    expect(expireGenerationJob(terminal, '느린 404', 'later')).toBe(terminal);
+    expect(expireGenerationJob(item('2'), '찾지 못함', 'later')).toMatchObject({
+      status: 'expired',
+      warning: '찾지 못함',
+      updatedAt: 'later'
+    });
   });
 
   it('복구 작업본과 명시적 회차 저장 메타를 구분해 직렬화하고 구버전 영수증도 읽는다', () => {
@@ -186,7 +381,8 @@ describe('generation inbox', () => {
       recovery,
       recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
       recoveryDraftId: 'recovery-draft-2',
-      result: { title: '완료 회차', prose: '승인 전 성공 결과' }
+      result: { title: '완료 회차', prose: '승인 전 성공 결과' },
+      approvedCondenseCheckpoint: approvedCheckpoint
     };
     const writes: string[] = [];
     const storage = {
@@ -209,6 +405,7 @@ describe('generation inbox', () => {
     expect(saved.items[1]).not.toHaveProperty('recovery');
     expect(saved.items[1]).not.toHaveProperty('recoveryDraftOpenedAt');
     expect(saved.items[1]).not.toHaveProperty('recoveryDraftId');
+    expect(saved.items[1]).toHaveProperty('approvedCondenseCheckpoint', approvedCheckpoint);
     expect(storage.setItem).toHaveBeenCalledTimes(2);
   });
 

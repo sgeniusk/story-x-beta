@@ -34,6 +34,7 @@ describe('PLAY recovery', () => {
       projectTitle: '달의 문서고',
       episode: 1,
       scene: '비 내리는 문서고 앞',
+      condensedThroughTurn: 1,
       capturedAt: '2026-07-16T12:34:56.000Z'
     }));
     expect(snapshot.transcript).toContain('나: 문을 열어도 될까?');

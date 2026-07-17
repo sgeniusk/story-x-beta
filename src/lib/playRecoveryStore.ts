@@ -39,6 +39,11 @@ function parseSnapshot(value: unknown): PlayRecoverySnapshot | null {
   if (typeof value.projectTitle !== 'string' || !isPositiveInteger(value.episode)) return null;
   if (typeof value.scene !== 'string' || typeof value.transcript !== 'string') return null;
   if (typeof value.capturedAt !== 'string' || !value.capturedAt) return null;
+  if (value.condensedThroughTurn !== undefined && (
+    typeof value.condensedThroughTurn !== 'number' ||
+    !Number.isInteger(value.condensedThroughTurn) ||
+    value.condensedThroughTurn < 0
+  )) return null;
   return {
     schema: 'storyx/play-recovery/v1',
     projectId: value.projectId,
@@ -46,6 +51,9 @@ function parseSnapshot(value: unknown): PlayRecoverySnapshot | null {
     episode: value.episode,
     scene: value.scene,
     transcript: value.transcript,
+    ...(typeof value.condensedThroughTurn === 'number'
+      ? { condensedThroughTurn: value.condensedThroughTurn }
+      : {}),
     capturedAt: value.capturedAt
   };
 }

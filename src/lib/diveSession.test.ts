@@ -6,6 +6,7 @@ import {
   shouldSuggestCondense,
   selectCondenseSpan,
   applyCondenseResult,
+  applyCondenseCheckpoint,
   buildTranscript,
   buildCondenseTranscript,
   buildRecentDialogue,
@@ -67,6 +68,19 @@ describe('diveSession', () => {
     expect(after.lastCondensedTurn).toBe(6 - CONDENSE_KEEP_RECENT);
     expect(after.pendingCondenseSuggested).toBe(false);
     expect(appendMessage(after, 'user', 'next').chatBuffer.at(-1)?.turn).toBe(7);
+  });
+
+  it('부분 성공 checkpoint 재개는 당시 응결 경계까지만 제거하고 이후 PLAY 대화를 보존한다', () => {
+    let s = createDiveSession('c', 'p');
+    for (let index = 0; index < 8; index += 1) {
+      s = appendMessage(s, index % 2 === 0 ? 'user' : 'character', `t${index + 1}`);
+    }
+
+    const after = applyCondenseCheckpoint(s, 4);
+
+    expect(after.chatBuffer.map((message) => message.turn)).toEqual([5, 6, 7, 8]);
+    expect(after.lastCondensedTurn).toBe(4);
+    expect(after.pendingCondenseSuggested).toBe(false);
   });
 
   // Task 3

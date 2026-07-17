@@ -1,4 +1,4 @@
-import { buildTranscript, type DiveSession } from './diveSession';
+import { buildTranscript, selectCondenseSpan, type DiveSession } from './diveSession';
 import {
   chapterFromDraftPayload,
   nextEpisodeNumber,
@@ -14,6 +14,8 @@ export interface PlayRecoverySnapshot {
   episode: number;
   scene: string;
   transcript: string;
+  /** 생성 시작 시 실제 응결 payload에 포함된 마지막 turn. 구버전 스냅샷은 undefined. */
+  condensedThroughTurn?: number;
   capturedAt: string;
 }
 
@@ -80,6 +82,10 @@ export function buildPlayRecoverySnapshot(
   project: SeriesProject,
   capturedAt = new Date().toISOString()
 ): PlayRecoverySnapshot {
+  const { condense } = selectCondenseSpan(session);
+  const condensedThroughTurn = condense.length > 0
+    ? condense[condense.length - 1].turn
+    : session.lastCondensedTurn;
   return {
     schema: 'storyx/play-recovery/v1',
     projectId: project.id,
@@ -88,6 +94,7 @@ export function buildPlayRecoverySnapshot(
     scene: session.scene?.trim() ?? '',
     // 복구는 응결 후보가 아니라 사용자 기록 보존이다. 최근 턴·캐논 차단 턴까지 전부 남긴다.
     transcript: buildTranscript(session.chatBuffer),
+    condensedThroughTurn,
     capturedAt
   };
 }

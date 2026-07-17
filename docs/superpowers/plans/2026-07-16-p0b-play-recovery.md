@@ -12,6 +12,10 @@
 - `src/lib/playRecoveryStore.test.ts`
 - `src/lib/generationInbox.ts`
 - `src/lib/generationInbox.test.ts`
+- `src/lib/diveSession.ts`
+- `src/lib/diveSession.test.ts`
+- `src/lib/syncConsole.ts`
+- `src/lib/syncConsole.test.ts`
 - `src/lib/storage.ts`
 - `src/lib/storage.test.ts`
 - `src/lib/projectLibrary.ts`
@@ -179,3 +183,26 @@ App 문자열 순서 단언만으로 끝내지 않고 저장소 실패를 주입
 3. GenerationInboxPanel·DiveDesk·RecoveryDraftWorkspace 카피와 PLAY 재시도 행동을 구현한다. 배열 위치와 무관하게 현재 회차의 최신 시도만 PLAY 상태로 선택하고, 실패·성공 미영속 영수증의 결과 검토·TXT 경고를 유지한다. 자동 재시도는 추가하지 않는다.
 4. 집중 테스트 뒤 브라우저에서 0화 카드→PLAY, 실패 보관함→수동 작업본, 성공 전 WRITE 회차 0개 불변을 확인한다.
 5. 전체 `bash init.sh`, progress/handoff, 커밋·push, Draft PR #40 갱신을 수행한다.
+
+## 사용자 테스트 수정 Task 12 — 승인→본편→WRITE 단일 커밋 RED→GREEN
+
+사용자가 성공 응결을 승인했는데 PLAY working에만 남고 WRITE가 빈 원고를 읽는 실화면 결함을 닫는다.
+
+1. 먼저 다음 실패 테스트를 추가한다.
+   - DiveDesk의 App 소유 승인 콜백은 완성된 session/project/generation id를 받고, 성공 전에는 로컬 pending과 영수증을 지우지 않는다.
+   - 승인 계획은 최신 본편의 기존 WRITE 편집을 보존하면서 새 회차·캐논만 합류한다.
+   - 최신 본편 충돌이 있으면 자동 합류하지 않고 기존 `ReconcileReview`로 보낸다.
+   - 무충돌 승인에서는 PLAY working과 본편을 같은 프로젝트로 저장한 뒤 영수증을 제거하고 WRITE로 이동한다.
+   - 제목·본문·journal이 빈 복구 작업본은 보관함 재열기 연결을 확인한 뒤 active만 해제한다.
+   - 충돌 resolved 회차 저장 뒤 영수증 정리만 실패해도 write-ahead checkpoint로 재시도하며 원본 chapter 충돌로 막히지 않는다.
+   - 승인 read-back은 exact 회차·새 캐논·retcon statement를 PLAY working과 본편 양쪽에서 검증한다.
+   - checkpoint에는 승인 직전·반영 직후의 전체 project revision을 함께 넣고, 둘 다 아닌 최신 본편에서는 stale로 차단한다.
+   - checkpoint에는 최초 승인에서 응결한 마지막 turn도 기록하고, 재개 시 그 이후 PLAY 대화를 보존한다.
+   - 생성 시작 recovery에도 실제 응결 마지막 turn을 기록해, 결과 보류 뒤 이어진 PLAY를 최초 승인에서 잘못 잘라내지 않는다.
+   - poll/checkpoint/receipt mutation은 매번 durable inbox를 다시 읽어 대상 변경만 병합하고, 실행 중 잡은 보호 checkpoint 20개 위에서도 overflow로 보존한다.
+   - 승인 요청의 전체 PLAY session·working project를 durable `DiveState`와 승인 직전/저장 직전에 exact 비교하고, 다른 탭의 새 대화를 stale session으로 덮어쓰지 않는다.
+   - 느린 running poll과 404 만료는 mutation 시점 영수증이 여전히 running일 때만 적용해 succeeded 결과와 승인 checkpoint를 역행시키지 않는다.
+2. `syncConsole`에 승인 후보의 ready/conflicts 순수 계획을 추가하고 기존 append/retcon 계약을 재사용한다.
+3. DiveDesk가 App에 승인 후보를 넘기고, App이 무충돌 즉시 커밋 또는 충돌 검토를 소유하게 한다. 실제 resolved chapter·retcon checkpoint를 생성 영수증에 먼저 영속하고, 생성 영수증 제거는 PLAY/WRITE read-back 성공 뒤로 이동한다.
+4. 브라우저에서 성공 결과 승인 한 번으로 `PLAY +N`이 사라지고 WRITE 1화·캐논 반영 토스트가 보이는지 확인한다. 빈 복구 작업본은 삭제 없이 보관함에서 재열 수 있어야 한다.
+5. 집중 테스트와 `bash init.sh`, progress/handoff, 커밋·push, Draft PR #40 갱신을 수행한다.
