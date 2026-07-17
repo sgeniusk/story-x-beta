@@ -4,6 +4,68 @@
 
 ---
 
+## 2026-07-17 20:34 — 승인 응결본 WRITE 연결·응결 품질 계약 완료, 새 결과 사용자 판정 대기
+
+> Last Updated: 2026-07-17 20:34 KST
+
+### Current Objective
+
+사용자가 확인한 “승인한 응결 1화가 WRITE에 보이지 않음”은 P0-b 직렬화 보강 `f40e811`/Draft PR #40에서 닫았고 실화면 동작도 확인됐다. 이어서 1,122자 요약체·직접 대사 0·약한 후크·QA 표식 작품화 문제를 입력 컨텍스트와 생성 계약에서 교정했다. 품질 구현은 `aad8872`, Draft PR은 #41이며 머지는 사용자에게 남긴다.
+
+### Recommended Next Step
+
+인앱 브라우저의 현재 프로젝트에서 PLAY로 들어가 새 재료를 만든 뒤 `지금 응결` 또는 `응결 다시 시도`를 누른다. 새 결과의 장면성·직접 대사·목소리를 기존 결과와 비교해 사용자가 주관적으로 판정한다. 기존의 약한 1화는 자동으로 덮어쓰지 않았으며, 새 결과를 승인할 때만 #40의 저장 경로로 WRITE에 나타난다.
+
+### Branch · Commit · Verification
+
+- Branch — `codex/p0a-condense-quality-contract` (origin tracking, `codex/p0b-failure-recovery` 위 스택)
+- Quality implementation — `aad8872` (`P0-a: strengthen condensation scene and voice contract`)
+- Draft PR — https://github.com/sgeniusk/story-x-beta/pull/41 (base `codex/p0b-failure-recovery`)
+- Approval→WRITE dependency — `f40e811`, Draft PR #40
+- Verification — 2026-07-17 20:33 `bash init.sh` 녹색: 102 files / 1114 tests, tsc+vite build 성공
+- Focused TDD — 4 files / 172 tests; 최종 코드 감사 P0/P1 0
+- Actual local generation — 1,855자, 3장면, 직접 대사 20문단, 작품 밖 메타 0; critic-reviewer·voice-curator P0/P1 0
+- Browser — 프로젝트 2개·생성 보관함 2개 정상 렌더, 오류 레벨 로그 0, `http://127.0.0.1:5175/?stage=projects`
+- Evidence — `/Users/taewookkim/.codex/visualizations/2026/07/13/019f5c20-8b9d-73d2-8aea-50a5ad8aac70/storyx-p0a-condense-quality-sample.md`
+
+### What the Last Session Did
+
+1. `buildProjectContextDigest`가 tone/rhythm/vocab을 실제 `한국어 문체·보이스 규칙`으로 응결에 전달하게 했다.
+2. 인물 카드에 욕망·상처·현재 상태·말투 규칙·캐논 앵커를 전달하고 빈 필드는 생략했다.
+3. 응결을 1,800~2,700자·2~3 현재 장면·직접 갈등 대사·압력/대가·비봉합·질문 진전·구체 후크 계약으로 바꾸고 TS/CLI를 byte-identical하게 묶었다.
+4. 테스트/QA/UI/타임스탬프 메타 누수, 근거 없는 캐논 발명, 감정 재설명, 높임말 드리프트, 기능적 선택 해설, 캐릭터 카드 이행 보고를 실제 실패 샘플에서 TDD로 닫았다.
+5. 다섯 차례 생성 교정을 거친 최종 합성 샘플을 독립 문학·보이스 감수했고, 전체 게이트·미리보기·Draft PR 생성까지 마쳤다.
+
+### Files To Touch (next milestone)
+
+- 사용자 새 응결 판정에서 구체 결함이 나오면 `docs/superpowers/specs/2026-07-17-p0a-condense-quality-contract-design.md` 수용 범위 안에서 실패 테스트를 먼저 추가한 뒤 최소 수정한다.
+- 승인 전 readiness 경고, 최신 2턴 소비 경계, 캐논 provenance는 각각 새 brainstorm으로 분리한다.
+
+### Files NOT To Touch
+
+- `.agents/skills/story-score/` — 사용자 소유 untracked 폴더. 추가·수정·스테이징 금지.
+- 기존 약한 1화나 사용자 작품 원문을 자동 재생성·덮어쓰기하는 경로.
+- 완료 생성물 자동 반영, 누수·stale revision·사용자 승인 게이트 우회.
+- #39→#40→#41 스택을 순서 없이 머지하거나, 다음 PR을 main으로 retarget하기 전 base 브랜치를 삭제하는 작업.
+
+### Blockers
+
+없음. 자동 검증·독립 감수·실생성은 녹색이며 현재는 사용자의 새 응결 결과 주관 판정 시점이다.
+
+### Known Issues
+
+- 프롬프트 계약은 생성 편차를 크게 줄이지만 결과 후처리나 자동 차단은 아니다. 품질 readiness는 오탐 정책을 별도 설계한 뒤 도입한다.
+- StoryScore의 현재 후크 휴리스틱은 물음표·느낌표·말줄임표·일부 전환어 중심이라 구체 행동·시한 후크를 0점으로 볼 수 있다. 이번 실생성은 독립 critic-reviewer가 후크를 통과시켰으며 탐지기 개선은 별도 슬라이스다.
+- 잡 레지스트리는 기존 계약대로 서버 프로세스 메모리다. 서버 재시작 뒤 실행 영수증은 `expired`가 되지만 recovery snapshot은 남는다.
+
+### Reference Documents
+
+- `docs/superpowers/specs/2026-07-17-p0a-condense-quality-contract-design.md`
+- `docs/superpowers/plans/2026-07-17-p0a-condense-quality-contract.md`
+- `progress.md` 맨 위 P0-a 후속 완료 트랙
+
+---
+
 ## 2026-07-17 14:42 — P0-b PLAY 재개/직접 쓰기 의미 교정 완료, 응결 재시도 사용자 테스트 대기
 
 > Last Updated: 2026-07-17 14:42 KST
