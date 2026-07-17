@@ -4,6 +4,66 @@
 
 ---
 
+## 2026-07-17 14:42 — P0-b PLAY 재개/직접 쓰기 의미 교정 완료, 응결 재시도 사용자 테스트 대기
+
+> Last Updated: 2026-07-17 14:42 KST
+
+### Current Objective
+
+사용자가 발견한 “응결되지 않은 빈 WRITE를 이어쓰기라고 부르는” 의미 결함을 교정했다. 작품 보관함의 기본 재개와 실패 원문 기반 수동 작성을 분리했고, 자동 재시도 없이 PLAY에서 명시적으로 응결을 다시 시작할 수 있게 했다. 의미 교정 구현 커밋은 `c4aabb9`이며 Draft PR #40을 갱신한다. 머지는 사용자에게 남긴다.
+
+### Recommended Next Step
+
+인앱 브라우저의 현재 PLAY 화면에서 `응결 다시 시도`를 한 번 누르고 생성 진행→완료→검토 진입을 확인한다. 프로젝트 보관함으로 돌아간 뒤 `작업 계속하기`를 누르면 회차가 없는 현재 작품은 PLAY로 돌아와야 한다. 실패 원문을 직접 다듬고 싶을 때만 `원문으로 직접 쓰기`를 사용한다.
+
+### Branch · Commit · Verification
+
+- Branch — `codex/p0b-failure-recovery` (origin tracking, `codex/p0c-work-library` 위 스택)
+- Resume semantics correction — `c4aabb9` (`P0-b: distinguish PLAY resume from manual recovery`)
+- Draft PR — https://github.com/sgeniusk/story-x-beta/pull/40 (base `codex/p0c-work-library`)
+- Verification — 2026-07-17 14:42 `bash init.sh` 녹색: tsc·vitest·vite build 전체 성공
+- Focused TDD — 8 files / 106 tests 녹색; 재시도 성공·배열 재정렬·지난 회차·미영속 실패/성공 경고 RED 확인 뒤 GREEN
+- Browser — 0화 `작업 계속하기`→PLAY, 수동 복구 작업실의 비응결 안내, PLAY 재시도 화면 복귀, 최종 변경 이후 콘솔 오류 0
+- Live handoff — `http://127.0.0.1:5175/` PLAY 화면, 로컬 Vite 서버 실행 중
+
+### What the Last Session Did
+
+1. 프로젝트 카드 CTA를 `작업 계속하기`로 바꾸고 최신 프로젝트·PLAY·복구 작업본 상태를 읽어 실제 재개 지점을 결정했다.
+2. 작성 내용이나 저장 journal이 있는 복구본은 WRITE를 우선하되, 재열기 가능한 빈 작업본은 비활성화해 0화 작품의 PLAY 복귀를 가로채지 않게 했다.
+3. 실패 CTA/작업실을 `원문으로 직접 쓰기`로 명명하고 `응결된 원고가 아님`을 첫 설명으로 고정했다.
+4. PLAY에 사용자 클릭형 `응결 다시 시도`를 추가하고 배열 위치가 아닌 `createdAt` 기준 현재 회차 최신 생성 시도만 대표하게 해 과거 실패 재노출과 지난 회차 오작동을 막았다.
+5. 미영속 실패·성공 영수증은 “안전” 문구를 쓰지 않고 새로고침 전 결과 검토·TXT 경고를 유지하도록 독립 리뷰 발견을 TDD로 닫았다.
+
+### Files To Touch (next milestone)
+
+- 사용자 재시도에서 결함이 나오면 P0-b spec 수용 기준 안에서 실패 테스트를 먼저 추가하고 최소 수정한다.
+- 수용 뒤 다음 기능 슬라이스는 새 brainstorm에서 범위를 다시 지정한다.
+
+### Files NOT To Touch
+
+- `.agents/skills/story-score/` — 사용자 소유 untracked 폴더. 추가·수정·스테이징 금지.
+- 복구 source를 일반 Chapter prose로 자동 주입하거나 회차/캐논/인물/지표를 자동 변경하는 경로.
+- `commitIntent`·`legacyRepair`·receipt 영속 확인, 사용자 클릭 재시도, 성공 결과 검토·승인 게이트를 우회하는 변경.
+- #40을 main으로 retarget하기 전 #39의 base 브랜치 삭제.
+
+### Blockers
+
+없음. 자동·실브라우저 검증은 녹색이며 현재는 실제 로컬 Codex 응결 재시도의 사용자 수용 테스트 시점이다.
+
+### Known Issues
+
+- 잡 레지스트리는 P0-a 계약대로 서버 프로세스 메모리다. 서버 재시작 뒤 실행 영수증은 `expired`가 되지만 recovery snapshot과 수동 작업본은 로컬에 남는다.
+- `gh auth status`의 CLI 토큰은 만료 상태다. git credential과 GitHub 연결 앱 경로로 PR 갱신은 가능하지만 CLI 전용 작업 전에는 `gh auth login`이 필요하다.
+- 보관함에는 이전 실패·취소 영수증이 함께 남는다. PLAY 현장은 현재 회차의 최신 시도만 표시하고 과거 항목은 전역 보관함에서 관리한다.
+
+### Reference Documents
+
+- `docs/superpowers/specs/2026-07-16-p0b-play-recovery-design.md`
+- `docs/superpowers/plans/2026-07-16-p0b-play-recovery.md`
+- `progress.md` 맨 위 P0-b 완료 트랙
+
+---
+
 ## 2026-07-17 00:53 — P0-b 복구 원문/작업본 분리 교정 완료, 사용자 테스트 대기
 
 > Last Updated: 2026-07-17 00:53 KST

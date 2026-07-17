@@ -1,20 +1,22 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-17 00:53 KST · Branch: `codex/p0b-failure-recovery` (**P0-b 복구 작업본 분리 수정 완료, Draft PR #40 갱신·사용자 테스트 대기**)
+> Last Updated: 2026-07-17 14:42 KST · Branch: `codex/p0b-failure-recovery` (**P0-b PLAY 재개/직접 쓰기 의미 교정 완료, Draft PR #40 갱신·사용자 테스트 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-> 최근 검증(2026-07-17 00:53 KST) — `bash init.sh` 녹색: `npm test` 1048 통과(101 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+> 최근 검증(2026-07-17 14:42 KST) — `bash init.sh` 녹색: `npm test` 1057 통과(101 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
 
-## 완료 트랙 — P0-b 응결 실패 구제: PLAY 원문 TXT·분리 복구 작업본 (`done` · 2026-07-17, 수정 커밋 `8bd10ab` · Draft PR #40)
+## 완료 트랙 — P0-b 응결 실패 구제: PLAY 재개·원문 TXT·분리 복구 작업본 (`done` · 2026-07-17, 분리 수정 `8bd10ab` · 의미 교정 `c4aabb9` · Draft PR #40)
 
 사용자 실화면에서 PLAY 원문 TXT가 일반 WRITE 회차 본문으로 바로 들어가던 결함을 교정했다. 응결 실패 기록은 이제 **본편 밖의 복구 작업본**으로 열리고, PLAY 원문은 접이식 참고 패널에만 보존된다. 사용자가 빈 원고지에 직접 쓴 문장을 `회차로 저장`할 때만 Chapter·회차 수·지표에 반영한다. spec `docs/superpowers/specs/2026-07-16-p0b-play-recovery-design.md` · plan `docs/superpowers/plans/2026-07-16-p0b-play-recovery.md`.
 - **도메인·UI** — `PlayRecoveryWorkDraft`/프로젝트별 저장소 + `RecoveryDraftWorkspace`를 일반 회차 편집기와 분리했다. 제목·본문은 빈 값, source는 별도 `<aside>`이며 작업본 자동 저장과 명시 저장만 허용한다. 기존 오염 회차는 제목·본문·구조·잠금·최신 회차·PLAY working까지 전부 시스템 생성과 정확히 일치할 때만 자동 환원한다.
 - **거래 안전성** — `commitIntent`·`legacyRepair` write-ahead journal로 project→PLAY working→receipt→draft 정리의 부분 성공을 재개한다. receipt의 `recoveryDraftId` 우선 재열기, 다중 탭 stale journal 강등/완료 뒤 중복 회차 차단, local receipt 영속 실패 이탈 차단, legacy 저장 직전 최신본 재판정을 고정했다.
 - **보존 정책** — active·작성 본문·journal 작업본과 미완료 draft-linked 영수증은 20개 cap을 넘어도 보존한다. 빈 비활성 작업본과 일반/완료 영수증만 먼저 정리한다. 완료 receipt가 실제 영속되고 draft 제거까지 성공한 뒤에만 일반 WRITE로 돌아간다.
 - **UI/접근성** — 저장 상태·본편 반영 안내 대비를 약 5.1:1로 올리고, 560px 이하 공통 상단 바를 2행 grid로 바꿔 제목·PLAY/WRITE/PLAN·더 보기/최신화 행동을 보존했다.
-- **실동작 증거** — 기존 잘못 생성된 1화가 엄격 환원되어 ProjectHub에서 **0화·캐논 0개** 유지. 생성 보관함 `작업본 열기`→빈 제목/본문·분리 PLAY 원문→임시 문장 작성→새로고침→같은 문장 복원→검증 문장 제거를 확인했다. 375px/320px 문서·source 가로 넘침 0, 320px 상단 바 좌우 경계 내, 최종 reload 이후 콘솔 오류 0. 인앱 브라우저는 `http://127.0.0.1:5175/?stage=projects`에 테스트 시작 화면으로 인계했다.
+- **사용자 테스트 의미 교정** — 보관함 CTA를 모드 중립적인 `작업 계속하기`로 바꾸고, 0화·회차 없음·저장 PLAY·작성 복구본 없음일 때만 PLAY로 복귀시킨다. 실패 작업은 `원문으로 직접 쓰기` / `직접 쓰던 작업본 열기`로 분리하고 작업실 첫 문장에서 응결 원고가 아님을 밝힌다. PLAY의 `응결 다시 시도`는 사용자 클릭 때만 새 잡을 시작한다.
+- **재시도·보존 안전** — 영수증 배열이 작업본 연결로 재정렬돼도 `createdAt` 기준 현재 회차 최신 생성 시도만 PLAY 현장을 대표해 running/succeeded 재시도 뒤 과거 실패가 되살아나지 않고 지난 회차 실패도 현재 재시도로 오인하지 않는다. 실패·성공 영수증 모두 `localPersistenceFailed`이면 안전 문구 대신 새로고침 전 결과 검토·TXT `alert`를 유지한다.
+- **실동작 증거** — 기존 잘못 생성된 1화가 엄격 환원되어 ProjectHub에서 **0화·캐논 0개** 유지. 보관함 `작업 계속하기`→PLAY 복귀, 실패 카드의 `응결 다시 시도`·`직접 쓰던 작업본 열기`, 수동 작업실의 빈 제목/본문·`응결된 원고가 아닙니다` 안내→PLAY 복귀를 실측했다. 최종 변경 이후 브라우저 오류 0이며 인앱 브라우저는 `http://127.0.0.1:5175/`의 PLAY 재시도 화면에 인계했다.
 - **게시/의존** — Draft PR #40 `https://github.com/sgeniusk/story-x-beta/pull/40`은 P0-c Draft PR #39 위의 스택이다. 머지 순서는 **#39 → #40**이며 #39 base 브랜치는 #40을 main으로 retarget하기 전에 삭제하지 않는다.
-- **Recommended Next Step** — 사용자가 생성 보관함의 기존 취소 항목에서 `작업본 열기`를 눌러 빈 원고지·PLAY 원문 분리·재시작 복원을 직접 확인한다. 수용되면 #39를 먼저 머지하고 #40 base를 main으로 바꿔 고유 diff를 재확인한 뒤 머지는 사용자에게 남긴다. 테스트 피드백 전에는 다음 기능 슬라이스를 섞지 않는다.
+- **Recommended Next Step** — 사용자가 현재 PLAY 화면에서 `응결 다시 시도`를 누르고 완료 영수증→검토 진입을 확인한다. 프로젝트 보관함으로 돌아가면 `작업 계속하기`가 빈 WRITE가 아니라 PLAY로 복귀해야 한다. 수용되면 #39를 먼저 머지하고 #40 base를 main으로 바꿔 고유 diff를 재확인한 뒤 머지는 사용자에게 남긴다. 테스트 피드백 전에는 다음 기능 슬라이스를 섞지 않는다.
 
 ## 완료 트랙 — P0-c 작품 관리 시스템: 임시작 보관·확정·이어쓰기 (`done` · 2026-07-16, 구현 커밋 `b9e578e` · Draft PR #39)
 
