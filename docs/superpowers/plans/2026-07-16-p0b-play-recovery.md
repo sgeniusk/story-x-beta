@@ -14,6 +14,8 @@
 - `src/lib/generationInbox.test.ts`
 - `src/lib/storage.ts`
 - `src/lib/storage.test.ts`
+- `src/lib/projectLibrary.ts`
+- `src/lib/projectLibrary.test.ts`
 - `src/lib/storyEngine.test.ts`
 - `src/components/GenerationInboxPanel.tsx`
 - `src/components/generationInboxPanel.test.ts`
@@ -22,6 +24,8 @@
 - `src/components/recoveryDraftWorkspace.test.ts`
 - `src/components/DiveDesk.tsx`
 - `src/components/diveDesk.test.ts`
+- `src/components/ProjectLibraryCard.tsx`
+- `src/components/projectLibraryCard.test.ts`
 - `src/StoryXDesk.tsx`
 - `src/App.tsx`
 - `src/appExperience.test.ts`
@@ -157,3 +161,21 @@
 그 뒤 회차 저장 전에 intent를 영속하고, 이미 저장된 회차 재사용 → PLAY working 보강 → 완료 receipt의 실제 영속 확인 → draft 제거 순으로 마무리한다. 어느 단계든 실패하면 journal과 화면을 보존하고 이탈을 막는다. legacy 환원도 journal로 receipt 전환을 재개한다.
 
 App 문자열 순서 단언만으로 끝내지 않고 저장소 실패를 주입하는 거래 테스트로 각 부분 성공 지점과 재시작 복원을 검증한다. 브라우저 인수에서는 빈 작업본·source 분리·재열기·명시 저장뿐 아니라 320px 상단 작업바와 콘솔 오류도 확인한다.
+
+## 사용자 테스트 수정 Task 11 — `이어쓰기` 의미·0화 재개 지점 RED→GREEN
+
+응결 결과가 없는 0화 작품에서 프로젝트 `이어쓰기`가 빈 복구 WRITE로 진입해 의미가 사라지는 사용자 피드백을 반영한다.
+
+1. 먼저 다음 실패 테스트를 추가한다.
+   - 프로젝트 카드 CTA는 모드 중립적인 `작업 계속하기`로 렌더한다.
+   - 최신 활성 프로젝트가 0화·회차 없음이고 저장된 DiveState가 있으며 작성/저장 중 복구 작업본이 없을 때만 PLAY로, 나머지는 WRITE로 폴백한다.
+   - 다른 탭의 최신 프로젝트를 다시 읽고, 일반 작품 재개 때 다른 작품의 선택된 생성 결과 id를 제거하며, WRITE 폴백은 PLAN이 아니라 editor view로 고정한다.
+   - 실패 구제 CTA는 `원문으로 직접 쓰기`, 기존 작업본은 `직접 쓰던 작업본 열기`로 표시한다.
+   - 복구 작업실은 첫 문장에서 `응결된 원고가 아님`을 알리고, PLAY 원문 참고·명시 저장 계약은 그대로 유지한다.
+   - PLAY 실패 카드의 `응결 다시 시도`는 사용자 클릭 때만 기존 잡 시작 함수를 다시 호출한다.
+   - 배열이 재정렬돼도 `createdAt` 기준 같은 회차의 최신 재시도가 running/succeeded이면 옛 실패 카드를 숨기고, 현재 회차가 바뀌면 지난 실패 카드를 PLAY에 띄우지 않는다.
+   - 종료된 실패·성공 영수증도 `localPersistenceFailed`이면 안전 문구가 아니라 새로고침 전 결과 검토·TXT `alert`를 표시한다.
+2. `projectLibrary`의 순수 재개 지점 판정과 ProjectLibraryCard/App 라우팅을 최소 구현한다.
+3. GenerationInboxPanel·DiveDesk·RecoveryDraftWorkspace 카피와 PLAY 재시도 행동을 구현한다. 배열 위치와 무관하게 현재 회차의 최신 시도만 PLAY 상태로 선택하고, 실패·성공 미영속 영수증의 결과 검토·TXT 경고를 유지한다. 자동 재시도는 추가하지 않는다.
+4. 집중 테스트 뒤 브라우저에서 0화 카드→PLAY, 실패 보관함→수동 작업본, 성공 전 WRITE 회차 0개 불변을 확인한다.
+5. 전체 `bash init.sh`, progress/handoff, 커밋·push, Draft PR #40 갱신을 수행한다.

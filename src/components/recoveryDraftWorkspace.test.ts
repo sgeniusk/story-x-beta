@@ -87,7 +87,9 @@ describe('RecoveryDraftWorkspace', () => {
 
     expect(title.value).toBe('');
     expect(body.value).toBe('');
-    expect(body.placeholder).toBe('PLAY 원문을 참고해 첫 문장을 써보세요');
+    expect(view.host.textContent).toContain('응결된 원고가 아닙니다');
+    expect(view.host.textContent).toContain('PLAY 원문으로 직접 쓰기');
+    expect(body.placeholder).toBe('작품으로 남길 첫 문장을 직접 써보세요');
     expect(source?.querySelector('summary')?.textContent).toContain('PLAY 원문 보기');
     expect(source?.textContent).toContain('나: 오늘은 문을 열어 볼게.');
     expect(body.value).not.toContain('나: 오늘은 문을 열어 볼게.');

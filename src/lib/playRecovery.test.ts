@@ -9,7 +9,8 @@ import {
   inspectPlayRecoveryCommitIntent,
   planPlayRecoveryCommit,
   preparePlayRecoveryCommitIntent,
-  repairLegacyPlayRecoveryChapter
+  repairLegacyPlayRecoveryChapter,
+  shouldResumePlayRecoveryWorkDraft
 } from './playRecovery';
 
 describe('PLAY recovery', () => {
@@ -89,6 +90,29 @@ describe('PLAY recovery', () => {
     expect(draft.source.transcript).toContain('나: 원문 한 줄');
     expect(JSON.stringify(project)).toBe(before);
     expect(project.chapters).toHaveLength(0);
+  });
+
+  it('작성 내용이나 저장 저널이 있는 복구 작업본만 프로젝트 기본 재개를 가로챈다', () => {
+    const project = { ...createSeedProject(), id: 'p1', title: '달의 문서고' };
+    const snapshot = buildPlayRecoverySnapshot(
+      createDiveSession(project.characters[0].id, project.id),
+      project,
+      '2026-07-16T12:34:56.000Z'
+    );
+    const empty = createPlayRecoveryWorkDraft(snapshot, 'job-1', '2026-07-16T13:00:00.000Z');
+
+    expect(shouldResumePlayRecoveryWorkDraft(null)).toBe(false);
+    expect(shouldResumePlayRecoveryWorkDraft(empty)).toBe(false);
+    expect(shouldResumePlayRecoveryWorkDraft({ ...empty, title: '  ', body: '\n' })).toBe(false);
+    expect(shouldResumePlayRecoveryWorkDraft({ ...empty, body: '직접 쓴 문장' })).toBe(true);
+    expect(shouldResumePlayRecoveryWorkDraft({
+      ...empty,
+      commitIntent: { chapterId: 'episode-1', chapterTitle: '1화', requestedAt: '2026-07-16T13:01:00.000Z' }
+    })).toBe(true);
+    expect(shouldResumePlayRecoveryWorkDraft({
+      ...empty,
+      legacyRepair: { chapterId: 'episode-1', startedAt: '2026-07-16T13:01:00.000Z' }
+    })).toBe(true);
   });
 
   it('명시 저장 때만 작성 본문을 한 회차로 만들고 캐논·인물·성장을 보존한다', () => {

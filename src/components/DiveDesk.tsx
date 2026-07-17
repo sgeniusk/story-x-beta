@@ -23,7 +23,7 @@ import { DIVE_SEED_CHARACTERS } from '../lib/diveSeedCharacters';
 import { requestVsCandidates } from '../lib/vsCandidatesClient';
 import { VsCandidatePanel } from './VsCandidatePanel';
 import type { VsCandidate } from '../lib/episodeBriefing';
-import { buildProjectRevision, canRecoverGeneration, type GenerationInboxItem } from '../lib/generationInbox';
+import { buildProjectRevision, canRecoverGeneration, findLatestGenerationAttempt, type GenerationInboxItem } from '../lib/generationInbox';
 import { buildPlayRecoverySnapshot, type PlayRecoverySnapshot } from '../lib/playRecovery';
 
 interface DiveDeskProps {
@@ -113,18 +113,27 @@ export function DiveDesk({
   }, [project, session.characterId]);
   const suggest = shouldSuggestCondense(session);
   const episode = nextEpisodeNumber(project);
-  const activeGeneration = generationInbox.find((item) => item.projectId === project.id && item.episode === episode && item.status === 'running') ?? null;
+  // UI 갱신으로 영수증 배열 순서가 바뀌어도 현재 회차의 최신 생성 시도 하나만 PLAY를 대표해야
+  // 재시도 성공 뒤 과거 실패가 되살아나거나 지난 회차 실패를 다시 실행하지 않는다.
+  const currentEpisodeGeneration = findLatestGenerationAttempt(generationInbox, project.id, episode);
+  const activeGeneration = currentEpisodeGeneration?.status === 'running' ? currentEpisodeGeneration : null;
+  const currentGenerationNeedsImmediateDownload = Boolean(
+    currentEpisodeGeneration?.localPersistenceFailed && currentEpisodeGeneration.recovery
+  );
   const projectInboxCount = generationInbox.filter((item) => item.projectId === project.id).length;
-  const recoverableGeneration = generationInbox.find((item) =>
-    item.projectId === project.id && canRecoverGeneration(item) && !(item.recoveredAt && item.recoveredChapterId)
-  ) ?? null;
-  const inlineRecovery = failedRecovery
-    ? { recovery: failedRecovery, generationId: undefined, hasRecoveryDraft: false }
+  const recoverableGeneration = currentEpisodeGeneration &&
+    canRecoverGeneration(currentEpisodeGeneration) &&
+    !(currentEpisodeGeneration.recoveredAt && currentEpisodeGeneration.recoveredChapterId)
+      ? currentEpisodeGeneration
+      : null;
+  const inlineRecovery = activeGeneration ? null : failedRecovery
+    ? { recovery: failedRecovery, generationId: undefined, hasRecoveryDraft: false, needsImmediateDownload: false }
     : recoverableGeneration?.recovery
       ? {
           recovery: recoverableGeneration.recovery,
           generationId: recoverableGeneration.id,
-          hasRecoveryDraft: Boolean(recoverableGeneration.recoveryDraftOpenedAt && recoverableGeneration.recoveryDraftId)
+          hasRecoveryDraft: Boolean(recoverableGeneration.recoveryDraftOpenedAt && recoverableGeneration.recoveryDraftId),
+          needsImmediateDownload: Boolean(recoverableGeneration.localPersistenceFailed)
         }
       : null;
   const selectedGenerationIsStale = Boolean(selectedGeneration && selectedGeneration.baseRevision !== buildProjectRevision(project));
@@ -425,11 +434,22 @@ export function DiveDesk({
 
       {inlineRecovery && (
         <aside className="dx-recovery" role="region" aria-labelledby="dx-recovery-title" aria-describedby="dx-recovery-description">
-          <div className="dx-recovery-copy" role="status" aria-live="polite">
-            <strong id="dx-recovery-title">응결은 멈췄지만 PLAY 기록은 안전합니다.</strong>
-            <span id="dx-recovery-description">원문 그대로 받거나 별도 WRITE 작업본에서 다듬으세요. 회차로 저장하기 전에는 본편·캐논에 반영되지 않습니다.</span>
+          <div className="dx-recovery-copy" role={inlineRecovery.needsImmediateDownload ? 'alert' : 'status'} aria-live={inlineRecovery.needsImmediateDownload ? 'assertive' : 'polite'}>
+            <strong id="dx-recovery-title">
+              {inlineRecovery.needsImmediateDownload
+                ? 'PLAY 기록이 아직 보관함에 저장되지 않았습니다.'
+                : '응결은 멈췄지만 PLAY 기록은 안전합니다.'}
+            </strong>
+            <span id="dx-recovery-description">
+              {inlineRecovery.needsImmediateDownload
+                ? '새로고침 전에 TXT를 먼저 받은 뒤 저장 공간을 확보해 주세요.'
+                : '응결 원고는 만들어지지 않았습니다. 다시 시도하거나 PLAY 원문을 참고해 직접 쓸 수 있습니다.'}
+            </span>
           </div>
           <div className="dx-recovery-actions">
+            <button type="button" className="is-retry" onClick={condense} disabled={busy || startingGeneration}>
+              {startingGeneration ? '다시 등록 중…' : '응결 다시 시도'}
+            </button>
             {onDownloadRecovery && (
               <button type="button" onClick={() => onDownloadRecovery(inlineRecovery.recovery)}>PLAY 기록 TXT</button>
             )}
@@ -439,7 +459,7 @@ export function DiveDesk({
                 className="is-write"
                 onClick={() => onSendRecoveryToDraft(inlineRecovery.recovery, inlineRecovery.generationId)}
               >
-                {inlineRecovery.hasRecoveryDraft ? '작업본 열기' : 'WRITE에서 이어쓰기'}
+                {inlineRecovery.hasRecoveryDraft ? '직접 쓰던 작업본 열기' : '원문으로 직접 쓰기'}
               </button>
             )}
             {onOpenGenerationInbox && (
@@ -450,15 +470,31 @@ export function DiveDesk({
       )}
 
       {(activeGeneration || (projectInboxCount > 0 && !inlineRecovery)) && (
-        <aside className="dx-generation-receipt" aria-label="생성 보관함 상태">
+        <aside
+          className="dx-generation-receipt"
+          aria-label="생성 보관함 상태"
+          role={currentGenerationNeedsImmediateDownload ? 'alert' : undefined}
+        >
           <div>
-            <strong>{activeGeneration?.localPersistenceFailed ? '응결 중 · PLAY 기록 보관 필요' : activeGeneration ? '백그라운드에서 응결 중' : `생성 보관함에 ${projectInboxCount}개`}</strong>
-            <span>{activeGeneration?.localPersistenceFailed ? '로컬 보관공간이 부족합니다. 새로고침 전에 TXT를 받아 주세요.' : activeGeneration ? '화면을 떠나도 로컬 Codex가 계속 작업합니다.' : '완료된 결과는 승인 전까지 작품에 반영되지 않습니다.'}</span>
+            <strong>{activeGeneration?.localPersistenceFailed
+              ? '응결 중 · PLAY 기록 보관 필요'
+              : currentGenerationNeedsImmediateDownload
+                ? '응결 결과 보관 필요'
+                : activeGeneration
+                  ? '백그라운드에서 응결 중'
+                  : `생성 보관함에 ${projectInboxCount}개`}</strong>
+            <span>{activeGeneration?.localPersistenceFailed
+              ? '로컬 보관공간이 부족합니다. 새로고침 전에 TXT를 받아 주세요.'
+              : currentGenerationNeedsImmediateDownload
+                ? '응결 결과가 보관함에 저장되지 않았습니다. 새로고침 전에 결과를 검토하거나 TXT를 받아 주세요.'
+                : activeGeneration
+                  ? '화면을 떠나도 로컬 Codex가 계속 작업합니다.'
+                  : '완료된 결과는 승인 전까지 작품에 반영되지 않습니다.'}</span>
           </div>
           <div className="dx-generation-actions">
             {activeGeneration && onCancelGeneration && <button type="button" onClick={() => onCancelGeneration(activeGeneration)}>생성 취소</button>}
-            {activeGeneration?.localPersistenceFailed && activeGeneration.recovery && onDownloadRecovery && (
-              <button type="button" onClick={() => onDownloadRecovery(activeGeneration.recovery!)}>PLAY 기록 TXT</button>
+            {currentGenerationNeedsImmediateDownload && currentEpisodeGeneration?.recovery && onDownloadRecovery && (
+              <button type="button" onClick={() => onDownloadRecovery(currentEpisodeGeneration.recovery!)}>PLAY 기록 TXT</button>
             )}
             {onOpenGenerationInbox && <button type="button" onClick={onOpenGenerationInbox}>생성 보관함</button>}
           </div>

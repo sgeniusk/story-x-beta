@@ -162,11 +162,100 @@ describe('DiveDesk', () => {
     }));
     expect(html).toContain('PLAY 기록은 안전합니다');
     expect(html).toContain('PLAY 기록 TXT');
-    expect(html).toContain('WRITE에서 이어쓰기');
+    expect(html).toContain('원문으로 직접 쓰기');
+    expect(html).toContain('응결 다시 시도');
     expect(html).toContain('생성 보관함');
     expect(html).toContain('role="region"');
     expect(html).toContain('role="status"');
     expect(html).not.toContain('dx-generation-receipt');
+  });
+
+  it('실패 뒤 재시도 잡이 실행 중이면 이전 복구 카드 대신 현재 진행 상태를 보여준다', () => {
+    const project = createEmptyProject({ title: 't' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const recovery: PlayRecoverySnapshot = {
+      schema: 'storyx/play-recovery/v1', projectId: project.id, projectTitle: 't', episode: 1,
+      scene: '', transcript: '나: 기록', capturedAt: '2026-07-16T00:00:00Z'
+    };
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {},
+      generationInbox: [
+        { id: 'job-retry', kind: 'dive-condense', projectId: project.id, projectTitle: 't', baseRevision: 'r1', episode: 1, status: 'running', createdAt: 'y', updatedAt: 'y' },
+        { id: 'job-failed', kind: 'dive-condense', projectId: project.id, projectTitle: 't', baseRevision: 'r1', episode: 1, status: 'failed', createdAt: 'x', updatedAt: 'x', recovery }
+      ],
+      onOpenGenerationInbox: () => {}
+    }));
+
+    expect(html).toContain('백그라운드에서 응결 중');
+    expect(html).not.toContain('응결은 멈췄지만');
+    expect(html).not.toContain('응결 다시 시도');
+  });
+
+  it('재시도가 성공하면 같은 회차의 이전 실패 카드를 다시 꺼내지 않는다', () => {
+    const project = createEmptyProject({ title: 't' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const recovery: PlayRecoverySnapshot = {
+      schema: 'storyx/play-recovery/v1', projectId: project.id, projectTitle: 't', episode: 1,
+      scene: '', transcript: '나: 기록', capturedAt: '2026-07-16T00:00:00Z'
+    };
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {},
+      generationInbox: [
+        {
+          ...({ id: 'job-failed', kind: 'dive-condense', projectId: project.id, projectTitle: 't', baseRevision: 'r1', episode: 1, status: 'failed', createdAt: '2026-07-16T00:00:00Z', updatedAt: '2026-07-16T00:02:00Z', recovery } as const),
+          recoveryDraftOpenedAt: '2026-07-16T00:02:00Z', recoveryDraftId: 'draft-old'
+        },
+        {
+          id: 'job-retry', kind: 'dive-condense', projectId: project.id, projectTitle: 't',
+          baseRevision: 'r1', episode: 1, status: 'succeeded', createdAt: '2026-07-16T00:01:00Z', updatedAt: '2026-07-16T00:01:30Z',
+          result: { status: 'complete', title: '응결본', hook: '', outline: [], beats: [], prose: '본문', newCanonFacts: [] }
+        }
+      ],
+      onOpenGenerationInbox: () => {}
+    }));
+
+    expect(html).not.toContain('응결은 멈췄지만');
+    expect(html).not.toContain('응결 다시 시도');
+  });
+
+  it('성공 결과 영수증이 영속되지 않았으면 PLAY에서도 즉시 검토·TXT 경고를 유지한다', () => {
+    const project = createEmptyProject({ title: 't' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const recovery: PlayRecoverySnapshot = {
+      schema: 'storyx/play-recovery/v1', projectId: project.id, projectTitle: 't', episode: 1,
+      scene: '', transcript: '나: 기록', capturedAt: '2026-07-16T00:00:00Z'
+    };
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {},
+      generationInbox: [{
+        id: 'job-success', kind: 'dive-condense', projectId: project.id, projectTitle: 't', baseRevision: 'r1',
+        episode: 1, status: 'succeeded', createdAt: 'x', updatedAt: 'x', recovery, localPersistenceFailed: true,
+        result: { status: 'complete', title: '응결본', hook: '', outline: [], beats: [], prose: '본문', newCanonFacts: [] }
+      }],
+      onDownloadRecovery: () => {}, onOpenGenerationInbox: () => {}
+    }));
+
+    expect(html).toContain('응결 결과 보관 필요');
+    expect(html).toContain('새로고침 전에 결과를 검토하거나 TXT');
+    expect(html).toContain('role="alert"');
+    expect(html).toContain('PLAY 기록 TXT');
+  });
+
+  it('현재 회차가 지나간 뒤에는 과거 회차의 실패 카드를 PLAY에 띄우지 않는다', () => {
+    const project = { ...createEmptyProject({ title: 't' }), currentEpisode: 1 };
+    const session = createDiveSession('seed-childhood', project.id);
+    const recovery: PlayRecoverySnapshot = {
+      schema: 'storyx/play-recovery/v1', projectId: project.id, projectTitle: 't', episode: 1,
+      scene: '', transcript: '나: 옛 기록', capturedAt: '2026-07-16T00:00:00Z'
+    };
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {},
+      generationInbox: [{ id: 'job-old', kind: 'dive-condense', projectId: project.id, projectTitle: 't', baseRevision: 'r1', episode: 1, status: 'failed', createdAt: 'x', updatedAt: 'x', recovery }],
+      onOpenGenerationInbox: () => {}
+    }));
+
+    expect(html).not.toContain('응결은 멈췄지만');
+    expect(html).not.toContain('응결 다시 시도');
   });
 
   it('실행 잡 영속화가 실패하면 PLAY에서 새로고침 전 TXT 행동을 제공한다', () => {
@@ -186,6 +275,28 @@ describe('DiveDesk', () => {
     expect(html).toContain('PLAY 기록 TXT');
   });
 
+  it('종료된 실패 영수증이 영속되지 않았으면 안전하다고 하지 않고 즉시 TXT를 경고한다', () => {
+    const project = createEmptyProject({ title: 't' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const recovery: PlayRecoverySnapshot = {
+      schema: 'storyx/play-recovery/v1', projectId: project.id, projectTitle: 't', episode: 1,
+      scene: '', transcript: '나: 기록', capturedAt: '2026-07-16T00:00:00Z'
+    };
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {},
+      generationInbox: [{
+        id: 'job-1', kind: 'dive-condense', projectId: project.id, projectTitle: 't', baseRevision: 'r1',
+        episode: 1, status: 'failed', createdAt: 'x', updatedAt: 'x', recovery, localPersistenceFailed: true
+      }],
+      onDownloadRecovery: () => {}, onSendRecoveryToDraft: () => {}, onOpenGenerationInbox: () => {}
+    }));
+
+    expect(html).toContain('PLAY 기록이 아직 보관함에 저장되지 않았습니다');
+    expect(html).toContain('새로고침 전에 TXT');
+    expect(html).toContain('role="alert"');
+    expect(html).not.toContain('PLAY 기록은 안전합니다');
+  });
+
   it('이미 연 복구 작업본은 PLAY에서도 새 작업이 아니라 재열기로 표시한다', () => {
     const project = createEmptyProject({ title: 't' });
     const session = createDiveSession('seed-childhood', project.id);
@@ -203,7 +314,7 @@ describe('DiveDesk', () => {
       onSendRecoveryToDraft: () => {}
     }));
     expect(html).toContain('작업본 열기');
-    expect(html).not.toContain('WRITE에서 이어쓰기');
+    expect(html).not.toContain('원문으로 직접 쓰기');
   });
 
   it('잡 등록 실패 전에 전체 PLAY를 캡처하고 인라인 TXT/WRITE 구제를 제공한다', async () => {
@@ -243,9 +354,15 @@ describe('DiveDesk', () => {
 
     const buttons = Array.from(host.querySelectorAll('button'));
     act(() => buttons.find((button) => button.textContent === 'PLAY 기록 TXT')?.click());
-    act(() => buttons.find((button) => button.textContent === 'WRITE에서 이어쓰기')?.click());
+    act(() => buttons.find((button) => button.textContent === '원문으로 직접 쓰기')?.click());
     expect(onDownloadRecovery).toHaveBeenCalledWith(captured);
     expect(onSendRecoveryToDraft).toHaveBeenCalledWith(captured, undefined);
+
+    await act(async () => {
+      Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '응결 다시 시도')?.click();
+      await Promise.resolve();
+    });
+    expect(onStartGeneration).toHaveBeenCalledTimes(2);
     act(() => root.unmount());
     host.remove();
   });

@@ -4,6 +4,7 @@ import {
   appendGenerationInboxItem,
   buildProjectRevision,
   canRecoverGeneration,
+  findLatestGenerationAttempt,
   hasDurableRecoveryDraftReceipt,
   isActiveGeneration,
   mergeGenerationJob,
@@ -59,6 +60,15 @@ describe('generation inbox', () => {
     for (let index = 0; index < 25; index += 1) list = appendGenerationInboxItem(list, item(String(index)));
     expect(list).toHaveLength(20);
     expect(list[0].id).toBe('24');
+  });
+
+  it('영수증 UI 갱신으로 배열 순서가 바뀌어도 생성 시도 createdAt 기준 최신 항목을 찾는다', () => {
+    const oldFailure = { ...item('1', 'failed'), createdAt: '2026-07-15T00:00:00Z' };
+    const newerSuccess = { ...item('2', 'succeeded'), createdAt: '2026-07-15T00:01:00Z' };
+
+    expect(findLatestGenerationAttempt([oldFailure, newerSuccess], 'p1', 1)?.id).toBe('2');
+    expect(findLatestGenerationAttempt([newerSuccess, oldFailure], 'p1', 1)?.id).toBe('2');
+    expect(findLatestGenerationAttempt([newerSuccess], 'other', 1)).toBeNull();
   });
 
   it('20개 cap을 넘어도 미완료 작업본이 연결된 영수증은 보존하고 오래된 일반 영수증을 정리한다', () => {

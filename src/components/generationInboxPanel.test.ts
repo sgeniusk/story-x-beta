@@ -38,7 +38,7 @@ describe('GenerationInboxPanel', () => {
     expect(html).toContain('생성 실패');
   });
 
-  it('복구 가능한 실패 영수증은 처음엔 WRITE 작업본을 만들고 연 뒤엔 다시 열 수 있다', () => {
+  it('복구 가능한 실패 영수증은 수동 작성임을 밝히고 연 뒤엔 같은 작업본을 다시 연다', () => {
     const onDownloadRecovery = vi.fn();
     const onSendRecoveryToDraft = vi.fn();
     const host = document.createElement('div');
@@ -54,7 +54,7 @@ describe('GenerationInboxPanel', () => {
     expect(host.textContent).toContain('본편 회차나 캐논에는 자동 반영되지 않습니다');
     const buttons = Array.from(host.querySelectorAll('button'));
     act(() => buttons.find((button) => button.textContent === 'PLAY 기록 TXT')?.click());
-    act(() => buttons.find((button) => button.textContent === 'WRITE에서 이어쓰기')?.click());
+    act(() => buttons.find((button) => button.textContent === '원문으로 직접 쓰기')?.click());
     expect(onDownloadRecovery).toHaveBeenCalledWith(failed);
     expect(onSendRecoveryToDraft).toHaveBeenCalledWith(failed);
 
@@ -66,9 +66,9 @@ describe('GenerationInboxPanel', () => {
       }],
       onReview: () => {}, onCancel: () => {}, onDiscard: () => {}, onDownloadRecovery, onSendRecoveryToDraft
     })));
-    expect(host.textContent).toContain('WRITE에 복구 작업본이 있습니다');
+    expect(host.textContent).toContain('직접 쓰는 복구 작업본이 있습니다');
     expect(host.textContent).toContain('아직 본편 회차나 캐논에 반영되지 않았습니다');
-    const reopenButton = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '작업본 열기');
+    const reopenButton = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '직접 쓰던 작업본 열기');
     expect(reopenButton?.hasAttribute('disabled')).toBe(false);
     act(() => reopenButton?.click());
     expect(onSendRecoveryToDraft).toHaveBeenCalledTimes(2);
@@ -136,5 +136,18 @@ describe('GenerationInboxPanel', () => {
     expect(html).toContain('새로고침 전에 PLAY 기록 TXT');
     expect(html).toContain('PLAY 기록 TXT');
     expect(html).not.toContain('WRITE에서 이어쓰기');
+  });
+
+  it('복구 가능한 종료 영수증도 영속화 실패 중이면 안전 문구 대신 새로고침 전 TXT 경고를 낸다', () => {
+    const html = renderToStaticMarkup(createElement(GenerationInboxPanel, {
+      items: [{ ...makeItem('failed'), recovery, localPersistenceFailed: true }],
+      onReview: () => {}, onCancel: () => {}, onDiscard: () => {},
+      onDownloadRecovery: () => {}, onSendRecoveryToDraft: () => {}
+    }));
+
+    expect(html).toContain('새로고침 전에 PLAY 기록 TXT');
+    expect(html).toContain('role="alert"');
+    expect(html).not.toContain('PLAY 기록은 안전합니다');
+    expect(html).toContain('원문으로 직접 쓰기');
   });
 });

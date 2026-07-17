@@ -10,6 +10,22 @@ export interface ProjectLibraryEntry {
   project: SeriesProject;
 }
 
+export type ProjectResumeStage = 'dive' | 'editor';
+
+/**
+ * 아직 응결된 회차가 없는 작품은 저장된 PLAY 현장이 있을 때 그 자리로 돌아간다.
+ * PLAY가 없거나 이미 회차가 생긴 작품은 WRITE로 안전하게 폴백한다.
+ */
+export function resolveProjectResumeStage(
+  project: SeriesProject,
+  hasDiveState: boolean,
+  hasRecoveryWorkToResume: boolean
+): ProjectResumeStage {
+  if (hasRecoveryWorkToResume) return 'editor';
+  const hasNoCommittedChapter = project.currentEpisode === 0 && project.chapters.length === 0;
+  return hasNoCommittedChapter && hasDiveState ? 'dive' : 'editor';
+}
+
 interface UpsertProjectOptions {
   lifecycle?: ProjectLifecycle;
   now?: Date;

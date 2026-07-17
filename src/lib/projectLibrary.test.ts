@@ -1,15 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { createEmptyProject } from './storyEngine';
+import { chapterFromDraftPayload, createEmptyProject } from './storyEngine';
 import {
   confirmProjectEntry,
   migrateLegacyProject,
   parseProjectLibrary,
+  resolveProjectResumeStage,
   upsertProjectEntry
 } from './projectLibrary';
 
 const project = (id: string, title = `작품 ${id}`) => ({ ...createEmptyProject({ title }), id });
 
 describe('project library', () => {
+  it('0화는 저장된 PLAY가 있을 때만 PLAY를 재개하고 그 밖에는 WRITE로 폴백한다', () => {
+    const empty = project('draft');
+    const started = { ...empty, currentEpisode: 1 };
+    const drifted = {
+      ...chapterFromDraftPayload(empty, {
+        title: '숨은 1화', hook: '', outline: [], beats: [], prose: '본문', newCanonFacts: []
+      }, { genre: empty.genre, intent: '', pressure: '' }).updatedProject,
+      currentEpisode: 0
+    };
+
+    expect(resolveProjectResumeStage(empty, true, false)).toBe('dive');
+    expect(resolveProjectResumeStage(empty, false, false)).toBe('editor');
+    expect(resolveProjectResumeStage(started, true, false)).toBe('editor');
+    expect(resolveProjectResumeStage(drifted, true, false)).toBe('editor');
+    expect(resolveProjectResumeStage(empty, true, true)).toBe('editor');
+  });
+
   it('migrates a legacy project as a confirmed work', () => {
     expect(migrateLegacyProject(project('legacy'), new Date('2026-07-15T00:00:00Z'))).toEqual({
       projectId: 'legacy',

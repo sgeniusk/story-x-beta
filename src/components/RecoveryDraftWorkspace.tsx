@@ -92,8 +92,8 @@ export function RecoveryDraftWorkspace({
             </div>
 
             <p className="fc-recovery-project">{draft.source.projectTitle} · 당시 {draft.episodeHint}화</p>
-            <h1 className="ep-title" id="fc-recovery-title">PLAY에서 이어 쓰기</h1>
-            <p className="ep-sub">원문은 옆의 참고 패널에 보존되어 있습니다. 여기에는 작품으로 남길 문장만 써 주세요.</p>
+            <h1 className="ep-title" id="fc-recovery-title">PLAY 원문으로 직접 쓰기</h1>
+            <p className="ep-sub">응결된 원고가 아닙니다. 옆의 PLAY 원문을 참고해 작품으로 남길 문장만 직접 써 주세요.</p>
 
             <form className="fc-recovery-form" onSubmit={commit}>
               <label className="fc-recovery-field">
@@ -117,7 +117,7 @@ export function RecoveryDraftWorkspace({
                   aria-label="복구 작업 본문"
                   aria-describedby="fc-recovery-impact"
                   value={draft.body}
-                  placeholder="PLAY 원문을 참고해 첫 문장을 써보세요"
+                  placeholder="작품으로 남길 첫 문장을 직접 써보세요"
                   rows={18}
                   readOnly={isFinalizingCommit}
                   onChange={(event) => onBodyChange(event.target.value)}

@@ -241,9 +241,19 @@ describe('P0-c 작품 라이브러리 배선', () => {
     expect(projectCardSource).toContain('작품으로 확정');
   });
 
-  it('작품 이어쓰기는 해당 projectId를 활성화한 뒤 editor로 들어간다', () => {
+  it('작품 계속하기는 최신 project·PLAY·작성 복구본을 판정하고 안전한 모드로 들어간다', () => {
     expect(app).toContain('activateProject(entry.projectId)');
     expect(app).toContain('handleOpenLibraryProject');
+    const handler = app.match(/function handleOpenLibraryProject[\s\S]{0,1800}?\n  \}/)?.[0] ?? '';
+    expect(handler).toContain('resolveProjectResumeStage(');
+    expect(handler).toContain('loadProject()');
+    expect(handler).toContain('loadDiveState()');
+    expect(handler).toContain('shouldResumePlayRecoveryWorkDraft(');
+    expect(handler).toContain('hasDurableRecoveryDraftReceipt(');
+    expect(handler).toContain('deactivatePlayRecoveryWorkDraft(');
+    expect(handler).toContain('setSelectedGenerationId(null)');
+    expect(handler).toContain("setStudioView('editor')");
+    expect(handler).toContain('setStage(resumeStage)');
   });
 
   it('생성 결과 검토도 결과의 projectId 활성화에 성공한 뒤에만 dive로 들어간다', () => {
@@ -269,7 +279,7 @@ describe('P0-b PLAY 기록 복구 배선', () => {
     expect(app).toContain('buildPlayRecoveryFilename(recovery)');
   });
 
-  it('WRITE 작업본 열기는 대상 작품만 활성화하고 본편 Chapter를 만들지 않는다', () => {
+  it('수동 복구 작업본 열기는 대상 작품만 활성화하고 본편 Chapter를 만들지 않는다', () => {
     const handler = app.match(/function handleOpenRecoveryWorkDraft[\s\S]{0,3000}?\n  \}/)?.[0] ?? '';
     expect(handler).toContain('activateProject(recovery.projectId)');
     expect(handler).toContain('createPlayRecoveryWorkDraft(');

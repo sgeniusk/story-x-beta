@@ -120,7 +120,7 @@ import {
 } from './lib/generationInbox';
 import { GenerationInboxPanel } from './components/GenerationInboxPanel';
 import { ProjectLibraryCard } from './components/ProjectLibraryCard';
-import type { ProjectLibraryEntry } from './lib/projectLibrary';
+import { resolveProjectResumeStage, type ProjectLibraryEntry } from './lib/projectLibrary';
 import {
   buildPlayRecoveryFilename,
   createPlayRecoveryWorkDraft,
@@ -129,6 +129,7 @@ import {
   planPlayRecoveryCommit,
   preparePlayRecoveryCommitIntent,
   repairLegacyPlayRecoveryChapter,
+  shouldResumePlayRecoveryWorkDraft,
   type PlayRecoverySnapshot,
   type PlayRecoveryWorkDraft
 } from './lib/playRecovery';
@@ -880,8 +881,27 @@ function App() {
   function handleOpenLibraryProject(entry: ProjectLibraryEntry): void {
     if (!canLeaveRecoveryWorkDraft()) return;
     if (!activateProject(entry.projectId)) return;
+    const activeProject = loadProject();
+    const recoveryDraft = getActivePlayRecoveryWorkDraft(activeProject.id);
+    let resumeRecoveryDraft = shouldResumePlayRecoveryWorkDraft(recoveryDraft);
+    if (recoveryDraft && !resumeRecoveryDraft) {
+      const canReopenFromInbox = hasDurableRecoveryDraftReceipt(
+        generationInboxRef.current,
+        recoveryDraft.generationId,
+        recoveryDraft.id
+      );
+      const deactivated = canReopenFromInbox && deactivatePlayRecoveryWorkDraft(activeProject.id);
+      resumeRecoveryDraft = !deactivated;
+    }
+    const resumeStage = resolveProjectResumeStage(
+      activeProject,
+      Boolean(loadDiveState()),
+      resumeRecoveryDraft
+    );
     refreshActiveProjectState();
-    setStage('editor');
+    setSelectedGenerationId(null);
+    if (resumeStage === 'editor') setStudioView('editor');
+    setStage(resumeStage);
   }
   function handleConfirmLibraryProject(entry: ProjectLibraryEntry): void {
     if (!confirmLibraryProject(entry.projectId)) return;

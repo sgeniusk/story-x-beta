@@ -59,16 +59,16 @@ export function GenerationInboxPanel({
                   <span className="gix-status">{STATUS_LABEL[item.status]}</span>
                   <h3>{item.result?.title || `${item.projectTitle} · ${item.episode}화`}</h3>
                   <p>{item.warning || `${item.projectTitle}에서 시작한 응결 작업`}</p>
-                  {recoverable && (
+                  {recoverable && !needsImmediateDownload && (
                     <p className="gix-recovery-note" role="status">
                       {savedAsChapter
                         ? 'WRITE에서 회차로 저장했습니다. 캐논에는 자동 반영되지 않았습니다.'
                         : hasRecoveryDraft
-                          ? 'WRITE에 복구 작업본이 있습니다. 아직 본편 회차나 캐논에 반영되지 않았습니다.'
-                          : 'PLAY 기록은 안전합니다. WRITE에서 작업본을 열어도 본편 회차나 캐논에는 자동 반영되지 않습니다.'}
+                          ? '직접 쓰는 복구 작업본이 있습니다. 아직 본편 회차나 캐논에 반영되지 않았습니다.'
+                          : 'PLAY 기록은 안전합니다. 원문으로 직접 쓰기를 열어도 본편 회차나 캐논에는 자동 반영되지 않습니다.'}
                     </p>
                   )}
-                  {needsImmediateDownload && !recoverable && (
+                  {needsImmediateDownload && (
                     <p className="gix-recovery-note" role="alert">
                       로컬 보관공간이 부족합니다. 새로고침 전에 PLAY 기록 TXT를 먼저 받아 주세요.
                     </p>
@@ -87,7 +87,7 @@ export function GenerationInboxPanel({
                           disabled={savedAsChapter}
                           onClick={() => onSendRecoveryToDraft(item)}
                         >
-                          {savedAsChapter ? '회차로 저장됨' : hasRecoveryDraft ? '작업본 열기' : 'WRITE에서 이어쓰기'}
+                          {savedAsChapter ? '회차로 저장됨' : hasRecoveryDraft ? '직접 쓰던 작업본 열기' : '원문으로 직접 쓰기'}
                         </button>
                       )}
                     </>

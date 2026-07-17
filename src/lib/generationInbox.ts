@@ -218,6 +218,22 @@ export function appendGenerationInboxItem(items: GenerationInboxItem[], item: Ge
   return retainGenerationInboxItems([item, ...items.filter((candidate) => candidate.id !== item.id)]);
 }
 
+/**
+ * 배열 위치는 작업본 연결 같은 UI 갱신으로 바뀔 수 있으므로 생성 시도 순서는 createdAt으로 판정한다.
+ */
+export function findLatestGenerationAttempt(
+  items: GenerationInboxItem[],
+  projectId: string,
+  episode: number
+): GenerationInboxItem | null {
+  let latest: GenerationInboxItem | null = null;
+  for (const item of items) {
+    if (item.projectId !== projectId || item.episode !== episode) continue;
+    if (!latest || item.createdAt > latest.createdAt) latest = item;
+  }
+  return latest;
+}
+
 export function mergeGenerationJob(item: GenerationInboxItem, job: GenerationJobSnapshot): GenerationInboxItem {
   return { ...item, ...job, kind: 'dive-condense', projectTitle: item.projectTitle };
 }

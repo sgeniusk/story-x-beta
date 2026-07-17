@@ -41,6 +41,18 @@ export interface PlayRecoveryWorkDraft {
   updatedAt: string;
 }
 
+/** 빈 자동 생성 작업본은 프로젝트 기본 재개를 가로채지 않는다. */
+export function shouldResumePlayRecoveryWorkDraft(
+  draft: PlayRecoveryWorkDraft | null | undefined
+): boolean {
+  return Boolean(draft && (
+    draft.title.trim() ||
+    draft.body.trim() ||
+    draft.commitIntent ||
+    draft.legacyRepair
+  ));
+}
+
 export type PlayRecoveryCommitPlan =
   | { status: 'project-mismatch' }
   | { status: 'empty-body' }
