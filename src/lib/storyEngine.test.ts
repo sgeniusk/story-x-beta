@@ -1305,6 +1305,45 @@ describe('buildProjectContextDigest — 작품 헌장 절 (Phase A-4)', () => {
   });
 });
 
+describe('buildProjectContextDigest — 한국어 문체·보이스 규칙 (P0-a)', () => {
+  it('tone/rhythm/vocab 규칙만 실제 digest에 출력한다', () => {
+    const project: SeriesProject = {
+      ...createEmptyProject({ title: '보이스 작품' }),
+      bibleOutline: [
+        { id: 'tone', title: '톤', body: '감정은 사물의 상태로 우회해 드러낸다.' },
+        { id: 'rhythm', title: '문장 리듬', body: '결정적 순간에는 단문으로 끊는다.' },
+        { id: 'world', title: '세계관 규칙', body: 'VOICE-EXCLUDE-WORLD' },
+        { id: 'vocab', title: '어휘 금기', body: '운명과 숙명은 쓰지 않는다.' },
+        { id: 'motif', title: '시각 모티프', body: 'VOICE-EXCLUDE-MOTIF' }
+      ]
+    };
+
+    const digest = buildProjectContextDigest(project);
+
+    expect(digest).toContain('한국어 문체·보이스 규칙:');
+    expect(digest).toContain('- 감정은 사물의 상태로 우회해 드러낸다.');
+    expect(digest).toContain('- 결정적 순간에는 단문으로 끊는다.');
+    expect(digest).toContain('- 운명과 숙명은 쓰지 않는다.');
+    expect(digest).not.toContain('VOICE-EXCLUDE-WORLD');
+    expect(digest).not.toContain('VOICE-EXCLUDE-MOTIF');
+  });
+
+  it('tone/rhythm/vocab가 공백뿐이면 문체·보이스 규칙 절을 출력하지 않는다', () => {
+    const project: SeriesProject = {
+      ...createEmptyProject({ title: '빈 보이스 작품' }),
+      bibleOutline: [
+        { id: 'tone', title: '톤', body: '' },
+        { id: 'rhythm', title: '문장 리듬', body: '   ' },
+        { id: 'world', title: '세계관 규칙', body: '세계관 규칙은 있다.' },
+        { id: 'vocab', title: '어휘 금기', body: '\n' },
+        { id: 'motif', title: '시각 모티프', body: '모티프 규칙은 있다.' }
+      ]
+    };
+
+    expect(buildProjectContextDigest(project)).not.toContain('한국어 문체·보이스 규칙');
+  });
+});
+
 // 온보딩 헌장 빌더 — Phase A-3. 4줄 척추 → 화수 핀 비트, 온보딩 입력 → StoryContract.
 describe('buildStoryContractFromOnboarding / deriveBeatSheet (Phase A-3)', () => {
   const spine = {

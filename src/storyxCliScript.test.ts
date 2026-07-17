@@ -3,12 +3,18 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
+import { buildDiveCondensePrompt } from './lib/server/promptBuilders';
 
 const packageJson = JSON.parse(readFileSync(resolve(__dirname, '../package.json'), 'utf8')) as {
   scripts?: Record<string, string>;
 };
 const cli = readFileSync(resolve(__dirname, '../tools/storyx.mjs'), 'utf8');
 const cliPath = resolve(__dirname, '../tools/storyx.mjs');
+const diveCondenseBlock = cli.slice(
+  cli.indexOf("if (command === 'dive-condense')"),
+  cli.indexOf("if (command === 'dive-showrunner')")
+);
+const legacyDiveCondenseConflicts = ['3인칭 서사 회차로 압축', '대사를 그대로 옮기지 말고', '인과로 봉합'] as const;
 
 describe('storyx CLI script', () => {
   it('exposes doctor and review commands for local AI CLI harness testing', () => {
@@ -18,6 +24,62 @@ describe('storyx CLI script', () => {
     expect(cli).toContain('provider');
     expect(cli).toContain('claude --print');
     expect(cli).toContain('codex exec');
+  });
+
+  it('dive-condense --dry-run은 실제 CLI 런타임 빌더의 전체 prompt를 TS 빌더와 byte-identical하게 출력한다', () => {
+    const input = {
+      character: '한서윤 — 선배. 욕망: 진실. 상처: 배신.',
+      scene: '비 오는 회사 옥상 문 앞',
+      context: '## 한국어 문체·보이스 규칙\n- 리듬: 짧고 긴 문장을 교차한다.',
+      transcript: '나: 문을 열 거예요.\n한서윤: 열면 돌아갈 수 없어.',
+      arc: '{"dramaticQuestion":"문을 열 것인가","tension":72}'
+    };
+    const result = spawnSync(
+      'node',
+      [
+        cliPath, 'dive-condense', '--provider', 'codex', '--dry-run',
+        '--character', input.character,
+        '--scene', input.scene,
+        '--context', input.context,
+        '--transcript', input.transcript,
+        '--arc', input.arc,
+        '--episode', '1'
+      ],
+      { encoding: 'utf8' }
+    );
+
+    expect(result.status).toBe(0);
+    const payload = JSON.parse(result.stdout) as { mode: string; dryRun: boolean; prompt: string; commandPreview: string[] };
+    const expectedPrompt = buildDiveCondensePrompt(input);
+    expect(payload.mode).toBe('dive-condense');
+    expect(payload.dryRun).toBe(true);
+    expect(payload.prompt).toBe(expectedPrompt);
+    expect(payload.commandPreview[payload.commandPreview.length - 1]).toBe(expectedPrompt);
+    for (const legacy of legacyDiveCondenseConflicts) expect(payload.prompt).not.toContain(legacy);
+  });
+
+  it('dive-condense는 commandPreview를 dry-run 전에 한 번 만들고 실제 provider 호출에도 같은 변수를 쓴다', () => {
+    expect(diveCondenseBlock.match(/const commandPreview\s*=/g)).toHaveLength(1);
+    expect(diveCondenseBlock.indexOf('const commandPreview =')).toBeLessThan(diveCondenseBlock.indexOf('if (dryRun)'));
+    const dryRunBranch = diveCondenseBlock.slice(
+      diveCondenseBlock.indexOf('if (dryRun)'),
+      diveCondenseBlock.indexOf("if (provider === 'mock')")
+    );
+    expect(dryRunBranch).toContain('commandPreview');
+    expect(diveCondenseBlock).toContain('runProviderWithRetry(commandPreview)');
+  });
+
+  it('dive-condense 빈 입력 dry-run도 TS fallback prompt와 byte-identical하다', () => {
+    const result = spawnSync(
+      'node',
+      [cliPath, 'dive-condense', '--provider', 'codex', '--dry-run'],
+      { encoding: 'utf8' }
+    );
+    expect(result.status).toBe(0);
+    const payload = JSON.parse(result.stdout) as { prompt: string; commandPreview: string[] };
+    const expectedPrompt = buildDiveCondensePrompt({ character: '', scene: '', context: '', transcript: '', arc: '' });
+    expect(payload.prompt).toBe(expectedPrompt);
+    expect(payload.commandPreview[payload.commandPreview.length - 1]).toBe(expectedPrompt);
   });
 
   // A-5 — 헌장 예산 배선: draft 명령이 --contract-status 를 받아 buildDraftPrompt 에 넘긴다.

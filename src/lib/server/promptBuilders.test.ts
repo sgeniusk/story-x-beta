@@ -2,7 +2,109 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildAgentReviewPrompt, buildDraftPrompt, buildPaceInterviewPrompt, buildSpineSuggestionPrompt } from './promptBuilders';
+import { buildAgentReviewPrompt, buildDiveCondensePrompt, buildDraftPrompt, buildPaceInterviewPrompt, buildSpineSuggestionPrompt } from './promptBuilders';
+
+const DIVE_CONDENSE_QUALITY_RULES = [
+  '- 본문은 한국어 기준 1,800~2,700자로 씁니다. 재료가 부족하면 설정을 발명하거나 같은 내용을 반복해 분량을 억지로 채우지 말고, 짧더라도 주어진 사실 범위를 지킵니다.',
+  '- 서로 다른 압력을 가진 현재 장면 2~3개로 재구성합니다. 사건 보고나 줄거리 요약으로 대신하지 않습니다.',
+  '- 원문에 인물 간 대화가 있으면 서로 원하는 것이 부딪히는 직접 대화 교환을 최소 1회 장면 안에 넣습니다. 원문에 없는 핵심 사실을 대사로 발명하지 않습니다.',
+  '- 각 장면은 압력을 높이거나, 선택지를 줄이거나, 실제 대가를 발생시켜야 합니다.',
+  '- 같은 장면 안에서 모두가 합리적으로 합의해 갈등을 봉합하지 않습니다.',
+  '- 이번 회차는 열린 질문 하나에 답하고, 그 답 때문에 더 날카로운 다음 질문을 엽니다.',
+  '- 마지막 2~3문장은 구체적인 반전·위협·기한·강제된 선택 중 하나로 끝냅니다. 주제나 교훈을 요약하며 닫지 않습니다.',
+  '- 테스트·QA·복구·UI 안내·스키마·타임스탬프처럼 작품 밖 메타 표식은, 사용자가 작품 내부 고유명사라고 명시하지 않은 한 title·hook·outline·beats·prose·newCanonFacts 어디에도 넣지 않습니다.',
+  '- newCanonFacts에는 원문·현재 장면·기존 캐논에 명시된 사실과 장면 성립에 꼭 필요한 최소 추론만 넣습니다. 근거 없는 새 이름·기관·범행 원인·시간·관계는 확정하지 않습니다.',
+  '- 초안을 장면화한 뒤, 기존 기억의 "한국어 문체·보이스 규칙"을 마지막 문장 패스로 적용합니다. 사건·사실은 바꾸지 않고 문장 리듬·어휘·말투를 그 규칙에 맞춥니다.'
+] as const;
+
+const DIVE_CONDENSE_VOICE_REVIEW_RULES = [
+  '- "한국어 문체·보이스 규칙"을 최종 검수 체크리스트로 사용합니다. 물리적 신호로 드러낸 감정을 바로 뒤에서 감정 이름으로 재설명하지 않고, 규칙에 적힌 금지어를 최종 원고에 남기지 않습니다.',
+  '- 인물별 호칭·높임말·말끝은 원문과 캐릭터 카드의 근거를 따릅니다. 근거 없이 반말과 존댓말을 오가거나 호칭을 바꾸지 않습니다.',
+  '- 장면 연결과 말미에서는 질문·선택을 기능적으로 해설하거나 요약하지 말고, 사물·행동·대사로 압력을 보여줍니다. 인과를 설명한 뒤 내리는 결정은 구체 동사의 독립 단문으로 둡니다.'
+] as const;
+
+const DIVE_CONDENSE_LENGTH_SELF_CHECK =
+  '- 완료 전에 prose 글자 수를 직접 확인합니다. 1,800자 미만이면 새 설정·기능적 해설·같은 내용 반복으로 채우지 말고, 입력에 이미 있는 장면의 행동·감각·갈등 대사를 더 구체화합니다. 입력 재료가 실제로 부족할 때만 사실 범위를 지키기 위해 1,800자 미만을 허용합니다.';
+
+const DIVE_CONDENSE_LENGTH_SAFETY_MARGIN =
+  '- 최종 허용 범위는 1,800~2,700자로 유지하되, 모델의 글자 수 계산 편차를 고려해 생성 목표는 1,900~2,600자로 둡니다. 하한과 상한 모두에 안전 여유를 남깁니다.';
+
+const DIVE_CONDENSE_ANTI_EXPOSITION_RULES = [
+  '- 캐릭터 카드의 욕망·말투·우선순위를 서술자가 요약·평가하거나 이행 보고처럼 재진술하지 않습니다. 독자가 행동과 대사에서만 알아차리게 합니다.',
+  '- 말투 규칙은 캐릭터의 실제 대사 배열에만 적용합니다. 대사 앞뒤에 문장 길이·말끝·호칭의 변화를 해설하는 문장을 추가하지 않습니다.',
+  '- prose에서 장면 기능을 "질문"·"문제"·"선택"·"답"이라고 명명하지 않고, 이미 드러난 양자택일을 다시 비교 설명하지 않습니다. 딜레마가 드러나면 즉시 행동으로 넘어갑니다.',
+  '- 마지막 2~3문장은 각 문장마다 하나의 구체 행동·감각·시한만 담은 독립문으로 둡니다. 행동 직전에 의미·동기·선택을 해설하지 않습니다.'
+] as const;
+
+const DIVE_CONDENSE_LEGACY_CONFLICTS = [
+  '3인칭 서사 회차로 압축',
+  '대사를 그대로 옮기지 말고',
+  '인과로 봉합'
+] as const;
+
+describe('buildDiveCondensePrompt — PLAY 응결 장면화·보이스 품질 계약', () => {
+  const input = {
+    character: '한서윤 — 선배. 욕망: 진실. 상처: 배신. 현재 상태: 옥상 앞. 말투: 짧게 말한다. 캐논 앵커: 비를 싫어한다.',
+    scene: '비 오는 회사 옥상 문 앞',
+    context: '## 한국어 문체·보이스 규칙\n- 리듬: 짧고 긴 문장을 교차한다.',
+    transcript: '나: 문을 열 거예요.\n한서윤: 열면 돌아갈 수 없어.',
+    arc: '{"dramaticQuestion":"문을 열 것인가","tension":72,"nextBeat":"경보"}'
+  };
+
+  it('입력의 다섯 섹션과 기존 JSON 출력 계약을 보존한다', () => {
+    const prompt = buildDiveCondensePrompt(input);
+
+    expect(prompt).toContain(input.character);
+    expect(prompt).toContain(input.scene);
+    expect(prompt).toContain(input.context);
+    expect(prompt).toContain(input.transcript);
+    expect(prompt).toContain(input.arc);
+    for (const fieldContract of [
+      '"title": "이 회차 제목"',
+      '"hook": "다음을 부르는 한 줄"',
+      '"outline": ["장면 비트 1", "비트 2"]',
+      '"beats": [{ "label": "구성 단위", "summary": "한 문장", "tension": 0 }]',
+      '"prose": "3인칭 본문"',
+      '"newCanonFacts": [{ "owner": "character|world|plot", "statement": "이 회차에서 확정된 새 사실(약속·사건·관계 변화)" }]'
+    ]) expect(prompt).toContain(fieldContract);
+  });
+
+  it('장면화·직접 갈등 대사 계약과 상충하는 구형 응결 문구를 제거한다', () => {
+    const prompt = buildDiveCondensePrompt(input);
+    for (const legacy of DIVE_CONDENSE_LEGACY_CONFLICTS) expect(prompt).not.toContain(legacy);
+  });
+
+  it('분량·장면·대화·압력·후크·메타·캐논·보이스 계약을 모두 포함한다', () => {
+    const prompt = buildDiveCondensePrompt(input);
+    for (const rule of DIVE_CONDENSE_QUALITY_RULES) expect(prompt).toContain(rule);
+  });
+
+  it('보이스 최종 검수에서 감정 재설명·금지어·호칭 흔들림·기능적 해설을 제거한다', () => {
+    const prompt = buildDiveCondensePrompt(input);
+    for (const rule of DIVE_CONDENSE_VOICE_REVIEW_RULES) expect(prompt).toContain(rule);
+  });
+
+  it('완료 전에 prose 하한을 self-check하고 기존 장면 재료로만 구체화한다', () => {
+    expect(buildDiveCondensePrompt(input)).toContain(DIVE_CONDENSE_LENGTH_SELF_CHECK);
+  });
+
+  it('최종 허용 범위 안에서 생성 목표에 하한·상한 안전 여유를 둔다', () => {
+    expect(buildDiveCondensePrompt(input)).toContain(DIVE_CONDENSE_LENGTH_SAFETY_MARGIN);
+  });
+
+  it('캐릭터 카드와 장면 기능을 해설하지 않고 딜레마·말미를 즉시 구체 행동으로 전환한다', () => {
+    const prompt = buildDiveCondensePrompt(input);
+    for (const rule of DIVE_CONDENSE_ANTI_EXPOSITION_RULES) expect(prompt).toContain(rule);
+  });
+
+  it('비어 있는 장면·아크·캐릭터·기존 기억에는 명시적 fallback을 쓴다', () => {
+    const prompt = buildDiveCondensePrompt({ character: '', scene: '', context: '', transcript: '', arc: '' });
+    expect(prompt).toContain('(장면 미설정)');
+    expect(prompt).toContain('(없음)');
+    expect(prompt).toContain('(미정)');
+    expect(prompt).toContain('(아직 없음)');
+  });
+});
 
 describe('buildAgentReviewPrompt — 전제 진척 점검 지시 (continuity≠payoff 보정)', () => {
   it('연재 장편에서 중심 질문(전제)의 진척을 함께 보도록 지시한다', () => {

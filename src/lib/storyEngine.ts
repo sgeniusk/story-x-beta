@@ -1606,6 +1606,9 @@ export function buildProjectContextDigest(project: SeriesProject): string {
       .filter((section) => section.id === 'tone' || section.id === 'rhythm' || section.id === 'vocab')
       .map((section) => section.body)
   });
+  const koreanVoiceRules = contextPack.koreanVoiceRules
+    .map((rule) => rule.trim())
+    .filter((rule) => rule.length > 0);
 
   // 작품 계약 — 1화부터 모든 생성이 따라야 하는 약속. 회차가 없어도 항상 넘긴다.
   lines.push('작품 계약:');
@@ -1698,6 +1701,10 @@ export function buildProjectContextDigest(project: SeriesProject): string {
   if (project.openThreads.length > 0) {
     lines.push('', '열린 떡밥:');
     project.openThreads.slice(-CONTEXT_THREAD_LIMIT).forEach((thread) => lines.push(`- ${thread}`));
+  }
+  if (koreanVoiceRules.length > 0) {
+    lines.push('', '한국어 문체·보이스 규칙:');
+    koreanVoiceRules.forEach((rule) => lines.push(`- ${rule}`));
   }
 
   return lines.join('\n');
