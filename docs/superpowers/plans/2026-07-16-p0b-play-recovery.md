@@ -24,6 +24,8 @@
 - `src/components/GenerationInboxPanel.tsx`
 - `src/components/generationInboxPanel.test.ts`
 - `src/components/WorkspaceModeBar.tsx`
+- `src/components/SingleWriterGate.tsx`
+- `src/components/singleWriterGate.test.ts`
 - `src/components/RecoveryDraftWorkspace.tsx`
 - `src/components/recoveryDraftWorkspace.test.ts`
 - `src/components/DiveDesk.tsx`
@@ -32,6 +34,7 @@
 - `src/components/projectLibraryCard.test.ts`
 - `src/StoryXDesk.tsx`
 - `src/App.tsx`
+- `src/main.tsx`
 - `src/appExperience.test.ts`
 - `src/editorFocusLayout.test.ts`
 - `src/styles.css`
@@ -202,6 +205,9 @@ App 문자열 순서 단언만으로 끝내지 않고 저장소 실패를 주입
    - poll/checkpoint/receipt mutation은 매번 durable inbox를 다시 읽어 대상 변경만 병합하고, 실행 중 잡은 보호 checkpoint 20개 위에서도 overflow로 보존한다.
    - 승인 요청의 전체 PLAY session·working project를 durable `DiveState`와 승인 직전/저장 직전에 exact 비교하고, 다른 탭의 새 대화를 stale session으로 덮어쓰지 않는다.
    - 느린 running poll과 404 만료는 mutation 시점 영수증이 여전히 running일 때만 적용해 succeeded 결과와 승인 checkpoint를 역행시키지 않는다.
+   - Chromium 로컬 앱은 App 바깥의 장기 exclusive Web Lock으로 single-writer 탭만 편집기·poller를 mount한다. 두 번째 탭은 자동 대기하고 첫 탭이 닫히면 승계하며, Web Locks 미지원 환경은 편집기를 fail-closed한다.
+   - 늦게 도착한 유효 succeeded 결과는 먼저 기록된 failed/cancelled/timed-out/expired보다 우선한다. 이미 연 직접 쓰기 작업본과 TXT·경고·폐기 확인도 성공 결과와 함께 보존한다.
+   - checkpoint 뒤 부분 실패는 일반 최신화와 분리된 전용 버전으로 durable DiveState를 remount해 같은 화면 재승인을 열고, 일반 최신화에서는 전송 전 PLAY 입력을 보존한다.
 2. `syncConsole`에 승인 후보의 ready/conflicts 순수 계획을 추가하고 기존 append/retcon 계약을 재사용한다.
 3. DiveDesk가 App에 승인 후보를 넘기고, App이 무충돌 즉시 커밋 또는 충돌 검토를 소유하게 한다. 실제 resolved chapter·retcon checkpoint를 생성 영수증에 먼저 영속하고, 생성 영수증 제거는 PLAY/WRITE read-back 성공 뒤로 이동한다.
 4. 브라우저에서 성공 결과 승인 한 번으로 `PLAY +N`이 사라지고 WRITE 1화·캐논 반영 토스트가 보이는지 확인한다. 빈 복구 작업본은 삭제 없이 보관함에서 재열 수 있어야 한다.

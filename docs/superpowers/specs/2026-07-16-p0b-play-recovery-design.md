@@ -191,6 +191,12 @@ interface GenerationInboxItem {
   - <AI>본문·제목·journal이 비어 있고 전역 보관함으로 재열 수 있을 때만 active 표시를 해제한다. 작업본 자체와 원문 영수증은 삭제하지 않는다. 작성 내용이나 부분 저장 상태는 계속 WRITE를 우선한다.</AI>
 - 질문 5 — 승인·폴링 사이 다른 탭의 변경은 어떻게 보호하는가?
   - <AI>승인 요청에는 project뿐 아니라 승인 직전의 전체 PLAY session을 함께 담는다. checkpoint 영속 전과 실제 PLAY 저장 직전에 durable `DiveState`의 session·project가 모두 정확히 같은지 확인하고, 최신 session에 최초 응결 turn 경계만 적용한다. 느린 running 응답과 404는 mutation 시점 영수증이 여전히 running일 때만 반영해 성공 결과·checkpoint를 terminal 상태에서 역행시키지 않는다.</AI>
+- 질문 6 — localStorage의 비원자적 read-modify-write를 여러 탭에서 어떻게 막는가?
+  - <AI>Chromium 로컬 모드에서는 App보다 바깥에서 origin 단위 exclusive Web Lock을 세션 동안 유지한다. lock을 가진 한 탭만 편집기와 poller를 mount하고, 다른 탭은 작품을 쓰지 않은 채 자동 대기한다. writer 탭이 닫히면 다음 탭이 lock을 이어받는다. Web Locks가 없는 환경은 작품 유실을 막기 위해 편집기를 mount하지 않고 지원 브라우저 안내를 표시한다.</AI>
+- 질문 7 — 실패 뒤 직접 쓰기를 연 상태에서 늦은 성공 결과가 도착하면 무엇을 보존하는가?
+  - <AI>성공 결과와 직접 쓰던 복구 작업본을 모두 사용자 자산으로 보존한다. 성공 결과 검토 CTA와 함께 작업본 재열기·TXT·미반영 경고를 계속 표시하고, 해당 영수증 폐기 전 확인을 받는다.</AI>
+- 질문 8 — checkpoint 뒤 부분 실패에서 PLAY를 어떻게 재개하는가?
+  - <AI>일반 최신화와 분리된 전용 `diveStateVersion`으로만 PLAY를 durable state에서 remount한다. 이로써 같은 화면의 멱등 재승인은 가능하게 하되 일반 최신화가 전송 전 입력이나 검토 결정을 지우지 않게 한다.</AI>
 
 이 결정은 `성공 결과 자동 반영`이 아니다. 결과 생성만으로는 아무것도 바꾸지 않으며, 사용자가 본문·캐논 후보를 본 뒤 누르는 명시적 승인 한 번을 안전한 최종 커밋으로 만든다.
 
@@ -237,6 +243,8 @@ interface GenerationInboxItem {
 - poll·checkpoint·receipt 정리는 mutation 직전 durable inbox를 다시 읽어 대상 ID만 합치며, 실행 중 잡과 미완료 checkpoint는 일반 cap을 넘어도 유실하지 않는다.
 - 승인 직전과 저장 직전에는 전체 PLAY session·working project를 exact 비교한다. 같은 작품에서 다른 탭이 새 대화를 추가했으면 stale 승인을 중단하고, 최신 session을 오래된 snapshot으로 덮지 않는다.
 - running poll과 404 만료는 mutation 시점의 최신 영수증이 여전히 running일 때만 적용한다. 이미 succeeded/checkpoint가 된 영수증은 상태·결과·checkpoint를 그대로 보존한다.
+- 유효한 늦은 succeeded 결과는 failed·cancelled·timed-out·expired보다 우선해 복구한다. checkpoint 뒤 부분 저장이 실패하면 durable PLAY를 다시 mount해 같은 화면의 재승인이 exact checkpoint로 이어진다.
+- Chromium 로컬 앱은 single-writer Web Lock을 가진 탭 하나에서만 App·poller를 실행한다. 대기 탭은 localStorage를 쓰지 않으며 writer 종료 뒤 자동 승계한다.
 - read-back은 exact 회차와 새 캐논뿐 아니라 승인 retcon statement를 PLAY working·본편 양쪽에서 확인한 뒤에만 영수증을 제거한다.
 - 제목·본문·journal이 빈 복구 작업본은 성공 승인 뒤 삭제하지 않고 안전하게 비활성화해 일반 WRITE를 가리지 않는다.
 - 전체 `bash init.sh`와 브라우저 실사용 흐름이 녹색이며 콘솔 오류가 없다.

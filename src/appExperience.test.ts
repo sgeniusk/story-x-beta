@@ -432,6 +432,18 @@ describe('P0-b PLAY 기록 복구 배선', () => {
     expect(saveProjectIndex).toBeGreaterThan(recheckIndex);
   });
 
+  it('승인 부분 저장 실패는 durable PLAY를 다시 읽도록 DiveStage를 remount해 같은 화면 재시도를 연다', () => {
+    const commit = app.match(/function commitApprovedCondense[\s\S]{0,9000}?return 'committed';\n  \}/)?.[0] ?? '';
+    const catchBlock = commit.match(/catch \(error\) \{[\s\S]{0,900}?return 'failed';\n    \}/)?.[0] ?? '';
+    expect(catchBlock).toContain('approvedCondenseCheckpoint');
+    expect(catchBlock).toContain('setDiveStateVersion((version) => version + 1)');
+
+    const diveBranch = app.slice(app.indexOf("if (stage === 'dive')"), app.indexOf("if (stage === 'dive')") + 6_000);
+    expect(diveBranch.match(/<DiveStage key=\{/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(diveBranch).toContain('diveStateVersion');
+    expect(diveBranch).not.toMatch(/<DiveStage key=\{`[^`]*syncVersion/);
+  });
+
   it('승인·checkpoint 재개는 durable receipt와 exact PLAY 전체 state snapshot을 함께 검증한다', () => {
     const validationStart = app.indexOf('function validateCondenseApprovalContext');
     const validation = validationStart >= 0 ? app.slice(validationStart, validationStart + 4_200) : '';

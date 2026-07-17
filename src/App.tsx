@@ -536,6 +536,9 @@ function App() {
   );
   // 최신화가 본편을 바꾸면 이 버전이 오르고 StoryXDesk 가 remount 되어 새 본편을 읽는다.
   const [syncVersion, setSyncVersion] = useState(0);
+  // 승인 checkpoint 부분 실패에서만 PLAY 로컬 state를 durable DiveState로 다시 읽는다.
+  // 일반 최신화 syncVersion과 분리해 전송 전 입력·검토 결정을 지우지 않는다.
+  const [diveStateVersion, setDiveStateVersion] = useState(0);
   // PLAN staged — 설계실 패치 수(배지)·반영 충돌 다이얼로그.
   const [pendingPlan, setPendingPlan] = useState<number>(() =>
     typeof window === 'undefined' ? 0 : loadPlanPatches().length
@@ -876,6 +879,13 @@ function App() {
         throw new Error('회차는 저장했지만 생성 결과 영수증 정리를 확인하지 못했습니다. 다시 승인해 마무리해 주세요.');
       }
     } catch (error) {
+      // checkpoint 이후 PLAY/WRITE 일부가 이미 저장됐다면 DiveStage의 로컬 state를 durable 상태로
+      // 다시 마운트한다. 선택 영수증은 유지되므로 같은 화면의 재승인이 exact checkpoint로 이어진다.
+      const approvedCondenseCheckpoint = loadGenerationInbox()
+        .find((item) => item.id === approval.generationId)?.approvedCondenseCheckpoint;
+      if (approvedCondenseCheckpoint) {
+        setDiveStateVersion((version) => version + 1);
+      }
       window.alert(error instanceof Error ? error.message : '응결 회차를 본편에 저장하지 못했습니다.');
       return 'failed';
     }
@@ -1673,10 +1683,10 @@ function App() {
     const selectedGeneration = generationInbox.find((item) => item.id === selectedGenerationId) ?? null;
     if (restored) {
       // 슬라이스 B — working(diveKey) 이 진실. 미반영 PLAY 작업을 loadProject 로 덮지 않는다(⟳최신화로만 머지).
-      return <>{bar}<DiveStage initial={restored} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={openProjectHub} onResolveGeneration={discardGeneration} onApproveGeneration={handleApproveGeneration} onDownloadRecovery={handleDownloadRecovery} onSendRecoveryToDraft={handleOpenRecoveryWorkDraft} /></>;
+      return <>{bar}<DiveStage key={`dive-${restored.project.id}-${diveStateVersion}`} initial={restored} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={openProjectHub} onResolveGeneration={discardGeneration} onApproveGeneration={handleApproveGeneration} onDownloadRecovery={handleDownloadRecovery} onSendRecoveryToDraft={handleOpenRecoveryWorkDraft} /></>;
     }
     if (diveInit) {
-      return <>{bar}<DiveStage initial={diveInit} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={openProjectHub} onResolveGeneration={discardGeneration} onApproveGeneration={handleApproveGeneration} onDownloadRecovery={handleDownloadRecovery} onSendRecoveryToDraft={handleOpenRecoveryWorkDraft} /></>;
+      return <>{bar}<DiveStage key={`dive-${diveInit.project.id}-${diveStateVersion}`} initial={diveInit} onBack={() => setStage('editor')} onWorkingChange={onWorkingChange} generationInbox={generationInbox} selectedGeneration={selectedGeneration} onStartGeneration={handleStartGeneration} onCancelGeneration={(item) => { void handleCancelGeneration(item); }} onOpenGenerationInbox={openProjectHub} onResolveGeneration={discardGeneration} onApproveGeneration={handleApproveGeneration} onDownloadRecovery={handleDownloadRecovery} onSendRecoveryToDraft={handleOpenRecoveryWorkDraft} /></>;
     }
     // PLAY 첫 진입 — 현 작품에 인물이 없으면 안내. 있으면 위 useEffect 가 diveInit 을 채워 다음 렌더에서 진입.
     if (!seedPlayFromProject(loadProject())) {

@@ -305,6 +305,22 @@ describe('generation inbox', () => {
     });
   });
 
+  it('성공 결과는 먼저 기록된 실패·취소·만료보다 우선해 작품 결과를 복구한다', () => {
+    const succeeded = {
+      id: 'late-success', projectId: 'p1', baseRevision: 'rev-1', episode: 1,
+      status: 'succeeded' as const, createdAt: 'x', updatedAt: 'later',
+      result: { title: '늦게 도착한 응결', prose: '보존할 본문' }
+    };
+
+    for (const status of ['failed', 'cancelled', 'timed-out', 'expired'] as const) {
+      const before = item('late-success', status);
+      expect(mergeGenerationJob(before, succeeded)).toMatchObject({
+        status: 'succeeded',
+        result: { title: '늦게 도착한 응결', prose: '보존할 본문' }
+      });
+    }
+  });
+
   it('복구 작업본과 명시적 회차 저장 메타를 구분해 직렬화하고 구버전 영수증도 읽는다', () => {
     const recoverable = {
       ...item('1', 'failed'),

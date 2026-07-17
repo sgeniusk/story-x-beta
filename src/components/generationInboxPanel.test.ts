@@ -118,6 +118,44 @@ describe('GenerationInboxPanel', () => {
     confirm.mockRestore();
   });
 
+  it('늦은 성공 뒤에도 이미 만든 직접 쓰기 작업본을 숨기지 않고 폐기 전 확인한다', () => {
+    const onDiscard = vi.fn();
+    const onSendRecoveryToDraft = vi.fn();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const lateSuccess = {
+      ...makeItem('succeeded'),
+      recovery,
+      recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
+      recoveryDraftId: 'recovery-draft-late'
+    };
+
+    act(() => root.render(createElement(GenerationInboxPanel, {
+      items: [lateSuccess], onReview: () => {}, onCancel: () => {}, onDiscard,
+      onDownloadRecovery: () => {}, onSendRecoveryToDraft
+    })));
+
+    expect(host.textContent).toContain('작품에서 검토');
+    expect(host.textContent).toContain('직접 쓰는 복구 작업본이 있습니다');
+    const reopen = Array.from(host.querySelectorAll('button'))
+      .find((button) => button.textContent === '직접 쓰던 작업본 열기');
+    expect(reopen).toBeDefined();
+    act(() => reopen?.click());
+    expect(onSendRecoveryToDraft).toHaveBeenCalledWith(lateSuccess);
+
+    const discard = Array.from(host.querySelectorAll('button'))
+      .find((button) => button.textContent === '폐기');
+    act(() => discard?.click());
+    expect(confirm).toHaveBeenCalled();
+    expect(onDiscard).not.toHaveBeenCalled();
+
+    act(() => root.unmount());
+    host.remove();
+    confirm.mockRestore();
+  });
+
   it('recovery가 없는 구버전 실패 영수증에는 구제 행동을 만들지 않는다', () => {
     const html = renderToStaticMarkup(createElement(GenerationInboxPanel, {
       items: [makeItem('failed')], onReview: () => {}, onCancel: () => {}, onDiscard: () => {},

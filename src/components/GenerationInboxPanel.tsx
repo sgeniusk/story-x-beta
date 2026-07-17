@@ -47,8 +47,11 @@ export function GenerationInboxPanel({
             const needsImmediateDownload = Boolean(item.localPersistenceFailed && item.recovery);
             const hasRecoveryDraft = Boolean(item.recoveryDraftOpenedAt && item.recoveryDraftId);
             const savedAsChapter = Boolean(item.recoveredAt && item.recoveredChapterId);
+            // 실패 뒤 직접 쓰기를 연 다음 늦은 성공이 도착해도 두 결과물은 모두 사용자 자산이다.
+            // status=succeeded만 보고 작업본을 숨기거나 무확인 삭제하지 않는다.
+            const exposesRecoveryDraft = recoverable || hasRecoveryDraft;
             const discard = () => {
-              if (recoverable && !savedAsChapter && !window.confirm('이 항목을 지우면 Story X 보관함에서 다시 복구할 수 없습니다. 계속할까요?')) {
+              if (exposesRecoveryDraft && !savedAsChapter && !window.confirm('이 항목을 지우면 Story X 보관함에서 다시 복구할 수 없습니다. 계속할까요?')) {
                 return;
               }
               onDiscard(item);
@@ -59,7 +62,7 @@ export function GenerationInboxPanel({
                   <span className="gix-status">{STATUS_LABEL[item.status]}</span>
                   <h3>{item.result?.title || `${item.projectTitle} · ${item.episode}화`}</h3>
                   <p>{item.warning || `${item.projectTitle}에서 시작한 응결 작업`}</p>
-                  {recoverable && !needsImmediateDownload && (
+                  {exposesRecoveryDraft && !needsImmediateDownload && (
                     <p className="gix-recovery-note" role="status">
                       {savedAsChapter
                         ? 'WRITE에서 회차로 저장했습니다. 캐논에는 자동 반영되지 않았습니다.'
@@ -77,10 +80,10 @@ export function GenerationInboxPanel({
                 <div className="gix-actions">
                   {item.status === 'running' && <button type="button" onClick={() => onCancel(item)}>생성 취소</button>}
                   {item.status === 'succeeded' && item.result && <button type="button" className="is-primary" onClick={() => onReview(item)}>작품에서 검토</button>}
-                  {(recoverable || needsImmediateDownload) && item.recovery && (
+                  {(exposesRecoveryDraft || needsImmediateDownload) && item.recovery && (
                     <>
                       <button type="button" onClick={() => onDownloadRecovery(item)}>PLAY 기록 TXT</button>
-                      {recoverable && (
+                      {exposesRecoveryDraft && (
                         <button
                           type="button"
                           className="is-primary"

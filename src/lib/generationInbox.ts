@@ -410,6 +410,12 @@ export function findLatestGenerationAttempt(
 export function mergeGenerationJob(item: GenerationInboxItem, job: GenerationJobSnapshot): GenerationInboxItem {
   // poll/cancel 요청을 보낼 때 running이었어도 mutation 시점의 receipt가 이미 terminal이면
   // 느린 응답으로 상태를 역행시키거나 성공 checkpoint를 떨어뜨리지 않는다.
+  if (item.status === 'succeeded' && item.result) return item;
+  // provider 성공은 실패·취소·시간 초과·404보다 정보량이 많은 최상위 상태다.
+  // 종료 상태가 먼저 도착했어도 유효한 늦은 성공 결과를 버리지 않는다.
+  if (job.status === 'succeeded' && job.result) {
+    return { ...item, ...job, kind: 'dive-condense', projectTitle: item.projectTitle };
+  }
   if (item.status !== 'running') return item;
   return { ...item, ...job, kind: 'dive-condense', projectTitle: item.projectTitle };
 }
