@@ -4,6 +4,67 @@
 
 ---
 
+## 2026-07-18 23:54 — P1-a PLAY 진행 피드백 완료, 실제 작품 대기 경험 테스트 대기
+
+> Last Updated: 2026-07-18 23:54 KST
+
+### Current Objective
+
+PLAY 대화·쇼러너·전개 후보·응결 등록·실행에 실제 경과시간과 작업 목적을 보여 주는 하나의 작업등을 추가했다. 응결은 화면 이탈 가능, 나머지 요청은 현재 화면 대기라는 차이를 정직하게 표시하며 퍼센트·남은 시간은 추정하지 않는다. 구현은 `b885767`, Draft PR은 #43이며 머지는 사용자에게 남긴다.
+
+### Recommended Next Step
+
+현재 5175 로컬 앱의 작가 잠금을 잡은 탭에서 작품을 열고 PLAY로 간다. 대화 한 번, `✦ 전개 후보` 한 번, `지금 응결` 한 번을 실행해 문구·경과시간·작성창 위치를 판정한다. 응결은 생성 보관함으로 나갔다가 PLAY로 돌아와도 경과시간이 영수증 시각에서 이어져야 한다. 수용하면 다음 단일 슬라이스는 P1-b 텍스트 반출로 새 brainstorm을 시작한다.
+
+### Branch · Commit · Verification
+
+- Branch — `codex/p1a-play-progress-feedback` (`codex/p0a-condense-source-boundary` / Draft PR #42 위 스택)
+- Implementation — `b885767` (`P1-a: add PLAY progress feedback`)
+- Draft PR — https://github.com/sgeniusk/story-x-beta/pull/43 (base `codex/p0a-condense-source-boundary`)
+- Verification — 2026-07-18 23:53 `bash init.sh` 녹색: 102 files / 1145 tests, tsc+vite build 성공
+- Focused TDD — 3 files / 54 tests; 음수 timestamp 실패 RED(`1784332923`초) 후 0초 안전 강등 GREEN
+- Independent audit — 코드·scope·harness P0/P1 0, `git diff --check` 녹색
+- Browser — 390×844·1280×900 카드/composer 겹침 0·가로 overflow 0, 타이머 중 scrollY 유지, 최종 preview `http://127.0.0.1:5175/?stage=projects` HTTP 200
+
+### What the Last Session Did
+
+1. `PlayProgressKind` 5종과 시간 구간별 label·message·hint, number/ISO 경과시간 순수 계약을 `generationProgress.ts`에 추가했다.
+2. DiveDesk의 로컬 요청은 시작/종료를 `finally`로 정리하고, running 응결은 영수증 `createdAt`을 쓰게 했다.
+3. 작업등 스택과 composer를 하나의 sticky dock으로 묶어 390px에서 진행 카드가 입력창을 덮던 중간 결함을 닫았다.
+4. polite live region·시간 `aria-hidden`·reduced motion·warm studio token을 고정하고 기존 취소·복구·보관함·TXT 경고 행동을 유지했다.
+5. 독립 감사가 발견한 음수 시작시각 결함과 쇼러너 경계 테스트 누락을 RED→GREEN으로 닫고 전체 하네스·Draft PR까지 완료했다.
+
+### Files To Touch (next milestone)
+
+- P1-a 실제 사용 테스트에서 문구·배치·타이머 결함이 나오면 현 spec 수용 범위 안에서 실패 테스트를 먼저 추가하고 최소 수정한다.
+- 수용 후 P1-b는 새 feature branch와 brainstorm→spec→plan→TDD로 시작하고 현 PR에 섞지 않는다.
+
+### Files NOT To Touch
+
+- `.agents/skills/story-score/` — 사용자 소유 untracked 폴더. 읽기·추가·수정·staging 금지.
+- 기존 사용자 작품 원문·회차·캐논을 자동 재생성하거나 덮어쓰는 경로.
+- 완료 생성물 자동 반영, 누수·stale revision·사용자 승인 게이트 우회.
+- VS stale response·chat non-2xx·polling timeout을 P1-a 표시 슬라이스에 뒤섞여 수정하는 작업.
+- #39→#40→#41→#42→#43 스택을 순서 없이 머지하거나 retarget 전 base 브랜치를 삭제하는 작업.
+
+### Blockers
+
+코드·하네스·preview·Draft PR 차단은 없다. 실제 로컬 AI 대기 경험의 최종 수용 판정만 사용자에게 남겨 둘 시점이다.
+
+### Known Issues
+
+- 인앱 브라우저에 다른 Story X 탭이 작가 잠금을 잡고 있으면 `?stage=projects` 탭은 `다른 탭의 Story X를 기다리는 중`을 보여 준다. 이는 작품 유실을 막는 기존 single-writer 계약이며, 테스트는 잠금을 잡은 기존 탭에서 진행한다.
+- 실제 전개 후보 요청은 이번 검증에서 기존 VS timeout 부재로 오래 대기했다. stale response race·non-2xx 판정·polling 상한은 설계대로 별도 신뢰성 슬라이스다.
+- 작업등 문구는 작품성을 판정하지 않는다. 응결 결과의 장면성·목소리·캐논 판정과 승인 게이트는 그대로 남아 있다.
+
+### Reference Documents
+
+- `docs/superpowers/specs/2026-07-18-p1a-play-progress-feedback-design.md`
+- `docs/superpowers/plans/2026-07-18-p1a-play-progress-feedback.md`
+- `progress.md` 맨 위 P1-a 완료 트랙
+
+---
+
 ## 2026-07-18 10:44 — PLAY 응결 source·소비 경계 완료, 실제 작품 연속 2회 응결 테스트 대기
 
 > Last Updated: 2026-07-18 10:44 KST

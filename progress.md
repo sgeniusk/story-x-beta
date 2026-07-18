@@ -1,9 +1,20 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-18 10:44 KST · Branch: `codex/p0a-condense-source-boundary` (**PLAY 응결 source·소비 경계 + 연결 문맥 표시 완료, Draft PR #42 사용자 테스트 대기**)
+> Last Updated: 2026-07-18 23:54 KST · Branch: `codex/p1a-play-progress-feedback` (**PLAY 진행 작업등·경과시간·sticky dock 완료, Draft PR #43 사용자 테스트 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-> 최근 검증(2026-07-18 10:38 KST) — `bash init.sh` 녹색: `npm test` 1135 통과(102 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+> 최근 검증(2026-07-18 23:53 KST) — `bash init.sh` 녹색: `npm test` 1145 통과(102 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+
+## 완료 트랙 — P1-a PLAY 진행 피드백 (`done` · 2026-07-18, 구현 `b885767` · Draft PR #43)
+
+PLAY 대화·쇼러너·전개 후보·응결 등록·실행이 30초에서 3분까지 조용히 멈춰 보이던 문제를 닫았다. 서버 telemetry를 흉내 낸 퍼센트 대신 실제 경과시간·작업 목적·대기 안내를 하나의 작업등으로 표시한다. spec `docs/superpowers/specs/2026-07-18-p1a-play-progress-feedback-design.md` · plan `docs/superpowers/plans/2026-07-18-p1a-play-progress-feedback.md`.
+- **정직한 진행 계약** — 작업별 2~4개 시간 구간에서 장면·감정·대가·보이스·연속성 점검 목적만 알린다. 퍼센트·남은 시간·완료 임박 추정은 금지했고, 응결은 `화면을 떠나도 계속`된다는 잡 계약을 분리해 알린다.
+- **재진입 경과시간** — 로컬 요청은 클릭 시각, running 응결은 영수증 `createdAt`에서 계산해 PLAY를 떠났다 돌아와도 이어진다. 음수·미래·손상 timestamp는 `0:00`으로 안전 강등한다.
+- **작성창 안정성** — 작업등 스택과 composer를 하나의 sticky dock으로 묶어 진행 카드가 입력창을 덮지 않게 했다. warm `--st-*` 토큰·PLAY lime·축소 모션·polite live region을 지키고, 매초 바뀌는 시간은 화면낭독기에서 제외했다.
+- **안전 경계** — 요청·polling·취소·오류·복구·승인·캐논 의미는 변경하지 않았다. running 응결의 취소·생성 보관함 행동과 로컬 영속 실패의 TXT `alert`도 그대로 유지했다.
+- **TDD·검증** — 도메인·UI·CSS RED 후 focused 3파일/54테스트, 전체 102파일/1145테스트·tsc·vite build 녹색. 390×844와 1280×900에서 카드/composer 겹침 0·가로 overflow 0·타이머 중 scrollY 유지를 실측했다. 독립 코드·scope·harness 감사 P0/P1 0.
+- **게시/의존** — Draft PR #43 `https://github.com/sgeniusk/story-x-beta/pull/43`은 #42 위 스택이다. 기존 순서 **#39 → #40 → #41 → #42 → #43**를 유지하고, 머지는 사용자에게 남긴다.
+- **Recommended Next Step** — 실제 작품 PLAY에서 대화 전송·`✦ 전개 후보`·`지금 응결`을 한 번씩 눌러 문구·시간·작성창 위치를 판정한다. 응결 중 보관함으로 나갔다 PLAY로 돌아왔을 때 경과시간이 이어지면 수용. 수용 뒤 다음 슬라이스는 **P1-b 텍스트 반출**이다.
 
 ## 완료 트랙 — P0-a 후속: PLAY 응결 source·소비 경계 (`done` · 2026-07-18, 구현 `8633789` · Draft PR #42)
 

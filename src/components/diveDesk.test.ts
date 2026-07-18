@@ -9,6 +9,22 @@ import type { PlayRecoverySnapshot } from '../lib/playRecovery';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+function enterTextareaValue(textarea: HTMLTextAreaElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+  setter?.call(textarea, value);
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 describe('DiveDesk', () => {
   it('연대기 회차와 채팅 버블을 렌더한다', () => {
     const base = createEmptyProject({ title: 't' });
@@ -144,8 +160,181 @@ describe('DiveDesk', () => {
       generationInbox: [{ id: 'job-1', kind: 'dive-condense', projectId: project.id, projectTitle: 't', baseRevision: 'r1', episode: 1, status: 'running', createdAt: 'x', updatedAt: 'x' }],
       onOpenGenerationInbox: () => {}
     }));
-    expect(html).toContain('백그라운드에서 응결 중');
+    expect(html).toContain('회차 응결');
     expect(html).toContain('생성 보관함');
+  });
+
+  it('실행 중 응결은 영수증 생성 시각부터의 경과와 화면 이탈 가능한 작업 안내를 함께 보여준다', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-18T00:02:00Z'));
+    try {
+      const project = createEmptyProject({ title: '응결 진행' });
+      const session = createDiveSession('seed-childhood', project.id);
+      const html = renderToStaticMarkup(createElement(DiveDesk, {
+        session, project, onChange: () => {}, onBack: () => {},
+        generationInbox: [{
+          id: 'job-progress', kind: 'dive-condense', projectId: project.id,
+          projectTitle: project.title, baseRevision: 'r1', episode: 1,
+          status: 'running', createdAt: '2026-07-18T00:00:00Z', updatedAt: '2026-07-18T00:00:00Z'
+        }],
+        onCancelGeneration: () => {}, onOpenGenerationInbox: () => {}
+      }));
+
+      expect(html).toContain('회차 응결');
+      expect(html).toContain('2:00 경과');
+      expect(html).toContain('화면을 떠나도 작업은 계속되고');
+      expect(html).toContain('생성 취소');
+      expect(html).toContain('생성 보관함');
+      expect(html).toContain('role="status"');
+      expect(html).toContain('aria-live="polite"');
+      expect(html).toContain('aria-atomic="true"');
+      expect(html).toMatch(/<time[^>]*aria-hidden="true"[^>]*>2:00 경과<\/time>/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('지연된 PLAY 대화는 실제 경과시간을 올리고 요청 종료 뒤 작업등을 제거한다', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-18T01:00:00Z'));
+    const request = deferred<Response>();
+    vi.stubGlobal('fetch', vi.fn(() => request.promise));
+    const project = createEmptyProject({ title: '대화 진행' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      act(() => root.render(createElement(DiveDesk, {
+        session, project, onChange: () => {}, onBack: () => {}
+      })));
+      const input = host.querySelector('.dx-composer textarea') as HTMLTextAreaElement;
+      act(() => enterTextareaValue(input, '문을 열어 본다'));
+      await act(async () => {
+        Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '보내기')?.click();
+        await Promise.resolve();
+      });
+
+      const progress = host.querySelector('.dx-progress-card');
+      expect(progress?.textContent).toContain('다음 대화');
+      expect(progress?.textContent).toContain('0:00 경과');
+      expect(progress?.getAttribute('role')).toBe('status');
+      expect(progress?.getAttribute('aria-live')).toBe('polite');
+      expect(progress?.querySelector('time')?.getAttribute('aria-hidden')).toBe('true');
+      expect(host.querySelector('.dx-progress-stack')?.nextElementSibling?.classList.contains('dx-composer')).toBe(true);
+      expect(host.querySelector('.dx-progress-stack')?.parentElement?.classList.contains('dx-workbench-dock')).toBe(true);
+
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+        await Promise.resolve();
+      });
+      expect(host.querySelector('.dx-progress-card')?.textContent).toContain('0:01 경과');
+
+      await act(async () => {
+        request.resolve({
+          json: async () => ({ status: 'complete', reply: '문 너머에서 발소리가 멎는다.', choices: [] })
+        } as Response);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(host.querySelector('.dx-progress-card')).toBeNull();
+    } finally {
+      act(() => root.unmount());
+      host.remove();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it('PLAY 대화가 실패해도 진행 작업등을 닫고 입력을 다시 사용할 수 있다', async () => {
+    const request = deferred<Response>();
+    vi.stubGlobal('fetch', vi.fn(() => request.promise));
+    const project = createEmptyProject({ title: '대화 실패' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      act(() => root.render(createElement(DiveDesk, {
+        session, project, onChange: () => {}, onBack: () => {}
+      })));
+      const input = host.querySelector('.dx-composer textarea') as HTMLTextAreaElement;
+      act(() => enterTextareaValue(input, '대답해 줘'));
+      await act(async () => {
+        Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '보내기')?.click();
+        await Promise.resolve();
+      });
+      expect(host.querySelector('.dx-progress-card')).not.toBeNull();
+
+      await act(async () => {
+        request.reject(new Error('offline'));
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(host.querySelector('.dx-progress-card')).toBeNull();
+      expect((host.querySelector('.dx-composer textarea') as HTMLTextAreaElement).disabled).toBe(false);
+    } finally {
+      act(() => root.unmount());
+      host.remove();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('전개 후보와 응결 등록은 서로 다른 목적·대기 안내를 작업등에 표시한다', async () => {
+    const vsRequest = deferred<Response>();
+    const condenseRequest = deferred<void>();
+    vi.stubGlobal('fetch', vi.fn(() => vsRequest.promise));
+    const project = createEmptyProject({ title: '작업 구분' });
+    const session = {
+      ...createDiveSession('seed-childhood', project.id),
+      chatBuffer: [
+        { id: 'm1', role: 'user' as const, text: '문을 연다', turn: 1 },
+        { id: 'm2', role: 'character' as const, text: '안은 비어 있다', turn: 2 },
+        { id: 'm3', role: 'user' as const, text: '불을 켠다', turn: 3 }
+      ]
+    };
+    const onStartGeneration = vi.fn(() => condenseRequest.promise);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      act(() => root.render(createElement(DiveDesk, {
+        session, project, onChange: () => {}, onBack: () => {}, onStartGeneration
+      })));
+      await act(async () => {
+        Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '✦ 전개 후보')?.click();
+        await Promise.resolve();
+      });
+      expect(host.querySelector('.dx-progress-card')?.textContent).toContain('전개 후보');
+      expect(host.querySelector('.dx-progress-card')?.textContent).toContain('30초');
+
+      await act(async () => {
+        vsRequest.resolve({ ok: false, status: 503, json: async () => ({}) } as Response);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(host.querySelector('.dx-progress-card')).toBeNull();
+
+      await act(async () => {
+        Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '지금 응결')?.click();
+        await Promise.resolve();
+      });
+      expect(host.querySelector('.dx-progress-card')?.textContent).toContain('응결 등록');
+      expect(host.querySelector('.dx-progress-card')?.textContent).toContain('등록되면 화면을 떠나도');
+
+      await act(async () => {
+        condenseRequest.resolve();
+        await Promise.resolve();
+      });
+      expect(host.querySelector('.dx-progress-card')).toBeNull();
+    } finally {
+      act(() => root.unmount());
+      host.remove();
+      vi.unstubAllGlobals();
+    }
   });
 
   it('실패 영수증이 PLAY에 도착하면 그 자리에서 원문 복구 행동을 렌더한다', () => {
@@ -186,7 +375,7 @@ describe('DiveDesk', () => {
       onOpenGenerationInbox: () => {}
     }));
 
-    expect(html).toContain('백그라운드에서 응결 중');
+    expect(html).toContain('회차 응결');
     expect(html).not.toContain('응결은 멈췄지만');
     expect(html).not.toContain('응결 다시 시도');
   });

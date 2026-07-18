@@ -9729,6 +9729,24 @@ body:has(.fc-app) {
 .dx-generation-actions { display: flex; flex: 0 0 auto; gap: 6px; }
 .dx-generation-actions button { padding: 7px 10px; border: 1px solid var(--st-rule); border-radius: 8px; background: var(--st-sheet); color: var(--st-ink); font-size: 11px; cursor: pointer; transition: background var(--st-dur-fast) var(--st-ease); }
 .dx-generation-actions button:hover { background: var(--st-bg-3); }
+/* P1-a PLAY 진행 작업등 — 실제 경과와 작업 목적만 말하고 가짜 퍼센트는 만들지 않는다. */
+.dx-progress-stack { display: flex; flex-direction: column; gap: 8px; min-width: 0; overflow-anchor: none; }
+.dx-progress-card { min-width: 0; padding: 11px 13px; border: 1px solid var(--st-rule-soft); border-left: 2px solid var(--st-mode-play); border-radius: 10px; background: var(--st-bg-2); overflow-anchor: none; }
+.dx-progress-copy { display: flex; flex: 1 1 auto; min-width: 0; flex-direction: column; gap: 3px; }
+.dx-progress-head { display: flex; min-width: 0; align-items: center; gap: 7px; }
+.dx-progress-dot { display: inline-block; flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: var(--st-mode-play); animation: fc-gen-pulse calc(var(--st-dur-slow) * 4) var(--st-ease) infinite; }
+.dx-progress-head strong { min-width: 0; color: var(--st-ink); font-size: 12px; font-weight: 650; }
+.dx-progress-time { flex: 0 0 auto; margin-left: auto; color: var(--st-ink-dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+.dx-progress-message { display: block; color: var(--st-ink); font-size: 12px; line-height: 1.45; }
+.dx-progress-hint { display: block; color: var(--st-ink-dim); font-size: 11px; line-height: 1.45; }
+.dx-generation-receipt.dx-progress-card { align-items: flex-start; border-color: var(--st-rule-soft); border-left-color: var(--st-mode-play); }
+@media (max-width: 600px) {
+  .dx-progress-card { min-width: 0; padding: 10px 11px; }
+  .dx-progress-head { flex-wrap: wrap; }
+  .dx-generation-receipt.dx-progress-card { align-items: stretch; flex-direction: column; }
+  .dx-generation-receipt.dx-progress-card .dx-generation-actions { width: 100%; flex-wrap: wrap; }
+  .dx-generation-receipt.dx-progress-card .dx-generation-actions button { min-height: 44px; flex: 1 1 132px; }
+}
 .dx-approve { border: 1px solid #7c5cff66; border-radius: 12px; padding: 14px; background: rgba(124,92,255,0.14); animation: st-rise var(--st-dur-slow) var(--st-ease); }
 .dx-approve h4 { margin: 0 0 8px; color: var(--st-mode-plan); }
 .dx-stale-warning { margin: 0 0 10px; padding: 8px 10px; border: 1px solid rgba(251,191,36,0.35); border-radius: 8px; background: rgba(251,191,36,0.08); color: #fbbf24; font-size: 12px; line-height: 1.5; }
@@ -9771,7 +9789,8 @@ body:has(.fc-app) {
 .dx-finding-vs { color: var(--st-ink-dim); }
 .dx-finding-ev { flex-basis: 100%; color: var(--st-ink-dim); }
 .dx-status { color: var(--st-ink-dim); font-size: 13px; padding: 2px 4px 6px; }
-.dx-composer { display: flex; gap: 8px; align-items: flex-end; position: sticky; bottom: 0; padding: 10px 0; background: var(--st-bg); }
+.dx-workbench-dock { display: flex; flex-direction: column; gap: 8px; position: sticky; bottom: 0; z-index: 20; padding-top: 8px; background: var(--st-bg); overflow-anchor: none; }
+.dx-composer { display: flex; gap: 8px; align-items: flex-end; position: static; padding: 10px 0; background: transparent; }
 .dx-input { flex: 1; padding: 11px 13px; border-radius: 8px; border: 1px solid var(--st-rule); background: var(--st-sheet); color: var(--st-ink); font-size: 14px; font-family: inherit; line-height: 1.5; resize: none; field-sizing: content; min-height: 46px; max-height: 160px; transition: border-color var(--st-dur-fast) var(--st-ease); }
 .dx-input:focus { border-color: var(--st-accent-dim); }
 .dx-input::placeholder { color: var(--st-ink-dim); }
@@ -9944,6 +9963,7 @@ body:has(.fc-app) {
   .dx-showrunner-sheet,
   .om-menu,
   .dx-empty,
+  .dx-progress-dot,
   .fc-gen-stage::before {
     animation: none;
   }

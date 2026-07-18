@@ -1,5 +1,5 @@
 // Dive X 얇은 표면 — 채팅·응결 제안·승인 다이얼로그·연대기. 엔진은 재사용.
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { Chapter, SeriesProject, ProductionRequest } from '../lib/storyEngine';
 import { chapterFromDraftPayload, buildProjectContextDigest, applyRetcons, nextEpisodeNumber } from '../lib/storyEngine';
 import { inspectLeak } from '../lib/leakGate';
@@ -30,6 +30,12 @@ import type { VsCandidate } from '../lib/episodeBriefing';
 import { buildProjectRevision, canRecoverGeneration, findLatestGenerationAttempt, type GenerationInboxItem } from '../lib/generationInbox';
 import { buildPlayRecoverySnapshot, type PlayRecoverySnapshot } from '../lib/playRecovery';
 import type { ApprovedCondenseRetcon } from '../lib/syncConsole';
+import {
+  elapsedSecondsSince,
+  formatElapsed,
+  playProgressPresentation,
+  type PlayProgressKind
+} from '../lib/generationProgress';
 
 export type CondenseApprovalResolution = 'committed' | 'pending-conflict' | 'failed';
 
@@ -112,6 +118,61 @@ function peekText(verdict: PlayTurnVerdict): string {
   return parts.join(' · ');
 }
 
+type LocalPlayProgressKind = Exclude<PlayProgressKind, 'condense'>;
+
+interface LocalPlayProgress {
+  id: number;
+  kind: LocalPlayProgressKind;
+  startedAt: number;
+  label?: string;
+}
+
+function DiveProgressCopy({
+  kind,
+  elapsedSeconds,
+  label
+}: {
+  kind: PlayProgressKind;
+  elapsedSeconds: number;
+  label?: string;
+}) {
+  const presentation = playProgressPresentation(kind, elapsedSeconds);
+  return (
+    <div className="dx-progress-copy">
+      <div className="dx-progress-head">
+        <span className="dx-progress-dot" aria-hidden="true" />
+        <strong>{label ?? presentation.label}</strong>
+        <time className="dx-progress-time" aria-hidden="true">
+          {formatElapsed(elapsedSeconds)} 경과
+        </time>
+      </div>
+      <span className="dx-progress-message">{presentation.message}</span>
+      <span className="dx-progress-hint">{presentation.hint}</span>
+    </div>
+  );
+}
+
+function DiveProgressCard({
+  progress,
+  now
+}: {
+  progress: LocalPlayProgress;
+  now: number;
+}) {
+  const elapsedSeconds = elapsedSecondsSince(progress.startedAt, now);
+  return (
+    <div
+      className={`dx-progress-card is-${progress.kind}`}
+      data-progress-kind={progress.kind}
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <DiveProgressCopy kind={progress.kind} elapsedSeconds={elapsedSeconds} label={progress.label} />
+    </div>
+  );
+}
+
 export function DiveDesk({
   session, project, onChange, onBack, generationInbox = [], selectedGeneration = null,
   onStartGeneration, onCancelGeneration, onOpenGenerationInbox, onResolveGeneration,
@@ -142,7 +203,6 @@ export function DiveDesk({
   const [srInput, setSrInput] = useState('');
   const [srReply, setSrReply] = useState<string | null>(null);
   const [srSceneUpdate, setSrSceneUpdate] = useState('');
-  const [srBusy, setSrBusy] = useState(false);
   const [chronicleOpen, setChronicleOpen] = useState(false);
   const scene = session.scene ?? '';
   const card = useMemo(() => characterCardText(project, session.characterId), [project, session.characterId]);
@@ -206,6 +266,28 @@ export function DiveDesk({
   const [vsCandidates, setVsCandidates] = useState<VsCandidate[]>([]);
   const [vsBusy, setVsBusy] = useState(false);
   const [vsReason, setVsReason] = useState<string | null>(null);
+  const [localProgresses, setLocalProgresses] = useState<LocalPlayProgress[]>([]);
+  const [progressClockNow, setProgressClockNow] = useState(() => Date.now());
+  const nextProgressId = useRef(0);
+
+  useEffect(() => {
+    if (localProgresses.length === 0 && !activeGeneration) return;
+    setProgressClockNow(Date.now());
+    const timer = window.setInterval(() => setProgressClockNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [activeGeneration?.id, localProgresses.length]);
+
+  function beginProgress(kind: LocalPlayProgressKind, label?: string): number {
+    const id = ++nextProgressId.current;
+    const startedAt = Date.now();
+    setProgressClockNow(startedAt);
+    setLocalProgresses((current) => [...current, { id, kind, startedAt, label }]);
+    return id;
+  }
+
+  function endProgress(id: number) {
+    setLocalProgresses((current) => current.filter((progress) => progress.id !== id));
+  }
 
   async function reviewConsolidation() {
     if (!pending || reviewing) return;
@@ -225,6 +307,7 @@ export function DiveDesk({
     if (!userText || busy || pending !== null) return;
     if (textArg === undefined) setInput('');
     setBusy(true);
+    const progressId = beginProgress('dialogue', `${charName}의 다음 대화`);
     setChoices([]);
     let next = appendMessage(session, 'user', userText);
     onChange(next, project);
@@ -248,6 +331,7 @@ export function DiveDesk({
     } finally {
       // fetch 거절(네트워크 오류·JSON 파싱 실패) 시에도 busy 가 고착돼 입력이 얼지 않게 항상 해제.
       setBusy(false);
+      endProgress(progressId);
     }
   }
 
@@ -255,6 +339,7 @@ export function DiveDesk({
   async function requestCandidates() {
     if (busy || vsBusy || pending !== null) return;
     setVsBusy(true);
+    const progressId = beginProgress('candidates');
     setVsReason(null);
     try {
       const result = await requestVsCandidates(buildVsCandidatesInput(session, project));
@@ -266,6 +351,7 @@ export function DiveDesk({
       }
     } finally {
       setVsBusy(false);
+      endProgress(progressId);
     }
   }
 
@@ -287,6 +373,7 @@ export function DiveDesk({
       return;
     }
     setStartingGeneration(true);
+    const progressId = beginProgress('condense-register');
     setChoices([]);
     try {
       await onStartGeneration({
@@ -305,6 +392,7 @@ export function DiveDesk({
       setFailedRecovery(recovery);
     } finally {
       setStartingGeneration(false);
+      endProgress(progressId);
     }
   }
 
@@ -317,7 +405,7 @@ export function DiveDesk({
     const directive = srInput.trim();
     setSrInput('');
     setBusy(true);
-    setSrBusy(true);
+    const progressId = beginProgress('showrunner');
     setChoices([]);
     try {
       const res = await requestDiveShowrunner({
@@ -332,7 +420,7 @@ export function DiveDesk({
       setSrSceneUpdate('');
     } finally {
       setBusy(false);
-      setSrBusy(false);
+      endProgress(progressId);
     }
   }
 
@@ -575,30 +663,21 @@ export function DiveDesk({
         </aside>
       )}
 
-      {(activeGeneration || (projectInboxCount > 0 && !inlineRecovery)) && (
+      {!activeGeneration && localProgresses.length === 0 && projectInboxCount > 0 && !inlineRecovery && (
         <aside
           className="dx-generation-receipt"
           aria-label="생성 보관함 상태"
           role={currentGenerationNeedsImmediateDownload ? 'alert' : undefined}
         >
           <div>
-            <strong>{activeGeneration?.localPersistenceFailed
-              ? '응결 중 · PLAY 기록 보관 필요'
-              : currentGenerationNeedsImmediateDownload
-                ? '응결 결과 보관 필요'
-                : activeGeneration
-                  ? '백그라운드에서 응결 중'
-                  : `생성 보관함에 ${projectInboxCount}개`}</strong>
-            <span>{activeGeneration?.localPersistenceFailed
-              ? '로컬 보관공간이 부족합니다. 새로고침 전에 TXT를 받아 주세요.'
-              : currentGenerationNeedsImmediateDownload
-                ? '응결 결과가 보관함에 저장되지 않았습니다. 새로고침 전에 결과를 검토하거나 TXT를 받아 주세요.'
-                : activeGeneration
-                  ? '화면을 떠나도 로컬 Codex가 계속 작업합니다.'
-                  : '완료된 결과는 승인 전까지 작품에 반영되지 않습니다.'}</span>
+            <strong>{currentGenerationNeedsImmediateDownload
+              ? '응결 결과 보관 필요'
+              : `생성 보관함에 ${projectInboxCount}개`}</strong>
+            <span>{currentGenerationNeedsImmediateDownload
+              ? '응결 결과가 보관함에 저장되지 않았습니다. 새로고침 전에 결과를 검토하거나 TXT를 받아 주세요.'
+              : '완료된 결과는 승인 전까지 작품에 반영되지 않습니다.'}</span>
           </div>
           <div className="dx-generation-actions">
-            {activeGeneration && onCancelGeneration && <button type="button" onClick={() => onCancelGeneration(activeGeneration)}>생성 취소</button>}
             {currentGenerationNeedsImmediateDownload && currentEpisodeGeneration?.recovery && onDownloadRecovery && (
               <button type="button" onClick={() => onDownloadRecovery(currentEpisodeGeneration.recovery!)}>PLAY 기록 TXT</button>
             )}
@@ -641,12 +720,6 @@ export function DiveDesk({
         </div>
       )}
 
-      {busy && (
-        <div className="dx-status">
-          {srBusy ? '쇼러너가 연출 중…' : `${charName} 입력 중…`}
-        </div>
-      )}
-
       {(turnCounts.surprise > 0 || turnCounts.anchor > 0 || turnCounts.major > 0) && (
         <button
           className="dx-ambient"
@@ -660,13 +733,58 @@ export function DiveDesk({
         </button>
       )}
 
-      {vsBusy && <div className="dx-status">전개 후보를 펼치는 중… 잠시만요.</div>}
       {vsReason && <div className="dx-vs-note">{vsReason}</div>}
       <VsCandidatePanel
         candidates={vsCandidates}
         onPick={pickCandidate}
         onDismiss={() => { setVsCandidates([]); setVsReason(null); }}
       />
+
+      <div className="dx-workbench-dock">
+      {activeGeneration && (
+        <aside
+          className={`dx-generation-receipt${activeGeneration && !activeGeneration.localPersistenceFailed ? ' dx-progress-card is-condense' : ''}`}
+          aria-label="생성 보관함 상태"
+          role={currentGenerationNeedsImmediateDownload ? 'alert' : activeGeneration ? 'status' : undefined}
+          aria-live={activeGeneration && !currentGenerationNeedsImmediateDownload ? 'polite' : undefined}
+          aria-atomic={activeGeneration && !currentGenerationNeedsImmediateDownload ? 'true' : undefined}
+        >
+          {activeGeneration && !activeGeneration.localPersistenceFailed ? (
+            <DiveProgressCopy
+              kind="condense"
+              elapsedSeconds={elapsedSecondsSince(activeGeneration.createdAt, progressClockNow)}
+            />
+          ) : (
+            <div>
+              <strong>{activeGeneration?.localPersistenceFailed
+                ? '응결 중 · PLAY 기록 보관 필요'
+                : currentGenerationNeedsImmediateDownload
+                  ? '응결 결과 보관 필요'
+                  : '회차 응결'}</strong>
+              <span>{activeGeneration?.localPersistenceFailed
+                ? '로컬 보관공간이 부족합니다. 새로고침 전에 TXT를 받아 주세요.'
+                : currentGenerationNeedsImmediateDownload
+                  ? '응결 결과가 보관함에 저장되지 않았습니다. 새로고침 전에 결과를 검토하거나 TXT를 받아 주세요.'
+                  : '응결 작업을 계속 확인하고 있습니다.'}</span>
+            </div>
+          )}
+          <div className="dx-generation-actions">
+            {activeGeneration && onCancelGeneration && <button type="button" onClick={() => onCancelGeneration(activeGeneration)}>생성 취소</button>}
+            {currentGenerationNeedsImmediateDownload && currentEpisodeGeneration?.recovery && onDownloadRecovery && (
+              <button type="button" onClick={() => onDownloadRecovery(currentEpisodeGeneration.recovery!)}>PLAY 기록 TXT</button>
+            )}
+            {onOpenGenerationInbox && <button type="button" onClick={onOpenGenerationInbox}>생성 보관함</button>}
+          </div>
+        </aside>
+      )}
+
+      {localProgresses.length > 0 && (
+        <div className="dx-progress-stack">
+          {localProgresses.map((progress) => (
+            <DiveProgressCard key={progress.id} progress={progress} now={progressClockNow} />
+          ))}
+        </div>
+      )}
 
       <div className="dx-composer">
         <textarea
@@ -696,6 +814,7 @@ export function DiveDesk({
         <button className="dx-vs-request" onClick={requestCandidates} disabled={busy || vsBusy || pending !== null}>
           ✦ 전개 후보
         </button>
+      </div>
       </div>
     </div>
   );
