@@ -31,6 +31,13 @@ const recovery: PlayRecoverySnapshot = {
   capturedAt: '2026-07-15T00:00:00Z'
 };
 
+const sourceSpan = {
+  afterTurn: 0,
+  throughTurn: 4,
+  messageIds: ['msg-1', 'msg-2', 'msg-3', 'msg-4'],
+  continuityMessageIds: ['msg-3', 'msg-4']
+};
+
 const item = (id: string, status: GenerationInboxItem['status'] = 'running'): GenerationInboxItem => ({
   id,
   kind: 'dive-condense',
@@ -76,6 +83,22 @@ describe('generation inbox', () => {
     const receipt = { ...item('boundary', 'failed'), recovery };
     expect(parseGenerationInbox(serializeGenerationInbox([receipt]))[0].recovery)
       .toHaveProperty('condensedThroughTurn', 4);
+  });
+
+  it('생성 시작 순간의 source span을 영수증 root와 recovery에서 독립적으로 왕복한다', () => {
+    const receipt = {
+      ...item('source-span', 'failed'),
+      sourceSpan,
+      recovery: { ...recovery, sourceSpan }
+    };
+
+    const [parsed] = parseGenerationInbox(serializeGenerationInbox([receipt]));
+
+    expect(parsed).toEqual(expect.objectContaining({
+      id: receipt.id,
+      sourceSpan,
+      recovery: expect.objectContaining({ sourceSpan })
+    }));
   });
 
   it('승인된 응결 체크포인트는 유효한 Chapter·retcon만 왕복하고 손상 데이터는 해당 영수증에서 제거한다', () => {
@@ -165,6 +188,68 @@ describe('generation inbox', () => {
     ]));
     expect(parsed).toHaveLength(7);
     expect(parsed.every((receipt) => !receipt.approvedCondenseCheckpoint)).toBe(true);
+  });
+
+  it('승인 checkpoint의 source span을 왕복해 부분 저장 재시도에서도 같은 소비 구간을 쓴다', () => {
+    const checkpointWithSourceSpan = { ...approvedCheckpoint, sourceSpan };
+    const valid = {
+      ...item('checkpoint-span', 'succeeded'),
+      result: { title: approvedChapter.title, prose: approvedChapter.prose },
+      approvedCondenseCheckpoint: checkpointWithSourceSpan
+    };
+
+    const [parsed] = parseGenerationInbox(serializeGenerationInbox([valid]));
+
+    expect(parsed.approvedCondenseCheckpoint).toEqual(checkpointWithSourceSpan);
+  });
+
+  it('checkpoint source span의 through turn이 숫자 경계와 다르면 span만 제거한다', () => {
+    const mismatchedSpan = {
+      afterTurn: 0,
+      throughTurn: 3,
+      messageIds: ['msg-1', 'msg-2', 'msg-3'],
+      continuityMessageIds: ['msg-2', 'msg-3']
+    };
+    const receipt = {
+      ...item('checkpoint-mismatch', 'succeeded'),
+      result: { title: approvedChapter.title, prose: approvedChapter.prose },
+      approvedCondenseCheckpoint: { ...approvedCheckpoint, sourceSpan: mismatchedSpan }
+    };
+
+    const [parsed] = parseGenerationInbox(JSON.stringify([receipt]));
+
+    expect(parsed.approvedCondenseCheckpoint).toEqual(approvedCheckpoint);
+  });
+
+  it('손상된 optional source span만 강등하고 recovery·영수증·checkpoint 본체는 보존한다', () => {
+    const malformedSpan = {
+      afterTurn: 4,
+      throughTurn: 3,
+      messageIds: ['msg-5'],
+      continuityMessageIds: ['msg-5']
+    };
+    const damaged = {
+      ...item('damaged-span', 'succeeded'),
+      sourceSpan: malformedSpan,
+      recovery: { ...recovery, sourceSpan: malformedSpan },
+      result: { title: approvedChapter.title, prose: approvedChapter.prose },
+      approvedCondenseCheckpoint: { ...approvedCheckpoint, sourceSpan: malformedSpan }
+    };
+
+    const [parsed] = parseGenerationInbox(JSON.stringify([damaged]));
+
+    expect(parsed).toEqual(expect.objectContaining({
+      id: damaged.id,
+      status: 'succeeded',
+      recovery: expect.objectContaining({ transcript: recovery.transcript }),
+      approvedCondenseCheckpoint: expect.objectContaining({
+        condensedThroughTurn: approvedCheckpoint.condensedThroughTurn,
+        chapter: approvedChapter
+      })
+    }));
+    expect(parsed).not.toHaveProperty('sourceSpan');
+    expect(parsed.recovery).not.toHaveProperty('sourceSpan');
+    expect(parsed.approvedCondenseCheckpoint).not.toHaveProperty('sourceSpan');
   });
 
   it('성공 영수증에 승인 체크포인트를 불변 upsert하고 기존 recovery 메타를 보존한다', () => {
@@ -394,6 +479,7 @@ describe('generation inbox', () => {
     const newest = { ...item('1', 'failed'), recovery };
     const oldSuccess = {
       ...item('2', 'succeeded'),
+      sourceSpan,
       recovery,
       recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
       recoveryDraftId: 'recovery-draft-2',
@@ -421,8 +507,10 @@ describe('generation inbox', () => {
     expect(saved.items[1]).not.toHaveProperty('recovery');
     expect(saved.items[1]).not.toHaveProperty('recoveryDraftOpenedAt');
     expect(saved.items[1]).not.toHaveProperty('recoveryDraftId');
+    expect(saved.items[1]).toHaveProperty('sourceSpan', sourceSpan);
     expect(saved.items[1]).toHaveProperty('approvedCondenseCheckpoint', approvedCheckpoint);
     expect(storage.setItem).toHaveBeenCalledTimes(2);
+    expect(parseGenerationInbox(writes[1])[1]).toHaveProperty('sourceSpan', sourceSpan);
   });
 
   it('저장 재시도까지 실패해도 예외를 전파하지 않고 메모리 유지 상태를 돌려준다', () => {

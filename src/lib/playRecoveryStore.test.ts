@@ -54,6 +54,54 @@ describe('PLAY recovery work draft store', () => {
     expect(loadPlayRecoveryWorkDraftStore().schema).toBe('storyx/play-recovery-work-draft-store/v1');
   });
 
+  it('recovery source span을 작업본 저장소에서 정확히 왕복한다', () => {
+    const withSourceSpan = {
+      ...draft('source-span'),
+      source: {
+        ...draft('source-span').source,
+        condensedThroughTurn: 6,
+        sourceSpan: {
+          afterTurn: 4,
+          throughTurn: 6,
+          messageIds: ['msg-5', 'msg-6'],
+          continuityMessageIds: ['msg-5', 'msg-6']
+        }
+      }
+    };
+
+    expect(savePlayRecoveryWorkDraft(withSourceSpan)).toBe(true);
+    expect(getActivePlayRecoveryWorkDraft('project-a')).toEqual(withSourceSpan);
+  });
+
+  it('손상된 optional recovery source span만 제거하고 작업본과 원문은 보존한다', () => {
+    const original = draft('damaged-source-span');
+    const raw = JSON.stringify({
+      schema: 'storyx/play-recovery-work-draft-store/v1',
+      projects: {
+        'project-a': {
+          drafts: [{
+            ...original,
+            source: {
+              ...original.source,
+              sourceSpan: {
+                afterTurn: 4,
+                throughTurn: 3,
+                messageIds: ['msg-5'],
+                continuityMessageIds: ['msg-5']
+              }
+            }
+          }],
+          activeDraftId: original.id
+        }
+      }
+    });
+
+    expect(parsePlayRecoveryWorkDraftStore(raw).projects['project-a']).toEqual({
+      drafts: [original],
+      activeDraftId: original.id
+    });
+  });
+
   it('같은 id를 저장하면 그 작업본만 갱신하고 다른 작업본은 보존한다', () => {
     savePlayRecoveryWorkDraft(draft('a-1', 'project-a', '첫 본문'));
     savePlayRecoveryWorkDraft(draft('a-2', 'project-a', '다른 본문'), false);

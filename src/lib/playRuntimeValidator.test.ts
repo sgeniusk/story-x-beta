@@ -102,6 +102,46 @@ describe('deriveDeviationCandidates — 응결 span의 일탈 수집', () => {
     expect(d.surprises).toEqual([]);
     expect(d.conflictCounts).toEqual({ anchor: 0, major: 0 });
   });
+
+  it('생성 당시 exact source span의 surprise·conflict만 검토하고 이전 연결 문맥과 생성 뒤 대화는 제외한다', () => {
+    const clean = { conflicts: [], surpriseCandidates: [], blocksCanonization: false };
+    const surprise = (snippet: string) => ({
+      conflicts: [],
+      surpriseCandidates: [{ snippet }],
+      blocksCanonization: false
+    });
+    const conflict = (factId: string, snippet: string) => ({
+      conflicts: [{ factId, band: 'anchor' as const, factStatement: `${factId}의 옛 정본`, snippet }],
+      surpriseCandidates: [],
+      blocksCanonization: true
+    });
+    const session = {
+      ...createDiveSession('c', 'p'),
+      lastCondensedTurn: 2,
+      chatBuffer: [
+        { id: 'm1', role: 'user' as const, text: '지난 회차 연결 1', turn: 1, verdict: clean },
+        { id: 'm2', role: 'character' as const, text: '지난 회차 연결 2', turn: 2, verdict: surprise('이전 후보') },
+        { id: 'm3', role: 'user' as const, text: '이번 source 1', turn: 3, verdict: surprise('이번 후보') },
+        { id: 'm4', role: 'character' as const, text: '이번 source 2', turn: 4, verdict: conflict('source-fact', '이번 충돌') },
+        { id: 'm5', role: 'user' as const, text: '생성 뒤 대화 1', turn: 5, verdict: surprise('늦은 후보') },
+        { id: 'm6', role: 'character' as const, text: '생성 뒤 대화 2', turn: 6, verdict: conflict('late-fact', '늦은 충돌') },
+        { id: 'm7', role: 'user' as const, text: '생성 뒤 대화 3', turn: 7, verdict: clean },
+        { id: 'm8', role: 'character' as const, text: '생성 뒤 대화 4', turn: 8, verdict: clean }
+      ]
+    };
+    const sourceSpan = {
+      afterTurn: 2,
+      throughTurn: 4,
+      messageIds: ['m3', 'm4'],
+      continuityMessageIds: ['m3', 'm4']
+    };
+
+    const d = deriveDeviationCandidates(session, sourceSpan);
+
+    expect(d.surprises.map((candidate) => candidate.snippet)).toEqual(['이번 후보']);
+    expect(d.conflicts.map((candidate) => candidate.factId)).toEqual(['source-fact']);
+    expect(d.conflictCounts).toEqual({ anchor: 1, major: 0 });
+  });
 });
 
 describe('dedupePromotions — LLM 캐논과 중복 제거(문자열 근접)', () => {

@@ -1,11 +1,14 @@
 // Dive X 얇은 표면 — 채팅·응결 제안·승인 다이얼로그·연대기. 엔진은 재사용.
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import type { Chapter, SeriesProject, ProductionRequest } from '../lib/storyEngine';
 import { chapterFromDraftPayload, buildProjectContextDigest, applyRetcons, nextEpisodeNumber } from '../lib/storyEngine';
 import { inspectLeak } from '../lib/leakGate';
 import {
   type DiveSession,
+  type CondenseSourceSpan,
   CONDENSE_KEEP_RECENT,
+  selectCondenseSpan,
+  resolveCondenseSourceBoundary,
   appendMessage,
   shouldSuggestCondense,
   buildCondenseTranscript,
@@ -37,6 +40,7 @@ export interface CondenseApprovalRequest {
   workingBeforeApproval: SeriesProject;
   chapter: Chapter;
   retcons: ApprovedCondenseRetcon[];
+  sourceSpan?: CondenseSourceSpan;
   generationId: string;
 }
 
@@ -119,6 +123,17 @@ export function DiveDesk({
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<DiveCondensePayload | null>(() => selectedResultBlocked ? null : selectedGeneration?.result ?? null);
   const [pendingGenerationId] = useState<string | null>(() => !selectedResultBlocked && selectedGeneration?.result ? selectedGeneration.id : null);
+  const selectedSourceBoundary: CondenseSourceSpan | number | undefined = pendingGenerationId === selectedGeneration?.id
+    ? resolveCondenseSourceBoundary(
+        session,
+        selectedGeneration.sourceSpan,
+        selectedGeneration.recovery?.sourceSpan,
+        selectedGeneration.recovery?.condensedThroughTurn
+      )
+    : undefined;
+  const selectedSourceSpan = typeof selectedSourceBoundary === 'object'
+    ? selectedSourceBoundary
+    : undefined;
   const [leakWarn] = useState<string | null>(() => selectedResultBlocked ? '본문에 프롬프트/AI 누수가 감지됐습니다. 이 결과는 승인할 수 없습니다.' : null);
   const [generationStartError, setGenerationStartError] = useState<string | null>(null);
   const [failedRecovery, setFailedRecovery] = useState<PlayRecoverySnapshot | null>(null);
@@ -136,6 +151,11 @@ export function DiveDesk({
       ?? DIVE_SEED_CHARACTERS.find((s) => s.character.id === session.characterId)?.character;
     return c?.name ?? '상대';
   }, [project, session.characterId]);
+  const condenseSpan = useMemo(() => selectCondenseSpan(session), [session]);
+  const hasEnoughCondenseMaterial = condenseSpan.condense.length > CONDENSE_KEEP_RECENT;
+  const continuityFirstMessageId = session.chatBuffer.find(
+    (message) => message.turn <= session.lastCondensedTurn
+  )?.id;
   const suggest = shouldSuggestCondense(session);
   const episode = nextEpisodeNumber(project);
   // UI 갱신으로 영수증 배열 순서가 바뀌어도 현재 회차의 최신 생성 시도 하나만 PLAY를 대표해야
@@ -164,7 +184,7 @@ export function DiveDesk({
   const selectedGenerationIsStale = Boolean(selectedGeneration && selectedGeneration.baseRevision !== buildProjectRevision(project));
   const turnCounts = useMemo(() => {
     let surprise = 0, anchor = 0, major = 0;
-    for (const m of session.chatBuffer) {
+    for (const m of condenseSpan.condense) {
       const v = m.verdict;
       if (!v) continue;
       surprise += v.surpriseCandidates.length;
@@ -172,11 +192,14 @@ export function DiveDesk({
       major += v.conflicts.filter((c) => c.band === 'major').length;
     }
     return { surprise, anchor, major };
-  }, [session.chatBuffer]);
+  }, [condenseSpan]);
   const [decisions, setDecisions] = useState<Record<string, 'skip' | 'promote'>>({});
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [retconDecisions, setRetconDecisions] = useState<Record<string, 'keep' | 'retcon'>>({});
-  const deviations = useMemo(() => deriveDeviationCandidates(session), [session]);
+  const deviations = useMemo(
+    () => deriveDeviationCandidates(session, selectedSourceBoundary),
+    [selectedSourceBoundary, session]
+  );
   const [findings, setFindings] = useState<ConsolidationFinding[] | null>(null);
   const [reviewing, setReviewing] = useState(false);
   // VS 전개 후보 — opt-in 버튼으로만 생성. 기존 res.choices 가벼운 칩과 공존.
@@ -271,7 +294,7 @@ export function DiveDesk({
         scene,
         arc: JSON.stringify(session.arc ?? {}),
         context: buildProjectContextDigest(project),
-        transcript: buildCondenseTranscript(session),
+        transcript: buildCondenseTranscript(session, recovery.sourceSpan),
         episode,
         projectId: project.id,
         projectTitle: project.title,
@@ -325,7 +348,7 @@ export function DiveDesk({
       ? selectedGeneration.approvedCondenseCheckpoint
       : undefined;
     const generationCondenseBoundary = pendingGenerationId === selectedGeneration?.id
-      ? selectedGeneration.recovery?.condensedThroughTurn ?? 0
+      ? selectedSourceBoundary
       : undefined;
     // intent·pressure 는 의도적으로 빈 값 — 본문은 응결 payload 에서 오지, intent/pressure 로 생성하지 않는다.
     const request: ProductionRequest = { genre: project.genre, intent: '', pressure: '' };
@@ -367,7 +390,10 @@ export function DiveDesk({
     }
     // chapterFromDraftPayload가 내부에서 commitChapter까지 수행 → updatedProject를 그대로 쓴다(이중 커밋 금지).
     const nextSession = resumeCheckpoint
-      ? applyCondenseCheckpoint(session, resumeCheckpoint.condensedThroughTurn)
+      ? applyCondenseCheckpoint(
+          session,
+          resumeCheckpoint.sourceSpan ?? resumeCheckpoint.condensedThroughTurn
+        )
       : generationCondenseBoundary !== undefined
         ? applyCondenseCheckpoint(session, generationCondenseBoundary)
         : applyCondenseResult(session);
@@ -381,6 +407,7 @@ export function DiveDesk({
         workingBeforeApproval: project,
         chapter,
         retcons: retconsForCommit,
+        sourceSpan: resumeCheckpoint?.sourceSpan ?? selectedSourceSpan,
         generationId: pendingGenerationId
       });
       if (resolution !== 'committed') return;
@@ -460,33 +487,39 @@ export function DiveDesk({
       )}
 
       <div className="dx-chat">
-        {session.chatBuffer.map((m) =>
-          m.role === 'user' ? (
-            <div key={m.id} className="dx-bubble dx-user">{renderDialogue(m.text)}</div>
-          ) : (
-            (() => {
-              const g = gutterClass(m.verdict);
-              return (
-                <div
-                  key={m.id}
-                  className={`dx-turn${g ? ` dx-has-gutter ${g}` : ''}`}
-                  title={m.verdict && g ? peekText(m.verdict) : undefined}
-                >
-                  {parseSceneSegments(m.text).map((seg, i) =>
-                    seg.kind === 'narration' ? (
-                      <div key={i} className="dx-narration">{renderDialogue(seg.text)}</div>
-                    ) : (
-                      <div key={i} className="dx-bubble dx-character">
-                        <span className="dx-speaker">{seg.speaker}</span>
-                        {renderDialogue(seg.text)}
-                      </div>
-                    )
-                  )}
-                </div>
-              );
-            })()
-          )
-        )}
+        {session.chatBuffer.map((m) => (
+          <Fragment key={m.id}>
+            {m.id === continuityFirstMessageId && (
+              <div className="dx-continuity-divider" role="separator">
+                <span>지난 회차에서 이어지는 대화</span>
+              </div>
+            )}
+            {m.role === 'user' ? (
+              <div className="dx-bubble dx-user">{renderDialogue(m.text)}</div>
+            ) : (
+              (() => {
+                const g = gutterClass(m.verdict);
+                return (
+                  <div
+                    className={`dx-turn${g ? ` dx-has-gutter ${g}` : ''}`}
+                    title={m.verdict && g ? peekText(m.verdict) : undefined}
+                  >
+                    {parseSceneSegments(m.text).map((seg, i) =>
+                      seg.kind === 'narration' ? (
+                        <div key={i} className="dx-narration">{renderDialogue(seg.text)}</div>
+                      ) : (
+                        <div key={i} className="dx-bubble dx-character">
+                          <span className="dx-speaker">{seg.speaker}</span>
+                          {renderDialogue(seg.text)}
+                        </div>
+                      )
+                    )}
+                  </div>
+                );
+              })()
+            )}
+          </Fragment>
+        ))}
       </div>
 
       {choices.length > 0 && !busy && pending === null && (
@@ -498,7 +531,7 @@ export function DiveDesk({
       )}
 
       {suggest && !pending && (
-        <button className="dx-condense-chip" onClick={condense} disabled={busy}>
+        <button className="dx-condense-chip" onClick={condense} disabled={busy || !hasEnoughCondenseMaterial}>
           이 장면을 한 회차로 응결할까요?
         </button>
       )}
@@ -618,7 +651,7 @@ export function DiveDesk({
         <button
           className="dx-ambient"
           onClick={condense}
-          disabled={busy || pending !== null || session.chatBuffer.length <= CONDENSE_KEEP_RECENT}
+          disabled={busy || pending !== null || !hasEnoughCondenseMaterial}
         >
           {turnCounts.surprise > 0 && <span className="dx-amb-surprise">✦ 의외 전개 후보 {turnCounts.surprise}</span>}
           {turnCounts.major > 0 && <span className="dx-amb-major">🟡 경고 {turnCounts.major}</span>}
@@ -651,7 +684,7 @@ export function DiveDesk({
           rows={1}
         />
         <button className="dx-send" onClick={() => send()} disabled={busy || pending !== null}>보내기</button>
-        <button className="dx-condense-manual" onClick={condense} disabled={busy || startingGeneration || activeGeneration !== null || pending !== null || session.chatBuffer.length <= CONDENSE_KEEP_RECENT}>
+        <button className="dx-condense-manual" onClick={condense} disabled={busy || startingGeneration || activeGeneration !== null || pending !== null || !hasEnoughCondenseMaterial}>
           {startingGeneration ? '잡 등록 중…' : activeGeneration ? '응결 진행 중' : '지금 응결'}
         </button>
         <button className="dx-continue" onClick={() => send('(가만히 지켜본다. 시간이 잠시 흐른다.)')} disabled={busy || pending !== null}>

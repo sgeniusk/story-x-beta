@@ -274,6 +274,12 @@ describe('P0-b PLAY 기록 복구 배선', () => {
     expect(app).toMatch(/appendGenerationInboxItem[\s\S]{0,300}?recovery/);
   });
 
+  it('생성 시작 영수증 root에 recovery와 별도로 exact source span을 복사해 압축 뒤에도 경계를 보존한다', () => {
+    const handler = app.match(/async function handleStartGeneration[\s\S]{0,1400}?\n  \}/)?.[0] ?? '';
+    expect(handler).toContain('sourceSpan: recovery.sourceSpan');
+    expect(handler).toMatch(/appendGenerationInboxItem[\s\S]{0,500}?sourceSpan: recovery\.sourceSpan/);
+  });
+
   it('TXT 다운로드는 복구 포맷터와 안전 파일명을 사용한다', () => {
     expect(app).toContain('formatPlayRecoveryText(recovery)');
     expect(app).toContain('buildPlayRecoveryFilename(recovery)');
@@ -463,6 +469,22 @@ describe('P0-b PLAY 기록 복구 배선', () => {
     expect(
       app.match(/workingBeforeApproval:\s*(?:approval|pendingCondenseApproval)\.workingBeforeApproval/g)?.length ?? 0
     ).toBeGreaterThanOrEqual(2);
+  });
+
+  it('승인 checkpoint에는 성공 영수증 root source span을 영속하고 재개 저장에도 같은 exact span을 재적용한다', () => {
+    const builder = app.match(/function buildApprovedCondenseCheckpoint[\s\S]{0,3000}?\n  \}/)?.[0] ?? '';
+    expect(builder).toContain('sourceSpan');
+    expect(builder).toMatch(/sourceSpan[:,]/);
+
+    const commitStart = app.indexOf('function commitApprovedCondense');
+    const commit = commitStart >= 0 ? app.slice(commitStart, commitStart + 9_000) : '';
+    expect(commit).toContain('context.receipt.sourceSpan');
+    expect(commit).toContain('resolveCondenseSourceBoundary(');
+    expect(commit).toContain('approval.sessionBeforeApproval');
+    expect(commit).not.toContain('?? approval.session.lastCondensedTurn');
+    expect(commit).toMatch(
+      /applyCondenseCheckpoint\([\s\S]{0,250}?checkpoint\.sourceSpan\s*\?\?\s*checkpoint\.condensedThroughTurn/
+    );
   });
 
   it('느린 404 poll도 mutation 시점의 terminal 영수증을 expired로 역행시키지 않는다', () => {

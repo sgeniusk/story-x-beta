@@ -1,4 +1,5 @@
 import type { DiveCondensePayload } from './diveClient';
+import { parseCondenseSourceSpan, type CondenseSourceSpan } from './diveSession';
 import type { PlayRecoverySnapshot } from './playRecovery';
 import type { Chapter, SeriesProject } from './storyEngine';
 
@@ -24,6 +25,7 @@ export interface ApprovedCondenseCheckpoint {
   baseProjectRevision: string;
   committedProjectRevision: string;
   condensedThroughTurn: number;
+  sourceSpan?: CondenseSourceSpan;
   chapter: Chapter;
   retcons: Array<{
     factId: string;
@@ -36,6 +38,8 @@ export interface GenerationInboxItem extends Omit<GenerationJobSnapshot, 'status
   kind: 'dive-condense';
   projectTitle: string;
   status: GenerationStatus;
+  /** recovery snapshot 압축 후에도 남아야 하는 생성 source 경계. */
+  sourceSpan?: CondenseSourceSpan;
   recovery?: PlayRecoverySnapshot;
   recoveryDraftOpenedAt?: string;
   recoveryDraftId?: string;
@@ -99,6 +103,8 @@ function parseRecovery(value: unknown): PlayRecoverySnapshot | undefined {
   if (value.condensedThroughTurn !== undefined && (
     !Number.isInteger(value.condensedThroughTurn) || (value.condensedThroughTurn as number) < 0
   )) return undefined;
+  // 손상된 optional span은 recovery 원문과 분리해 강등한다.
+  const sourceSpan = parseCondenseSourceSpan(value.sourceSpan);
   return {
     schema: 'storyx/play-recovery/v1',
     projectId: value.projectId,
@@ -109,6 +115,7 @@ function parseRecovery(value: unknown): PlayRecoverySnapshot | undefined {
     ...(typeof value.condensedThroughTurn === 'number'
       ? { condensedThroughTurn: value.condensedThroughTurn }
       : {}),
+    ...(sourceSpan ? { sourceSpan } : {}),
     capturedAt: value.capturedAt
   };
 }
@@ -209,6 +216,11 @@ function parseApprovedCondenseCheckpoint(
     ? 0
     : value.condensedThroughTurn;
   if (!Number.isInteger(condensedThroughTurn) || (condensedThroughTurn as number) < 0) return undefined;
+  const parsedSourceSpan = parseCondenseSourceSpan(value.sourceSpan);
+  // checkpoint의 숫자 경계는 legacy 재개의 정본이다. 불일치 span만 버린다.
+  const sourceSpan = parsedSourceSpan?.throughTurn === condensedThroughTurn
+    ? parsedSourceSpan
+    : undefined;
   if (expectedEpisode !== undefined && value.chapter.episode !== expectedEpisode) return undefined;
   const retcons: ApprovedCondenseCheckpoint['retcons'] = [];
   const factIds = new Set<string>();
@@ -227,6 +239,7 @@ function parseApprovedCondenseCheckpoint(
     baseProjectRevision: value.baseProjectRevision,
     committedProjectRevision: value.committedProjectRevision,
     condensedThroughTurn: condensedThroughTurn as number,
+    ...(sourceSpan ? { sourceSpan } : {}),
     chapter: value.chapter,
     retcons
   };
@@ -240,6 +253,8 @@ function parseItem(value: unknown): GenerationInboxItem | null {
   if (typeof value.status !== 'string' || !STATUSES.has(value.status as GenerationStatus)) return null;
   if (typeof value.createdAt !== 'string' || typeof value.updatedAt !== 'string') return null;
   const result = parseResult(value.result);
+  // root span은 성공 recovery 원문이 quota 압축될 때도 남는 소비 경계다.
+  const sourceSpan = parseCondenseSourceSpan(value.sourceSpan);
   const parsedRecovery = parseRecovery(value.recovery);
   const recovery = parsedRecovery?.projectId === value.projectId && parsedRecovery.episode === value.episode
     ? parsedRecovery
@@ -271,6 +286,7 @@ function parseItem(value: unknown): GenerationInboxItem | null {
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
     result,
+    ...(sourceSpan ? { sourceSpan } : {}),
     recovery,
     recoveryDraftOpenedAt: recoveryDraftOpenedAt && recoveryDraftId ? recoveryDraftOpenedAt : undefined,
     recoveryDraftId: recoveryDraftOpenedAt && recoveryDraftId ? recoveryDraftId : undefined,

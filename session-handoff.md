@@ -4,6 +4,67 @@
 
 ---
 
+## 2026-07-18 10:45 — PLAY 응결 source·소비 경계 완료, 실제 작품 연속 2회 응결 테스트 대기
+
+> Last Updated: 2026-07-18 10:45 KST
+
+### Current Objective
+
+응결이 최신 두 턴을 빠뜨리고 승인 뒤 다음 회차가 같은 대화를 다시 소비할 수 있던 경계를 교정했다. 잡 시작 시점의 정확한 source를 영속하고, 승인 시 그 범위만 한 번 소비하며, 최신 두 턴은 PLAY 연결 문맥으로만 남긴다. 구현 commit과 Draft PR은 현재 생성 중이며 머지는 사용자에게 남긴다.
+
+### Recommended Next Step
+
+실제 작품에서 새 PLAY 대화를 3턴 이상 만든 뒤 `지금 응결`을 누른다. 결과에 마지막 대화가 포함됐는지 확인하고 승인하면 WRITE에 회차가 나타나고, PLAY에는 `지난 회차에서 이어지는 대화` 구분선 아래 연결 두 턴만 보여야 한다. 다시 3턴 이상 진행해 두 번째 응결을 만들었을 때 첫 회차의 연결 두 턴이 중복 포함되지 않는지 판정한다.
+
+### Branch · Commit · Verification
+
+- Branch — `codex/p0a-condense-source-boundary` (`codex/p0a-condense-quality-contract` 위 스택)
+- Implementation — commit pending (`P0-a: fix condensation source boundary`)
+- Draft PR — pending (base `codex/p0a-condense-quality-contract`)
+- Verification — 2026-07-18 10:38 `bash init.sh` 녹색: 102 files / 1135 tests, tsc+vite build 성공
+- Focused TDD — 9 files / 270 tests
+- Independent audit — 코드·시각 재감사 P0/P1/P2 0
+- Browser — 구분선 1개; 390px 입력창 342×46·버튼 2행; 320px 입력창 272px·버튼 3행; 가로 overflow/콘솔 오류 0
+- Live handoff — `http://127.0.0.1:5175/?stage=projects`
+
+### What the Last Session Did
+
+1. `CondenseSourceSpan`으로 after/through turn, 전체 message ID, 연결용 최신 최대 2개 ID를 잡 시작 전에 확정했다.
+2. 응결 입력은 모든 미소비 턴을 포함하고, 잡 실행 뒤 추가 대화는 다음 회차 source로 남기도록 소비 경계를 분리했다.
+3. source를 receipt root·recovery·approval checkpoint에 보존하고 root→recovery→검증된 legacy 순으로만 복구하게 했다.
+4. 승인·deviation/retcon 검토가 동일 source를 사용하고, 손상 metadata에서 기존 연결 문맥을 잘못 지우지 않도록 안전 강등했다.
+5. PLAY에 연결 대화 구분선을 추가하고, 실화면 감사에서 발견한 600px 이하 composer 입력창 붕괴를 TDD로 닫았다.
+
+### Files To Touch (next milestone)
+
+- 실제 연속 2회 응결 테스트에서 source 중복·누락이 재현되면 이번 spec 범위 안에서 실패 테스트를 먼저 추가하고 최소 수정한다.
+- 결과 작품성 편차를 승인 전에 알려 주는 readiness는 이번 경계와 섞지 말고 새 brainstorm으로 시작한다.
+
+### Files NOT To Touch
+
+- `.agents/skills/story-score/` — 사용자 소유 untracked 폴더. 추가·수정·스테이징 금지.
+- 기존 사용자 작품 원문·회차·캐논을 자동 재생성하거나 덮어쓰는 경로.
+- 완료 생성물 자동 반영, 누수·stale revision·사용자 승인 게이트 우회.
+- #39→#40→#41→이번 PR 스택을 순서 없이 머지하거나 retarget 전에 base 브랜치를 삭제하는 작업.
+
+### Blockers
+
+없음. 자동·브라우저·독립 감사 게이트는 녹색이며 실제 작품의 새 로컬 AI 응결을 사용자가 판정할 시점이다.
+
+### Known Issues
+
+- 이번 브라우저 검증은 결정론적 로컬 상태로 source 소비·구분선·반응형을 검증했다. 실제 새 AI 응결의 문학적 품질과 연속 2회 체감은 사용자 테스트가 남아 있다.
+- 잡 레지스트리는 기존 계약대로 서버 프로세스 메모리다. 서버 재시작 뒤 실행 영수증은 `expired`가 되지만 recovery/source span은 남는다.
+- readiness 경고와 canon provenance 강화는 각각 별도 슬라이스다.
+
+### Reference Documents
+
+- `docs/superpowers/specs/2026-07-18-p0a-condense-source-boundary-design.md`
+- `docs/superpowers/plans/2026-07-18-p0a-condense-source-boundary.md`
+- `progress.md` 맨 위 P0-a source·소비 경계 완료 트랙
+
+---
+
 ## 2026-07-17 20:34 — 승인 응결본 WRITE 연결·응결 품질 계약 완료, 새 결과 사용자 판정 대기
 
 > Last Updated: 2026-07-17 20:34 KST

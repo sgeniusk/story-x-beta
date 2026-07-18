@@ -2,7 +2,14 @@
 import type { CanonFact, SeriesProject } from './storyEngine';
 import type { ContinuityContract } from './continuityContract';
 import { classifyCanonChange } from './continuityContract';
-import { parseSceneSegments, selectCondenseSpan, type DiveSession } from './diveSession';
+import {
+  parseCondenseSourceSpan,
+  parseSceneSegments,
+  selectCondenseSpan,
+  type CondenseSourceSpan,
+  type DiveMessage,
+  type DiveSession
+} from './diveSession';
 import { factBand, deriveParticipants } from './canonImportance';
 
 export interface PlayConflict {
@@ -173,9 +180,31 @@ export function deriveReconcilePlan(working: SeriesProject, committed: SeriesPro
   return { conflicts };
 }
 
-// 응결 대상 span의 메시지 verdict에서 결정 대상(✦)과 충돌 카운트를 모은다.
-export function deriveDeviationCandidates(session: DiveSession): ConsolidationDeviations {
-  const { condense } = selectCondenseSpan(session);
+function selectDeviationSource(
+  session: DiveSession,
+  source?: CondenseSourceSpan | number
+): DiveMessage[] {
+  if (typeof source === 'number') {
+    if (!Number.isInteger(source) || source < session.lastCondensedTurn) return [];
+    return session.chatBuffer.filter(
+      (message) => message.turn > session.lastCondensedTurn && message.turn <= source
+    );
+  }
+  if (source) {
+    const span = parseCondenseSourceSpan(source);
+    if (!span) return [];
+    const sourceIds = new Set(span.messageIds);
+    return session.chatBuffer.filter((message) => sourceIds.has(message.id));
+  }
+  return selectCondenseSpan(session).condense;
+}
+
+// 생성 당시 응결 source의 메시지 verdict에서 결정 대상(✦)과 충돌 카운트를 모은다.
+export function deriveDeviationCandidates(
+  session: DiveSession,
+  source?: CondenseSourceSpan | number
+): ConsolidationDeviations {
+  const condense = selectDeviationSource(session, source);
   const surprises: DeviationCandidate[] = [];
   const conflicts: DeviationConflict[] = [];
   let anchor = 0;

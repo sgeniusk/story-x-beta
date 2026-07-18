@@ -136,7 +136,12 @@ import {
   type ApprovedCondenseCheckpoint,
   type GenerationInboxItem
 } from './lib/generationInbox';
-import { applyCondenseCheckpoint, type DiveSession } from './lib/diveSession';
+import {
+  applyCondenseCheckpoint,
+  resolveCondenseSourceBoundary,
+  type CondenseSourceSpan,
+  type DiveSession
+} from './lib/diveSession';
 import { GenerationInboxPanel } from './components/GenerationInboxPanel';
 import { ProjectLibraryCard } from './components/ProjectLibraryCard';
 import { resolveProjectResumeStage, type ProjectLibraryEntry } from './lib/projectLibrary';
@@ -419,6 +424,7 @@ function App() {
       ...job,
       kind: 'dive-condense',
       projectTitle: request.projectTitle,
+      sourceSpan: recovery.sourceSpan,
       recovery
     }));
   }
@@ -702,7 +708,8 @@ function App() {
     before: SeriesProject,
     expectedProject: SeriesProject,
     chapterId: string,
-    condensedThroughTurn: number
+    condensedThroughTurn: number,
+    sourceSpan?: CondenseSourceSpan
   ): ApprovedCondenseCheckpoint | null {
     const chapter = expectedProject.chapters.find((item) => item.id === chapterId);
     if (!chapter) return null;
@@ -720,6 +727,7 @@ function App() {
       chapter,
       retcons,
       condensedThroughTurn,
+      sourceSpan: sourceSpan?.throughTurn === condensedThroughTurn ? sourceSpan : undefined,
       baseProjectRevision: buildApprovedCondenseProjectRevision(before),
       committedProjectRevision: buildApprovedCondenseProjectRevision(
         normalizeProject(expectedProject)
@@ -827,11 +835,24 @@ function App() {
       return 'failed';
     }
     const before = context.committed;
+    const receiptSourceBoundary = resolveCondenseSourceBoundary(
+      approval.sessionBeforeApproval,
+      context.receipt.sourceSpan,
+      context.receipt.recovery?.sourceSpan,
+      context.receipt.recovery?.condensedThroughTurn
+    );
+    const receiptSourceSpan = typeof receiptSourceBoundary === 'object'
+      ? receiptSourceBoundary
+      : undefined;
+    const condensedThroughTurn = typeof receiptSourceBoundary === 'number'
+      ? receiptSourceBoundary
+      : receiptSourceBoundary.throughTurn;
     const checkpoint = resumedCheckpoint ?? buildApprovedCondenseCheckpoint(
       before,
       committedProject,
       approval.chapter.id,
-      approval.session.lastCondensedTurn
+      condensedThroughTurn,
+      receiptSourceSpan
     );
     if (!checkpoint) {
       window.alert('승인할 정확한 회차를 확인하지 못했습니다. 응결 결과를 유지했습니다.');
@@ -860,7 +881,7 @@ function App() {
         schema: 'storyx/dive/v1',
         session: applyCondenseCheckpoint(
           latestWorkingState.session,
-          checkpoint.condensedThroughTurn
+          checkpoint.sourceSpan ?? checkpoint.condensedThroughTurn
         ),
         project: committedProject
       };

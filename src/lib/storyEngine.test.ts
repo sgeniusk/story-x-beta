@@ -37,6 +37,14 @@ import {
 } from './storyEngine';
 import { computePayoffLedger } from './payoffLedger';
 import { runStoryHarness } from './storyHarness';
+import {
+  appendMessage,
+  applyCondenseCheckpoint,
+  buildCondenseTranscript,
+  buildRecentDialogue,
+  captureCondenseSourceSpan,
+  createDiveSession
+} from './diveSession';
 
 describe('storyEngine', () => {
   it('uses a neutral sample project name instead of a fake production title', () => {
@@ -159,6 +167,23 @@ describe('storyEngine', () => {
     expect(result.updatedProject.canonFacts).toEqual(canonBefore);
     expect(result.updatedProject.characters).toEqual(charactersBefore);
     expect(result.updatedProject.growthLedger).toEqual(growthBefore);
+  });
+
+  it('PLAY 응결은 시작 시점의 모든 턴을 한 번만 소비하고 tail과 후속 대화를 다음 회차 문맥으로 분리한다', () => {
+    let session = createDiveSession('lead', 'project');
+    session = appendMessage(session, 'user', '첫 장면을 시작해');
+    session = appendMessage(session, 'character', '문이 열렸다.');
+    session = appendMessage(session, 'user', '누가 들어왔지?');
+    session = appendMessage(session, 'character', '잊었던 동생이 서 있었다.');
+
+    const sourceSpan = captureCondenseSourceSpan(session);
+    expect(buildCondenseTranscript(session, sourceSpan)).toContain('잊었던 동생이 서 있었다.');
+
+    session = appendMessage(session, 'user', '생성 중 이어진 질문');
+    const approved = applyCondenseCheckpoint(session, sourceSpan);
+
+    expect(buildRecentDialogue(approved)).toContain('잊었던 동생이 서 있었다.');
+    expect(buildCondenseTranscript(approved)).toBe('나: 생성 중 이어진 질문');
   });
 
   it('commitChapterProse 가 지정 회차의 prose 만 갱신하고 다른 필드·회차는 보존, 없는 id·동일 prose 는 무변경', () => {
