@@ -4,13 +4,13 @@
 
 ---
 
-## 2026-07-18 10:45 — PLAY 응결 source·소비 경계 완료, 실제 작품 연속 2회 응결 테스트 대기
+## 2026-07-18 10:44 — PLAY 응결 source·소비 경계 완료, 실제 작품 연속 2회 응결 테스트 대기
 
-> Last Updated: 2026-07-18 10:45 KST
+> Last Updated: 2026-07-18 10:44 KST
 
 ### Current Objective
 
-응결이 최신 두 턴을 빠뜨리고 승인 뒤 다음 회차가 같은 대화를 다시 소비할 수 있던 경계를 교정했다. 잡 시작 시점의 정확한 source를 영속하고, 승인 시 그 범위만 한 번 소비하며, 최신 두 턴은 PLAY 연결 문맥으로만 남긴다. 구현 commit과 Draft PR은 현재 생성 중이며 머지는 사용자에게 남긴다.
+응결이 최신 두 턴을 빠뜨리고 승인 뒤 다음 회차가 같은 대화를 다시 소비할 수 있던 경계를 교정했다. 잡 시작 시점의 정확한 source를 영속하고, 승인 시 그 범위만 한 번 소비하며, 최신 두 턴은 PLAY 연결 문맥으로만 남긴다. 구현은 `8633789`, Draft PR은 #42이며 머지는 사용자에게 남긴다.
 
 ### Recommended Next Step
 
@@ -19,8 +19,8 @@
 ### Branch · Commit · Verification
 
 - Branch — `codex/p0a-condense-source-boundary` (`codex/p0a-condense-quality-contract` 위 스택)
-- Implementation — commit pending (`P0-a: fix condensation source boundary`)
-- Draft PR — pending (base `codex/p0a-condense-quality-contract`)
+- Implementation — `8633789` (`P0-a: fix condensation source boundary`)
+- Draft PR — https://github.com/sgeniusk/story-x-beta/pull/42 (base `codex/p0a-condense-quality-contract` / PR #41)
 - Verification — 2026-07-18 10:38 `bash init.sh` 녹색: 102 files / 1135 tests, tsc+vite build 성공
 - Focused TDD — 9 files / 270 tests
 - Independent audit — 코드·시각 재감사 P0/P1/P2 0

@@ -1,11 +1,11 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-18 10:45 KST · Branch: `codex/p0a-condense-source-boundary` (**PLAY 응결 source·소비 경계 + 연결 문맥 표시 완료, Draft PR 생성 중**)
+> Last Updated: 2026-07-18 10:44 KST · Branch: `codex/p0a-condense-source-boundary` (**PLAY 응결 source·소비 경계 + 연결 문맥 표시 완료, Draft PR #42 사용자 테스트 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
 > 최근 검증(2026-07-18 10:38 KST) — `bash init.sh` 녹색: `npm test` 1135 통과(102 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
 
-## 완료 트랙 — P0-a 후속: PLAY 응결 source·소비 경계 (`done` · 2026-07-18, 구현 commit pending · Draft PR pending)
+## 완료 트랙 — P0-a 후속: PLAY 응결 source·소비 경계 (`done` · 2026-07-18, 구현 `8633789` · Draft PR #42)
 
 기존 N-2 응결 경계가 최신 두 턴을 다음 회차로 밀어 마지막 대화·클라이맥스를 빠뜨리고, 생성 중 새 대화가 생기면 검토 범위까지 흔들리던 결함을 닫았다. 잡 시작 시점의 정확한 원문 범위를 영속하고 승인 시 그 범위만 한 번 소비하며, 보존한 최신 두 턴은 다음 PLAY의 연결 문맥으로 명시한다. spec `docs/superpowers/specs/2026-07-18-p0a-condense-source-boundary-design.md` · plan `docs/superpowers/plans/2026-07-18-p0a-condense-source-boundary.md`.
 - **정확한 source 계약** — `CondenseSourceSpan(afterTurn, throughTurn, messageIds, continuityMessageIds)`을 잡 시작 전에 확정하고 `turn > lastCondensedTurn`인 미소비 대화를 최신 두 턴까지 모두 생성 입력에 넣는다. 시작 뒤 추가된 대화는 span 밖에 남아 다음 응결 재료가 된다.
@@ -14,7 +14,7 @@
 - **이어쓰기 UX** — 승인 뒤 보존한 두 턴 앞에 `지난 회차에서 이어지는 대화` 구분선을 정확히 한 번 표시한다. 회차 본문은 WRITE에 남고 PLAY는 다음 장면의 연결 대화만 보여, 같은 원문을 재응결하는 인상을 제거했다.
 - **모바일 인접 결함** — 600px 이하에서 5개 행동 버튼 때문에 28px로 찌그러지던 PLAY 입력창을 full-row 46px 이상으로 복구하고 버튼을 2~3행으로 감쌌다. 390/320px 모두 가로 overflow 0을 실측했다.
 - **검증** — focused 9파일/270테스트, 전체 102파일/1135테스트·tsc·vite build 녹색. 독립 코드·시각 재감사 P0/P1/P2 0. 브라우저 390px 입력창 342×46, 320px 입력창 272px, 구분선 1개, 콘솔 오류 0.
-- **게시/의존** — `codex/p0a-condense-quality-contract` 위 스택이며 머지 순서는 **#39 → #40 → #41 → 이번 Draft PR**이다. 이전 PR을 먼저 머지한 뒤 다음 PR base를 순차 retarget하고 고유 diff를 확인하며, 실제 머지는 사용자에게 남긴다.
+- **게시/의존** — Draft PR #42 `https://github.com/sgeniusk/story-x-beta/pull/42`는 `codex/p0a-condense-quality-contract`/PR #41 위 스택이며 머지 순서는 **#39 → #40 → #41 → #42**다. 이전 PR을 먼저 머지한 뒤 다음 PR base를 순차 retarget하고 고유 diff를 확인하며, 실제 머지는 사용자에게 남긴다.
 - **Recommended Next Step** — 사용자가 실제 작품에서 새 PLAY 대화를 3턴 이상 만든 뒤 `지금 응결`을 눌러 마지막 대화가 결과에 포함되는지 판정한다. 승인 후 WRITE에 회차가 보이고 PLAY에는 구분선+연결 두 턴만 남아야 한다. 다시 3턴 이상 진행한 두 번째 응결에는 그 연결 두 턴이 중복 포함되지 않아야 한다. 실제 로컬 AI 생성의 작품성 판정은 이 사용자 테스트까지 열어 둔다.
 
 ## 완료 트랙 — P0-a 후속: PLAY 응결 장면화·보이스 품질 계약 (`done` · 2026-07-17, 구현 `aad8872` · Draft PR #41)
