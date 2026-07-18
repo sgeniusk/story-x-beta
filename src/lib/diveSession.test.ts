@@ -5,6 +5,9 @@ import {
   appendMessage,
   shouldSuggestCondense,
   selectCondenseSpan,
+  captureCondenseSourceSpan,
+  parseCondenseSourceSpan,
+  resolveCondenseSourceBoundary,
   applyCondenseResult,
   applyCondenseCheckpoint,
   buildTranscript,
@@ -49,23 +52,25 @@ describe('diveSession', () => {
     expect(shouldSuggestCondense(s)).toBe(true);
   });
 
-  it('selectCondenseSpan은 최근 KEEP_RECENT개를 남기고 나머지를 응결 대상으로', () => {
+  it('selectCondenseSpan은 소비 watermark 이하 연결 문맥만 남기고 최신 턴까지 응결 대상으로 삼는다', () => {
     let s = createDiveSession('c', 'p');
     for (let i = 0; i < 6; i += 1) s = appendMessage(s, 'user', `t${i}`);
+    s = { ...s, lastCondensedTurn: 2 };
     const { condense, keep } = selectCondenseSpan(s);
     expect(keep).toHaveLength(CONDENSE_KEEP_RECENT);
-    expect(condense).toHaveLength(6 - CONDENSE_KEEP_RECENT);
-    expect(condense[0].text).toBe('t0');
-    expect(keep[keep.length - 1].text).toBe('t5');
+    expect(condense).toHaveLength(4);
+    expect(keep.map((message) => message.turn)).toEqual([1, 2]);
+    expect(condense.map((message) => message.turn)).toEqual([3, 4, 5, 6]);
   });
 
-  it('applyCondenseResult는 버퍼를 keep 구간으로 줄이고 lastCondensedTurn을 갱신', () => {
+  it('applyCondenseResult는 이번 source 최신 두 턴만 연결 문맥으로 남기고 끝까지 소비한다', () => {
     let s = createDiveSession('c', 'p');
     for (let i = 0; i < 6; i += 1) s = appendMessage(s, 'user', `t${i}`);
     s = { ...s, pendingCondenseSuggested: true };
     const after = applyCondenseResult(s);
     expect(after.chatBuffer).toHaveLength(CONDENSE_KEEP_RECENT);
-    expect(after.lastCondensedTurn).toBe(6 - CONDENSE_KEEP_RECENT);
+    expect(after.chatBuffer.map((message) => message.turn)).toEqual([5, 6]);
+    expect(after.lastCondensedTurn).toBe(6);
     expect(after.pendingCondenseSuggested).toBe(false);
     expect(appendMessage(after, 'user', 'next').chatBuffer.at(-1)?.turn).toBe(7);
   });
@@ -81,6 +86,139 @@ describe('diveSession', () => {
     expect(after.chatBuffer.map((message) => message.turn)).toEqual([5, 6, 7, 8]);
     expect(after.lastCondensedTurn).toBe(4);
     expect(after.pendingCondenseSuggested).toBe(false);
+  });
+
+  it('응결 source span은 이미 소비된 경계 뒤 최신 두 턴까지 이번 transcript에 고정한다', () => {
+    let s = createDiveSession('c', 'p');
+    for (let index = 0; index < 6; index += 1) {
+      s = appendMessage(s, index % 2 === 0 ? 'user' : 'character', `t${index + 1}`);
+    }
+
+    const span = captureCondenseSourceSpan(s);
+    const transcript = buildCondenseTranscript(s, span);
+
+    expect(span).toEqual({
+      afterTurn: 0,
+      throughTurn: 6,
+      messageIds: ['msg-1', 'msg-2', 'msg-3', 'msg-4', 'msg-5', 'msg-6'],
+      continuityMessageIds: ['msg-5', 'msg-6']
+    });
+    expect(transcript).toContain('나: t5');
+    expect(transcript).toContain('상대: t6');
+  });
+
+  it('승인 뒤 source tail은 recent dialogue에 남지만 다음 condense transcript에서는 제외한다', () => {
+    let s = createDiveSession('c', 'p');
+    for (let index = 0; index < 6; index += 1) {
+      s = appendMessage(s, index % 2 === 0 ? 'user' : 'character', `t${index + 1}`);
+    }
+
+    const span = captureCondenseSourceSpan(s);
+    const after = applyCondenseCheckpoint(s, span);
+
+    expect(after.chatBuffer.map((message) => message.turn)).toEqual([5, 6]);
+    expect(after.lastCondensedTurn).toBe(6);
+    expect(buildRecentDialogue(after)).toBe('나: t5\n상대: t6');
+    expect(buildCondenseTranscript(after)).toBe('');
+  });
+
+  it('응결 생성 뒤 추가된 턴은 exact source span 승인 뒤 보존되어 다음 transcript가 된다', () => {
+    let s = createDiveSession('c', 'p');
+    for (let index = 0; index < 6; index += 1) {
+      s = appendMessage(s, index % 2 === 0 ? 'user' : 'character', `t${index + 1}`);
+    }
+    const span = captureCondenseSourceSpan(s);
+    s = appendMessage(s, 'user', '생성 중 추가한 질문');
+    s = appendMessage(s, 'character', '생성 중 추가된 대답');
+
+    const after = applyCondenseCheckpoint(s, span);
+
+    expect(after.chatBuffer.map((message) => message.turn)).toEqual([5, 6, 7, 8]);
+    expect(after.lastCondensedTurn).toBe(6);
+    expect(buildCondenseTranscript(after)).toBe(
+      '나: 생성 중 추가한 질문\n상대: 생성 중 추가된 대답'
+    );
+  });
+
+  it('exact source span과 legacy 숫자 checkpoint는 각각의 경계를 넘지 않고 재적용해도 멱등이다', () => {
+    let exactSession = createDiveSession('c', 'p');
+    for (let index = 0; index < 8; index += 1) {
+      exactSession = appendMessage(
+        exactSession,
+        index % 2 === 0 ? 'user' : 'character',
+        `t${index + 1}`
+      );
+    }
+    const exactSpan = {
+      afterTurn: 0,
+      throughTurn: 6,
+      messageIds: ['msg-1', 'msg-2', 'msg-3', 'msg-4', 'msg-5', 'msg-6'],
+      continuityMessageIds: ['msg-5', 'msg-6']
+    };
+
+    const exactOnce = applyCondenseCheckpoint(exactSession, exactSpan);
+    const exactTwice = applyCondenseCheckpoint(exactOnce, exactSpan);
+    expect(exactTwice).toEqual(exactOnce);
+    expect(exactTwice.chatBuffer.map((message) => message.turn)).toEqual([5, 6, 7, 8]);
+
+    const legacyOnce = applyCondenseCheckpoint(exactSession, 4);
+    const legacyTwice = applyCondenseCheckpoint(legacyOnce, 4);
+    expect(legacyTwice).toEqual(legacyOnce);
+    expect(legacyTwice.chatBuffer.map((message) => message.turn)).toEqual([5, 6, 7, 8]);
+    expect(legacyTwice.lastCondensedTurn).toBe(4);
+  });
+
+  it('source span parser는 continuity가 실제 마지막 두 ID가 아니거나 turn 구간 수와 다르면 강등한다', () => {
+    expect(parseCondenseSourceSpan({
+      afterTurn: 0,
+      throughTurn: 4,
+      messageIds: ['m1', 'm2', 'm3', 'm4'],
+      continuityMessageIds: ['m1', 'm2']
+    })).toBeUndefined();
+    expect(parseCondenseSourceSpan({
+      afterTurn: 0,
+      throughTurn: 99,
+      messageIds: ['m1', 'm2'],
+      continuityMessageIds: ['m1', 'm2']
+    })).toBeUndefined();
+  });
+
+  it('receipt source 경계는 현재 세션 turn·ID와 일치하는 root/recovery만 쓰고 없으면 0으로 보존한다', () => {
+    let session = createDiveSession('c', 'p');
+    for (let index = 0; index < 8; index += 1) {
+      session = appendMessage(session, index % 2 === 0 ? 'user' : 'character', `t${index + 1}`);
+    }
+    const damagedRoot = {
+      afterTurn: 0,
+      throughTurn: 8,
+      messageIds: Array.from({ length: 8 }, (_, index) => `damaged-${index + 1}`),
+      continuityMessageIds: ['damaged-7', 'damaged-8']
+    };
+    const recoverySpan = {
+      afterTurn: 0,
+      throughTurn: 6,
+      messageIds: ['msg-1', 'msg-2', 'msg-3', 'msg-4', 'msg-5', 'msg-6'],
+      continuityMessageIds: ['msg-5', 'msg-6']
+    };
+
+    expect(resolveCondenseSourceBoundary(session, damagedRoot, recoverySpan, 4)).toEqual(recoverySpan);
+    expect(resolveCondenseSourceBoundary(session, damagedRoot, undefined, undefined)).toBe(0);
+    expect(resolveCondenseSourceBoundary(session, damagedRoot, undefined, 4)).toBe(4);
+
+    const continuityOnly = {
+      ...session,
+      chatBuffer: session.chatBuffer.slice(2, 4),
+      lastCondensedTurn: 4
+    };
+    const missingBoundary = resolveCondenseSourceBoundary(
+      continuityOnly,
+      undefined,
+      undefined,
+      undefined
+    );
+    expect(missingBoundary).toBe(0);
+    expect(applyCondenseCheckpoint(continuityOnly, missingBoundary).chatBuffer.map((message) => message.turn))
+      .toEqual([3, 4]);
   });
 
   // Task 3

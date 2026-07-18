@@ -9699,6 +9699,8 @@ body:has(.fc-app) {
 .dx-chapter h4 { margin: 0 0 6px; color: var(--st-mode-plan); font-size: 14px; }
 .dx-chapter p { margin: 0; color: var(--st-ink); line-height: 1.6; }
 .dx-chat { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; }
+.dx-continuity-divider { display: flex; align-items: center; gap: 10px; margin: 6px 0 2px; color: var(--st-ink-faint); font-size: 11px; line-height: 1.4; letter-spacing: .02em; }
+.dx-continuity-divider::before, .dx-continuity-divider::after { flex: 1; height: 1px; background: var(--st-rule-soft); content: ''; }
 .dx-bubble { max-width: 78%; padding: 9px 13px; border-radius: 14px; font-size: 14px; line-height: 1.5; color: #f2f3f7; animation: st-rise var(--st-dur-slow) var(--st-ease); }
 .dx-user { align-self: flex-end; background: #1f6f78; }
 .dx-character { align-self: flex-start; background: var(--st-bg-3); }
@@ -9779,6 +9781,11 @@ body:has(.fc-app) {
 .dx-condense-manual { background: var(--st-bg-2); color: var(--st-ink); border: 1px solid var(--st-rule); }
 .dx-condense-manual:hover:not(:disabled) { background: var(--st-bg-3); }
 .dx-send:disabled, .dx-condense-manual:disabled { opacity: 0.4; cursor: not-allowed; }
+@media (max-width: 600px) {
+  .dx-composer { flex-wrap: wrap; }
+  .dx-input { flex: 1 1 100%; min-width: 0; width: 100%; }
+  .dx-composer > button { flex: 1 1 calc(33.333% - 8px); min-width: 88px; min-height: 44px; padding-inline: 10px; }
+}
 .dx-scene { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; border: 1px solid var(--st-rule); border-radius: 10px; padding: 10px 12px; background: rgba(124,92,255,0.06); }
 .dx-scene-label { font-size: 12px; color: var(--st-mode-plan); align-self: center; }
 .dx-scene-input { flex: 1; min-width: 220px; resize: none; field-sizing: content; min-height: 40px; max-height: 120px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--st-rule); background: var(--st-sheet); color: var(--st-ink); font-family: inherit; font-size: 13px; line-height: 1.5; }

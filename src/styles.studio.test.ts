@@ -51,6 +51,18 @@ describe('Story X studio shared tokens (--st-*)', () => {
     expect(css).toMatch(/@media \(max-width: 560px\)\{[\s\S]*?\.sync-pending\{[^}]*display:none/);
   });
 
+  it('600px 이하 PLAY composer는 입력창을 한 행으로 확보하고 행동 버튼을 다음 행에 감싼다', () => {
+    expect(css).toMatch(
+      /@media \(max-width: 600px\)[\s\S]*?\.dx-composer\s*\{[^}]*flex-wrap:\s*wrap/
+    );
+    expect(css).toMatch(
+      /@media \(max-width: 600px\)[\s\S]*?\.dx-input\s*\{[^}]*flex:\s*1 1 100%[^}]*min-width:\s*0[^}]*width:\s*100%/
+    );
+    expect(css).toMatch(
+      /@media \(max-width: 600px\)[\s\S]*?\.dx-composer\s*>\s*button\s*\{[^}]*flex:\s*1 1 calc\(33\.333% - 8px\)[^}]*min-width:\s*88px/
+    );
+  });
+
   it('PLAY 표면이 공통 토큰을 소비하고 등장 모션 keyframes 가 있다', () => {
     expect(css).toMatch(/\.dx-desk\s*\{[^}]*var\(--st-bg\)/);
     expect(css).toContain('@keyframes st-rise');

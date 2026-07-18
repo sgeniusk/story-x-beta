@@ -1,4 +1,5 @@
 import type { PlayRecoverySnapshot, PlayRecoveryWorkDraft } from './playRecovery';
+import { parseCondenseSourceSpan } from './diveSession';
 
 export const PLAY_RECOVERY_WORK_DRAFT_STORAGE_KEY = 'serial-story-studio/play-recovery-work-drafts';
 export const MAX_PLAY_RECOVERY_WORK_DRAFTS_PER_PROJECT = 20;
@@ -44,6 +45,8 @@ function parseSnapshot(value: unknown): PlayRecoverySnapshot | null {
     !Number.isInteger(value.condensedThroughTurn) ||
     value.condensedThroughTurn < 0
   )) return null;
+  // sourceSpan은 하위호환 optional 메타데이터다. 손상되어도 사용자 원문을 함께 버리지 않는다.
+  const sourceSpan = parseCondenseSourceSpan(value.sourceSpan);
   return {
     schema: 'storyx/play-recovery/v1',
     projectId: value.projectId,
@@ -54,6 +57,7 @@ function parseSnapshot(value: unknown): PlayRecoverySnapshot | null {
     ...(typeof value.condensedThroughTurn === 'number'
       ? { condensedThroughTurn: value.condensedThroughTurn }
       : {}),
+    ...(sourceSpan ? { sourceSpan } : {}),
     capturedAt: value.capturedAt
   };
 }

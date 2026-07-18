@@ -396,7 +396,11 @@ describe('DiveDesk', () => {
 
     expect(onStartGeneration).toHaveBeenCalledTimes(1);
     const [request, captured] = onStartGeneration.mock.calls[0] as [Record<string, string>, PlayRecoverySnapshot];
-    expect(request.transcript).toBe('나: 첫 문장');
+    expect(request.transcript).toBe([
+      '나: 첫 문장',
+      '상대: 둘째 문장',
+      '나: 셋째 문장'
+    ].join('\n'));
     expect(request.episode).toBe(6);
     expect(captured.episode).toBe(6);
     expect(captured.transcript).toContain('나: 첫 문장');
@@ -564,7 +568,7 @@ describe('DiveDesk', () => {
     host.remove();
   });
 
-  it('성공 결과를 보류한 뒤 PLAY를 이어도 생성 당시 응결 경계 이후 대화는 승인에서 보존한다', () => {
+  it('sourceSpan이 없는 legacy 결과는 recovery 숫자 경계까지만 소비하고 이후 대화를 보존한다', () => {
     const project = createEmptyProject({ title: '보류 뒤 이어진 대화' });
     const session = {
       ...createDiveSession('seed-childhood', project.id),
@@ -616,5 +620,164 @@ describe('DiveDesk', () => {
 
     act(() => root.unmount());
     host.remove();
+  });
+
+  it('성공 영수증 root source span을 recovery 경계보다 우선하고 지연 승인 뒤 연결 tail과 후속 대화를 분리 보존한다', () => {
+    const project = createEmptyProject({ title: 'root source 우선' });
+    const session = {
+      ...createDiveSession('seed-childhood', project.id),
+      chatBuffer: Array.from({ length: 8 }, (_, index) => ({
+        id: `m${index + 1}`,
+        role: index % 2 === 0 ? 'user' as const : 'character' as const,
+        text: `대화 ${index + 1}`,
+        turn: index + 1
+      }))
+    };
+    const rootSourceSpan = {
+      afterTurn: 0,
+      throughTurn: 6,
+      messageIds: ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'],
+      continuityMessageIds: ['m5', 'm6']
+    };
+    const onApproveGeneration = vi.fn().mockReturnValue('committed');
+    const selectedGeneration = {
+      id: 'job-root-source', kind: 'dive-condense' as const, projectId: project.id,
+      projectTitle: project.title, baseRevision: 'r1', episode: 1, status: 'succeeded' as const,
+      createdAt: '2026-07-18T00:00:00Z', updatedAt: '2026-07-18T00:01:00Z',
+      sourceSpan: rootSourceSpan,
+      recovery: {
+        schema: 'storyx/play-recovery/v1' as const,
+        projectId: project.id,
+        projectTitle: project.title,
+        episode: 1,
+        scene: '',
+        transcript: 'legacy recovery 원문',
+        condensedThroughTurn: 2,
+        sourceSpan: {
+          afterTurn: 0,
+          throughTurn: 4,
+          messageIds: ['m1', 'm2', 'm3', 'm4'],
+          continuityMessageIds: ['m3', 'm4']
+        },
+        capturedAt: '2026-07-18T00:00:00Z'
+      },
+      result: {
+        status: 'complete' as const,
+        title: '여섯 턴 응결본', hook: '', outline: [], beats: [],
+        prose: '생성 시작 당시 여섯 턴으로 만든 본문.', newCanonFacts: []
+      }
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, selectedGeneration,
+      onApproveGeneration
+    })));
+    act(() => Array.from(host.querySelectorAll('button'))
+      .find((button) => button.textContent === '승인 — 캐논으로 고정')?.click());
+
+    const [approval] = onApproveGeneration.mock.calls[0];
+    const keptTurns = approval.session.chatBuffer.map((message: { turn: number }) => message.turn);
+    expect(keptTurns).toEqual([5, 6, 7, 8]);
+    expect(keptTurns.filter((turn: number) => turn <= rootSourceSpan.throughTurn)).toEqual([5, 6]);
+    expect(keptTurns.filter((turn: number) => turn > rootSourceSpan.throughTurn)).toEqual([7, 8]);
+    expect(approval.session.lastCondensedTurn).toBe(6);
+
+    act(() => root.unmount());
+    host.remove();
+  });
+
+  it('응결 검토는 recovery의 더 넓은 경계가 아니라 성공 영수증 root source span의 후보만 표시한다', () => {
+    const project = createEmptyProject({ title: 'exact 검토 source' });
+    const clean = { conflicts: [], surpriseCandidates: [], blocksCanonization: false };
+    const session = {
+      ...createDiveSession('seed-childhood', project.id),
+      chatBuffer: [
+        { id: 'm1', role: 'user' as const, text: '이번 질문', turn: 1, verdict: clean },
+        {
+          id: 'm2', role: 'character' as const, text: '이번 답', turn: 2,
+          verdict: { conflicts: [], surpriseCandidates: [{ snippet: '이번 source 후보' }], blocksCanonization: false }
+        },
+        {
+          id: 'm3', role: 'user' as const, text: '생성 뒤 질문', turn: 3,
+          verdict: { conflicts: [], surpriseCandidates: [{ snippet: '승인에 섞이면 안 되는 늦은 후보' }], blocksCanonization: false }
+        },
+        { id: 'm4', role: 'character' as const, text: '생성 뒤 답', turn: 4, verdict: clean },
+        { id: 'm5', role: 'user' as const, text: '후속 3', turn: 5, verdict: clean },
+        { id: 'm6', role: 'character' as const, text: '후속 4', turn: 6, verdict: clean }
+      ]
+    };
+    const selectedGeneration = {
+      id: 'job-exact-review', kind: 'dive-condense' as const, projectId: project.id,
+      projectTitle: project.title, baseRevision: 'r1', episode: 1, status: 'succeeded' as const,
+      createdAt: '2026-07-18T00:00:00Z', updatedAt: '2026-07-18T00:01:00Z',
+      sourceSpan: {
+        afterTurn: 0,
+        throughTurn: 2,
+        messageIds: ['m1', 'm2'],
+        continuityMessageIds: ['m1', 'm2']
+      },
+      recovery: {
+        schema: 'storyx/play-recovery/v1' as const,
+        projectId: project.id,
+        projectTitle: project.title,
+        episode: 1,
+        scene: '',
+        transcript: 'recovery',
+        condensedThroughTurn: 4,
+        sourceSpan: {
+          afterTurn: 0,
+          throughTurn: 4,
+          messageIds: ['m1', 'm2', 'm3', 'm4'],
+          continuityMessageIds: ['m3', 'm4']
+        },
+        capturedAt: '2026-07-18T00:00:00Z'
+      },
+      result: {
+        status: 'complete' as const,
+        title: 'exact source 응결본', hook: '', outline: [], beats: [],
+        prose: 'exact source 본문.', newCanonFacts: []
+      }
+    };
+
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, selectedGeneration
+    }));
+
+    expect(html).toContain('이번 source 후보');
+    expect(html).not.toContain('승인에 섞이면 안 되는 늦은 후보');
+  });
+
+  it('이미 작품화된 연결 메시지가 남아 있을 때만 PLAY에 연결 구분선을 한 번 렌더한다', () => {
+    const project = createEmptyProject({ title: '연결 구분선' });
+    const messages = [
+      { id: 'm3', role: 'user' as const, text: '지난 회차 끝 질문', turn: 3 },
+      { id: 'm4', role: 'character' as const, text: '지난 회차 끝 답', turn: 4 },
+      { id: 'm5', role: 'user' as const, text: '새 회차 질문', turn: 5 },
+      { id: 'm6', role: 'character' as const, text: '새 회차 답', turn: 6 }
+    ];
+    const withContinuity = {
+      ...createDiveSession('seed-childhood', project.id),
+      chatBuffer: messages,
+      lastCondensedTurn: 4
+    };
+    const withoutContinuity = {
+      ...withContinuity,
+      lastCondensedTurn: 0
+    };
+
+    const withHtml = renderToStaticMarkup(createElement(DiveDesk, {
+      session: withContinuity, project, onChange: () => {}, onBack: () => {}
+    }));
+    const withoutHtml = renderToStaticMarkup(createElement(DiveDesk, {
+      session: withoutContinuity, project, onChange: () => {}, onBack: () => {}
+    }));
+
+    expect(withHtml.match(/지난 회차에서 이어지는 대화/g)).toHaveLength(1);
+    expect(withHtml).toContain('dx-continuity-divider');
+    expect(withoutHtml).not.toContain('지난 회차에서 이어지는 대화');
+    expect(withoutHtml).not.toContain('dx-continuity-divider');
   });
 });

@@ -34,12 +34,49 @@ describe('PLAY recovery', () => {
       projectTitle: '달의 문서고',
       episode: 1,
       scene: '비 내리는 문서고 앞',
-      condensedThroughTurn: 1,
+      condensedThroughTurn: 3,
+      sourceSpan: {
+        afterTurn: 0,
+        throughTurn: 3,
+        messageIds: ['msg-1', 'msg-2', 'msg-3'],
+        continuityMessageIds: ['msg-2', 'msg-3']
+      },
       capturedAt: '2026-07-16T12:34:56.000Z'
     }));
     expect(snapshot.transcript).toContain('나: 문을 열어도 될까?');
     expect(snapshot.transcript).toContain('상대: 아직은 안 돼.');
     expect(snapshot.transcript).toContain('나: 그래도 열겠어.');
+  });
+
+  it('이미 소비된 연결 문맥은 다음 응결 recovery 원문에 중복 포함하지 않는다', () => {
+    const project = { ...createSeedProject(), id: 'project-recovery', title: '달의 문서고' };
+    let session = createDiveSession(project.characters[0].id, project.id);
+    session = appendMessage(session, 'user', '이전 회차 마지막 질문');
+    session = appendMessage(session, 'character', '이전 회차 마지막 답');
+    session = appendMessage(session, 'user', '지난 회차 연결 질문');
+    session = appendMessage(session, 'character', '지난 회차 연결 답');
+    session = appendMessage(session, 'user', '새 회차의 첫 질문');
+    session = appendMessage(session, 'character', '새 회차의 첫 답');
+    session = {
+      ...session,
+      // 승인 뒤 PLAY에는 소비된 source의 끝 2개만 연결 문맥으로 남아 있다.
+      chatBuffer: session.chatBuffer.slice(2),
+      lastCondensedTurn: 4
+    };
+
+    const snapshot = buildPlayRecoverySnapshot(session, project, '2026-07-18T01:00:00.000Z');
+
+    expect(snapshot).toEqual(expect.objectContaining({
+      condensedThroughTurn: 6,
+      sourceSpan: {
+        afterTurn: 4,
+        throughTurn: 6,
+        messageIds: ['msg-5', 'msg-6'],
+        continuityMessageIds: ['msg-5', 'msg-6']
+      }
+    }));
+    expect(snapshot.transcript).toBe('나: 새 회차의 첫 질문\n상대: 새 회차의 첫 답');
+    expect(snapshot.transcript).not.toContain('지난 회차 연결');
   });
 
   it('TXT에 식별 정보와 원문을 담고 파일명의 경로 문자를 제거한다', () => {

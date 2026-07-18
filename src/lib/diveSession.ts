@@ -32,6 +32,17 @@ export interface DiveSession {
   arc?: StoryArc;
 }
 
+export interface CondenseSourceSpan {
+  /** 생성 직전까지 이미 작품화된 마지막 turn. */
+  afterTurn: number;
+  /** 이번 생성 source가 캡처한 마지막 turn. */
+  throughTurn: number;
+  /** 생성 시작 순간 캡처한 미소비 메시지 ID. */
+  messageIds: string[];
+  /** 승인 뒤 PLAY 연결 문맥으로 남길 source tail(최대 2개). */
+  continuityMessageIds: string[];
+}
+
 export const CONDENSE_SUGGEST_TURNS = 12;
 export const CONDENSE_KEEP_RECENT = 2;
 
@@ -60,43 +71,133 @@ export function appendMessage(
 }
 
 export function shouldSuggestCondense(session: DiveSession): boolean {
-  return session.chatBuffer.length >= CONDENSE_SUGGEST_TURNS;
+  return selectCondenseSpan(session).condense.length >= CONDENSE_SUGGEST_TURNS;
 }
 
 export function selectCondenseSpan(session: DiveSession): {
   condense: DiveMessage[];
   keep: DiveMessage[];
 } {
-  const buffer = session.chatBuffer;
-  if (buffer.length <= CONDENSE_KEEP_RECENT) {
-    return { condense: [], keep: [...buffer] };
-  }
-  const splitAt = buffer.length - CONDENSE_KEEP_RECENT;
-  return { condense: buffer.slice(0, splitAt), keep: buffer.slice(splitAt) };
-}
-
-export function applyCondenseResult(session: DiveSession): DiveSession {
-  const { condense, keep } = selectCondenseSpan(session);
-  const lastCondensedTurn = condense.length
-    ? condense[condense.length - 1].turn
-    : session.lastCondensedTurn;
   return {
-    ...session,
-    chatBuffer: keep,
-    lastCondensedTurn,
-    pendingCondenseSuggested: false
+    condense: session.chatBuffer.filter((message) => message.turn > session.lastCondensedTurn),
+    keep: session.chatBuffer.filter((message) => message.turn <= session.lastCondensedTurn)
   };
 }
 
-// write-ahead checkpoint 재개는 현재 버퍼를 다시 N-2 방식으로 자르지 않는다.
-// 최초 승인 때 실제로 응결한 turn 경계까지만 제거해, 부분 성공 뒤 이어진 PLAY 대화를 보존한다.
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0;
+}
+
+function parseMessageIds(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const ids = value.filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
+  if (ids.length !== value.length || new Set(ids).size !== ids.length) return undefined;
+  return ids;
+}
+
+export function parseCondenseSourceSpan(value: unknown): CondenseSourceSpan | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const candidate = value as Record<string, unknown>;
+  if (!isNonNegativeInteger(candidate.afterTurn) || !isNonNegativeInteger(candidate.throughTurn)) {
+    return undefined;
+  }
+  if (candidate.throughTurn < candidate.afterTurn) return undefined;
+
+  const messageIds = parseMessageIds(candidate.messageIds);
+  const continuityMessageIds = parseMessageIds(candidate.continuityMessageIds);
+  if (!messageIds || !continuityMessageIds || continuityMessageIds.length > CONDENSE_KEEP_RECENT) {
+    return undefined;
+  }
+  const sourceIds = new Set(messageIds);
+  if (continuityMessageIds.some((id) => !sourceIds.has(id))) return undefined;
+
+  const emptyBoundary = candidate.afterTurn === candidate.throughTurn;
+  if (emptyBoundary !== (messageIds.length === 0)) return undefined;
+  if (messageIds.length !== candidate.throughTurn - candidate.afterTurn) return undefined;
+  const expectedContinuityIds = messageIds.slice(-CONDENSE_KEEP_RECENT);
+  if (
+    continuityMessageIds.length !== expectedContinuityIds.length ||
+    continuityMessageIds.some((id, index) => id !== expectedContinuityIds[index])
+  ) return undefined;
+
+  return {
+    afterTurn: candidate.afterTurn,
+    throughTurn: candidate.throughTurn,
+    messageIds: [...messageIds],
+    continuityMessageIds: [...continuityMessageIds]
+  };
+}
+
+export function captureCondenseSourceSpan(session: DiveSession): CondenseSourceSpan {
+  const { condense } = selectCondenseSpan(session);
+  const messageIds = condense.map((message) => message.id);
+  return {
+    afterTurn: session.lastCondensedTurn,
+    throughTurn: condense.at(-1)?.turn ?? session.lastCondensedTurn,
+    messageIds,
+    continuityMessageIds: messageIds.slice(-CONDENSE_KEEP_RECENT)
+  };
+}
+
+function sourceSpanMatchesSession(session: DiveSession, value: unknown): CondenseSourceSpan | undefined {
+  const span = parseCondenseSourceSpan(value);
+  if (!span || session.lastCondensedTurn !== span.afterTurn) return undefined;
+  const captured = session.chatBuffer.filter(
+    (message) => message.turn > span.afterTurn && message.turn <= span.throughTurn
+  );
+  if (captured.length !== span.messageIds.length) return undefined;
+  if (captured.some((message, index) => message.id !== span.messageIds[index])) return undefined;
+  if ((captured.at(-1)?.turn ?? span.afterTurn) !== span.throughTurn) return undefined;
+  return span;
+}
+
+/**
+ * 영수증의 exact 경계는 현재 승인 전 PLAY snapshot과 일치할 때만 신뢰한다.
+ * 손상 root는 recovery exact로, 둘 다 불일치하면 검증 가능한 legacy 숫자 또는 0으로 강등한다.
+ */
+export function resolveCondenseSourceBoundary(
+  session: DiveSession,
+  primarySourceSpan?: unknown,
+  recoverySourceSpan?: unknown,
+  legacyBoundary?: unknown
+): CondenseSourceSpan | number {
+  const primary = sourceSpanMatchesSession(session, primarySourceSpan);
+  if (primary) return primary;
+  const recovery = sourceSpanMatchesSession(session, recoverySourceSpan);
+  if (recovery) return recovery;
+  const maxTurn = session.chatBuffer.at(-1)?.turn ?? session.lastCondensedTurn;
+  return isNonNegativeInteger(legacyBoundary) && legacyBoundary <= maxTurn
+    ? legacyBoundary
+    : 0;
+}
+
+export function applyCondenseResult(session: DiveSession): DiveSession {
+  return applyCondenseCheckpoint(session, captureCondenseSourceSpan(session));
+}
+
+// exact checkpoint는 생성 당시 source만 소비하고 tail 2개를 연결 문맥으로 남긴다.
+// legacy 숫자 checkpoint는 과거 N-2 결과의 실제 경계까지만 제거한다.
 export function applyCondenseCheckpoint(
   session: DiveSession,
-  condensedThroughTurn: number
+  source: CondenseSourceSpan | number
 ): DiveSession {
-  const boundary = Number.isInteger(condensedThroughTurn) && condensedThroughTurn >= 0
-    ? condensedThroughTurn
-    : session.lastCondensedTurn;
+  if (typeof source !== 'number') {
+    const span = parseCondenseSourceSpan(source);
+    if (!span) {
+      return { ...session, pendingCondenseSuggested: false };
+    }
+    const continuityIds = new Set(span.continuityMessageIds);
+    return {
+      ...session,
+      chatBuffer: session.chatBuffer.filter(
+        (message) => message.turn > span.throughTurn || continuityIds.has(message.id)
+      ),
+      lastCondensedTurn: Math.max(session.lastCondensedTurn, span.throughTurn),
+      pendingCondenseSuggested: false
+    };
+  }
+
+  const boundary = isNonNegativeInteger(source) ? source : session.lastCondensedTurn;
   return {
     ...session,
     chatBuffer: session.chatBuffer.filter((message) => message.turn > boundary),
@@ -137,9 +238,17 @@ export function buildVsCandidatesInput(session: DiveSession, project: SeriesProj
   };
 }
 
-// 응결 대상 span에서 캐논화 차단(앵커 위반) 턴을 제외한 transcript. 정본 §7 하드 차단.
-export function buildCondenseTranscript(session: DiveSession): string {
-  const { condense } = selectCondenseSpan(session);
+// 응결 source에서 캐논화 차단(앵커 위반) 턴을 제외한 transcript. 정본 §7 하드 차단.
+export function buildCondenseTranscript(session: DiveSession, sourceSpan?: CondenseSourceSpan): string {
+  let condense: DiveMessage[];
+  if (sourceSpan) {
+    const span = parseCondenseSourceSpan(sourceSpan);
+    if (!span) return '';
+    const sourceIds = new Set(span.messageIds);
+    condense = session.chatBuffer.filter((message) => sourceIds.has(message.id));
+  } else {
+    ({ condense } = selectCondenseSpan(session));
+  }
   return buildTranscript(condense.filter((m) => !m.verdict?.blocksCanonization));
 }
 
