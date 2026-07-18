@@ -1,11 +1,14 @@
 // 초안 생성 진행 피드백 순수 로직 — 경과시간 포맷·단계별 안심 메시지가 결정론적인지 검증.
 import { describe, expect, it } from 'vitest';
 import {
+  elapsedSecondsSince,
   formatElapsed,
   generationStageMessage,
   GENERATION_TIME_HINT,
   interviewStageMessage,
   INTERVIEW_TIME_HINT,
+  playProgressPresentation,
+  type PlayProgressKind,
 } from './generationProgress';
 
 describe('formatElapsed', () => {
@@ -79,5 +82,84 @@ describe('INTERVIEW_TIME_HINT', () => {
     expect(INTERVIEW_TIME_HINT).toContain('분');
     expect(INTERVIEW_TIME_HINT).toContain('새로고침');
     expect(INTERVIEW_TIME_HINT.endsWith(':')).toBe(false);
+  });
+});
+
+describe('PLAY progress presentation', () => {
+  const kinds: PlayProgressKind[] = [
+    'dialogue', 'showrunner', 'candidates', 'condense-register', 'condense'
+  ];
+
+  it('각 비동기 작업을 사용자가 구분할 수 있는 label과 정직한 hint로 설명한다', () => {
+    expect(kinds.map((kind) => playProgressPresentation(kind, 0).label)).toEqual([
+      '다음 대화', '쇼러너 연출', '전개 후보', '응결 등록', '회차 응결'
+    ]);
+    for (const kind of kinds) {
+      const presentation = playProgressPresentation(kind, 0);
+      expect(presentation.message.length).toBeGreaterThan(0);
+      expect(presentation.hint.length).toBeGreaterThan(0);
+      expect(`${presentation.message} ${presentation.hint}`).not.toMatch(/\d+%|남은 시간|완료 임박/);
+    }
+    expect(playProgressPresentation('candidates', 0).hint).toContain('30초');
+    expect(playProgressPresentation('condense-register', 0).hint).toContain('등록되면 화면을 떠나도');
+    expect(playProgressPresentation('condense', 0).hint).toContain('화면을 떠나도 작업은 계속되고');
+    expect(playProgressPresentation('condense', 0).hint).toContain('생성 보관함');
+    expect(playProgressPresentation('dialogue', 0).hint).not.toContain('화면을 떠나도');
+  });
+
+  it('대화·쇼러너·후보·등록은 경과 구간에 따라 목적 문구가 바뀌고 마지막 문구로 수렴한다', () => {
+    expect(playProgressPresentation('dialogue', 11).message)
+      .not.toBe(playProgressPresentation('dialogue', 12).message);
+    expect(playProgressPresentation('dialogue', 29).message)
+      .not.toBe(playProgressPresentation('dialogue', 30).message);
+    expect(playProgressPresentation('dialogue', 300).message)
+      .toBe(playProgressPresentation('dialogue', 30).message);
+
+    expect(playProgressPresentation('showrunner', 11).message)
+      .not.toBe(playProgressPresentation('showrunner', 12).message);
+    expect(playProgressPresentation('showrunner', 29).message)
+      .not.toBe(playProgressPresentation('showrunner', 30).message);
+    expect(playProgressPresentation('showrunner', 300).message)
+      .toBe(playProgressPresentation('showrunner', 30).message);
+
+    expect(playProgressPresentation('candidates', 9).message)
+      .not.toBe(playProgressPresentation('candidates', 10).message);
+    expect(playProgressPresentation('candidates', 24).message)
+      .not.toBe(playProgressPresentation('candidates', 25).message);
+    expect(playProgressPresentation('candidates', 300).message)
+      .toBe(playProgressPresentation('candidates', 25).message);
+
+    expect(playProgressPresentation('condense-register', 4).message)
+      .not.toBe(playProgressPresentation('condense-register', 5).message);
+    expect(playProgressPresentation('condense-register', 300).message)
+      .toBe(playProgressPresentation('condense-register', 5).message);
+  });
+
+  it('응결은 원문 정리→장면 구성→보이스·연속성→마무리 순서로 안내한다', () => {
+    const messages = [0, 25, 70, 130].map((elapsed) =>
+      playProgressPresentation('condense', elapsed).message
+    );
+    expect(new Set(messages).size).toBe(4);
+    expect(messages[0]).toContain('원문');
+    expect(messages[1]).toContain('장면');
+    expect(messages[2]).toMatch(/보이스|연속성/);
+    expect(playProgressPresentation('condense', 600).message).toBe(messages[3]);
+  });
+});
+
+describe('elapsedSecondsSince', () => {
+  const now = Date.parse('2026-07-18T00:02:03Z');
+
+  it('millisecond와 ISO 시작점을 같은 경과 초로 계산한다', () => {
+    expect(elapsedSecondsSince(now - 83_999, now)).toBe(83);
+    expect(elapsedSecondsSince('2026-07-18T00:01:00Z', now)).toBe(63);
+  });
+
+  it('미래·손상·누락 timestamp와 잘못된 now를 0초로 안전 강등한다', () => {
+    expect(elapsedSecondsSince(-1, now)).toBe(0);
+    expect(elapsedSecondsSince(now + 1_000, now)).toBe(0);
+    expect(elapsedSecondsSince('not-a-date', now)).toBe(0);
+    expect(elapsedSecondsSince(undefined, now)).toBe(0);
+    expect(elapsedSecondsSince(now, Number.NaN)).toBe(0);
   });
 });

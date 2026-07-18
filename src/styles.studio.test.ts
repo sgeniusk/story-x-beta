@@ -63,6 +63,26 @@ describe('Story X studio shared tokens (--st-*)', () => {
     );
   });
 
+  it('PLAY 작업등은 warm studio 토큰과 PLAY 의미색을 쓰고 작은 화면에서 안전하게 감싼다', () => {
+    expect(css).toMatch(
+      /\.dx-workbench-dock\s*\{[^}]*position:\s*sticky[^}]*bottom:\s*0[^}]*background:\s*var\(--st-bg\)/
+    );
+    expect(css).toMatch(/\.dx-composer\s*\{[^}]*position:\s*static/);
+    expect(css).toMatch(/\.dx-progress-stack\s*\{[^}]*overflow-anchor:\s*none/);
+    expect(css).toMatch(
+      /\.dx-progress-card\s*\{[^}]*border:[^}]*var\(--st-rule-soft\)[^}]*border-left:[^}]*var\(--st-mode-play\)[^}]*background:[^}]*var\(--st-bg-2\)/
+    );
+    expect(css).toMatch(
+      /\.dx-progress-dot\s*\{[^}]*background:\s*var\(--st-mode-play\)[^}]*animation:[^}]*fc-gen-pulse[^}]*var\(--st-dur-slow\)[^}]*var\(--st-ease\)/
+    );
+    expect(css).toMatch(
+      /@media \(max-width: 600px\)[\s\S]*?\.dx-progress-card\s*\{[^}]*min-width:\s*0[\s\S]*?\.dx-progress-head\s*\{[^}]*flex-wrap:\s*wrap/
+    );
+    expect(css).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,500}?\.dx-progress-dot[\s\S]{0,300}?animation:\s*none/
+    );
+  });
+
   it('PLAY 표면이 공통 토큰을 소비하고 등장 모션 keyframes 가 있다', () => {
     expect(css).toMatch(/\.dx-desk\s*\{[^}]*var\(--st-bg\)/);
     expect(css).toContain('@keyframes st-rise');
