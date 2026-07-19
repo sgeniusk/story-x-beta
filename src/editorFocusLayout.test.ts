@@ -87,6 +87,20 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-axis-input');
   });
 
+  it('P1-b — WRITE의 현재 선택 회차와 저장 전 본문을 반출 액션에 직접 전달한다', () => {
+    expect(desk).toContain("import { ManuscriptExportActions }");
+    expect(desk).toContain('<ManuscriptExportActions');
+    expect(desk).toContain('projectTitle={project.title}');
+    expect(desk).toContain('chapter={latestChapter}');
+    expect(desk).toContain('body={editorText}');
+    expect(desk).not.toContain("loadProject().chapters.at(-1)");
+
+    const recoveryReturn = desk.indexOf('if (isDraftMode && recoveryWorkDraft)');
+    const regularDraftReturn = desk.indexOf('if (isDraftMode) {', recoveryReturn + 1);
+    expect(recoveryReturn).toBeGreaterThan(-1);
+    expect(regularDraftReturn).toBeGreaterThan(recoveryReturn);
+  });
+
   it('P1 — keeps the manuscript as the protagonist with a thin toolstrip above it', () => {
     expect(css).toContain('.sx-workbench.is-draft');
     // 편집 트랙: 툴스트립 1행 + 원고가 나머지 공간을 채우는 1행

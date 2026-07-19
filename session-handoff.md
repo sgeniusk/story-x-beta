@@ -4,6 +4,70 @@
 
 ---
 
+## 2026-07-19 17:46 — P1-b 현재 회차 본문 복사·TXT 완료, 실제 OS 반출 테스트 대기
+
+> Last Updated: 2026-07-19 17:46 KST
+
+### Current Objective
+
+WRITE에서 지금 보고 수정하는 한 회차의 live 본문을 메타데이터 없이 클립보드나 UTF-8 TXT로 꺼내는 P1-b를 완료했다. 복사와 TXT는 같은 본문을 사용하며, PLAY 복구본·JSON 백업·캐논/출간 승인의 의미는 분리했다. 구현은 `47d17d4`, Draft PR은 #44이고 머지는 사용자에게 남긴다.
+
+### Recommended Next Step
+
+실행 중인 `http://127.0.0.1:5175/?stage=editor`에서 한 문장을 수정한 직후 `본문 복사`를 눌러 macOS 메모장 등 Story X 밖에 붙여넣는다. 이어 `TXT`를 내려받아 같은 문장·문단 빈 줄·한글 파일명을 확인한다. 두 결과가 맞으면 P1-b를 수용하고, 다음 백로그 슬라이스는 새 brainstorm으로 선택한다.
+
+### Branch · Commit · Verification
+
+- Branch — `codex/p1b-text-export` (`codex/p1a-play-progress-feedback` / Draft PR #43 위 스택)
+- Implementation — `47d17d4` (`P1-b: add current chapter text export`)
+- Draft PR — https://github.com/sgeniusk/story-x-beta/pull/44 (base `codex/p1a-play-progress-feedback`)
+- Verification — 2026-07-19 17:46 `bash init.sh` 녹색: tsc·vitest·Vite build 전체 성공
+- Focused TDD — 7 files / 133 tests; clipboard fallback·비동기 회차 경합·download cleanup 실패 RED→GREEN
+- Independent audit — 코드 재감사 P0–P2 0, `git diff --check` 녹색
+- Browser — 1280/390/320px 본문·브라우저 clipboard·실제 TXT byte-for-byte/SHA-256 일치, UTF-8·빈 줄 보존, 가로 overflow·원고 겹침·console warn/error 0
+- Captures — `/private/tmp/storyx-p1b-write-1280-final.png` · `/private/tmp/storyx-p1b-write-390-final.png` · `/private/tmp/storyx-p1b-write-320-keyboard-final.png`
+- Live handoff — `http://127.0.0.1:5175/?stage=editor`
+
+### What the Last Session Did
+
+1. P1-b를 현재 선택 회차 한 개·본문만·WRITE 로컬 행동으로 고정하고 brainstorm→spec→plan을 작성했다.
+2. `prepareChapterTextExport`와 안전 파일명, UTF-8 다운로드, Clipboard API+selection fallback을 TDD로 구현했다.
+3. `ManuscriptExportActions`를 `latestChapter`·저장 전 `editorText`에 직접 연결하고 공백·성공·실패·회차 전환 상태를 정직하게 표시했다.
+4. PLAY 복구 TXT가 공용 helper를 재사용하게 하되 복구 경고/메타와 깨끗한 회차 본문 포맷은 분리했다.
+5. 독립 감사의 pending Promise 경합·object URL 누수 후보·다운로드 실패 테스트 누락을 RED→GREEN으로 닫고 전체 하네스·실브라우저·Draft PR까지 완료했다.
+
+### Files To Touch (next milestone)
+
+- 사용자 실제 OS 붙여넣기/TXT 판정에서 결함이 나오면 P1-b spec 수용 범위 안에서 실패 테스트를 먼저 추가하고 최소 수정한다.
+- P1-b가 수용되면 다음 백로그는 별도 feature branch와 brainstorm→spec→plan→TDD로 시작한다.
+
+### Files NOT To Touch
+
+- `.agents/skills/story-score/` — 사용자 소유 untracked 폴더. 읽기·추가·수정·staging 금지.
+- 기존 사용자 작품 원문·회차·캐논을 자동 재생성하거나 덮어쓰는 경로.
+- PLAY 복구 원문을 일반 회차 본문으로 자동 반영하거나 완료 생성물·캐논 승인 gate를 우회하는 변경.
+- JSON export/import schema, ProjectHub·PublishScreen, 작품 전체 묶음 반출을 P1-b에 섞는 변경.
+- #39→#40→#41→#42→#43→#44 스택을 순서 없이 머지하거나 retarget 전 base 브랜치를 삭제하는 작업.
+
+### Blockers
+
+코드·하네스·실브라우저·Draft PR 차단은 없다. 실제 macOS 클립보드 붙여넣기와 내려받은 파일의 최종 수용 판정만 사용자에게 남긴다.
+
+### Known Issues
+
+- 자동 브라우저 세션의 clipboard는 원고와 정확히 일치했지만 shell `pbpaste`는 앱 세션 격리로 빈 값을 돌려줬다. 사용자가 실제 외부 앱 붙여넣기를 한 번 확인해야 하며, 실패하면 P1-b 차단 결함으로 취급한다.
+- 빈 본문은 컴포넌트 테스트로 fail-closed를 검증했다. 보관된 작품 상태를 훼손하지 않기 위해 실브라우저 작품을 비우는 검증은 하지 않았다.
+- 320px에서 기존 `.dock.left`가 양끝 약 2.5px bleed하지만 문서 overflow나 이번 반출 영역에는 영향이 없는 별도 Low 이슈다.
+- StoryXDesk의 recovery 조기 return 배선은 현재 source contract 테스트다. 독립 감사는 구현 결함을 찾지 않았으나 실제 렌더 통합 테스트 보강은 후속 P3 후보다.
+
+### Reference Documents
+
+- `docs/superpowers/specs/2026-07-19-p1b-text-export-design.md`
+- `docs/superpowers/plans/2026-07-19-p1b-text-export.md`
+- `progress.md` 맨 위 P1-b 완료 트랙
+
+---
+
 ## 2026-07-18 23:54 — P1-a PLAY 진행 피드백 완료, 실제 작품 대기 경험 테스트 대기
 
 > Last Updated: 2026-07-18 23:54 KST

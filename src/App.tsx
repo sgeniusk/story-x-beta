@@ -100,6 +100,7 @@ import { WorkspaceModeBar, type WorkspaceMode } from './components/WorkspaceMode
 import { OverflowMenu } from './components/OverflowMenu';
 import { SyncConsole } from './components/SyncConsole';
 import { SyncFlash, type SyncFlashPayload } from './components/SyncFlash';
+import { downloadTextFile } from './lib/textFileExport';
 import { ReconcileReview } from './components/ReconcileReview';
 import { PlanApplyReview } from './components/PlanApplyReview';
 import { applyPlanPatches, derivePlanConflicts, resolvePlanApply, type PlanConflict } from './lib/planStage';
@@ -430,15 +431,7 @@ function App() {
   }
 
   function handleDownloadRecovery(recovery: PlayRecoverySnapshot): void {
-    const blob = new Blob([formatPlayRecoveryText(recovery)], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = buildPlayRecoveryFilename(recovery);
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
+    downloadTextFile(formatPlayRecoveryText(recovery), buildPlayRecoveryFilename(recovery));
   }
 
   async function handleCancelGeneration(item: GenerationInboxItem): Promise<void> {
