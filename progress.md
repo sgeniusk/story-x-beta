@@ -1,9 +1,20 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-18 23:54 KST · Branch: `codex/p1a-play-progress-feedback` (**PLAY 진행 작업등·경과시간·sticky dock 완료, Draft PR #43 사용자 테스트 대기**)
+> Last Updated: 2026-07-19 17:46 KST · Branch: `codex/p1b-text-export` (**WRITE 현재 회차 본문 복사·TXT 완료, Draft PR #44 사용자 테스트 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-> 최근 검증(2026-07-18 23:53 KST) — `bash init.sh` 녹색: `npm test` 1145 통과(102 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+> 최근 검증(2026-07-19 17:46 KST) — `bash init.sh` 녹색: `npm test` 1165 통과(105 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+
+## 완료 트랙 — P1-b WRITE 현재 회차 평문 반출 (`done` · 2026-07-19, 구현 `47d17d4` · Draft PR #44)
+
+WRITE에서 현재 선택한 회차의 **화면상 최신 본문**을 메타데이터 없이 복사하거나 UTF-8 TXT로 내려받는 소유권 출구를 만들었다. 저장소의 마지막 회차를 다시 추정하지 않고 `latestChapter` 식별자와 저장 debounce 전 `editorText`를 직접 사용한다. spec `docs/superpowers/specs/2026-07-19-p1b-text-export-design.md` · plan `docs/superpowers/plans/2026-07-19-p1b-text-export.md`.
+- **현재 회차 계약** — 복사와 TXT는 같은 live body를 byte-for-byte 사용하고, 작품명·회차·제목은 안전한 파일명에만 둔다. 잠긴 회차·임시 작품도 반출할 수 있으며 공백 본문은 두 행동을 비활성화한다.
+- **정직한 실패·경합 방어** — 표준 Clipboard API와 임베디드 브라우저 selection fallback을 사용하고 둘 다 실패할 때만 오류를 알린다. 회차·본문 변경이나 다른 반출 뒤 늦게 끝난 복사는 request version으로 무효화하며, 다운로드 예외에서도 anchor와 object URL을 항상 정리한다.
+- **산출물 경계** — P0-b PLAY 실패 복구 TXT와 안전 파일명·다운로드 helper만 공유한다. 깨끗한 회차 본문에 복구 경고·캐논·리뷰를 섞지 않았고 기존 JSON 백업/import와 출간·승인 계약은 변경하지 않았다.
+- **UI·접근성** — WRITE 회차 컨텍스트 줄에 낮은 위계의 `본문 복사`·`TXT`를 배치했다. warm `--st-*` 토큰, polite live status, 키보드 초점, 모바일 44px target을 지키고 중앙 원고 면을 침범하지 않는다.
+- **TDD·검증** — 도메인·UI·CSS RED 뒤 focused 7파일/133테스트, 최종 `bash init.sh`, 독립 코드 재감사 P0–P2 0. 실브라우저 1280/390/320px에서 본문·브라우저 클립보드·TXT의 길이와 SHA-256 일치, UTF-8 한글·빈 줄 보존, 가로 overflow·원고 겹침·console 오류 0을 확인했다. 캡처 `/private/tmp/storyx-p1b-write-1280-final.png`, `/private/tmp/storyx-p1b-write-390-final.png`, `/private/tmp/storyx-p1b-write-320-keyboard-final.png`.
+- **게시/의존** — Draft PR #44 `https://github.com/sgeniusk/story-x-beta/pull/44`는 #43 위 스택이다. 기존 순서 **#39 → #40 → #41 → #42 → #43 → #44**를 유지하고 머지는 사용자에게 남긴다.
+- **Recommended Next Step** — 현재 5175 로컬 WRITE에서 한 문장을 수정한 직후 `본문 복사`를 눌러 외부 메모장에 붙여넣고, `TXT` 파일을 열어 같은 본문·빈 줄인지 사용자가 판정한다. 실제 OS 붙여넣기와 파일 내용이 맞으면 P1-b를 수용하고, 다음 백로그 슬라이스는 새 brainstorm에서 선택한다.
 
 ## 완료 트랙 — P1-a PLAY 진행 피드백 (`done` · 2026-07-18, 구현 `b885767` · Draft PR #43)
 
