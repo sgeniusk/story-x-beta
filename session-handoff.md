@@ -4,6 +4,71 @@
 
 ---
 
+## 2026-07-19 18:28 — P2-c1 PLAY 추천 답변 작성창 삽입 완료, 실제 말투 수정 테스트 대기
+
+> Last Updated: 2026-07-19 18:28 KST
+
+### Current Objective
+
+PLAY의 `dive-chat` 추천 답변 칩을 즉시 전송 버튼에서 수정 가능한 답변 재료로 바꾸는 P2-c1을 완료했다. 칩은 빈 작성창에만 보이고 클릭하면 네트워크·대화 변경 없이 작성창으로 이동한다. 사용자가 한국어로 고친 뒤 Enter/`보내기`를 눌러야 전송된다. 구현은 `8b72ad5`, Draft PR은 #45이고 머지는 사용자에게 남긴다.
+
+### Recommended Next Step
+
+실행 중인 `http://127.0.0.1:5175/`의 PLAY에서 추천 답변 하나를 누른다. 즉시 새 말풍선·작업등이 생기지 않고 작성창에만 문구가 들어오는지, 한글로 고쳐도 조합 확정 Enter에서 조기 전송되지 않는지 확인한다. 모두 지우면 같은 추천이 돌아오고, 최종 `보내기`에서 수정본만 한 번 전송되면 P2-c1을 수용한다. 다음 후보 P2-d 목표 분량은 새 brainstorm부터 시작한다.
+
+### Branch · Commit · Verification
+
+- Branch — `codex/p2-choice-composer` (`codex/p1b-text-export` / Draft PR #44 위 스택)
+- Implementation — `8b72ad5` (`P2-c1: make PLAY choices editable`)
+- Draft PR — https://github.com/sgeniusk/story-x-beta/pull/45 (base `codex/p1b-text-export`)
+- Verification — 2026-07-19 18:28 `bash init.sh` 녹색: 105 files / 1169 tests, tsc+Vite build 성공
+- Focused TDD — 2 files / 43 tests; 즉시 전송·초안 보존·복원·한글 IME 오전송 RED→GREEN
+- Independent code audit — P0–P2 0, `git diff --check` 녹색
+- Main browser — 실제 3칩에서 클릭 전후 chat 4→4·progress 0→0, textarea focus/caret-end, 수정·삭제·3칩 복원 확인
+- Independent harness — 1280/390/320px overflow·clipping·console 오류 0, 모바일 action 44px, keyboard focus 2px, 320×700 max-scroll chronicle–dock 44px·hit-test 정상
+- Captures — `/private/tmp/storyx-p2-choice-1280.png` · `/private/tmp/storyx-p2-choice-390.png` · `/private/tmp/storyx-p2-choice-320.png` · `/private/tmp/storyx-p2-choice-harness-320-maxscroll.png`
+- Live handoff — `http://127.0.0.1:5175/` PLAY, 추천 답변 3개가 남은 작성창 빈 상태
+
+### What the Last Session Did
+
+1. 5/5 페르소나의 즉시 전송 차단을 단일 P2-c1로 고르고 brainstorm→spec→plan으로 동작 경계를 고정했다.
+2. 추천 칩이 fetch나 session 변경 없이 작성창만 채우고, focus와 커서를 끝으로 옮기도록 TDD 구현했다.
+3. 작성 중 문장을 덮어쓰지 않고 비우면 추천을 복원하며, 계속·전개·VS 후보 경로는 유지했다.
+4. 독립 감사가 발견한 한글 IME 조합 Enter 오전송을 실패 테스트와 가드로 닫았다.
+5. 전체 하네스·메인/독립 실브라우저 검증 후 구현 커밋·push·Draft PR #45를 만들었다.
+
+### Files To Touch (next milestone)
+
+- 사용자 실제 PLAY 테스트에서 칩→작성창→수정→명시 전송 결함이 나오면 P2-c1 spec 범위 안에서 실패 테스트를 먼저 추가하고 최소 수정한다.
+- P2-c1 수용 뒤 P2-d 목표 분량은 별도 feature branch에서 brainstorm→spec→plan→TDD로 시작한다.
+
+### Files NOT To Touch
+
+- `.agents/skills/story-score/` — 사용자 소유 untracked 폴더. 읽기·추가·수정·staging 금지.
+- 기존 사용자 작품 원문·회차·캐논을 자동 재생성하거나 덮어쓰는 경로.
+- PLAY 응결·생성 잡·보관함·실패 복구·승인·캐논 계약.
+- `⏳ 계속`·`⏭ 전개`·VS 후보의 기존 실행 의미를 P2-c1에 섞는 변경.
+- #39→#40→#41→#42→#43→#44→#45 스택을 순서 없이 머지하거나 retarget 전 base 브랜치를 삭제하는 작업.
+
+### Blockers
+
+코드·하네스·실브라우저·Draft PR 차단은 없다. 추천 문구를 실제 한국어 말투로 고쳐 보내는 체감과 작품 내 결과의 최종 수용 판정만 사용자에게 남긴다.
+
+### Known Issues
+
+- 독립 Chrome 프로필의 유일 작품에는 PLAY transcript/choice가 없어 칩 상호작용은 메인 인앱 브라우저와 단위 테스트에서 검증했고, 독립 하네스는 레이아웃·키보드·콘솔만 재검증했다.
+- 320×700 최초 위치에서는 250px sticky dock이 chronicle toggle을 잠시 가리지만 max-scroll에서 44px 간격과 정상 hit-test로 완전히 접근 가능하다. 현재는 비차단 관찰이며 실제 사용에서 스크롤 발견성이 나쁘면 별도 UX 슬라이스로 다룬다.
+- 실제 모바일 소프트웨어 키보드 열림은 자동화하지 못했다. 한글 IME 오전송은 합성 이벤트 단위 테스트로 막았고, 최종 실기 체감은 사용자 판정이 필요하다.
+- 브라우저 검증 중 테스트 프로젝트에 PLAY 메시지 한 턴을 추가했다. 새 로컬 AI 요청을 자동 반복하지 말고 현재 남은 추천으로 수용 테스트한다.
+
+### Reference Documents
+
+- `docs/superpowers/specs/2026-07-19-p2-choice-composer-design.md`
+- `docs/superpowers/plans/2026-07-19-p2-choice-composer.md`
+- `progress.md` 맨 위 P2-c1 완료 트랙
+
+---
+
 ## 2026-07-19 17:46 — P1-b 현재 회차 본문 복사·TXT 완료, 실제 OS 반출 테스트 대기
 
 > Last Updated: 2026-07-19 17:46 KST
