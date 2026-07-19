@@ -269,6 +269,8 @@ export function DiveDesk({
   const [localProgresses, setLocalProgresses] = useState<LocalPlayProgress[]>([]);
   const [progressClockNow, setProgressClockNow] = useState(() => Date.now());
   const nextProgressId = useRef(0);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const focusComposerAfterChoice = useRef(false);
 
   useEffect(() => {
     if (localProgresses.length === 0 && !activeGeneration) return;
@@ -276,6 +278,16 @@ export function DiveDesk({
     const timer = window.setInterval(() => setProgressClockNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [activeGeneration?.id, localProgresses.length]);
+
+  useEffect(() => {
+    if (!focusComposerAfterChoice.current) return;
+    focusComposerAfterChoice.current = false;
+    const composer = composerRef.current;
+    if (!composer) return;
+    composer.focus();
+    const end = composer.value.length;
+    composer.setSelectionRange(end, end);
+  }, [input]);
 
   function beginProgress(kind: LocalPlayProgressKind, label?: string): number {
     const id = ++nextProgressId.current;
@@ -333,6 +345,15 @@ export function DiveDesk({
       setBusy(false);
       endProgress(progressId);
     }
+  }
+
+  function putChoiceInComposer(choice: string) {
+    const nextInput = choice.trim();
+    // 작성 중인 작가 문장은 추천으로 덮어쓰지 않는다. 렌더 조건도 칩을 숨기지만
+    // 지연된 click 같은 경계에서도 같은 비파괴 계약을 지킨다.
+    if (!nextInput || input.trim()) return;
+    focusComposerAfterChoice.current = true;
+    setInput(nextInput);
   }
 
   // ✦ 전개 후보 — 명시 버튼 opt-in. 라이브 상태를 VS 입력으로 조립해 후보 다발을 1회 생성. 실패는 안내로 강등.
@@ -610,11 +631,24 @@ export function DiveDesk({
         ))}
       </div>
 
-      {choices.length > 0 && !busy && pending === null && (
-        <div className="dx-choices">
-          {choices.map((c, i) => (
-            <button key={i} className="dx-choice-chip" onClick={() => send(c)}>{c}</button>
-          ))}
+      {choices.length > 0 && !busy && pending === null && input.trim() === '' && (
+        <div className="dx-choice-suggestions">
+          <span className="dx-choice-hint" id="dx-choice-hint">
+            추천 답변 · 눌러 작성창에 담아 고치세요
+          </span>
+          <div className="dx-choices" role="group" aria-labelledby="dx-choice-hint">
+            {choices.map((c, i) => (
+              <button
+                key={i}
+                type="button"
+                className="dx-choice-chip"
+                title="작성창에 담아 고친 뒤 보냅니다"
+                onClick={() => putChoiceInComposer(c)}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -788,11 +822,15 @@ export function DiveDesk({
 
       <div className="dx-composer">
         <textarea
+          ref={composerRef}
           className="dx-input"
+          aria-label="PLAY 답변 작성"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
+              // 한글 IME 조합 확정 Enter를 전송 Enter로 오인하지 않는다.
+              if (e.nativeEvent.isComposing || e.keyCode === 229) return;
               e.preventDefault();
               send();
             }
