@@ -83,6 +83,16 @@ describe('Story X studio shared tokens (--st-*)', () => {
     );
   });
 
+  it('P1-b WRITE 반출 행동은 warm 토큰·키보드 초점·모바일 44px target을 지킨다', () => {
+    expect(css).toMatch(/\.mx-export-actions\s*\{[^}]*margin-left:\s*auto[^}]*display:\s*flex[^}]*flex-wrap:\s*wrap/);
+    expect(css).toMatch(/\.mx-export-button\s*\{[^}]*color:\s*var\(--st-ink-dim\)[^}]*transition:[^}]*var\(--st-dur-fast\)/);
+    expect(css).toMatch(/\.mx-export-button:focus-visible/);
+    expect(css).toMatch(/\.mx-export-status\s*\{[^}]*color:\s*var\(--st-ink-dim\)/);
+    expect(css).toMatch(
+      /@media \(max-width: 600px\)[\s\S]*?\.mx-export-actions\s*\{[^}]*width:\s*100%[\s\S]*?\.mx-export-button\s*\{[^}]*min-height:\s*44px/
+    );
+  });
+
   it('PLAY 표면이 공통 토큰을 소비하고 등장 모션 keyframes 가 있다', () => {
     expect(css).toMatch(/\.dx-desk\s*\{[^}]*var\(--st-bg\)/);
     expect(css).toContain('@keyframes st-rise');

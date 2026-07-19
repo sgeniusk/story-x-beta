@@ -9842,6 +9842,20 @@ body:has(.fc-app) {
 .wm-conflict-chip:hover{background:rgba(248,113,113,.1)}
 /* 공통 셸 — 상단 wm-bar 아래 모드별 하위 컨텍스트 줄(WRITE 회차 픽커·PLAN 캐논/충돌 칩) */
 .dx-desk-context{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:6px 14px;border-bottom:1px solid var(--st-rule-soft);background:var(--st-bg)}
+/* P1-b — WRITE 현재 회차의 조용한 평문 반출. 중앙 원고 면을 침범하지 않고 컨텍스트 줄에만 둔다. */
+.mx-export-actions{margin-left:auto;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;min-width:0}
+.mx-export-button{display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:4px 9px;border:1px solid var(--st-rule-soft);border-radius:6px;background:transparent;color:var(--st-ink-dim);font:inherit;font-size:11px;cursor:pointer;transition:background var(--st-dur-fast) var(--st-ease),color var(--st-dur-fast) var(--st-ease),border-color var(--st-dur-fast) var(--st-ease)}
+.mx-export-button:hover:not(:disabled){background:var(--st-bg-3);border-color:var(--st-rule);color:var(--st-ink)}
+.mx-export-button:focus-visible{outline:2px solid color-mix(in oklch,var(--st-mode-write) 68%,transparent);outline-offset:2px}
+.mx-export-button:disabled{opacity:.45;cursor:not-allowed}
+.mx-export-status{max-width:min(280px,100%);overflow-wrap:anywhere;color:var(--st-ink-dim);font-size:11px;line-height:1.35}
+.mx-export-status.is-error{color:#fca5a5}
+.mx-export-status.is-success{color:color-mix(in oklch,var(--st-mode-write) 72%,var(--st-ink))}
+@media (max-width: 600px){
+  .mx-export-actions{width:100%;margin-left:0;justify-content:flex-start}
+  .mx-export-button{min-height:44px;padding-inline:12px}
+  .mx-export-status{flex:1 1 100%}
+}
 /* 슬라이스 C — 하단 메타 줄. 중앙은 비워 dock pill 과 충돌하지 않는다 */
 .dm-line{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:space-between;align-items:center;padding:4px 14px;font-size:11px;color:rgba(237,237,243,.5);pointer-events:none}
 .dm-line .dm-right{display:inline-flex;align-items:center;gap:8px;pointer-events:auto}
@@ -9972,6 +9986,7 @@ body:has(.fc-app) {
   .wm-conflict-chip,
   .om-toggle,
   .om-menu button,
+  .mx-export-button,
   .dx-input,
   .dx-desk button {
     transition: none;

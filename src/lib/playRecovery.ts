@@ -12,6 +12,7 @@ import {
   type SeriesProject
 } from './storyEngine';
 import { countPendingSync, type PendingSync } from './syncConsole';
+import { safeTextFilenamePart } from './textFileExport';
 
 export interface PlayRecoverySnapshot {
   schema: 'storyx/play-recovery/v1';
@@ -123,18 +124,8 @@ export function formatPlayRecoveryText(snapshot: PlayRecoverySnapshot): string {
   ].join('\n');
 }
 
-function safeFilenamePart(value: string): string {
-  const normalized = value
-    .normalize('NFKC')
-    .replace(/[\\/:?*"<>|\u0000-\u001f]/g, ' ')
-    .replace(/\s+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48);
-  return normalized || 'untitled';
-}
-
 export function buildPlayRecoveryFilename(snapshot: PlayRecoverySnapshot): string {
-  return `storyx-${safeFilenamePart(snapshot.projectTitle)}-${snapshot.episode}화-play-record.txt`;
+  return `storyx-${safeTextFilenamePart(snapshot.projectTitle)}-${snapshot.episode}화-play-record.txt`;
 }
 
 function hashText(text: string): string {

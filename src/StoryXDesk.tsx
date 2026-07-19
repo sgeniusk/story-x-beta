@@ -13,6 +13,7 @@ import { FloatingEditor } from './components/FloatingEditor';
 import { FloatingDataWorkspace } from './components/FloatingDataWorkspace';
 import { FloatingPublishWorkspace } from './components/FloatingPublishWorkspace';
 import { RecoveryDraftWorkspace, type RecoveryDraftSaveStatus } from './components/RecoveryDraftWorkspace';
+import { ManuscriptExportActions } from './components/ManuscriptExportActions';
 import { CommandPalette, type DeskCommand } from './components/CommandPalette';
 import { useMarginReview } from './hooks/useMarginReview';
 import { findPersona } from './lib/extendedPersonas';
@@ -2226,30 +2227,38 @@ export function StoryXDesk({
 
   // 슬라이스 C — 단일 바(소유권 역전). WRITE↔PLAN 은 switchToTrack 내부 전환(remount 없음),
   // PLAY 는 App stage 전환. 슬롯 = 제목 input·회차 픽커/캐논 요약·⚠충돌 칩·싱크 콘솔·⋯ 메뉴.
-  const writeContext =
-    isSerial && project.chapters.length > 0 && latestChapter ? (
-      <span className="wm-context-chip" role="group" aria-label="회차 이동">
-        <button
-          type="button"
-          className="ex-chapter-picker-step"
-          aria-label="이전 회차"
-          disabled={!hasPrevChapter}
-          onClick={() => stepChapter(-1)}
-        >
-          <ChevronLeft size={12} aria-hidden="true" />
-        </button>
-        <span>{latestChapter.episode}화 · {latestChapter.title}</span>
-        <button
-          type="button"
-          className="ex-chapter-picker-step"
-          aria-label="다음 회차"
-          disabled={!hasNextChapter}
-          onClick={() => stepChapter(1)}
-        >
-          <ChevronRight size={12} aria-hidden="true" />
-        </button>
-      </span>
-    ) : null;
+  const writeContext = latestChapter ? (
+    <>
+      {isSerial && project.chapters.length > 0 && (
+        <span className="wm-context-chip" role="group" aria-label="회차 이동">
+          <button
+            type="button"
+            className="ex-chapter-picker-step"
+            aria-label="이전 회차"
+            disabled={!hasPrevChapter}
+            onClick={() => stepChapter(-1)}
+          >
+            <ChevronLeft size={12} aria-hidden="true" />
+          </button>
+          <span>{latestChapter.episode}화 · {latestChapter.title}</span>
+          <button
+            type="button"
+            className="ex-chapter-picker-step"
+            aria-label="다음 회차"
+            disabled={!hasNextChapter}
+            onClick={() => stepChapter(1)}
+          >
+            <ChevronRight size={12} aria-hidden="true" />
+          </button>
+        </span>
+      )}
+      <ManuscriptExportActions
+        projectTitle={project.title}
+        chapter={latestChapter}
+        body={editorText}
+      />
+    </>
+  ) : null;
   const planContext = (
     <>
       <span className="wm-context-chip">캐논 {project.canonFacts.length}</span>
