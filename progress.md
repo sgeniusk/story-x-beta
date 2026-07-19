@@ -1,9 +1,20 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-19 17:46 KST · Branch: `codex/p1b-text-export` (**WRITE 현재 회차 본문 복사·TXT 완료, Draft PR #44 사용자 테스트 대기**)
+> Last Updated: 2026-07-19 18:28 KST · Branch: `codex/p2-choice-composer` (**PLAY 추천 답변 작성창 삽입 완료, Draft PR #45 사용자 테스트 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-> 최근 검증(2026-07-19 17:46 KST) — `bash init.sh` 녹색: `npm test` 1165 통과(105 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+> 최근 검증(2026-07-19 18:28 KST) — `bash init.sh` 녹색: `npm test` 1169 통과(105 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+
+## 완료 트랙 — P2-c1 PLAY 추천 답변 작성창 삽입 (`done` · 2026-07-19, 구현 `8b72ad5` · Draft PR #45)
+
+PLAY 응답의 추천 선택지를 클릭 즉시 전송하던 동작에서 **작성창에 담아 사용자가 고친 뒤 명시적으로 전송**하는 동작으로 바꿨다. 생성 프롬프트·캐논·응결·잡 계약은 건드리지 않고 `dive-chat` 응답 선택지만 좁게 교정했다. spec `docs/superpowers/specs/2026-07-19-p2-choice-composer-design.md` · plan `docs/superpowers/plans/2026-07-19-p2-choice-composer.md`.
+- **창작 주도권 계약** — 칩 클릭은 fetch·대화 턴·진행 작업등·프로젝트 `onChange`를 만들지 않고 문구를 textarea에 넣어 focus와 커서를 끝으로 옮긴다. 사용자가 수정한 뒤 Enter 또는 `보내기`를 눌러야 기존 전송 경로가 한 번 실행된다.
+- **비파괴 초안·되돌리기** — 작성 중인 문장이 있으면 추천 칩을 숨겨 byte-for-byte 보존한다. 전송 전 `choices`는 유지하므로 작성창을 비우면 같은 추천이 다시 나타난다. `⏳ 계속`·`⏭ 전개`·VS 후보의 기존 즉시 실행 의미는 유지했다.
+- **한국어·접근성** — 한글 IME 조합 확정 Enter의 오전송을 `isComposing`/229 가드와 RED→GREEN 테스트로 막았다. `추천 답변 · 눌러 작성창에 담아 고치세요` 안내, group/label, 키보드 focus, warm `--st-*` 토큰, 600px 이하 44px 칩을 고정했다.
+- **TDD·검증** — focused 2파일/43테스트, 전체 105파일/1169테스트, tsc·Vite build, `git diff --check`, 독립 코드 감사 P0–P2 0. 메인 실브라우저에서 칩 클릭 전후 chat 4→4·progress 0→0, 수정·비우면 3칩 복원과 focus/caret를 확인했다.
+- **반응형 하네스** — 1280/390/320px 가로 overflow·clipping·console warning/error 0, 모바일 action 44px·2px focus outline. 독립 320×700 초기 sticky 가림은 max-scroll에서 chronicle–dock 44px·정상 hit-test로 접근 가능해 비차단으로 판정했다. 캡처 `/private/tmp/storyx-p2-choice-1280.png`, `/private/tmp/storyx-p2-choice-390.png`, `/private/tmp/storyx-p2-choice-320.png`, `/private/tmp/storyx-p2-choice-harness-320-maxscroll.png`.
+- **게시/의존** — Draft PR #45 `https://github.com/sgeniusk/story-x-beta/pull/45`는 #44 위 스택이다. 기존 순서 **#39 → #40 → #41 → #42 → #43 → #44 → #45**를 유지하고 머지는 사용자에게 남긴다.
+- **Recommended Next Step** — 로컬 5175 PLAY의 추천 답변 하나를 눌러 즉시 말풍선·작업등이 생기지 않는지 보고, 한국어로 고친 뒤 `보내기`를 눌러 수정본만 전송되는지 사용자가 판정한다. 수용 뒤 다음 후보는 P2-d 목표 분량 계약이며 반드시 새 brainstorm에서 범위를 다시 정한다.
 
 ## 완료 트랙 — P1-b WRITE 현재 회차 평문 반출 (`done` · 2026-07-19, 구현 `47d17d4` · Draft PR #44)
 

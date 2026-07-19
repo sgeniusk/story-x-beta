@@ -63,6 +63,17 @@ describe('Story X studio shared tokens (--st-*)', () => {
     );
   });
 
+  it('PLAY 추천 답변 안내는 warm 토큰을 쓰고 선택지 칩의 wrap을 보존한다', () => {
+    expect(css).toMatch(
+      /\.dx-choice-suggestions\s*\{[^}]*display:\s*flex[^}]*flex-direction:\s*column/
+    );
+    expect(css).toMatch(/\.dx-choice-hint\s*\{[^}]*color:\s*var\(--st-ink-dim\)/);
+    expect(css).toMatch(/\.dx-choices\s*\{[^}]*display:\s*flex[^}]*flex-wrap:\s*wrap/);
+    expect(css).toMatch(
+      /@media \(max-width: 600px\)[\s\S]*?\.dx-choice-chip\s*\{[^}]*min-height:\s*44px/
+    );
+  });
+
   it('PLAY 작업등은 warm studio 토큰과 PLAY 의미색을 쓰고 작은 화면에서 안전하게 감싼다', () => {
     expect(css).toMatch(
       /\.dx-workbench-dock\s*\{[^}]*position:\s*sticky[^}]*bottom:\s*0[^}]*background:\s*var\(--st-bg\)/

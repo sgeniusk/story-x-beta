@@ -282,6 +282,154 @@ describe('DiveDesk', () => {
     }
   });
 
+  it('추천 선택지는 작성창에 담아 고친 뒤 명시적으로만 전송한다', async () => {
+    const firstReply = deferred<Response>();
+    const secondReply = deferred<Response>();
+    const fetchMock = vi.fn()
+      .mockImplementationOnce(() => firstReply.promise)
+      .mockImplementationOnce(() => secondReply.promise);
+    vi.stubGlobal('fetch', fetchMock);
+    const project = createEmptyProject({ title: '추천 답변 편집' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const onChange = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      act(() => root.render(createElement(DiveDesk, {
+        session, project, onChange, onBack: () => {}
+      })));
+      const input = host.querySelector('.dx-composer textarea') as HTMLTextAreaElement;
+      act(() => enterTextareaValue(input, '무슨 조건인지 묻는다'));
+      await act(async () => {
+        Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '보내기')?.click();
+        await Promise.resolve();
+      });
+      await act(async () => {
+        firstReply.resolve({
+          json: async () => ({
+            status: 'complete',
+            reply: '대답하기 전에 네 조건부터 듣지.',
+            choices: ['먼저 조건을 밝혀 주세요.', '서신부터 보여 주세요.']
+          })
+        } as Response);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(host.querySelector('.dx-choice-hint')?.textContent).toContain('작성창에 담아 고치세요');
+      expect(host.querySelector('.dx-choices')?.getAttribute('role')).toBe('group');
+      const choice = Array.from(host.querySelectorAll('.dx-choice-chip'))
+        .find((button) => button.textContent === '먼저 조건을 밝혀 주세요.') as HTMLButtonElement;
+      const callsBeforeChoice = onChange.mock.calls.length;
+
+      act(() => choice.click());
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledTimes(callsBeforeChoice);
+      expect(input.value).toBe('먼저 조건을 밝혀 주세요.');
+      expect(document.activeElement).toBe(input);
+      expect(input.selectionStart).toBe(input.value.length);
+      expect(input.selectionEnd).toBe(input.value.length);
+      expect(host.querySelector('.dx-choices')).toBeNull();
+
+      act(() => enterTextareaValue(input, '먼저 조건을 정확히 말해 주세요.'));
+      await act(async () => {
+        Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '보내기')?.click();
+        await Promise.resolve();
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const secondOptions = fetchMock.mock.calls[1]?.[1] as RequestInit;
+      expect(JSON.parse(String(secondOptions.body))).toMatchObject({ query: '먼저 조건을 정확히 말해 주세요.' });
+
+      await act(async () => {
+        secondReply.resolve({ json: async () => ({ status: 'complete', reply: '좋아.', choices: [] }) } as Response);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+    } finally {
+      act(() => root.unmount());
+      host.remove();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('작성 중인 답변이 있으면 추천 선택지를 숨겨 문장을 보존하고 비우면 다시 보여준다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      json: async () => ({
+        status: 'complete', reply: '어느 쪽을 택하지?', choices: ['문을 연다', '기다린다']
+      })
+    } as Response));
+    const project = createEmptyProject({ title: '작성 중 답변 보존' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const onChange = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      act(() => root.render(createElement(DiveDesk, {
+        session, project, onChange, onBack: () => {}
+      })));
+      const input = host.querySelector('.dx-composer textarea') as HTMLTextAreaElement;
+      act(() => enterTextareaValue(input, '무엇이 있는지 묻는다'));
+      await act(async () => {
+        Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '보내기')?.click();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(host.querySelectorAll('.dx-choice-chip')).toHaveLength(2);
+      const callsAfterReply = onChange.mock.calls.length;
+
+      act(() => enterTextareaValue(input, '내가 먼저 쓴 문장\n둘째 줄'));
+      expect(input.value).toBe('내가 먼저 쓴 문장\n둘째 줄');
+      expect(host.querySelector('.dx-choices')).toBeNull();
+      expect(onChange).toHaveBeenCalledTimes(callsAfterReply);
+
+      act(() => enterTextareaValue(input, ''));
+      expect(input.value).toBe('');
+      expect(host.querySelectorAll('.dx-choice-chip')).toHaveLength(2);
+      expect(onChange).toHaveBeenCalledTimes(callsAfterReply);
+    } finally {
+      act(() => root.unmount());
+      host.remove();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('한글 조합을 확정하는 Enter는 답변을 전송하지 않고 작성창에 보존한다', () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const project = createEmptyProject({ title: '한글 추천 수정' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const onChange = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      act(() => root.render(createElement(DiveDesk, {
+        session, project, onChange, onBack: () => {}
+      })));
+      const input = host.querySelector('.dx-composer textarea') as HTMLTextAreaElement;
+      act(() => enterTextareaValue(input, '승인 계정 위치를 조용히 추적해요'));
+
+      act(() => input.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Enter', bubbles: true, cancelable: true, isComposing: true
+      })));
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(onChange).not.toHaveBeenCalled();
+      expect(input.value).toBe('승인 계정 위치를 조용히 추적해요');
+    } finally {
+      act(() => root.unmount());
+      host.remove();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('전개 후보와 응결 등록은 서로 다른 목적·대기 안내를 작업등에 표시한다', async () => {
     const vsRequest = deferred<Response>();
     const condenseRequest = deferred<void>();
