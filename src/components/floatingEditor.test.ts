@@ -5,10 +5,17 @@ import { createRoot } from 'react-dom/client';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { FloatingEditor, type FloatingEditorProps } from './FloatingEditor';
+import { StoryXDesk } from '../StoryXDesk';
 import { CORE_PERSONAS } from '../lib/extendedPersonas';
 import type { MarginReview, Paragraph } from '../lib/marginReview';
 import { splitIntoParagraphs } from '../lib/marginReview';
 import type { StudioMetrics } from '../lib/studioMetrics';
+import {
+  chapterFromDraftPayload,
+  createEmptyProject,
+  episodeLengthContractFor
+} from '../lib/storyEngine';
+import { saveProject } from '../lib/storage';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -30,6 +37,7 @@ function baseProps(over: Partial<FloatingEditorProps> = {}): FloatingEditorProps
   return {
     kicker: '장편소설 · 1화',
     charCount: '1,284자', chapterTitle: '이름을 빌리는 자', chapterSub: '필사관 이야기.',
+    episodeLengthProgress: { actualChars: 1284, targetChars: 5000, percent: 26, isLegacyTarget: false },
     paragraphs, reviews, personas: CORE_PERSONAS,
     onSummon: vi.fn(), onRunAll: vi.fn(), onAcceptDiff: vi.fn(), onRejectReview: vi.fn(),
     beats: [], onSelectBeat: vi.fn(),
@@ -104,6 +112,79 @@ describe('FloatingEditor 실데이터 배선', () => {
     const { host, unmount } = mount(baseProps({ reviews: [], paragraphs: [] }));
     expect(host.querySelectorAll('.mnote').length).toBe(0);
     unmount();
+  });
+
+  it('실제 WRITE 표면에 공백 제외 현재 글자 수와 회차 목표 진행률을 표시한다', () => {
+    const { host, unmount } = mount(baseProps({
+      charCount: '0자',
+      episodeLengthProgress: {
+        actualChars: 0,
+        targetChars: 8000,
+        percent: 0,
+        isLegacyTarget: false
+      }
+    }));
+    const meter = host.querySelector('.ep-length-progress');
+
+    expect(meter?.textContent).toBe('0자 / 목표 8,000자 · 0%');
+    expect(meter?.hasAttribute('aria-live')).toBe(false);
+    expect(meter?.getAttribute('role')).toBeNull();
+    expect(host.querySelector('[role="progressbar"]')).toBeNull();
+    expect(host.querySelector('.dm-line')?.textContent).toContain('0자');
+    expect(host.querySelector('.dm-line')?.textContent).not.toContain('목표 8,000자');
+    unmount();
+  });
+
+  it('목표 없는 legacy 회차는 WRITE에서 기본 5천자 기준임을 숨기지 않는다', () => {
+    const { host, unmount } = mount(baseProps({
+      episodeLengthProgress: {
+        actualChars: 1250,
+        targetChars: 5000,
+        percent: 25,
+        isLegacyTarget: true
+      }
+    }));
+
+    expect(host.querySelector('.ep-length-progress')?.textContent)
+      .toBe('1,250자 / 기본 5,000자 · 25%');
+    unmount();
+  });
+
+  it('저장된 compact 회차를 실제 WRITE에서 비우면 과거 prose 대신 즉시 0자로 센다', async () => {
+    window.localStorage.clear();
+    const empty = createEmptyProject({ title: 'WRITE 분량 통합' });
+    const project = chapterFromDraftPayload(
+      empty,
+      { title: '1화', hook: '', outline: [], beats: [], prose: '가 나\n다!', newCanonFacts: [] },
+      {
+        genre: empty.genre,
+        intent: '',
+        pressure: '',
+        episodeLength: episodeLengthContractFor('compact')
+      }
+    ).updatedProject;
+    saveProject(project, { lifecycle: 'confirmed', activate: true });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(createElement(StoryXDesk, { studioView: 'editor' }));
+    });
+    expect(host.querySelector('.ep-length-progress')?.textContent)
+      .toBe('4자 / 목표 3,000자 · 0%');
+
+    const manuscript = host.querySelector('.ms') as HTMLElement;
+    await act(async () => {
+      manuscript.replaceChildren();
+      manuscript.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(host.querySelector('.ep-length-progress')?.textContent)
+      .toBe('0자 / 목표 3,000자 · 0%');
+
+    act(() => root.unmount());
+    host.remove();
+    window.localStorage.clear();
   });
 
   it('초안 생성 버튼이 onGenerateDraft 를 호출한다', () => {

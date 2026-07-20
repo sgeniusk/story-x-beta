@@ -1,6 +1,18 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { cancelDiveCondenseJob, getDiveCondenseJob, requestDiveChat, requestDiveCondense, requestDiveShowrunner, requestDiveProposals, requestDiveSetup, requestDiveConsolidate, normalizeFindings, startDiveCondenseJob } from './diveClient';
 
+const STANDARD_EPISODE_LENGTH = {
+  schema: 'storyx/episode-length/v1',
+  preset: 'standard',
+  targetChars: 5000,
+  minChars: 4500,
+  maxChars: 5500,
+  generationMinChars: 4750,
+  generationMaxChars: 5250,
+  minScenes: 3,
+  maxScenes: 4
+} as const;
+
 afterEach(() => vi.restoreAllMocks());
 
 describe('diveClient', () => {
@@ -34,13 +46,25 @@ describe('diveClient', () => {
   });
 
   it('requestDiveCondense는 회차 페이로드를 반환', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ status: 'complete', title: '1화', prose: '본문', newCanonFacts: [] })
-    }));
-    const res = await requestDiveCondense({ character: 'c', scene: '', context: '', transcript: '나: 안녕', episode: 1 });
+      json: async () => ({
+        status: 'complete', title: '1화', prose: '본문', newCanonFacts: [],
+        episodeLength: STANDARD_EPISODE_LENGTH, actualChars: 2, lengthStatus: 'under'
+      })
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const request = {
+      character: 'c', scene: '', context: '', transcript: '나: 안녕', episode: 1,
+      episodeLength: STANDARD_EPISODE_LENGTH
+    };
+    const res = await requestDiveCondense(request);
     expect(res.title).toBe('1화');
     expect(res.prose).toBe('본문');
+    expect(res.episodeLength).toEqual(STANDARD_EPISODE_LENGTH);
+    expect(res.actualChars).toBe(2);
+    expect(res.lengthStatus).toBe('under');
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual(request);
   });
 
   it('start/get/cancel dive condense job uses the polling API contract', async () => {
@@ -49,7 +73,11 @@ describe('diveClient', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ id: 'job-1', status: 'succeeded', result: { title: '1화', prose: '본문' } }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ id: 'job-1', status: 'cancelled' }) });
     vi.stubGlobal('fetch', fetchMock);
-    const req = { character: 'c', scene: '', context: '', transcript: '나: 안녕', episode: 1, projectId: 'p1', baseRevision: 'r1', projectTitle: '작품' };
+    const req = {
+      character: 'c', scene: '', context: '', transcript: '나: 안녕', episode: 1,
+      projectId: 'p1', baseRevision: 'r1', projectTitle: '작품',
+      episodeLength: STANDARD_EPISODE_LENGTH
+    };
     expect((await startDiveCondenseJob(req)).id).toBe('job-1');
     expect((await getDiveCondenseJob('job-1')).status).toBe('succeeded');
     expect((await cancelDiveCondenseJob('job-1')).status).toBe('cancelled');
@@ -58,6 +86,7 @@ describe('diveClient', () => {
       ['/api/dive-condense-jobs/job-1', 'GET'],
       ['/api/dive-condense-jobs/job-1', 'DELETE']
     ]);
+    expect(JSON.parse(fetchMock.mock.calls[0][1]?.body)).toEqual(req);
   });
 
   it('requestDiveShowrunner는 /api/dive-showrunner에 POST하고 reply·sceneUpdate를 반환', async () => {

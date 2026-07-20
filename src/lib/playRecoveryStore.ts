@@ -1,5 +1,6 @@
 import type { PlayRecoverySnapshot, PlayRecoveryWorkDraft } from './playRecovery';
 import { parseCondenseSourceSpan } from './diveSession';
+import { parseEpisodeLengthContract } from './storyEngine';
 
 export const PLAY_RECOVERY_WORK_DRAFT_STORAGE_KEY = 'serial-story-studio/play-recovery-work-drafts';
 export const MAX_PLAY_RECOVERY_WORK_DRAFTS_PER_PROJECT = 20;
@@ -47,6 +48,11 @@ function parseSnapshot(value: unknown): PlayRecoverySnapshot | null {
   )) return null;
   // sourceSpan은 하위호환 optional 메타데이터다. 손상되어도 사용자 원문을 함께 버리지 않는다.
   const sourceSpan = parseCondenseSourceSpan(value.sourceSpan);
+  const sourceFingerprint = typeof value.sourceFingerprint === 'string' && value.sourceFingerprint
+    ? value.sourceFingerprint
+    : undefined;
+  // 회차 분량도 하위호환 optional이다. 손상 필드만 버리고 작업본·원문은 보존한다.
+  const episodeLength = parseEpisodeLengthContract(value.episodeLength);
   return {
     schema: 'storyx/play-recovery/v1',
     projectId: value.projectId,
@@ -58,6 +64,8 @@ function parseSnapshot(value: unknown): PlayRecoverySnapshot | null {
       ? { condensedThroughTurn: value.condensedThroughTurn }
       : {}),
     ...(sourceSpan ? { sourceSpan } : {}),
+    ...(sourceFingerprint ? { sourceFingerprint } : {}),
+    ...(episodeLength ? { episodeLength } : {}),
     capturedAt: value.capturedAt
   };
 }

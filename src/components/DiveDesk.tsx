@@ -1,16 +1,30 @@
 // Dive X 얇은 표면 — 채팅·응결 제안·승인 다이얼로그·연대기. 엔진은 재사용.
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import type { Chapter, SeriesProject, ProductionRequest } from '../lib/storyEngine';
-import { chapterFromDraftPayload, buildProjectContextDigest, applyRetcons, nextEpisodeNumber } from '../lib/storyEngine';
+import type {
+  Chapter,
+  EpisodeLengthContract,
+  EpisodeLengthPreset,
+  ProductionRequest,
+  SeriesProject
+} from '../lib/storyEngine';
+import {
+  chapterFromDraftPayload,
+  buildProjectContextDigest,
+  applyRetcons,
+  episodeLengthContractFor,
+  evaluateEpisodeLength,
+  nextEpisodeNumber,
+  parseEpisodeLengthContract
+} from '../lib/storyEngine';
 import { inspectLeak } from '../lib/leakGate';
 import {
   type DiveSession,
   type CondenseSourceSpan,
   CONDENSE_KEEP_RECENT,
   selectCondenseSpan,
+  resolveCondenseRetrySource,
   resolveCondenseSourceBoundary,
   appendMessage,
-  shouldSuggestCondense,
   buildCondenseTranscript,
   buildRecentDialogue,
   applyCondenseResult,
@@ -64,6 +78,58 @@ interface DiveDeskProps {
   onApproveGeneration?: (approval: CondenseApprovalRequest) => CondenseApprovalResolution;
   onDownloadRecovery?: (recovery: PlayRecoverySnapshot) => void;
   onSendRecoveryToDraft?: (recovery: PlayRecoverySnapshot, generationId?: string) => void;
+}
+
+const EPISODE_LENGTH_OPTIONS: Array<{
+  preset: EpisodeLengthPreset;
+  label: string;
+}> = [
+  { preset: 'compact', label: '3천자 · 2~3장면' },
+  { preset: 'standard', label: '5천자 · 3~4장면' },
+  { preset: 'extended', label: '8천자 · 4~6장면' }
+];
+
+function episodeLengthTargetLabel(contract: EpisodeLengthContract): string {
+  return `${contract.targetChars / 1000}천자`;
+}
+
+function episodeLengthSceneLabel(contract: EpisodeLengthContract): string {
+  return `${contract.minScenes}~${contract.maxScenes}장면`;
+}
+
+function formatEpisodeChars(chars: number): string {
+  return chars.toLocaleString('ko-KR');
+}
+
+function episodeLengthReceiptCopy(
+  contract: EpisodeLengthContract,
+  actualChars: number,
+  status: 'under' | 'within' | 'over'
+): string {
+  const prefix = `${formatEpisodeChars(actualChars)}자 / 목표 ${formatEpisodeChars(contract.targetChars)}자 · `;
+  if (status === 'under') return `${prefix}목표 미달, 자동으로 채우지 않음`;
+  if (status === 'over') return `${prefix}목표 초과, 자동으로 자르지 않음`;
+  return `${prefix}범위 안`;
+}
+
+function resolveRetryEpisodeLength(
+  item: GenerationInboxItem | null,
+  recovery: PlayRecoverySnapshot
+): EpisodeLengthContract | undefined {
+  // 영수증이 있으면 quota 압축 후에도 남는 root가 정본이다.
+  // 잡 등록 전 현재 탭에서 즉시 실패한 경우(item=null)만 recovery 복제본을 쓴다.
+  return parseEpisodeLengthContract(item ? item.episodeLength : recovery.episodeLength);
+}
+
+function withReceiptRootEpisodeLength(
+  recovery: PlayRecoverySnapshot,
+  item: GenerationInboxItem | null
+): PlayRecoverySnapshot {
+  if (!item) return recovery;
+  const { episodeLength: _storedEpisodeLength, ...targetlessRecovery } = recovery;
+  return item.episodeLength
+    ? { ...targetlessRecovery, episodeLength: item.episodeLength }
+    : targetlessRecovery;
 }
 
 function characterCardText(project: SeriesProject, characterId: string): string {
@@ -184,12 +250,21 @@ export function DiveDesk({
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<DiveCondensePayload | null>(() => selectedResultBlocked ? null : selectedGeneration?.result ?? null);
   const [pendingGenerationId] = useState<string | null>(() => !selectedResultBlocked && selectedGeneration?.result ? selectedGeneration.id : null);
+  const pendingEpisodeLength = pending
+    ? pendingGenerationId === selectedGeneration?.id
+      ? selectedGeneration.episodeLength
+      : pending.episodeLength
+    : undefined;
+  const pendingLengthEvaluation = pending && pendingEpisodeLength
+    ? evaluateEpisodeLength(pending.prose, pendingEpisodeLength)
+    : null;
   const selectedSourceBoundary: CondenseSourceSpan | number | undefined = pendingGenerationId === selectedGeneration?.id
     ? resolveCondenseSourceBoundary(
         session,
         selectedGeneration.sourceSpan,
         selectedGeneration.recovery?.sourceSpan,
-        selectedGeneration.recovery?.condensedThroughTurn
+        selectedGeneration.recovery?.condensedThroughTurn,
+        selectedGeneration.sourceFingerprint ?? selectedGeneration.recovery?.sourceFingerprint
       )
     : undefined;
   const selectedSourceSpan = typeof selectedSourceBoundary === 'object'
@@ -212,16 +287,20 @@ export function DiveDesk({
     return c?.name ?? '상대';
   }, [project, session.characterId]);
   const condenseSpan = useMemo(() => selectCondenseSpan(session), [session]);
-  const hasEnoughCondenseMaterial = condenseSpan.condense.length > CONDENSE_KEEP_RECENT;
+  const validCondenseMaterialCount = condenseSpan.condense.filter(
+    (message) => !message.verdict?.blocksCanonization
+  ).length;
+  const hasEnoughCondenseMaterial = validCondenseMaterialCount > CONDENSE_KEEP_RECENT;
+  const selectedEpisodeLength = episodeLengthContractFor(session.episodeLengthPreset);
   const continuityFirstMessageId = session.chatBuffer.find(
     (message) => message.turn <= session.lastCondensedTurn
   )?.id;
-  const suggest = shouldSuggestCondense(session);
   const episode = nextEpisodeNumber(project);
   // UI 갱신으로 영수증 배열 순서가 바뀌어도 현재 회차의 최신 생성 시도 하나만 PLAY를 대표해야
   // 재시도 성공 뒤 과거 실패가 되살아나거나 지난 회차 실패를 다시 실행하지 않는다.
   const currentEpisodeGeneration = findLatestGenerationAttempt(generationInbox, project.id, episode);
   const activeGeneration = currentEpisodeGeneration?.status === 'running' ? currentEpisodeGeneration : null;
+  const activeEpisodeLength = activeGeneration?.episodeLength;
   const currentGenerationNeedsImmediateDownload = Boolean(
     currentEpisodeGeneration?.localPersistenceFailed && currentEpisodeGeneration.recovery
   );
@@ -232,14 +311,31 @@ export function DiveDesk({
       ? currentEpisodeGeneration
       : null;
   const inlineRecovery = activeGeneration ? null : failedRecovery
-    ? { recovery: failedRecovery, generationId: undefined, hasRecoveryDraft: false, needsImmediateDownload: false }
+    ? { recovery: failedRecovery, generationId: undefined, hasRecoveryDraft: false, needsImmediateDownload: false, item: null }
     : recoverableGeneration?.recovery
       ? {
-          recovery: recoverableGeneration.recovery,
+          recovery: withReceiptRootEpisodeLength(recoverableGeneration.recovery, recoverableGeneration),
           generationId: recoverableGeneration.id,
           hasRecoveryDraft: Boolean(recoverableGeneration.recoveryDraftOpenedAt && recoverableGeneration.recoveryDraftId),
-          needsImmediateDownload: Boolean(recoverableGeneration.localPersistenceFailed)
+          needsImmediateDownload: Boolean(recoverableGeneration.localPersistenceFailed),
+          item: recoverableGeneration
         }
+      : null;
+  const inlineRetrySource = inlineRecovery
+    ? resolveCondenseRetrySource(
+        session,
+        inlineRecovery.item?.sourceSpan,
+        inlineRecovery.recovery.sourceSpan,
+        inlineRecovery.item?.sourceFingerprint ?? inlineRecovery.recovery.sourceFingerprint
+      )
+    : undefined;
+  const inlineRetryEpisodeLength = inlineRecovery
+    ? resolveRetryEpisodeLength(inlineRecovery.item, inlineRecovery.recovery)
+    : undefined;
+  const inlineRetryBlockedCopy = inlineRecovery && !inlineRetrySource
+    ? '생성 당시 원문 범위를 현재 PLAY에서 정확히 확인할 수 없어 자동 재시도는 막았습니다. PLAY 기록 TXT를 받거나 원문을 참고해 직접 쓰세요.'
+    : inlineRecovery && !inlineRetryEpisodeLength
+      ? '생성 당시 목표 기록을 확인할 수 없어 자동 재시도는 막았습니다. PLAY 기록 TXT를 받거나 원문을 참고해 직접 쓰세요.'
       : null;
   const selectedGenerationIsStale = Boolean(selectedGeneration && selectedGeneration.baseRevision !== buildProjectRevision(project));
   const turnCounts = useMemo(() => {
@@ -356,6 +452,11 @@ export function DiveDesk({
     setInput(nextInput);
   }
 
+  function selectEpisodeLength(preset: EpisodeLengthPreset) {
+    if (startingGeneration || activeGeneration || pending) return;
+    onChange({ ...session, episodeLengthPreset: preset }, project);
+  }
+
   // ✦ 전개 후보 — 명시 버튼 opt-in. 라이브 상태를 VS 입력으로 조립해 후보 다발을 1회 생성. 실패는 안내로 강등.
   async function requestCandidates() {
     if (busy || vsBusy || pending !== null) return;
@@ -383,9 +484,34 @@ export function DiveDesk({
     send(buildPlayDirectionSeed(direction));
   }
 
-  async function condense() {
-    if (busy || startingGeneration || activeGeneration) return;
-    const recovery = buildPlayRecoverySnapshot(session, project);
+  async function condense(retry?: { recovery: PlayRecoverySnapshot; item: GenerationInboxItem | null }) {
+    if (busy || startingGeneration || activeGeneration || (!retry && !hasEnoughCondenseMaterial)) return;
+    const retrySource = retry
+      ? resolveCondenseRetrySource(
+          session,
+          retry.item?.sourceSpan,
+          retry.recovery.sourceSpan,
+          retry.item?.sourceFingerprint ?? retry.recovery.sourceFingerprint
+        )
+      : undefined;
+    const retryEpisodeLength = retry
+      ? resolveRetryEpisodeLength(retry.item, retry.recovery)
+      : undefined;
+    if (retry && (!retrySource || !retryEpisodeLength)) {
+      setGenerationStartError(!retrySource
+        ? '생성 당시 원문 범위가 현재 PLAY와 정확히 일치하지 않아 재시도를 막았습니다.'
+        : '생성 당시 회차 목표 기록이 없거나 손상되어 재시도를 막았습니다.');
+      return;
+    }
+    const episodeLength = retryEpisodeLength ?? selectedEpisodeLength;
+    const recovery = retry
+      ? {
+          ...retry.recovery,
+          sourceSpan: retrySource!.sourceSpan,
+          sourceFingerprint: retry.item?.sourceFingerprint ?? retry.recovery.sourceFingerprint,
+          episodeLength
+        }
+      : { ...buildPlayRecoverySnapshot(session, project), episodeLength };
     setGenerationStartError(null);
     setFailedRecovery(null);
     if (!onStartGeneration) {
@@ -399,11 +525,14 @@ export function DiveDesk({
     try {
       await onStartGeneration({
         character: card,
-        scene,
+        scene: retry ? recovery.scene : scene,
         arc: JSON.stringify(session.arc ?? {}),
         context: buildProjectContextDigest(project),
-        transcript: buildCondenseTranscript(session, recovery.sourceSpan),
-        episode,
+        transcript: retry
+          ? retrySource!.transcript
+          : buildCondenseTranscript(session, recovery.sourceSpan),
+        episode: retry ? recovery.episode : episode,
+        episodeLength,
         projectId: project.id,
         projectTitle: project.title,
         baseRevision: buildProjectRevision(project)
@@ -459,8 +588,17 @@ export function DiveDesk({
     const generationCondenseBoundary = pendingGenerationId === selectedGeneration?.id
       ? selectedSourceBoundary
       : undefined;
+    if (pendingGenerationId && !resumeCheckpoint && generationCondenseBoundary === undefined) {
+      setGenerationStartError('생성 당시 PLAY 원문과 현재 세션이 달라 이 결과를 승인할 수 없습니다. 결과는 보관함에 유지했습니다.');
+      return;
+    }
     // intent·pressure 는 의도적으로 빈 값 — 본문은 응결 payload 에서 오지, intent/pressure 로 생성하지 않는다.
-    const request: ProductionRequest = { genre: project.genre, intent: '', pressure: '' };
+    const request: ProductionRequest = {
+      genre: project.genre,
+      intent: '',
+      pressure: '',
+      ...(pendingEpisodeLength ? { episodeLength: pendingEpisodeLength } : {})
+    };
     const promoted = buildPromotedFacts(deviations.surprises, decisions, edits, pending.newCanonFacts);
     const approvedRetcons: ApprovedCondenseRetcon[] = deviations.conflicts
       .filter((conflict) => retconDecisions[conflict.id] === 'retcon')
@@ -652,11 +790,6 @@ export function DiveDesk({
         </div>
       )}
 
-      {suggest && !pending && (
-        <button className="dx-condense-chip" onClick={condense} disabled={busy || !hasEnoughCondenseMaterial}>
-          이 장면을 한 회차로 응결할까요?
-        </button>
-      )}
       {leakWarn && <div className="dx-leak">{leakWarn}</div>}
       {generationStartError && <div className="dx-generation-error" role="alert">{generationStartError}</div>}
 
@@ -670,14 +803,23 @@ export function DiveDesk({
             </strong>
             <span id="dx-recovery-description">
               {inlineRecovery.needsImmediateDownload
-                ? '새로고침 전에 TXT를 먼저 받은 뒤 저장 공간을 확보해 주세요.'
-                : '응결 원고는 만들어지지 않았습니다. 다시 시도하거나 PLAY 원문을 참고해 직접 쓸 수 있습니다.'}
+                ? `새로고침 전에 TXT를 먼저 받은 뒤 저장 공간을 확보해 주세요.${inlineRetryBlockedCopy ? ` ${inlineRetryBlockedCopy}` : ''}`
+                : inlineRetryBlockedCopy
+                  ? inlineRetryBlockedCopy
+                  : '응결 원고는 만들어지지 않았습니다. 다시 시도하거나 PLAY 원문을 참고해 직접 쓸 수 있습니다.'}
             </span>
           </div>
           <div className="dx-recovery-actions">
-            <button type="button" className="is-retry" onClick={condense} disabled={busy || startingGeneration}>
-              {startingGeneration ? '다시 등록 중…' : '응결 다시 시도'}
-            </button>
+            {!inlineRetryBlockedCopy && (
+              <button
+                type="button"
+                className="is-retry"
+                onClick={() => condense({ recovery: inlineRecovery.recovery, item: inlineRecovery.item })}
+                disabled={busy || startingGeneration}
+              >
+                {startingGeneration ? '다시 등록 중…' : '응결 다시 시도'}
+              </button>
+            )}
             {onDownloadRecovery && (
               <button type="button" onClick={() => onDownloadRecovery(inlineRecovery.recovery)}>PLAY 기록 TXT</button>
             )}
@@ -723,7 +865,21 @@ export function DiveDesk({
       {pending && (
         <div className="dx-approve" role="dialog">
           <h4>응결된 회차 — {pending.title}</h4>
+          {pendingEpisodeLength && pendingLengthEvaluation ? (
+            <p className={`dx-length-receipt is-${pendingLengthEvaluation.status}`}>
+              {episodeLengthReceiptCopy(
+                pendingEpisodeLength,
+                pendingLengthEvaluation.actualChars,
+                pendingLengthEvaluation.status
+              )}
+            </p>
+          ) : (
+            <p className="dx-length-receipt is-legacy">목표 기록 없음</p>
+          )}
           {selectedGenerationIsStale && <p className="dx-stale-warning">이 결과를 만든 뒤 작품 기준이 바뀌었습니다. 승인 전에 정밀 검토와 캐논 후보를 다시 확인하세요.</p>}
+          {pendingGenerationId && !selectedGeneration?.approvedCondenseCheckpoint && selectedSourceBoundary === undefined && (
+            <p className="dx-stale-warning">생성 당시 PLAY 원문과 현재 세션이 달라 승인할 수 없습니다. 결과는 보관함에 안전하게 유지됩니다.</p>
+          )}
           <p className="dx-approve-prose">{pending.prose}</p>
           <DeviationReview
             deviations={deviations}
@@ -748,7 +904,18 @@ export function DiveDesk({
             {pending.newCanonFacts.map((f, i) => <li key={i}>+ {f.statement}</li>)}
           </ul>
           <div className="dx-approve-actions">
-            <button onClick={approve}>승인 — 캐논으로 고정</button>
+            <button
+              onClick={approve}
+              disabled={Boolean(
+                pendingGenerationId &&
+                !selectedGeneration?.approvedCondenseCheckpoint &&
+                selectedSourceBoundary === undefined
+              )}
+            >
+              {pendingLengthEvaluation && pendingLengthEvaluation.status !== 'within'
+                ? `${formatEpisodeChars(pendingLengthEvaluation.actualChars)}자로 승인 — 캐논으로 고정`
+                : '승인 — 캐논으로 고정'}
+            </button>
             <button onClick={() => { setPending(null); setDecisions({}); setEdits({}); setRetconDecisions({}); setFindings(null); }}>보류 — 보관함에 유지</button>
           </div>
         </div>
@@ -757,8 +924,8 @@ export function DiveDesk({
       {(turnCounts.surprise > 0 || turnCounts.anchor > 0 || turnCounts.major > 0) && (
         <button
           className="dx-ambient"
-          onClick={condense}
-          disabled={busy || pending !== null || !hasEnoughCondenseMaterial}
+          onClick={() => condense()}
+          disabled={busy || pending !== null || !hasEnoughCondenseMaterial || inlineRecovery !== null}
         >
           {turnCounts.surprise > 0 && <span className="dx-amb-surprise">✦ 의외 전개 후보 {turnCounts.surprise}</span>}
           {turnCounts.major > 0 && <span className="dx-amb-major">🟡 경고 {turnCounts.major}</span>}
@@ -774,6 +941,43 @@ export function DiveDesk({
         onDismiss={() => { setVsCandidates([]); setVsReason(null); }}
       />
 
+      {hasEnoughCondenseMaterial && !activeGeneration && pending === null && !inlineRecovery && (
+        <fieldset
+          className="dx-condense-target"
+          aria-describedby="dx-condense-target-help"
+          disabled={startingGeneration}
+        >
+          <legend>회차 분량</legend>
+          <div className="dx-condense-target-options">
+            {EPISODE_LENGTH_OPTIONS.map((option) => (
+              <label key={option.preset} className="dx-condense-target-option">
+                <input
+                  type="radio"
+                  name="dx-episode-length"
+                  value={option.preset}
+                  checked={selectedEpisodeLength.preset === option.preset}
+                  onChange={() => selectEpisodeLength(option.preset)}
+                />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </div>
+          <p id="dx-condense-target-help">
+            재료가 모자라면 짧게 돌아오며, 자동으로 내용을 만들거나 잘라내지 않습니다.
+          </p>
+          <button
+            type="button"
+            className="dx-condense-target-action"
+            onClick={() => condense()}
+            disabled={busy || startingGeneration}
+          >
+            {startingGeneration
+              ? '잡 등록 중…'
+              : `${episodeLengthTargetLabel(selectedEpisodeLength)}로 응결`}
+          </button>
+        </fieldset>
+      )}
+
       <div className="dx-workbench-dock">
       {activeGeneration && (
         <aside
@@ -787,6 +991,9 @@ export function DiveDesk({
             <DiveProgressCopy
               kind="condense"
               elapsedSeconds={elapsedSecondsSince(activeGeneration.createdAt, progressClockNow)}
+              label={activeEpisodeLength
+                ? `${episodeLengthTargetLabel(activeEpisodeLength)} 목표 · ${episodeLengthSceneLabel(activeEpisodeLength)} 응결 중`
+                : undefined}
             />
           ) : (
             <div>
@@ -795,6 +1002,9 @@ export function DiveDesk({
                 : currentGenerationNeedsImmediateDownload
                   ? '응결 결과 보관 필요'
                   : '회차 응결'}</strong>
+              {activeEpisodeLength && (
+                <span>{episodeLengthTargetLabel(activeEpisodeLength)} 목표 · {episodeLengthSceneLabel(activeEpisodeLength)}</span>
+              )}
               <span>{activeGeneration?.localPersistenceFailed
                 ? '로컬 보관공간이 부족합니다. 새로고침 전에 TXT를 받아 주세요.'
                 : currentGenerationNeedsImmediateDownload
@@ -840,9 +1050,6 @@ export function DiveDesk({
           rows={1}
         />
         <button className="dx-send" onClick={() => send()} disabled={busy || pending !== null}>보내기</button>
-        <button className="dx-condense-manual" onClick={condense} disabled={busy || startingGeneration || activeGeneration !== null || pending !== null || !hasEnoughCondenseMaterial}>
-          {startingGeneration ? '잡 등록 중…' : activeGeneration ? '응결 진행 중' : '지금 응결'}
-        </button>
         <button className="dx-continue" onClick={() => send('(가만히 지켜본다. 시간이 잠시 흐른다.)')} disabled={busy || pending !== null}>
           ⏳ 계속
         </button>

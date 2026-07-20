@@ -9,6 +9,11 @@ const projectCardSource = readFileSync(resolve(__dirname, 'components/ProjectLib
 const diveDeskSource = readFileSync(resolve(__dirname, 'components/DiveDesk.tsx'), 'utf8');
 
 describe('Story X page experience', () => {
+  it('320px viewport에서도 세로 스크롤바가 body 최소 폭을 밀어 가로 스크롤을 만들지 않는다', () => {
+    expect(css).toMatch(/body\s*\{[\s\S]*?min-width:\s*min\(320px,\s*100%\)/);
+    expect(css).not.toMatch(/body\s*\{[\s\S]*?min-width:\s*320px/);
+  });
+
   it('separates the product into landing, login, projects, new-project, and editor stages', () => {
     expect(app).toContain("type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor'");
     expect(app).toContain('useState<AppStage>(initialStage)');
@@ -510,6 +515,78 @@ describe('P0-b PLAY 기록 복구 배선', () => {
     expect(poll).toContain('const updates = new Map');
     expect(poll).toContain('loadGenerationInboxMutationBase(');
     expect(poll).not.toContain('let next = generationInboxRef.current');
+  });
+
+  it('P2-d 생성 시작과 로컬 recovery 영수증은 frozen 회차 분량을 root에 보존한다', () => {
+    const localReceipt = app.match(/function buildLocalRecoveryReceipt[\s\S]{0,1800}?\n\}/)?.[0] ?? '';
+    expect(localReceipt).toContain('episodeLength: draft.source.episodeLength');
+    expect(localReceipt).toContain('episodeLengthSchema: EPISODE_LENGTH_RECEIPT_SCHEMA');
+
+    const start = app.match(/async function handleStartGeneration[\s\S]{0,1800}?\n  \}/)?.[0] ?? '';
+    expect(start).toContain('episodeLength: request.episodeLength');
+    expect(start).toContain('episodeLengthSchema: EPISODE_LENGTH_RECEIPT_SCHEMA');
+    expect(start).toContain('recovery');
+  });
+
+  it('승인 checkpoint 재개는 영수증 root 목표와 Chapter 목표가 정확히 같을 때만 허용한다', () => {
+    const contextStart = app.indexOf('function validateCondenseApprovalContext');
+    const contextEnd = app.indexOf('function buildApprovedCondenseCheckpoint', contextStart);
+    const contextGuard = app.slice(contextStart, contextEnd);
+
+    expect(app).toContain('receiptEpisodeLengthMatchesChapter');
+    expect(contextGuard).toContain('receiptEpisodeLengthMatchesChapter(receipt, approval.chapter)');
+    expect(contextGuard).toContain(
+      'receiptEpisodeLengthMatchesChapter(receipt, receipt.approvedCondenseCheckpoint.chapter)'
+    );
+  });
+
+  it('보관함에서 직접 쓰기를 열 때 recovery optional 목표가 빠졌어도 영수증 root 목표로 작업본 source를 복원한다', () => {
+    const openStart = app.indexOf('function handleOpenRecoveryWorkDraft');
+    const openEnd = app.indexOf('function handleRecoveryWorkDraftChange', openStart);
+    const openRecovery = app.slice(openStart, openEnd);
+
+    expect(openRecovery).toContain('withCanonicalReceiptEpisodeLength(recovery, previousReceipt)');
+    expect(openRecovery).toContain('withCanonicalReceiptEpisodeLength(draftCandidate.source, previousReceipt)');
+    expect(openRecovery).toContain('createPlayRecoveryWorkDraft(canonicalRecovery');
+  });
+
+  it('복구 작업본 회차 저장 직전 durable receipt root 목표로 source를 다시 정본화한다', () => {
+    const commitStart = app.indexOf('function handleCommitRecoveryWorkDraft');
+    const commitEnd = app.indexOf('function handleOpenGenerationInbox', commitStart);
+    const commit = app.slice(commitStart, commitEnd);
+
+    expect(commit).toContain('canonicalizeRecoveryDraftEpisodeLength');
+    expect(commit).toContain('hasUsableRecoveryDraftEpisodeLength(draftWithGenerationId, durableCompletedReceipt)');
+    expect(commit).toContain('loadGenerationInbox()');
+    expect(commit.indexOf('hasUsableRecoveryDraftEpisodeLength'))
+      .toBeLessThan(commit.indexOf('canonicalizeRecoveryDraftEpisodeLength'));
+    expect(commit.indexOf('canonicalizeRecoveryDraftEpisodeLength'))
+      .toBeLessThan(commit.indexOf('savePlayRecoveryWorkDraft(requestedDraft, true)'));
+    expect(commit.indexOf('canonicalizeRecoveryDraftEpisodeLength'))
+      .toBeLessThan(commit.indexOf('inspectPlayRecoveryCommitIntent'));
+    expect(commit.indexOf('canonicalizeRecoveryDraftEpisodeLength'))
+      .toBeLessThan(commit.indexOf('planPlayRecoveryCommit'));
+    const persistedIndex = commit.indexOf('const persistedDraft');
+    const persistedGuardIndex = commit.indexOf(
+      'hasUsableRecoveryDraftEpisodeLength(persistedDraft, durableCompletedReceipt)',
+      persistedIndex
+    );
+    const persistedCanonicalIndex = commit.indexOf(
+      'canonicalizeRecoveryDraftEpisodeLength(persistedDraft, durableCompletedReceipt)',
+      persistedIndex
+    );
+    expect(persistedGuardIndex).toBeGreaterThan(persistedIndex);
+    expect(persistedCanonicalIndex).toBeGreaterThan(persistedGuardIndex);
+    expect(persistedCanonicalIndex).toBeLessThan(commit.indexOf('planPlayRecoveryCommit'));
+  });
+
+  it('기존 영수증의 root 목표가 없으면 recovery 목표를 root나 작업본에 역승격하지 않는다', () => {
+    const canonicalizer = app.match(/function withCanonicalReceiptEpisodeLength[\s\S]{0,1200}?\n\}/)?.[0] ?? '';
+    const receiptWriter = app.match(/function persistRecoveryDraftReceipt[\s\S]{0,2200}?\n  \}/)?.[0] ?? '';
+
+    expect(canonicalizer).toContain('if (!receipt) return recovery');
+    expect(canonicalizer).toContain('const { episodeLength: _storedEpisodeLength, ...targetlessRecovery } = recovery');
+    expect(receiptWriter).not.toContain('currentReceipt.episodeLength ?? draft.source.episodeLength');
   });
 
   it('생성 시작·취소·복구·폐기·마이그레이션도 stale ref 전체를 저장하지 않는다', () => {

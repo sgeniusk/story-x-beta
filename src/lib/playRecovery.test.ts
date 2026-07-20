@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { appendMessage, createDiveSession } from './diveSession';
-import { chapterFromDraftPayload, createSeedProject } from './storyEngine';
+import { appendMessage, buildCondenseSourceFingerprint, createDiveSession } from './diveSession';
+import { chapterFromDraftPayload, createSeedProject, episodeLengthContractFor } from './storyEngine';
 import {
   buildPlayRecoveryFilename,
   buildPlayRecoverySnapshot,
@@ -41,11 +41,33 @@ describe('PLAY recovery', () => {
         messageIds: ['msg-1', 'msg-2', 'msg-3'],
         continuityMessageIds: ['msg-2', 'msg-3']
       },
+      sourceFingerprint: buildCondenseSourceFingerprint(session.chatBuffer),
       capturedAt: '2026-07-16T12:34:56.000Z'
     }));
     expect(snapshot.transcript).toContain('나: 문을 열어도 될까?');
     expect(snapshot.transcript).toContain('상대: 아직은 안 돼.');
     expect(snapshot.transcript).toContain('나: 그래도 열겠어.');
+  });
+
+  it('새 recovery snapshot은 PLAY 세션의 회차 분량을 고정하고 legacy 세션은 5천자로 시작한다', () => {
+    const project = { ...createSeedProject(), id: 'project-recovery', title: '달의 문서고' };
+    const legacySession = createDiveSession(project.characters[0].id, project.id);
+
+    const standard = buildPlayRecoverySnapshot(
+      legacySession,
+      project,
+      '2026-07-20T00:00:00.000Z'
+    );
+    const compact = buildPlayRecoverySnapshot(
+      { ...legacySession, episodeLengthPreset: 'compact' },
+      project,
+      '2026-07-20T00:01:00.000Z'
+    );
+
+    expect(standard.episodeLength).toEqual(episodeLengthContractFor('standard'));
+    expect(compact.episodeLength).toEqual(episodeLengthContractFor('compact'));
+    expect(createPlayRecoveryWorkDraft(compact, 'job-compact').source.episodeLength)
+      .toEqual(episodeLengthContractFor('compact'));
   });
 
   it('이미 소비된 연결 문맥은 다음 응결 recovery 원문에 중복 포함하지 않는다', () => {
@@ -73,7 +95,8 @@ describe('PLAY recovery', () => {
         throughTurn: 6,
         messageIds: ['msg-5', 'msg-6'],
         continuityMessageIds: ['msg-5', 'msg-6']
-      }
+      },
+      sourceFingerprint: buildCondenseSourceFingerprint(session.chatBuffer.slice(-2))
     }));
     expect(snapshot.transcript).toBe('나: 새 회차의 첫 질문\n상대: 새 회차의 첫 답');
     expect(snapshot.transcript).not.toContain('지난 회차 연결');
@@ -157,6 +180,7 @@ describe('PLAY recovery', () => {
     const committed = { ...createSeedProject(), id: 'p1', title: '달의 문서고' };
     const session = {
       ...createDiveSession(committed.characters[0].id, committed.id),
+      episodeLengthPreset: 'compact' as const,
       chatBuffer: [{ id: 'm1', role: 'user' as const, text: '복구할 기록', turn: 1 }]
     };
     const snapshot = buildPlayRecoverySnapshot(session, committed, '2026-07-16T12:34:56.000Z');
@@ -181,6 +205,7 @@ describe('PLAY recovery', () => {
     expect(ready.committedProject.chapters).toHaveLength(committed.chapters.length + 1);
     expect(ready.chapter.title).toBe('문 뒤의 목소리');
     expect(ready.chapter.prose).toBe(authoredDraft.body);
+    expect(ready.chapter.episodeLength).toEqual(episodeLengthContractFor('compact'));
     expect(ready.chapter.prose).not.toContain('Story X PLAY 기록 복구본');
     expect(ready.chapter.prose).not.toContain('보존 시각');
     expect(ready.chapter.newCanonFacts).toEqual([]);
@@ -259,6 +284,21 @@ describe('PLAY recovery', () => {
       status: 'committed',
       chapter: plan.chapter
     });
+
+    const missingLength = {
+      ...plan.committedProject,
+      chapters: plan.committedProject.chapters.map(({ episodeLength: _episodeLength, ...chapter }) => chapter)
+    };
+    expect(inspectPlayRecoveryCommitIntent(missingLength, prepared)).toEqual({ status: 'conflict' });
+
+    const mismatchedLength = {
+      ...plan.committedProject,
+      chapters: plan.committedProject.chapters.map((chapter) => ({
+        ...chapter,
+        episodeLength: episodeLengthContractFor('extended')
+      }))
+    };
+    expect(inspectPlayRecoveryCommitIntent(mismatchedLength, prepared)).toEqual({ status: 'conflict' });
 
     const collided = {
       ...plan.committedProject,

@@ -28,7 +28,12 @@ import {
   type DiveState
 } from './storage';
 import type { PlanPatch } from './planStage';
-import { createSeedProject, createEmptyProject, buildStoryEditorWorkspace } from './storyEngine';
+import {
+  buildStoryEditorWorkspace,
+  createEmptyProject,
+  createSeedProject,
+  episodeLengthContractFor
+} from './storyEngine';
 import { createDiveSession } from './diveSession';
 import { importanceBand } from './canonImportance';
 import { createPlayRecoveryWorkDraft } from './playRecovery';
@@ -273,6 +278,46 @@ describe('하드-시딩/import 파생 배열 백필 (크래시 방어)', () => {
   });
 });
 
+describe('P2-d 회차 분량 계약 영속', () => {
+  const chapter = {
+    id: 'episode-1',
+    episode: 1,
+    title: '1화',
+    hook: '문이 열린다',
+    outline: [],
+    beats: [],
+    prose: '보존할 본문',
+    memoryAnchors: [],
+    newCanonFacts: []
+  };
+
+  it('normalizeProject는 유효한 Chapter 계약을 보존한다', () => {
+    const episodeLength = episodeLengthContractFor('extended');
+    const project = { ...createEmptyProject({ title: 't' }), currentEpisode: 1, chapters: [chapter] };
+    const normalized = normalizeProject({
+      ...project,
+      chapters: [{ ...chapter, episodeLength }]
+    });
+
+    expect(normalized.chapters[0].episodeLength).toEqual(episodeLength);
+  });
+
+  it('normalizeProject는 손상된 Chapter 계약 필드만 버리고 본문을 보존한다', () => {
+    const project = { ...createEmptyProject({ title: 't' }), currentEpisode: 1, chapters: [chapter] };
+    const corrupted = {
+      ...episodeLengthContractFor('standard'),
+      generationMaxChars: 9999
+    };
+    const normalized = normalizeProject({
+      ...project,
+      chapters: [{ ...chapter, episodeLength: corrupted }]
+    } as typeof project);
+
+    expect(normalized.chapters[0]).not.toHaveProperty('episodeLength');
+    expect(normalized.chapters[0].prose).toBe(project.chapters[0].prose);
+  });
+});
+
 describe('DiveState 영속 (Dive X)', () => {
   it('DiveState는 라운드트립으로 보존된다', () => {
     const state: DiveState = {
@@ -300,6 +345,23 @@ describe('DiveState 영속 (Dive X)', () => {
     };
     const parsed = parseDiveState(serializeDiveState(state));
     expect(parsed?.session.scene).toBe('도윤네 집 앞. 도윤은 학원.');
+  });
+
+  it('DiveState는 유효한 회차 분량 preset을 보존하고 손상 preset만 버린다', () => {
+    const project = createEmptyProject({ title: 't' });
+    const state: DiveState = {
+      schema: 'storyx/dive/v1',
+      session: { ...createDiveSession('seed-childhood', project.id), episodeLengthPreset: 'compact' },
+      project
+    };
+
+    expect(parseDiveState(serializeDiveState(state))?.session.episodeLengthPreset).toBe('compact');
+
+    const corrupted = JSON.parse(serializeDiveState(state));
+    corrupted.session.episodeLengthPreset = 'giant';
+    const parsed = parseDiveState(JSON.stringify(corrupted));
+    expect(parsed?.session).not.toHaveProperty('episodeLengthPreset');
+    expect(parsed?.project.title).toBe('t');
   });
 });
 

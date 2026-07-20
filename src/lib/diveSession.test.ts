@@ -6,7 +6,9 @@ import {
   shouldSuggestCondense,
   selectCondenseSpan,
   captureCondenseSourceSpan,
+  buildCondenseSourceFingerprint,
   parseCondenseSourceSpan,
+  resolveCondenseRetrySource,
   resolveCondenseSourceBoundary,
   applyCondenseResult,
   applyCondenseCheckpoint,
@@ -30,6 +32,15 @@ describe('diveSession', () => {
     expect(s.chatBuffer).toEqual([]);
     expect(s.lastCondensedTurn).toBe(0);
     expect(s.pendingCondenseSuggested).toBe(false);
+  });
+
+  it('P2-d 회차 분량 preset은 legacy 세션에서 비어 있고 명시 선택은 세션 갱신 뒤에도 보존된다', () => {
+    const legacy = createDiveSession('char-1', 'proj-1');
+    expect(legacy.episodeLengthPreset).toBeUndefined();
+
+    const selected = { ...legacy, episodeLengthPreset: 'extended' as const };
+    expect(appendMessage(selected, 'user', '긴 회차로 가자').episodeLengthPreset).toBe('extended');
+    expect(applyCondenseCheckpoint(selected, 0).episodeLengthPreset).toBe('extended');
   });
 
   it('appendMessage는 순차 turn과 id를 부여한다', () => {
@@ -219,6 +230,126 @@ describe('diveSession', () => {
     expect(missingBoundary).toBe(0);
     expect(applyCondenseCheckpoint(continuityOnly, missingBoundary).chatBuffer.map((message) => message.turn))
       .toEqual([3, 4]);
+  });
+
+  it('현대 receipt fingerprint가 있으면 같은 ID·turn의 다른 PLAY를 legacy 숫자 경계로 강등하지 않는다', () => {
+    const originalMessages = [
+      { id: 'msg-1', role: 'user' as const, text: '원래 문을 연다', turn: 1 },
+      { id: 'msg-2', role: 'character' as const, text: '원래 멈춰.', turn: 2 }
+    ];
+    const replacement = {
+      ...createDiveSession('c', 'p'),
+      chatBuffer: [
+        { ...originalMessages[0], text: '다른 계단을 오른다' },
+        { ...originalMessages[1], text: '다른 대답' }
+      ]
+    };
+    const sourceSpan = {
+      afterTurn: 0,
+      throughTurn: 2,
+      messageIds: ['msg-1', 'msg-2'],
+      continuityMessageIds: ['msg-1', 'msg-2']
+    };
+
+    expect(resolveCondenseSourceBoundary(
+      replacement,
+      sourceSpan,
+      sourceSpan,
+      2,
+      buildCondenseSourceFingerprint(originalMessages)
+    )).toBeUndefined();
+  });
+
+  it('재시도 source는 exact frozen span만 쓰고 차단·이후 턴을 제외한다', () => {
+    const blockedVerdict = { conflicts: [], surpriseCandidates: [], blocksCanonization: true };
+    const session = {
+      ...createDiveSession('c', 'p'),
+      chatBuffer: [
+        { id: 'm1', role: 'user' as const, text: '문을 연다', turn: 1 },
+        { id: 'm2', role: 'character' as const, text: '차단된 원문', turn: 2, verdict: blockedVerdict },
+        { id: 'm3', role: 'user' as const, text: '불빛을 따라간다', turn: 3 },
+        // 손상 세션에서 ID가 재사용되어도 throughTurn 밖 턴은 절대 재진입하지 않아야 한다.
+        { id: 'm1', role: 'character' as const, text: '생성 뒤 추가된 턴', turn: 4 }
+      ]
+    };
+    const sourceSpan = {
+      afterTurn: 0,
+      throughTurn: 3,
+      messageIds: ['m1', 'm2', 'm3'],
+      continuityMessageIds: ['m2', 'm3']
+    };
+    const sourceFingerprint = buildCondenseSourceFingerprint(session.chatBuffer.slice(0, 3));
+
+    expect(resolveCondenseRetrySource(session, sourceSpan, undefined, sourceFingerprint)).toEqual({
+      sourceSpan,
+      transcript: '나: 문을 연다\n나: 불빛을 따라간다'
+    });
+  });
+
+  it.each([
+    ['본문', { text: '다른 문을 연다' }],
+    ['화자', { role: 'character' as const }],
+    ['차단 판정', { verdict: { conflicts: [], surpriseCandidates: [], blocksCanonization: true } }]
+  ])('재시도 source는 같은 ID·turn이어도 %s가 바뀐 다른 PLAY를 거부한다', (_label, mutation) => {
+    const original = [
+      { id: 'msg-1', role: 'user' as const, text: '문을 연다', turn: 1 },
+      { id: 'msg-2', role: 'character' as const, text: '멈춰.', turn: 2 }
+    ];
+    const sourceSpan = {
+      afterTurn: 0,
+      throughTurn: 2,
+      messageIds: ['msg-1', 'msg-2'],
+      continuityMessageIds: ['msg-1', 'msg-2']
+    };
+    const changedSession = {
+      ...createDiveSession('c', 'p'),
+      chatBuffer: [{ ...original[0], ...mutation }, original[1]]
+    };
+
+    expect(resolveCondenseRetrySource(
+      changedSession,
+      sourceSpan,
+      undefined,
+      buildCondenseSourceFingerprint(original)
+    )).toBeUndefined();
+  });
+
+  it.each([
+    ['ID 누락', {
+      afterTurn: 0, throughTurn: 3,
+      messageIds: ['m1', 'missing', 'm3'], continuityMessageIds: ['missing', 'm3']
+    }],
+    ['ID 순서 변경', {
+      afterTurn: 0, throughTurn: 3,
+      messageIds: ['m2', 'm1', 'm3'], continuityMessageIds: ['m1', 'm3']
+    }],
+    ['turn 경계 불일치', {
+      afterTurn: 0, throughTurn: 3,
+      messageIds: ['m1', 'm2', 'm3'], continuityMessageIds: ['m2', 'm3']
+    }]
+  ] as const)('재시도 source는 %s를 부분 transcript로 강등하지 않는다', (label, sourceSpan) => {
+    const turns = label === 'turn 경계 불일치' ? [1, 1, 3] : [1, 2, 3];
+    const session = {
+      ...createDiveSession('c', 'p'),
+      chatBuffer: ['m1', 'm2', 'm3'].map((id, index) => ({
+        id,
+        role: index % 2 === 0 ? 'user' as const : 'character' as const,
+        text: `t${index + 1}`,
+        turn: turns[index]
+      }))
+    };
+
+    expect(resolveCondenseRetrySource(session, sourceSpan)).toBeUndefined();
+  });
+
+  it('빈 frozen span은 형식상 일치해도 재시도 source로 인정하지 않는다', () => {
+    const session = createDiveSession('c', 'p');
+    expect(resolveCondenseRetrySource(session, {
+      afterTurn: 0,
+      throughTurn: 0,
+      messageIds: [],
+      continuityMessageIds: []
+    })).toBeUndefined();
   });
 
   // Task 3

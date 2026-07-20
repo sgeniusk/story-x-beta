@@ -1,24 +1,29 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createEmptyProject } from './storyEngine';
+import { createEmptyProject, episodeLengthContractFor } from './storyEngine';
 import {
   appendGenerationInboxItem,
   buildProjectRevision,
+  canonicalizeRecoveryDraftEpisodeLength,
   canRecoverGeneration,
   expireGenerationJob,
   findLatestGenerationAttempt,
   hasDurableRecoveryDraftReceipt,
+  hasUsableRecoveryDraftEpisodeLength,
   isActiveGeneration,
   mergeGenerationJob,
   parseGenerationInbox,
   persistGenerationInboxState,
+  receiptEpisodeLengthMatchesChapter,
   saveGenerationInbox,
   serializeGenerationInbox,
   upsertApprovedCondenseCheckpoint,
   type ApprovedCondenseCheckpoint,
+  type GenerationJobSnapshot,
   type GenerationInboxItem
 } from './generationInbox';
 import type { Chapter } from './storyEngine';
 import type { PlayRecoverySnapshot } from './playRecovery';
+import type { PlayRecoveryWorkDraft } from './playRecovery';
 
 const recovery: PlayRecoverySnapshot = {
   schema: 'storyx/play-recovery/v1',
@@ -27,6 +32,7 @@ const recovery: PlayRecoverySnapshot = {
   episode: 1,
   scene: '서고',
   transcript: '나: 기록',
+  sourceFingerprint: '{"schema":"storyx/condense-source-fingerprint/v1","messages":[]}',
   condensedThroughTurn: 4,
   capturedAt: '2026-07-15T00:00:00Z'
 };
@@ -89,6 +95,7 @@ describe('generation inbox', () => {
     const receipt = {
       ...item('source-span', 'failed'),
       sourceSpan,
+      sourceFingerprint: recovery.sourceFingerprint,
       recovery: { ...recovery, sourceSpan }
     };
 
@@ -97,8 +104,194 @@ describe('generation inbox', () => {
     expect(parsed).toEqual(expect.objectContaining({
       id: receipt.id,
       sourceSpan,
+      sourceFingerprint: recovery.sourceFingerprint,
       recovery: expect.objectContaining({ sourceSpan })
     }));
+  });
+
+  it('recovery의 frozen source fingerprint를 영수증에서 정확히 왕복한다', () => {
+    const [parsed] = parseGenerationInbox(serializeGenerationInbox([{
+      ...item('source-fingerprint', 'failed'),
+      recovery
+    }]));
+
+    expect(parsed.recovery?.sourceFingerprint).toBe(recovery.sourceFingerprint);
+  });
+
+  it('생성 시작 순간의 회차 분량을 영수증 root와 recovery에서 독립적으로 왕복한다', () => {
+    const episodeLength = episodeLengthContractFor('extended');
+    const receipt = {
+      ...item('episode-length', 'failed'),
+      episodeLength,
+      recovery: { ...recovery, episodeLength }
+    };
+
+    const [parsed] = parseGenerationInbox(serializeGenerationInbox([receipt]));
+
+    expect(parsed).toEqual(expect.objectContaining({
+      id: receipt.id,
+      episodeLength,
+      recovery: expect.objectContaining({ episodeLength })
+    }));
+  });
+
+  it('손상된 optional 회차 분량만 강등하고 recovery·영수증·checkpoint 본체는 보존한다', () => {
+    const malformedLength = { ...episodeLengthContractFor('standard'), minChars: 1 };
+    const damaged = {
+      ...item('damaged-length', 'succeeded'),
+      episodeLength: malformedLength,
+      recovery: { ...recovery, episodeLength: malformedLength },
+      result: {
+        title: approvedChapter.title,
+        prose: approvedChapter.prose,
+        episodeLength: malformedLength,
+        actualChars: 4321,
+        lengthStatus: 'under'
+      },
+      approvedCondenseCheckpoint: {
+        ...approvedCheckpoint,
+        chapter: { ...approvedChapter, episodeLength: malformedLength }
+      }
+    };
+
+    const [parsed] = parseGenerationInbox(JSON.stringify([damaged]));
+
+    expect(parsed).toEqual(expect.objectContaining({
+      id: damaged.id,
+      status: 'succeeded',
+      result: expect.objectContaining({
+        title: approvedChapter.title,
+        prose: approvedChapter.prose,
+        actualChars: 4321,
+        lengthStatus: 'under'
+      }),
+      recovery: expect.objectContaining({ transcript: recovery.transcript }),
+      approvedCondenseCheckpoint: expect.objectContaining({
+        condensedThroughTurn: approvedCheckpoint.condensedThroughTurn,
+        chapter: expect.objectContaining({ id: approvedChapter.id, prose: approvedChapter.prose })
+      })
+    }));
+    expect(parsed).not.toHaveProperty('episodeLength');
+    expect(parsed.episodeLengthSchema).toBe('storyx/episode-length/v1');
+    expect(parsed.result).not.toHaveProperty('episodeLength');
+    expect(parsed.recovery).not.toHaveProperty('episodeLength');
+    expect(parsed.approvedCondenseCheckpoint?.chapter).not.toHaveProperty('episodeLength');
+    expect(receiptEpisodeLengthMatchesChapter(parsed, {
+      ...approvedChapter,
+      episodeLength: undefined
+    })).toBe(false);
+  });
+
+  it('현대 분량 schema만 남고 root 목표가 유실된 영수증은 targetless legacy 승인으로 강등하지 않는다', () => {
+    const [modernTargetless] = parseGenerationInbox(JSON.stringify([{
+      ...item('modern-targetless', 'succeeded'),
+      episodeLengthSchema: 'storyx/episode-length/v1',
+      result: { title: approvedChapter.title, prose: approvedChapter.prose }
+    }]));
+    const legacyTargetless = item('legacy-targetless', 'succeeded');
+    const targetlessChapter = { ...approvedChapter, episodeLength: undefined };
+
+    expect(modernTargetless.episodeLengthSchema).toBe('storyx/episode-length/v1');
+    expect(receiptEpisodeLengthMatchesChapter(modernTargetless, targetlessChapter)).toBe(false);
+    expect(receiptEpisodeLengthMatchesChapter(legacyTargetless, targetlessChapter)).toBe(true);
+  });
+
+  it('유효한 현대 root 목표와 같은 Chapter 목표만 승인 계약으로 인정한다', () => {
+    const episodeLength = episodeLengthContractFor('extended');
+    const modern = {
+      ...item('modern-valid', 'succeeded'),
+      episodeLengthSchema: 'storyx/episode-length/v1' as const,
+      episodeLength
+    };
+
+    expect(receiptEpisodeLengthMatchesChapter(modern, { ...approvedChapter, episodeLength })).toBe(true);
+    expect(receiptEpisodeLengthMatchesChapter(modern, {
+      ...approvedChapter,
+      episodeLength: episodeLengthContractFor('compact')
+    })).toBe(false);
+  });
+
+  it('복구 작업본 commit source는 durable receipt root 목표로 덮고 root가 없으면 목표를 제거한다', () => {
+    const compact = episodeLengthContractFor('compact');
+    const extended = episodeLengthContractFor('extended');
+    const draft: PlayRecoveryWorkDraft = {
+      schema: 'storyx/play-recovery-work-draft/v1',
+      id: 'draft-contract', projectId: 'p1', generationId: 'job-contract', episodeHint: 1,
+      title: '', body: '사용자가 직접 쓴 본문',
+      source: { ...recovery, episodeLength: compact },
+      createdAt: '2026-07-20T00:00:00Z', updatedAt: '2026-07-20T00:00:00Z'
+    };
+
+    expect(canonicalizeRecoveryDraftEpisodeLength(draft, {
+      ...item('job-contract', 'failed'),
+      episodeLengthSchema: 'storyx/episode-length/v1',
+      episodeLength: extended
+    }).source.episodeLength).toEqual(extended);
+    expect(canonicalizeRecoveryDraftEpisodeLength(draft, {
+      ...item('job-contract', 'failed'),
+      episodeLengthSchema: 'storyx/episode-length/v1'
+    }).source).not.toHaveProperty('episodeLength');
+    expect(canonicalizeRecoveryDraftEpisodeLength({
+      ...draft,
+      generationId: 'local-draft-contract'
+    }, undefined).source.episodeLength).toEqual(compact);
+    expect(canonicalizeRecoveryDraftEpisodeLength(draft, undefined).source)
+      .not.toHaveProperty('episodeLength');
+  });
+
+  it('현대 receipt 손상·연결 불일치·비로컬 receipt 유실은 차단하고 등록 전 local snapshot만 허용한다', () => {
+    const draft: PlayRecoveryWorkDraft = {
+      schema: 'storyx/play-recovery-work-draft/v1',
+      id: 'draft-guard', projectId: 'p1', generationId: 'modern-valid', episodeHint: 1,
+      title: '', body: '사용자가 직접 쓴 본문', source: recovery,
+      createdAt: '2026-07-20T00:00:00Z', updatedAt: '2026-07-20T00:00:00Z'
+    };
+    expect(hasUsableRecoveryDraftEpisodeLength(draft, {
+      ...item('modern-valid', 'failed'),
+      episodeLengthSchema: 'storyx/episode-length/v1'
+    })).toBe(false);
+    expect(hasUsableRecoveryDraftEpisodeLength({ ...draft, generationId: 'legacy' }, item('legacy', 'failed'))).toBe(true);
+    expect(hasUsableRecoveryDraftEpisodeLength(draft, {
+      ...item('modern-valid', 'failed'),
+      episodeLengthSchema: 'storyx/episode-length/v1',
+      episodeLength: episodeLengthContractFor('standard')
+    })).toBe(true);
+    expect(hasUsableRecoveryDraftEpisodeLength(draft, {
+      ...item('modern-valid', 'failed'),
+      projectId: '다른-작품',
+      episodeLengthSchema: 'storyx/episode-length/v1',
+      episodeLength: episodeLengthContractFor('standard')
+    })).toBe(false);
+    expect(hasUsableRecoveryDraftEpisodeLength(draft, undefined)).toBe(false);
+    expect(hasUsableRecoveryDraftEpisodeLength({
+      ...draft,
+      generationId: 'local-draft-guard',
+      source: { ...recovery, episodeLength: episodeLengthContractFor('compact') }
+    }, undefined)).toBe(true);
+  });
+
+  it.each([
+    {
+      label: 'result 계약',
+      nested: { result: { title: '1화', prose: '본문', episodeLength: episodeLengthContractFor('compact') } }
+    },
+    {
+      label: 'result 길이 평가',
+      nested: { result: { title: '1화', prose: '본문', actualChars: 2, lengthStatus: 'under' } }
+    },
+    {
+      label: 'recovery 계약',
+      nested: { recovery: { ...recovery, episodeLength: episodeLengthContractFor('compact') } }
+    }
+  ])('root가 삭제돼도 $label 흔적이 있으면 현대 receipt marker를 복원하되 목표 root로 승격하지 않는다', ({ nested }) => {
+    const [parsed] = parseGenerationInbox(JSON.stringify([{
+      ...item('nested-modern', 'succeeded'),
+      ...nested
+    }]));
+
+    expect(parsed.episodeLengthSchema).toBe('storyx/episode-length/v1');
+    expect(parsed.episodeLength).toBeUndefined();
+    expect(receiptEpisodeLengthMatchesChapter(parsed, approvedChapter)).toBe(false);
   });
 
   it('승인된 응결 체크포인트는 유효한 Chapter·retcon만 왕복하고 손상 데이터는 해당 영수증에서 제거한다', () => {
@@ -191,7 +384,14 @@ describe('generation inbox', () => {
   });
 
   it('승인 checkpoint의 source span을 왕복해 부분 저장 재시도에서도 같은 소비 구간을 쓴다', () => {
-    const checkpointWithSourceSpan = { ...approvedCheckpoint, sourceSpan };
+    const checkpointWithSourceSpan = {
+      ...approvedCheckpoint,
+      sourceSpan,
+      chapter: {
+        ...approvedCheckpoint.chapter,
+        episodeLength: episodeLengthContractFor('extended')
+      }
+    };
     const valid = {
       ...item('checkpoint-span', 'succeeded'),
       result: { title: approvedChapter.title, prose: approvedChapter.prose },
@@ -253,8 +453,10 @@ describe('generation inbox', () => {
   });
 
   it('성공 영수증에 승인 체크포인트를 불변 upsert하고 기존 recovery 메타를 보존한다', () => {
+    const episodeLength = episodeLengthContractFor('compact');
     const receipt = {
       ...item('1', 'succeeded'),
+      episodeLength,
       result: { title: approvedChapter.title, prose: approvedChapter.prose },
       recovery,
       recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
@@ -267,6 +469,7 @@ describe('generation inbox', () => {
     expect(updated).not.toBe(original);
     expect(updated[0]).toBe(original[0]);
     expect(updated[1]).toEqual({ ...receipt, approvedCondenseCheckpoint: approvedCheckpoint });
+    expect(updated[1].episodeLength).toEqual(episodeLength);
     expect(original[1]).not.toHaveProperty('approvedCondenseCheckpoint');
     expect(upsertApprovedCondenseCheckpoint(original, 'missing', approvedCheckpoint)).toBe(original);
     expect(upsertApprovedCondenseCheckpoint([item('1', 'failed')], '1', approvedCheckpoint)).toEqual([item('1', 'failed')]);
@@ -350,8 +553,10 @@ describe('generation inbox', () => {
   });
 
   it('merges polled terminal result without losing client metadata', () => {
+    const episodeLength = episodeLengthContractFor('standard');
     const merged = mergeGenerationJob({
       ...item('1'),
+      episodeLength,
       recovery,
       recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
       recoveryDraftId: 'recovery-draft-1',
@@ -369,6 +574,20 @@ describe('generation inbox', () => {
     expect(merged.recoveryDraftId).toBe('recovery-draft-1');
     expect(merged.recoveredAt).toBe('2026-07-16T01:00:00Z');
     expect(merged.recoveredChapterId).toBe('episode-1');
+    expect(merged.episodeLength).toEqual(episodeLength);
+  });
+
+  it('poll 응답의 손상된 optional 목표는 메모리 병합에서도 제거하고 기존 root 목표는 보존한다', () => {
+    const compact = episodeLengthContractFor('compact');
+    const corruptJob = {
+      id: 'corrupt-length', projectId: 'p1', baseRevision: 'rev-1', episode: 1,
+      status: 'failed', createdAt: 'x', updatedAt: 'y',
+      episodeLength: { ...episodeLengthContractFor('extended'), minChars: 1 }
+    } as unknown as GenerationJobSnapshot;
+
+    expect(mergeGenerationJob(item('corrupt-length'), corruptJob)).not.toHaveProperty('episodeLength');
+    expect(mergeGenerationJob({ ...item('corrupt-length'), episodeLength: compact }, corruptJob))
+      .toHaveProperty('episodeLength', compact);
   });
 
   it('느린 poll 응답은 이미 terminal/checkpoint가 된 최신 영수증을 running·expired로 역행시키지 않는다', () => {
@@ -479,6 +698,7 @@ describe('generation inbox', () => {
     const newest = { ...item('1', 'failed'), recovery };
     const oldSuccess = {
       ...item('2', 'succeeded'),
+      episodeLength: episodeLengthContractFor('extended'),
       sourceSpan,
       recovery,
       recoveryDraftOpenedAt: '2026-07-16T00:00:00Z',
@@ -508,9 +728,14 @@ describe('generation inbox', () => {
     expect(saved.items[1]).not.toHaveProperty('recoveryDraftOpenedAt');
     expect(saved.items[1]).not.toHaveProperty('recoveryDraftId');
     expect(saved.items[1]).toHaveProperty('sourceSpan', sourceSpan);
+    expect(saved.items[1]).toHaveProperty('episodeLength', episodeLengthContractFor('extended'));
     expect(saved.items[1]).toHaveProperty('approvedCondenseCheckpoint', approvedCheckpoint);
     expect(storage.setItem).toHaveBeenCalledTimes(2);
     expect(parseGenerationInbox(writes[1])[1]).toHaveProperty('sourceSpan', sourceSpan);
+    expect(parseGenerationInbox(writes[1])[1]).toHaveProperty(
+      'episodeLength',
+      episodeLengthContractFor('extended')
+    );
   });
 
   it('저장 재시도까지 실패해도 예외를 전파하지 않고 메모리 유지 상태를 돌려준다', () => {

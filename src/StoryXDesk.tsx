@@ -19,7 +19,7 @@ import { useMarginReview } from './hooks/useMarginReview';
 import { findPersona } from './lib/extendedPersonas';
 import { applyDiff, resolveRunReviewAnchor, splitIntoParagraphs, toMarginReview, type CanonDelta, type InlineDiff, type MarginReview } from './lib/marginReview';
 import { buildCreativeBlueprint, getFormatOptions, getMediumOptions, isSerialFormat, type CreativeFormat, type CreativeMedium } from './lib/projectBlueprint';
-import { applyApprovedMemory, buildDeterministicDataReview, buildProjectContextDigest, buildStoryEditorWorkspace, chapterFromDraftPayload, createEmptyProject, createSeedProject, evaluateProductionGate, getCanonReviewCategoryLabel, getGenreProfiles, lockChapter, unlockChapter, produceNextChapter, serializeCanonCategory, type AgentRun, type Chapter, type ChapterBeat, commitChapterProse, addCharacter, applyContractAmendment, removeCharacter, renameCharacter, type AgentId, type CanonReviewCategory, type ContractAmendmentPatch, type CreativeWeight, type DraftChapterPayload, type ProductionRequest, type ProductionResult, type SeriesProject } from './lib/storyEngine';
+import { applyApprovedMemory, buildDeterministicDataReview, buildProjectContextDigest, buildStoryEditorWorkspace, buildWriteEpisodeLengthProgress, chapterFromDraftPayload, countEpisodeChars, createEmptyProject, createSeedProject, evaluateProductionGate, getCanonReviewCategoryLabel, getGenreProfiles, lockChapter, unlockChapter, produceNextChapter, serializeCanonCategory, type AgentRun, type Chapter, type ChapterBeat, commitChapterProse, addCharacter, applyContractAmendment, removeCharacter, renameCharacter, type AgentId, type CanonReviewCategory, type ContractAmendmentPatch, type CreativeWeight, type DraftChapterPayload, type ProductionRequest, type ProductionResult, type SeriesProject } from './lib/storyEngine';
 import { requestLlmDraft } from './lib/draftClient';
 import { requestAgentReview } from './lib/reviewClient';
 import { computePayoffLedger } from './lib/payoffLedger';
@@ -433,7 +433,9 @@ export function StoryXDesk({
     }, 600);
     return () => window.clearTimeout(t);
   }, [draftPrompt]);
-  const [editorText, setEditorText] = useState('');
+  const [editorText, setEditorText] = useState(
+    () => recoveryWorkDraft?.body ?? project.chapters[project.chapters.length - 1]?.prose ?? ''
+  );
   // 베타테스트 #1 — debounce/flush commit 이 stale closure 가 아닌 최신 editorText 를 쓰도록 ref 미러.
   const editorTextRef = useRef(editorText);
   editorTextRef.current = editorText;
@@ -716,8 +718,9 @@ export function StoryXDesk({
       setLatestChapter(next);
     }
   }
-  // 회차 분량 미터 — 실제 원고 글자 수(FloatingEditor 표면에서 사용)
-  const chapterCharCount = (editorText || latestChapter?.prose || '').replace(/\s/g, '').length;
+  // 회차 분량 미터 — 실제 editorText만 세어 완전히 비운 본문도 과거 prose로 되돌리지 않는다.
+  const chapterLengthProgress = buildWriteEpisodeLengthProgress(editorText, latestChapter?.episodeLength);
+  const chapterCharCount = chapterLengthProgress.actualChars;
   const currentReviewText = editorText.trim() || latestChapter?.prose.trim() || draftPrompt.trim() || project.logline;
   const marginParagraphs = useMemo(
     () => splitIntoParagraphs(editorText || latestChapter?.prose || ''),
@@ -1081,6 +1084,7 @@ export function StoryXDesk({
     () => ({
       kicker: `${blueprint.mediumLabel} · ${latestChapter ? chapterLabel(latestChapter) : '새 초안'}`,
       charCount: `${chapterCharCount.toLocaleString()}자`,
+      episodeLengthProgress: chapterLengthProgress,
       chapterTitle: latestChapter?.title ?? '제목 없음',
       chapterSub: project.logline,
       paragraphs: marginParagraphs,
@@ -1148,6 +1152,7 @@ export function StoryXDesk({
       latestChapter,
       blueprint,
       chapterCharCount,
+      chapterLengthProgress,
       marginParagraphs,
       marginReview,
       acceptMarginDiff,

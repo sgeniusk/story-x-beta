@@ -5,6 +5,24 @@ import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { buildDiveCondensePrompt } from './lib/server/promptBuilders';
 
+const EPISODE_LENGTH_CONTRACTS = {
+  compact: {
+    schema: 'storyx/episode-length/v1', preset: 'compact', targetChars: 3000,
+    minChars: 2700, maxChars: 3300, generationMinChars: 2850, generationMaxChars: 3150,
+    minScenes: 2, maxScenes: 3
+  },
+  standard: {
+    schema: 'storyx/episode-length/v1', preset: 'standard', targetChars: 5000,
+    minChars: 4500, maxChars: 5500, generationMinChars: 4750, generationMaxChars: 5250,
+    minScenes: 3, maxScenes: 4
+  },
+  extended: {
+    schema: 'storyx/episode-length/v1', preset: 'extended', targetChars: 8000,
+    minChars: 7200, maxChars: 8800, generationMinChars: 7600, generationMaxChars: 8400,
+    minScenes: 4, maxScenes: 6
+  }
+} as const;
+
 const packageJson = JSON.parse(readFileSync(resolve(__dirname, '../package.json'), 'utf8')) as {
   scripts?: Record<string, string>;
 };
@@ -26,37 +44,42 @@ describe('storyx CLI script', () => {
     expect(cli).toContain('codex exec');
   });
 
-  it('dive-condense --dry-run은 실제 CLI 런타임 빌더의 전체 prompt를 TS 빌더와 byte-identical하게 출력한다', () => {
-    const input = {
-      character: '한서윤 — 선배. 욕망: 진실. 상처: 배신.',
-      scene: '비 오는 회사 옥상 문 앞',
-      context: '## 한국어 문체·보이스 규칙\n- 리듬: 짧고 긴 문장을 교차한다.',
-      transcript: '나: 문을 열 거예요.\n한서윤: 열면 돌아갈 수 없어.',
-      arc: '{"dramaticQuestion":"문을 열 것인가","tension":72}'
-    };
-    const result = spawnSync(
-      'node',
-      [
-        cliPath, 'dive-condense', '--provider', 'codex', '--dry-run',
-        '--character', input.character,
-        '--scene', input.scene,
-        '--context', input.context,
-        '--transcript', input.transcript,
-        '--arc', input.arc,
-        '--episode', '1'
-      ],
-      { encoding: 'utf8' }
-    );
+  it.each(Object.values(EPISODE_LENGTH_CONTRACTS))(
+    'dive-condense $preset dry-run은 해당 프리셋 prompt를 TS 빌더와 byte-identical하게 출력한다',
+    (episodeLength) => {
+      const input = {
+        character: '한서윤 — 선배. 욕망: 진실. 상처: 배신.',
+        scene: '비 오는 회사 옥상 문 앞',
+        context: '## 한국어 문체·보이스 규칙\n- 리듬: 짧고 긴 문장을 교차한다.',
+        transcript: '나: 문을 열 거예요.\n한서윤: 열면 돌아갈 수 없어.',
+        arc: '{"dramaticQuestion":"문을 열 것인가","tension":72}',
+        episodeLength
+      };
+      const result = spawnSync(
+        'node',
+        [
+          cliPath, 'dive-condense', '--provider', 'codex', '--dry-run',
+          '--character', input.character,
+          '--scene', input.scene,
+          '--context', input.context,
+          '--transcript', input.transcript,
+          '--arc', input.arc,
+          '--length-contract', JSON.stringify(episodeLength),
+          '--episode', '1'
+        ],
+        { encoding: 'utf8' }
+      );
 
-    expect(result.status).toBe(0);
-    const payload = JSON.parse(result.stdout) as { mode: string; dryRun: boolean; prompt: string; commandPreview: string[] };
-    const expectedPrompt = buildDiveCondensePrompt(input);
-    expect(payload.mode).toBe('dive-condense');
-    expect(payload.dryRun).toBe(true);
-    expect(payload.prompt).toBe(expectedPrompt);
-    expect(payload.commandPreview[payload.commandPreview.length - 1]).toBe(expectedPrompt);
-    for (const legacy of legacyDiveCondenseConflicts) expect(payload.prompt).not.toContain(legacy);
-  });
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout) as { mode: string; dryRun: boolean; prompt: string; commandPreview: string[] };
+      const expectedPrompt = buildDiveCondensePrompt(input);
+      expect(payload.mode).toBe('dive-condense');
+      expect(payload.dryRun).toBe(true);
+      expect(payload.prompt).toBe(expectedPrompt);
+      expect(payload.commandPreview[payload.commandPreview.length - 1]).toBe(expectedPrompt);
+      for (const legacy of legacyDiveCondenseConflicts) expect(payload.prompt).not.toContain(legacy);
+    }
+  );
 
   it('dive-condense는 commandPreview를 dry-run 전에 한 번 만들고 실제 provider 호출에도 같은 변수를 쓴다', () => {
     expect(diveCondenseBlock.match(/const commandPreview\s*=/g)).toHaveLength(1);
@@ -66,20 +89,145 @@ describe('storyx CLI script', () => {
       diveCondenseBlock.indexOf("if (provider === 'mock')")
     );
     expect(dryRunBranch).toContain('commandPreview');
-    expect(diveCondenseBlock).toContain('runProviderWithRetry(commandPreview)');
+    expect(diveCondenseBlock).toContain('runProviderWithRetry(commandPreview, CONDENSE_PROVIDER_TIMEOUT_MS)');
   });
 
-  it('dive-condense 빈 입력 dry-run도 TS fallback prompt와 byte-identical하다', () => {
+  it('dive-condense 최소 transcript와 빈 주변 입력 dry-run도 TS fallback prompt와 byte-identical하다', () => {
+    const transcript = '나: 문 앞에 멈췄다.';
     const result = spawnSync(
       'node',
-      [cliPath, 'dive-condense', '--provider', 'codex', '--dry-run'],
+      [
+        cliPath, 'dive-condense', '--provider', 'codex', '--dry-run',
+        '--transcript', transcript,
+        '--length-contract', JSON.stringify(EPISODE_LENGTH_CONTRACTS.standard)
+      ],
       { encoding: 'utf8' }
     );
     expect(result.status).toBe(0);
     const payload = JSON.parse(result.stdout) as { prompt: string; commandPreview: string[] };
-    const expectedPrompt = buildDiveCondensePrompt({ character: '', scene: '', context: '', transcript: '', arc: '' });
+    const expectedPrompt = buildDiveCondensePrompt({
+      character: '', scene: '', context: '', transcript, arc: '',
+      episodeLength: EPISODE_LENGTH_CONTRACTS.standard
+    });
     expect(payload.prompt).toBe(expectedPrompt);
     expect(payload.commandPreview[payload.commandPreview.length - 1]).toBe(expectedPrompt);
+  });
+
+  it.each([undefined, '  \n\t'])('dive-condense dry-run은 공백 transcript를 생성 전에 거부한다 (%s)', (transcript) => {
+    const result = spawnSync(
+      'node',
+      [
+        cliPath, 'dive-condense', '--provider', 'codex', '--dry-run',
+        ...(transcript === undefined ? [] : ['--transcript', transcript]),
+        '--length-contract', JSON.stringify(EPISODE_LENGTH_CONTRACTS.standard)
+      ],
+      { encoding: 'utf8' }
+    );
+
+    expect(result.status).not.toBe(0);
+    const payload = JSON.parse(result.stdout) as { status: string; warning: string; prompt?: string; commandPreview?: string[] };
+    expect(payload.status).toBe('failed');
+    expect(payload.warning).toContain('--transcript');
+    expect(payload).not.toHaveProperty('prompt');
+    expect(payload).not.toHaveProperty('commandPreview');
+  });
+
+  it('dive-condense는 --transcript 값이 빠진 뒤의 flag를 원문으로 승격하지 않는다', () => {
+    const result = spawnSync(
+      'node',
+      [
+        cliPath, 'dive-condense', '--provider', 'codex', '--dry-run',
+        '--transcript',
+        '--length-contract', JSON.stringify(EPISODE_LENGTH_CONTRACTS.standard)
+      ],
+      { encoding: 'utf8' }
+    );
+
+    expect(result.status).not.toBe(0);
+    const payload = JSON.parse(result.stdout) as { status: string; warning: string; prompt?: string };
+    expect(payload.status).toBe('failed');
+    expect(payload.warning).toContain('--transcript');
+    expect(payload).not.toHaveProperty('prompt');
+  });
+
+  it('dive-condense 8천 자 희소 원문도 근거 없는 장면·행동·사건·폭로·페이오프를 요구하지 않는다', () => {
+    const episodeLength = EPISODE_LENGTH_CONTRACTS.extended;
+    const result = spawnSync(
+      'node',
+      [
+        cliPath, 'dive-condense', '--provider', 'codex', '--dry-run',
+        '--character', '한서윤 — 선배.',
+        '--scene', '비 오는 회사 옥상 문 앞',
+        '--transcript', '나: 문을 바라봤다.',
+        '--length-contract', JSON.stringify(episodeLength)
+      ],
+      { encoding: 'utf8' }
+    );
+
+    expect(result.status).toBe(0);
+    const payload = JSON.parse(result.stdout) as { prompt: string; commandPreview: string[] };
+    expect(payload.prompt).toContain(`사건·행동이 있을 때만 서로 다른 압력의 현재 장면 ${episodeLength.minScenes}~${episodeLength.maxScenes}개까지 재구성합니다.`);
+    expect(payload.prompt).toContain('각각 뒷받침할 때만 하나의 중앙 갈등 안에서 그 연쇄를 깊게 합니다.');
+    expect(payload.prompt).toContain('"원문 근거"는 응결할 대화에 명시된 사건·행동·결정·대사만 뜻합니다.');
+    expect(payload.prompt).toContain('원문 근거에 없는 새 행동·결정·사건·폭로(reveal)·대가·페이오프를 발명하지 않습니다.');
+    expect(payload.prompt).toContain('더 적은 장면과 허용 하한보다 짧은 prose를 반환합니다.');
+    expect(payload.prompt).toContain(`${episodeLength.maxChars.toLocaleString('ko-KR')}자를 넘어도 자동으로 자르지 않습니다.`);
+    expect(payload.commandPreview[payload.commandPreview.length - 1]).toBe(payload.prompt);
+    expect(payload.prompt).not.toContain('- 서로 다른 압력을 가진 현재 장면 4~6개로 재구성합니다.');
+    expect(payload.prompt).not.toContain('- 하나의 중앙 갈등 안에서 시도 → 반격 → 관계·지위 비용 → 주 reveal 하나 → 강제 선택을 깊게 합니다.');
+  });
+
+  it('dive-condense는 유효한 --length-contract JSON을 필수로 요구한다', () => {
+    for (const contractArg of [undefined, '{not json', JSON.stringify({ ...EPISODE_LENGTH_CONTRACTS.standard, targetChars: 3000 })]) {
+      const result = spawnSync(
+        'node',
+        [cliPath, 'dive-condense', '--provider', 'mock', ...(contractArg === undefined ? [] : ['--length-contract', contractArg])],
+        { encoding: 'utf8' }
+      );
+      expect(result.status).not.toBe(0);
+      expect(result.stdout).toContain('--length-contract');
+    }
+  });
+
+  it('dive-condense mock 결과는 요청 계약·공백 제외 실제 글자 수·상태를 함께 반환한다', () => {
+    const episodeLength = EPISODE_LENGTH_CONTRACTS.extended;
+    const result = spawnSync(
+      'node',
+      [
+        cliPath, 'dive-condense', '--provider', 'mock',
+        '--transcript', '나: 문을 열었다.',
+        '--length-contract', JSON.stringify(episodeLength)
+      ],
+      { encoding: 'utf8' }
+    );
+    expect(result.status).toBe(0);
+    const payload = JSON.parse(result.stdout) as {
+      prose: string;
+      episodeLength: typeof episodeLength;
+      actualChars: number;
+      lengthStatus: string;
+    };
+    expect(payload.episodeLength).toEqual(episodeLength);
+    expect(payload.actualChars).toBe(payload.prose.replace(/\s/gu, '').length);
+    expect(payload.lengthStatus).toBe('under');
+  });
+
+  it('dive-condense provider 결과도 모델 prose를 기준으로 분량 메타를 계산해 반환한다', () => {
+    const providerBranch = diveCondenseBlock.slice(diveCondenseBlock.indexOf('runProviderWithRetry(commandPreview'));
+    expect(providerBranch).toContain('const prose = readString(parsed?.prose)');
+    expect(providerBranch).toContain('const lengthEvaluation = evaluateEpisodeLength(prose, episodeLength)');
+    expect(providerBranch).toContain('episodeLength,');
+    expect(providerBranch).toContain('actualChars: lengthEvaluation.actualChars');
+    expect(providerBranch).toContain('lengthStatus: lengthEvaluation.status');
+  });
+
+  it('장문 provider timeout은 안전한 진단 메타를 남기고 같은 호출을 맹목 재시도하지 않는다', () => {
+    expect(cli).toContain('const CONDENSE_PROVIDER_TIMEOUT_MS = 540_000');
+    expect(cli).toContain("if (firstFailure.kind === 'timed-out')");
+    expect(cli).toContain('providerFailure: firstFailure');
+    expect(diveCondenseBlock).toContain('providerFailure');
+    expect(diveCondenseBlock).toContain("providerFailure?.kind === 'timed-out'");
+    expect(diveCondenseBlock).not.toContain('stderr: providerResult.stderr');
   });
 
   // A-5 — 헌장 예산 배선: draft 명령이 --contract-status 를 받아 buildDraftPrompt 에 넘긴다.

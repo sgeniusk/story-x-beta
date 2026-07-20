@@ -3,10 +3,12 @@ import {
   createSeedProject,
   defaultPlannedEpisodes,
   DEFAULT_BEAT_TENSION,
+  parseEpisodeLengthContract,
   type BibleSection,
   type CanonEntity,
   type CharacterProfile,
   type ContractLengthClass,
+  type EpisodeLengthPreset,
   type SeriesProject,
   type StorySpine,
   type TimelineEntry
@@ -462,23 +464,28 @@ export function normalizeProject(project: SeriesProject): SeriesProject {
       Array.isArray(project.bibleOutline) && project.bibleOutline.length > 0
         ? (project.bibleOutline as BibleSection[])
         : defaultBibleOutline(),
-    chapters: project.chapters.map((chapter) => ({
-      ...chapter,
-      // 하드-시딩/import 회차가 파생 배열 필드를 빠뜨리면 buildStoryEditorWorkspace 등에서
-      // chapter.memoryAnchors.length·newCanonFacts.length 접근이 TypeError → 에디터 크래시.
-      // 로드/import 는 모두 이 정규화를 거치므로 여기서 누락 배열을 [] 로 백필해 방어한다.
-      outline: Array.isArray(chapter.outline) ? chapter.outline : [],
-      memoryAnchors: Array.isArray(chapter.memoryAnchors) ? chapter.memoryAnchors : [],
-      newCanonFacts: Array.isArray(chapter.newCanonFacts) ? chapter.newCanonFacts : [],
-      beats: Array.isArray(chapter.beats)
-        ? chapter.beats.map((beat) => ({
-            ...beat,
-            tension: typeof beat.tension === 'number' && Number.isFinite(beat.tension)
-              ? beat.tension
-              : DEFAULT_BEAT_TENSION
-          }))
-        : []
-    }))
+    chapters: project.chapters.map((chapter) => {
+      const { episodeLength: storedEpisodeLength, ...chapterWithoutEpisodeLength } = chapter;
+      const episodeLength = parseEpisodeLengthContract(storedEpisodeLength);
+      return {
+        ...chapterWithoutEpisodeLength,
+        // 하드-시딩/import 회차가 파생 배열 필드를 빠뜨리면 buildStoryEditorWorkspace 등에서
+        // chapter.memoryAnchors.length·newCanonFacts.length 접근이 TypeError → 에디터 크래시.
+        // 로드/import 는 모두 이 정규화를 거치므로 여기서 누락 배열을 [] 로 백필해 방어한다.
+        outline: Array.isArray(chapter.outline) ? chapter.outline : [],
+        memoryAnchors: Array.isArray(chapter.memoryAnchors) ? chapter.memoryAnchors : [],
+        newCanonFacts: Array.isArray(chapter.newCanonFacts) ? chapter.newCanonFacts : [],
+        beats: Array.isArray(chapter.beats)
+          ? chapter.beats.map((beat) => ({
+              ...beat,
+              tension: typeof beat.tension === 'number' && Number.isFinite(beat.tension)
+                ? beat.tension
+                : DEFAULT_BEAT_TENSION
+            }))
+          : [],
+        ...(episodeLength ? { episodeLength } : {})
+      };
+    })
   };
 
   if (project.title !== '달의 문서고' && project.id !== 'moon-archive') {
@@ -679,6 +686,12 @@ export function serializeDiveState(state: DiveState): string {
   return JSON.stringify(state);
 }
 
+function parseEpisodeLengthPreset(value: unknown): EpisodeLengthPreset | undefined {
+  return value === 'compact' || value === 'standard' || value === 'extended'
+    ? value
+    : undefined;
+}
+
 export function parseDiveState(raw: string | null): DiveState | null {
   if (!raw) return null;
   try {
@@ -686,9 +699,15 @@ export function parseDiveState(raw: string | null): DiveState | null {
     if (!value || value.schema !== 'storyx/dive/v1' || !value.session || !value.project) {
       return null;
     }
+    const rawSession = value.session as DiveSession & { episodeLengthPreset?: unknown };
+    const { episodeLengthPreset: storedPreset, ...sessionWithoutPreset } = rawSession;
+    const episodeLengthPreset = parseEpisodeLengthPreset(storedPreset);
     return {
       schema: 'storyx/dive/v1',
-      session: value.session as DiveSession,
+      session: {
+        ...sessionWithoutPreset,
+        ...(episodeLengthPreset ? { episodeLengthPreset } : {})
+      },
       project: normalizeProject(value.project as SeriesProject)
     };
   } catch {

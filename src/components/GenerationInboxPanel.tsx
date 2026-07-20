@@ -1,4 +1,5 @@
 import { canRecoverGeneration, type GenerationInboxItem } from '../lib/generationInbox';
+import type { EpisodeLengthContract } from '../lib/storyEngine';
 
 interface GenerationInboxPanelProps {
   items: GenerationInboxItem[];
@@ -17,6 +18,10 @@ const STATUS_LABEL: Record<GenerationInboxItem['status'], string> = {
   'timed-out': '시간 초과',
   expired: '연결 만료'
 };
+
+function episodeLengthLabel(contract: EpisodeLengthContract): string {
+  return `${contract.targetChars / 1000}천자 목표 · ${contract.minScenes}~${contract.maxScenes}장면`;
+}
 
 export function GenerationInboxPanel({
   items,
@@ -47,6 +52,9 @@ export function GenerationInboxPanel({
             const needsImmediateDownload = Boolean(item.localPersistenceFailed && item.recovery);
             const hasRecoveryDraft = Boolean(item.recoveryDraftOpenedAt && item.recoveryDraftId);
             const savedAsChapter = Boolean(item.recoveredAt && item.recoveredChapterId);
+            // Root receipt metadata alone is the frozen job contract. Nested copies are
+            // recovery evidence, not a source for retroactively targeting legacy items.
+            const episodeLength = item.episodeLength;
             // 실패 뒤 직접 쓰기를 연 다음 늦은 성공이 도착해도 두 결과물은 모두 사용자 자산이다.
             // status=succeeded만 보고 작업본을 숨기거나 무확인 삭제하지 않는다.
             const exposesRecoveryDraft = recoverable || hasRecoveryDraft;
@@ -61,6 +69,7 @@ export function GenerationInboxPanel({
                 <div className="gix-item-copy">
                   <span className="gix-status">{STATUS_LABEL[item.status]}</span>
                   <h3>{item.result?.title || `${item.projectTitle} · ${item.episode}화`}</h3>
+                  {episodeLength && <p className="gix-target">{episodeLengthLabel(episodeLength)}</p>}
                   <p>{item.warning || `${item.projectTitle}에서 시작한 응결 작업`}</p>
                   {exposesRecoveryDraft && !needsImmediateDownload && (
                     <p className="gix-recovery-note" role="status">

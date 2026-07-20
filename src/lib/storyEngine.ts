@@ -177,6 +177,137 @@ export interface RewardArcEntry {
   intensity?: number;
 }
 
+/** P2-d — 한 회차의 생성·검토·WRITE가 공유하는 목표 분량 preset. */
+export type EpisodeLengthPreset = 'compact' | 'standard' | 'extended';
+
+/** 시즌 총 화수 StoryContract와 분리된 회차 단위 분량 계약. */
+export interface EpisodeLengthContract {
+  schema: 'storyx/episode-length/v1';
+  preset: EpisodeLengthPreset;
+  targetChars: number;
+  minChars: number;
+  maxChars: number;
+  generationMinChars: number;
+  generationMaxChars: number;
+  minScenes: number;
+  maxScenes: number;
+}
+
+export type EpisodeLengthStatus = 'under' | 'within' | 'over';
+
+export interface EpisodeLengthEvaluation {
+  actualChars: number;
+  status: EpisodeLengthStatus;
+}
+
+const EPISODE_LENGTH_CONTRACTS: Record<EpisodeLengthPreset, EpisodeLengthContract> = {
+  compact: {
+    schema: 'storyx/episode-length/v1',
+    preset: 'compact',
+    targetChars: 3000,
+    minChars: 2700,
+    maxChars: 3300,
+    generationMinChars: 2850,
+    generationMaxChars: 3150,
+    minScenes: 2,
+    maxScenes: 3
+  },
+  standard: {
+    schema: 'storyx/episode-length/v1',
+    preset: 'standard',
+    targetChars: 5000,
+    minChars: 4500,
+    maxChars: 5500,
+    generationMinChars: 4750,
+    generationMaxChars: 5250,
+    minScenes: 3,
+    maxScenes: 4
+  },
+  extended: {
+    schema: 'storyx/episode-length/v1',
+    preset: 'extended',
+    targetChars: 8000,
+    minChars: 7200,
+    maxChars: 8800,
+    generationMinChars: 7600,
+    generationMaxChars: 8400,
+    minScenes: 4,
+    maxScenes: 6
+  }
+};
+
+function isEpisodeLengthPreset(value: unknown): value is EpisodeLengthPreset {
+  return value === 'compact' || value === 'standard' || value === 'extended';
+}
+
+/** undefined·구버전 세션은 standard(5천자)로 해석한다. */
+export function episodeLengthContractFor(preset?: EpisodeLengthPreset): EpisodeLengthContract {
+  const resolvedPreset = isEpisodeLengthPreset(preset) ? preset : 'standard';
+  return { ...EPISODE_LENGTH_CONTRACTS[resolvedPreset] };
+}
+
+/** 저장 데이터는 preset 이름뿐 아니라 v1 정본의 모든 수치가 일치할 때만 신뢰한다. */
+export function parseEpisodeLengthContract(value: unknown): EpisodeLengthContract | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const candidate = value as Record<string, unknown>;
+  if (!isEpisodeLengthPreset(candidate.preset)) return undefined;
+
+  const expected = episodeLengthContractFor(candidate.preset);
+  const keys: Array<keyof EpisodeLengthContract> = [
+    'schema',
+    'preset',
+    'targetChars',
+    'minChars',
+    'maxChars',
+    'generationMinChars',
+    'generationMaxChars',
+    'minScenes',
+    'maxScenes'
+  ];
+  return keys.every((key) => candidate[key] === expected[key]) ? expected : undefined;
+}
+
+/** WRITE와 같은 규칙: prose의 모든 공백 문자는 제외하고 문장부호는 포함한다. */
+export function countEpisodeChars(prose: string): number {
+  return prose.replace(/\s/gu, '').length;
+}
+
+export interface WriteEpisodeLengthProgress {
+  actualChars: number;
+  targetChars: number;
+  percent: number;
+  isLegacyTarget: boolean;
+}
+
+/** 실제 WRITE 본문만 세며, 목표 없는 legacy 회차는 기존 5천자 기준을 명시적으로 유지한다. */
+export function buildWriteEpisodeLengthProgress(
+  prose: string,
+  storedContract?: unknown
+): WriteEpisodeLengthProgress {
+  const parsedContract = parseEpisodeLengthContract(storedContract);
+  const contract = parsedContract ?? episodeLengthContractFor('standard');
+  const actualChars = countEpisodeChars(prose);
+  return {
+    actualChars,
+    targetChars: contract.targetChars,
+    percent: Math.min(100, Math.round((actualChars / contract.targetChars) * 100)),
+    isLegacyTarget: !parsedContract
+  };
+}
+
+export function evaluateEpisodeLength(
+  prose: string,
+  contract: EpisodeLengthContract
+): EpisodeLengthEvaluation {
+  const actualChars = countEpisodeChars(prose);
+  const status: EpisodeLengthStatus = actualChars < contract.minChars
+    ? 'under'
+    : actualChars > contract.maxChars
+      ? 'over'
+      : 'within';
+  return { actualChars, status };
+}
+
 export interface Chapter {
   id: string;
   episode: number;
@@ -193,6 +324,8 @@ export interface Chapter {
   stakesLedger?: StakesLedgerEntry[];
   /** M4 청크 E — 이 회차의 reward arc. 약속과 회수. */
   rewardArc?: RewardArcEntry[];
+  /** P2-d — 생성 시작 시 고정한 회차 목표. 구버전·수동 회차에는 없다. */
+  episodeLength?: EpisodeLengthContract;
 }
 
 export function lockChapter(project: SeriesProject, chapterId: string): SeriesProject {
@@ -559,6 +692,8 @@ export interface ProductionRequest {
   genre: GenreId;
   intent: string;
   pressure: string;
+  /** P2-d — 승인 시 Chapter로 전달할 생성 당시 목표. 구버전 생성 경로에는 없다. */
+  episodeLength?: EpisodeLengthContract;
 }
 
 export type AgentRunStatus = 'idle' | 'pass' | 'revise' | 'block' | 'complete';
@@ -1512,6 +1647,7 @@ export function chapterFromDraftPayload(
   request: ProductionRequest
 ): ProductionResult {
   const episode = nextEpisodeNumber(project);
+  const episodeLength = parseEpisodeLengthContract(request.episodeLength);
   const memoryAnchors = project.canonFacts.slice(0, 4).map((fact) => fact.statement);
   const continuityIssues = validateContinuity(project, [request.intent, request.pressure]);
   const newCanonFacts: CanonFact[] = (payload.newCanonFacts ?? [])
@@ -1534,6 +1670,7 @@ export function chapterFromDraftPayload(
     prose: payload.prose ?? '',
     memoryAnchors,
     newCanonFacts,
+    ...(episodeLength ? { episodeLength } : {}),
     rewardArc: (payload.rewardArc ?? [])
       .filter((e) => typeof e?.promise === 'string' && e.promise.trim().length > 0)
       .map((e) => ({

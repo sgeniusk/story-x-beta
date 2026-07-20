@@ -1,5 +1,5 @@
 // 작품 상태 그리드 컴포넌트
-import type { Chapter, SeriesProject } from '../lib/storyEngine';
+import { countEpisodeChars, type Chapter, type SeriesProject } from '../lib/storyEngine';
 
 export function WorkStateGrid({
   project,
@@ -11,13 +11,14 @@ export function WorkStateGrid({
   isSerial: boolean;
 }) {
   const totalChars = project.chapters.reduce(
-    (sum, chapter) => sum + chapter.prose.replace(/\s/g, '').length,
+    (sum, chapter) => sum + countEpisodeChars(chapter.prose),
     0
   );
   const chapterCount = project.chapters.length;
-  const currentChars = (latestChapter?.prose ?? '').replace(/\s/g, '').length;
-  // 진행 % — 현재 분량을 목표 5,000자와 비교한 비율
-  const progressPct = Math.min(100, Math.round((currentChars / 5000) * 100));
+  const currentChars = countEpisodeChars(latestChapter?.prose ?? '');
+  // P2-d 신규 회차는 생성 시점에 고정한 목표를 쓴다. legacy 회차는 기존 WRITE 5천자 UI를 유지한다.
+  const targetChars = latestChapter?.episodeLength?.targetChars ?? 5000;
+  const progressPct = Math.min(100, Math.round((currentChars / targetChars) * 100));
   const draftStage = !latestChapter ? '시작 전' : latestChapter.locked ? '완성' : '초안';
 
   return (

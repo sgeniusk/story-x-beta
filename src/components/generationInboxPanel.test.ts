@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { GenerationInboxPanel } from './GenerationInboxPanel';
 import type { GenerationInboxItem } from '../lib/generationInbox';
 import type { PlayRecoverySnapshot } from '../lib/playRecovery';
+import { episodeLengthContractFor } from '../lib/storyEngine';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -36,6 +37,24 @@ describe('GenerationInboxPanel', () => {
     expect(html).toContain('작품에서 검토');
     expect(html).toContain('생성 취소');
     expect(html).toContain('생성 실패');
+  });
+
+  it('보관함 카드는 root 영수증 목표만 표시하고 recovery/result의 보조 목표를 legacy에 소급하지 않는다', () => {
+    const html = renderToStaticMarkup(createElement(GenerationInboxPanel, {
+      items: [
+        { ...makeItem('running'), episodeLength: episodeLengthContractFor('compact') },
+        { ...makeItem('succeeded'), episodeLength: episodeLengthContractFor('standard') },
+        { ...makeItem('failed'), recovery: { ...recovery, episodeLength: episodeLengthContractFor('extended') } },
+        { ...makeItem('failed'), id: 'job-legacy-target' }
+      ],
+      onReview: () => {}, onCancel: () => {}, onDiscard: () => {},
+      onDownloadRecovery: () => {}, onSendRecoveryToDraft: () => {}
+    }));
+
+    expect(html).toContain('3천자 목표 · 2~3장면');
+    expect(html).toContain('5천자 목표 · 3~4장면');
+    expect(html).not.toContain('8천자 목표 · 4~6장면');
+    expect(html.match(/목표 기록 없음/g)).toBeNull();
   });
 
   it('복구 가능한 실패 영수증은 수동 작성임을 밝히고 연 뒤엔 같은 작업본을 다시 연다', () => {

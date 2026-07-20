@@ -620,6 +620,13 @@ describe('B2 — 활동일 기록 배선 (편집·생성·확정)', () => {
     expect(desk).toMatch(/retention:\s*\{/);
     expect(desk).toContain('computeRetentionStats(');
   });
+
+  it('실제 WRITE FloatingEditor가 최신 Chapter 목표와 editorText의 공백 제외 진행률을 받는다', () => {
+    expect(desk).toContain('buildWriteEpisodeLengthProgress(editorText, latestChapter?.episodeLength)');
+    expect(desk).not.toContain("countEpisodeChars(editorText || latestChapter?.prose || '')");
+    const propsStart = desk.indexOf('const floatingEditorProps');
+    expect(desk.slice(propsStart, propsStart + 1800)).toContain('episodeLengthProgress: chapterLengthProgress');
+  });
 });
 
 describe('B3 — 캐논 멘션 배선', () => {

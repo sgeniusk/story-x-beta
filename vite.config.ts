@@ -3,10 +3,23 @@ import { createHash } from 'node:crypto';
 import { defineConfig, type Connect, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { createLocalGenerationJobRegistry } from './src/lib/server/localGenerationJobs';
+import { parseEpisodeLengthContract } from './src/lib/storyEngine';
 
 interface StoryxProcess {
   completion: Promise<Record<string, unknown>>;
   cancel: () => void;
+}
+
+function parseJsonRecordBody(body: string): Record<string, unknown> {
+  if (!body) return {};
+  try {
+    const parsed: unknown = JSON.parse(body);
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
 }
 
 function startStoryxProcess(args: string[]): StoryxProcess {
@@ -47,7 +60,8 @@ function startStoryxProcess(args: string[]): StoryxProcess {
 // 배포본(Vercel 정적 호스팅)에는 이 미들웨어가 없으므로 프런트엔드가 deterministic 생성/검토로 폴백한다.
 function storyxBridge(
   route: string,
-  buildArgs: (input: Record<string, unknown>) => string[]
+  buildArgs: (input: Record<string, unknown>) => string[],
+  validateInput?: (input: Record<string, unknown>) => string | undefined
 ): Plugin {
   const handler: Connect.SimpleHandleFunction = (req, res) => {
     if (req.method !== 'POST') {
@@ -62,11 +76,14 @@ function storyxBridge(
       body += chunk;
     });
     req.on('end', () => {
-      let input: Record<string, unknown> = {};
-      try {
-        input = body ? (JSON.parse(body) as Record<string, unknown>) : {};
-      } catch {
-        input = {};
+      const input = parseJsonRecordBody(body);
+
+      const validationWarning = validateInput?.(input);
+      if (validationWarning) {
+        res.statusCode = 400;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ status: 'failed', warning: validationWarning }));
+        return;
       }
 
       const task = startStoryxProcess(buildArgs(input));
@@ -100,8 +117,7 @@ function readJsonBody(req: Connect.IncomingMessage, done: (input: Record<string,
   let body = '';
   req.on('data', (chunk) => { body += chunk; });
   req.on('end', () => {
-    try { done(body ? JSON.parse(body) as Record<string, unknown> : {}); }
-    catch { done({}); }
+    done(parseJsonRecordBody(body));
   });
 }
 
@@ -111,16 +127,26 @@ function sendJson(res: Connect.ServerResponse, statusCode: number, payload: unkn
   res.end(JSON.stringify(payload));
 }
 
-function localGenerationJobBridge(route: string, buildArgs: (input: Record<string, unknown>) => string[]): Plugin {
+function localGenerationJobBridge(
+  route: string,
+  buildArgs: (input: Record<string, unknown>) => string[],
+  validateInput?: (input: Record<string, unknown>) => string | undefined
+): Plugin {
   const registry = createLocalGenerationJobRegistry<Record<string, unknown>, Record<string, unknown>>({
     run: (input) => startStoryxProcess(buildArgs(input)),
-    timeoutMs: 300_000
+    // CLI 장문 응결 상한(9분) 뒤 JSON 실패 메타를 회수할 1분 grace.
+    timeoutMs: 600_000
   });
   const dispose = () => registry.dispose();
   const handler: Connect.SimpleHandleFunction = (req, res) => {
     const id = decodeURIComponent((req.url ?? '').split('?')[0].replace(/^\/+/, ''));
     if (req.method === 'POST' && !id) {
       readJsonBody(req, (input) => {
+        const validationWarning = validateInput?.(input);
+        if (validationWarning) {
+          sendJson(res, 400, { status: 'failed', warning: validationWarning });
+          return;
+        }
         const projectId = String(input.projectId ?? '').trim();
         const baseRevision = String(input.baseRevision ?? '').trim();
         const episode = Number(input.episode ?? 1);
@@ -128,7 +154,7 @@ function localGenerationJobBridge(route: string, buildArgs: (input: Record<strin
           sendJson(res, 400, { status: 'failed', warning: 'projectId·baseRevision·episode이 필요합니다.' });
           return;
         }
-        const dedupeKey = createHash('sha256').update(JSON.stringify(input)).digest('hex');
+        const dedupeKey = createDiveCondenseDedupeKey(input);
         sendJson(res, 202, registry.start(input, dedupeKey, { projectId, baseRevision, episode }));
       });
       return;
@@ -154,14 +180,47 @@ function localGenerationJobBridge(route: string, buildArgs: (input: Record<strin
   };
 }
 
-function buildDiveCondenseArgs(input: Record<string, unknown>): string[] {
+export function validateDiveCondenseInput(input: Record<string, unknown>): string | undefined {
+  if (typeof input.transcript !== 'string' || !input.transcript.trim()) {
+    return '응결할 PLAY 원문이 필요합니다.';
+  }
+  return parseEpisodeLengthContract(input.episodeLength)
+    ? undefined
+    : '유효한 episodeLength v1 계약이 필요합니다.';
+}
+
+export function createDiveCondenseDedupeKey(input: Record<string, unknown>): string {
+  const episodeLength = parseEpisodeLengthContract(input.episodeLength);
+  if (!episodeLength) throw new Error('유효한 episodeLength v1 계약이 필요합니다.');
+  const canonicalInput = {
+    projectId: String(input.projectId ?? '').trim(),
+    projectTitle: String(input.projectTitle ?? ''),
+    baseRevision: String(input.baseRevision ?? '').trim(),
+    episode: String(input.episode ?? '1'),
+    character: String(input.character ?? ''),
+    scene: String(input.scene ?? ''),
+    context: String(input.context ?? ''),
+    transcript: typeof input.transcript === 'string' ? input.transcript : '',
+    arc: String(input.arc ?? ''),
+    episodeLength
+  };
+  return createHash('sha256').update(JSON.stringify(canonicalInput)).digest('hex');
+}
+
+export function buildDiveCondenseArgs(input: Record<string, unknown>): string[] {
+  const episodeLength = parseEpisodeLengthContract(input.episodeLength);
+  if (!episodeLength) throw new Error('유효한 episodeLength v1 계약이 필요합니다.');
+  if (typeof input.transcript !== 'string' || !input.transcript.trim()) {
+    throw new Error('응결할 PLAY 원문이 필요합니다.');
+  }
   return [
     'tools/storyx.mjs', 'dive-condense', '--provider', 'codex',
     '--character', String(input.character ?? ''),
     '--scene', String(input.scene ?? ''),
     '--context', String(input.context ?? ''),
-    '--transcript', String(input.transcript ?? ''),
+    '--transcript', input.transcript,
     '--arc', String(input.arc ?? ''),
+    '--length-contract', JSON.stringify(episodeLength),
     '--episode', String(input.episode ?? '1')
   ];
 }
@@ -393,8 +452,8 @@ export default defineConfig({
       '--query',
       String(input.query ?? '')
     ]),
-    localGenerationJobBridge('/api/dive-condense-jobs', buildDiveCondenseArgs),
-    storyxBridge('/api/dive-condense', buildDiveCondenseArgs),
+    localGenerationJobBridge('/api/dive-condense-jobs', buildDiveCondenseArgs, validateDiveCondenseInput),
+    storyxBridge('/api/dive-condense', buildDiveCondenseArgs, validateDiveCondenseInput),
     storyxBridge('/api/dive-showrunner', (input) => [
       'tools/storyx.mjs',
       'dive-showrunner',

@@ -6,10 +6,57 @@ import { join, resolve } from 'node:path';
 const [, , command = 'help', ...args] = process.argv;
 const providerCommandHints = ['claude --print', 'codex exec'];
 void providerCommandHints;
+const DEFAULT_PROVIDER_TIMEOUT_MS = 300_000;
+// 5천~8천자 응결은 로컬 Codex의 장문 추론 시간을 허용하되, 잡 상한보다 먼저 안전하게 끝낸다.
+const CONDENSE_PROVIDER_TIMEOUT_MS = 540_000;
 
 // 연재형 포맷 — 회차(N화)가 누적되는 형식. src/lib/projectBlueprint.ts 의 serialFormats 와 같은 목록.
 // 나머지(단편·단독 완결형)는 한 편으로 완결되며, 인터뷰·초안 프롬프트가 회차를 가정하지 않는다.
 const SERIAL_FORMATS = new Set(['long-novel', 'medium-novel', 'essay-series', 'serial-webtoon', 'insta-toon']);
+
+// P2-d 회차 목표 분량 정본 — src/lib/storyEngine.ts 와 같은 v1 값.
+const EPISODE_LENGTH_CONTRACTS = {
+  compact: {
+    schema: 'storyx/episode-length/v1', preset: 'compact', targetChars: 3000,
+    minChars: 2700, maxChars: 3300, generationMinChars: 2850, generationMaxChars: 3150,
+    minScenes: 2, maxScenes: 3
+  },
+  standard: {
+    schema: 'storyx/episode-length/v1', preset: 'standard', targetChars: 5000,
+    minChars: 4500, maxChars: 5500, generationMinChars: 4750, generationMaxChars: 5250,
+    minScenes: 3, maxScenes: 4
+  },
+  extended: {
+    schema: 'storyx/episode-length/v1', preset: 'extended', targetChars: 8000,
+    minChars: 7200, maxChars: 8800, generationMinChars: 7600, generationMaxChars: 8400,
+    minScenes: 4, maxScenes: 6
+  }
+};
+
+function parseEpisodeLengthContract(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const expected = EPISODE_LENGTH_CONTRACTS[value.preset];
+  if (!expected) return undefined;
+  const keys = [
+    'schema', 'preset', 'targetChars', 'minChars', 'maxChars',
+    'generationMinChars', 'generationMaxChars', 'minScenes', 'maxScenes'
+  ];
+  return keys.every((key) => value[key] === expected[key]) ? { ...expected } : undefined;
+}
+
+function parseEpisodeLengthContractFlag(raw) {
+  try {
+    return parseEpisodeLengthContract(JSON.parse(raw));
+  } catch {
+    return undefined;
+  }
+}
+
+function evaluateEpisodeLength(prose, contract) {
+  const actualChars = prose.replace(/\s/gu, '').length;
+  const status = actualChars < contract.minChars ? 'under' : actualChars > contract.maxChars ? 'over' : 'within';
+  return { actualChars, status };
+}
 
 function isSerialFormat(format) {
   return SERIAL_FORMATS.has(format);
@@ -330,34 +377,64 @@ if (command === 'dive-condense') {
   const characterCard = readFlag(args, '--character', '');
   const scene = readFlag(args, '--scene', '');
   const context = readFlag(args, '--context', '');
-  const transcript = readFlag(args, '--transcript', '');
+  const transcript = readTextFlag(args, '--transcript', '');
   const episode = readFlag(args, '--episode', '1');
   const arc = readFlag(args, '--arc', '');
+  const episodeLength = parseEpisodeLengthContractFlag(readFlag(args, '--length-contract', ''));
   const dryRun = args.includes('--dry-run');
-  const prompt = buildDiveCondensePrompt({ character: characterCard, scene, context, transcript, arc });
+  if (!episodeLength) {
+    printJson({
+      provider,
+      mode: 'dive-condense',
+      status: 'failed',
+      warning: '유효한 --length-contract JSON이 필요합니다.'
+    });
+    process.exit(1);
+  }
+  if (!transcript.trim()) {
+    printJson({
+      provider,
+      mode: 'dive-condense',
+      status: 'failed',
+      warning: '비어 있지 않은 --transcript가 필요합니다.'
+    });
+    process.exit(1);
+  }
+  const prompt = buildDiveCondensePrompt({ character: characterCard, scene, context, transcript, arc, episodeLength });
   const commandPreview =
     provider === 'claude'
       ? ['claude', '--print', '--output-format', 'text', '--permission-mode', 'dontAsk', '--model', 'sonnet', prompt]
       : ['codex', 'exec', '--sandbox', 'read-only', '--cd', process.cwd(), '--ephemeral', prompt];
 
   if (dryRun) {
-    printJson({ provider, mode: 'dive-condense', dryRun: true, prompt, commandPreview, warning: 'dry-run 모드 — provider 호출 없이 프롬프트만 출력합니다.' });
+    printJson({ provider, mode: 'dive-condense', dryRun: true, episodeLength, prompt, commandPreview, warning: 'dry-run 모드 — provider 호출 없이 프롬프트만 출력합니다.' });
     process.exit(0);
   }
 
   if (provider === 'mock') {
+    const prose = 'mock 3인칭 회차 본문.';
+    const lengthEvaluation = evaluateEpisodeLength(prose, episodeLength);
     printJson({
       provider, mode: 'dive-condense', status: 'complete',
       title: `${episode}화 — 응결`, hook: '...', outline: ['mock 비트'],
       beats: [{ label: '도입', summary: 'mock', tension: 0 }],
-      prose: 'mock 3인칭 회차 본문.',
-      newCanonFacts: [{ owner: 'character', statement: 'mock 캐논' }]
+      prose,
+      newCanonFacts: [{ owner: 'character', statement: 'mock 캐논' }],
+      episodeLength,
+      actualChars: lengthEvaluation.actualChars,
+      lengthStatus: lengthEvaluation.status
     });
     process.exit(0);
   }
-  const { result: providerResult, raw: rawOutput } = runProviderWithRetry(commandPreview);
+  const {
+    result: providerResult,
+    raw: rawOutput,
+    providerFailure
+  } = runProviderWithRetry(commandPreview, CONDENSE_PROVIDER_TIMEOUT_MS);
   const isError = looksLikeProviderError(rawOutput, providerResult);
   const parsed = isError ? null : parseProviderJson(rawOutput);
+  const prose = readString(parsed?.prose);
+  const lengthEvaluation = evaluateEpisodeLength(prose, episodeLength);
   printJson({
     provider, mode: 'dive-condense',
     status: isError ? 'failed' : 'complete',
@@ -365,9 +442,17 @@ if (command === 'dive-condense') {
     hook: readString(parsed?.hook),
     outline: normalizeStringList(parsed?.outline),
     beats: Array.isArray(parsed?.beats) ? parsed.beats : [],
-    prose: readString(parsed?.prose),
+    prose,
     newCanonFacts: Array.isArray(parsed?.newCanonFacts) ? parsed.newCanonFacts : [],
-    warning: isError ? 'provider 호출 실패' : undefined
+    episodeLength,
+    actualChars: lengthEvaluation.actualChars,
+    lengthStatus: lengthEvaluation.status,
+    warning: isError
+      ? providerFailure?.kind === 'timed-out'
+        ? '로컬 provider 제한 시간을 초과했습니다. PLAY 원문과 회차 목표는 보존되었습니다.'
+        : 'provider 호출 실패'
+      : undefined,
+    ...(isError && providerFailure ? { providerFailure } : {})
   });
   process.exit(isError ? 1 : 0);
 }
@@ -1334,6 +1419,12 @@ function readFlag(values, flag, fallback) {
   return index >= 0 && values[index + 1] ? values[index + 1] : fallback;
 }
 
+function readTextFlag(values, flag, fallback) {
+  const value = readFlag(values, flag, fallback);
+  // `--transcript --next-flag value`에서 다음 옵션명을 원문으로 승격하지 않는다.
+  return typeof value === 'string' && !value.startsWith('--') ? value : fallback;
+}
+
 function findCommand(commandName) {
   const result = spawnSync('which', [commandName], { encoding: 'utf8' });
   return result.status === 0 ? result.stdout.trim() : null;
@@ -1897,7 +1988,7 @@ function writeRawDraftFile(outDir, provider, content) {
   return path;
 }
 
-function runProvider(commandParts) {
+function runProvider(commandParts, timeoutMs = DEFAULT_PROVIDER_TIMEOUT_MS) {
   const [binary, ...providerArgs] = commandParts;
   return spawnSync(binary, providerArgs, {
     encoding: 'utf8',
@@ -1905,9 +1996,27 @@ function runProvider(commandParts) {
     // 'Reading additional input from stdin' 을 raw 출력에 누수하고, 그게 JSON 파싱 실패 → 빈 note 로
     // 합류해 검토가 "검토 의견이 비어 있습니다"로 뜬다. input:'' 로 대기를 없앤다.
     input: '',
-    timeout: 300000,
+    timeout: timeoutMs,
     maxBuffer: 1024 * 1024 * 8
   });
+}
+
+/** stderr 원문은 노출하지 않고 실패 종류와 프로세스 종료 정보만 남긴다. */
+function classifyProviderFailure(result, retried) {
+  const errorCode = typeof result.error?.code === 'string' ? result.error.code : '';
+  const kind = errorCode === 'ETIMEDOUT'
+    ? 'timed-out'
+    : errorCode === 'ENOENT'
+      ? 'unavailable'
+      : result.status === 0
+        ? 'invalid-output'
+        : 'nonzero-exit';
+  return {
+    kind,
+    exitCode: Number.isInteger(result.status) ? result.status : null,
+    signal: typeof result.signal === 'string' ? result.signal : null,
+    retried
+  };
 }
 
 /**
@@ -1969,16 +2078,30 @@ function looksLikeProviderError(raw, spawnResult) {
  * 재시도 후에도 에러 신호면 최종 결과를 그대로 반환한다 (caller 가 폴백 처리).
  * retried 플래그로 재시도 여부를 caller 에게 알린다.
  */
-function runProviderWithRetry(commandParts) {
-  const first = runProvider(commandParts);
+function runProviderWithRetry(commandParts, timeoutMs = DEFAULT_PROVIDER_TIMEOUT_MS) {
+  const first = runProvider(commandParts, timeoutMs);
   const firstRaw = first.stdout || first.stderr;
   if (!looksLikeProviderError(firstRaw, first)) {
     return { result: first, raw: firstRaw, retried: false };
   }
+  const firstFailure = classifyProviderFailure(first, false);
+  // 같은 장문 호출을 다시 기다려도 job 상한을 넘기므로 timeout은 원문을 보존한 채 즉시 보고한다.
+  if (firstFailure.kind === 'timed-out') {
+    return { result: first, raw: firstRaw, retried: false, providerFailure: firstFailure };
+  }
   // 에러 신호 감지 — 1회 재시도
-  const second = runProvider(commandParts);
+  const second = runProvider(commandParts, timeoutMs);
   const secondRaw = second.stdout || second.stderr;
-  return { result: second, raw: secondRaw, retried: true, firstErrorRaw: firstRaw };
+  const providerFailure = looksLikeProviderError(secondRaw, second)
+    ? classifyProviderFailure(second, true)
+    : undefined;
+  return {
+    result: second,
+    raw: secondRaw,
+    retried: true,
+    firstErrorRaw: firstRaw,
+    ...(providerFailure ? { providerFailure } : {})
+  };
 }
 
 function writePendingReviewFile(outDir, provider, scale, payload) {
@@ -2377,37 +2500,45 @@ function buildPlanChatPrompt({ medium, format, activeSection, contextDigest, cat
 }
 
 // PLAY 응결 프롬프트 — src/lib/server/promptBuilders.ts 의 buildDiveCondensePrompt와 전체 결과 byte-identical 유지.
-function buildDiveCondensePrompt({ character, scene, context, transcript, arc }) {
+function buildDiveCondensePrompt({ character, scene, context, transcript, arc, episodeLength }) {
+  const n = (value) => value.toLocaleString('ko-KR');
   return [
     'Dive X 회차 응결 요청. 아래 실시간 대화를, 나와 캐릭터를 함께 주인공으로 한 3인칭 서사 회차로 장면화하세요.',
     'PLAY의 반복·머뭇거림은 덜어내되, 일어난 사건·감정 변화·약속은 보존하고 행동·감각·인물별 대사로 다시 배열하세요.',
     '사용자가 자유롭게 들이민 비현실·즉흥 설정도 버리지 말고, 기존 캐논·현재 장면과 모순되지 않는 선에서 그럴듯한 인과로 연결하세요. 이미 확정된 하드 캐논은 임의로 뒤집지 마세요.',
     '',
     '## 장면화 품질 계약',
-    '- 본문은 한국어 기준 1,800~2,700자로 씁니다. 재료가 부족하면 설정을 발명하거나 같은 내용을 반복해 분량을 억지로 채우지 말고, 짧더라도 주어진 사실 범위를 지킵니다.',
-    '- 최종 허용 범위는 1,800~2,700자로 유지하되, 모델의 글자 수 계산 편차를 고려해 생성 목표는 1,900~2,600자로 둡니다. 하한과 상한 모두에 안전 여유를 남깁니다.',
-    '- 완료 전에 prose 글자 수를 직접 확인합니다. 1,800자 미만이면 새 설정·기능적 해설·같은 내용 반복으로 채우지 말고, 입력에 이미 있는 장면의 행동·감각·갈등 대사를 더 구체화합니다. 입력 재료가 실제로 부족할 때만 사실 범위를 지키기 위해 1,800자 미만을 허용합니다.',
-    '- 서로 다른 압력을 가진 현재 장면 2~3개로 재구성합니다. 사건 보고나 줄거리 요약으로 대신하지 않습니다.',
-    '- 원문에 인물 간 대화가 있으면 서로 원하는 것이 부딪히는 직접 대화 교환을 최소 1회 장면 안에 넣습니다. 원문에 없는 핵심 사실을 대사로 발명하지 않습니다.',
-    '- 각 장면은 압력을 높이거나, 선택지를 줄이거나, 실제 대가를 발생시켜야 합니다.',
-    '- 같은 장면 안에서 모두가 합리적으로 합의해 갈등을 봉합하지 않습니다.',
-    '- 이번 회차는 열린 질문 하나에 답하고, 그 답 때문에 더 날카로운 다음 질문을 엽니다.',
-    '- 마지막 2~3문장은 구체적인 반전·위협·기한·강제된 선택 중 하나로 끝냅니다. 주제나 교훈을 요약하며 닫지 않습니다.',
+    `- 본문은 한국어 기준 목표 ${n(episodeLength.targetChars)}자, 허용 범위 ${n(episodeLength.minChars)}~${n(episodeLength.maxChars)}자로 씁니다. 재료가 부족하면 설정을 발명하거나 같은 내용을 반복해 분량을 억지로 채우지 말고, 짧더라도 주어진 사실 범위를 지킵니다.`,
+    `- 원문 근거가 목표 분량을 뒷받침할 때의 최종 허용 범위는 ${n(episodeLength.minChars)}~${n(episodeLength.maxChars)}자이며, 모델의 글자 수 계산 편차를 고려한 생성 목표는 ${n(episodeLength.generationMinChars)}~${n(episodeLength.generationMaxChars)}자입니다. 하한과 상한 모두에 안전 여유를 남깁니다. 근거가 부족하면 이 범위보다 원문 사실 보존을 우선합니다.`,
+    `- 완료 전에 prose 글자 수를 공백 문자를 제외하고 직접 확인합니다. ${n(episodeLength.minChars)}자 미만이면 새 설정·기능적 해설·같은 내용 반복으로 채우지 말고, 원문에 이미 있는 행동·감각·갈등 대사를 더 구체화합니다. 원문 재료가 실제로 부족할 때만 사실 범위를 지키기 위해 ${n(episodeLength.minChars)}자 미만을 허용합니다. ${n(episodeLength.maxChars)}자를 넘어도 자동으로 자르지 않습니다.`,
+    '- "원문 근거"는 응결할 대화에 명시된 사건·행동·결정·대사만 뜻합니다. 현재 장면·캐릭터·기존 기억·이야기 아크는 원문을 해석하고 모순을 막는 제약이며, 원문에 없던 사건을 새로 일으키는 근거로 사용하지 않습니다.',
+    `- 원문 근거에 각 장면을 뒷받침하는 사건·행동이 있을 때만 서로 다른 압력의 현재 장면 ${episodeLength.minScenes}~${episodeLength.maxScenes}개까지 재구성합니다. 근거가 부족하면 장면 수를 줄이고, 사건 보고나 줄거리 요약으로 대신하지 않습니다.`,
+    '- 원문 근거가 시도·반격·관계 또는 지위 비용·주요 폭로(reveal)·강제 선택을 각각 뒷받침할 때만 하나의 중앙 갈등 안에서 그 연쇄를 깊게 합니다. 일부만 뒷받침되면 확인된 단계까지만 쓰고 나머지는 만들지 않습니다.',
+    '- 목표 글자 수·장면 수·갈등 연쇄·후크를 맞추기 위해 원문 근거에 없는 새 행동·결정·사건·폭로(reveal)·대가·페이오프를 발명하지 않습니다.',
+    '- 원문 근거가 지정 장면 수나 중앙 갈등 연쇄를 뒷받침하지 못하면, 더 적은 장면과 허용 하한보다 짧은 prose를 반환합니다. 부족한 장면이나 연쇄 단계를 새로 만들지 않습니다.',
+    '- 긴 목표를 위해 새 서브플롯·세계 규칙·과거사·새 이름·기관·범행 원인을 발명하지 않습니다.',
+    '- 원문에 있는 행동·감각·갈등 대사를 먼저 구체화합니다. 그래도 부족하면 짧은 결과를 반환합니다.',
+    '- 원문에 인물 간 욕망 충돌이 드러나는 대화가 있으면 그 직접 대화 교환을 최소 1회 장면 안에 넣습니다. 원문에 없는 충돌이나 핵심 사실을 대사로 발명하지 않습니다.',
+    '- 원문 근거가 뒷받침하는 범위에서 각 장면은 압력을 높이거나 선택지를 줄이거나 실제 대가를 드러냅니다. 원문에 없는 압력·선택·대가는 만들지 않습니다.',
+    '- 원문 근거에 미해결 갈등이 있으면 같은 장면 안에서 모두가 합리적으로 합의해 갈등을 봉합하지 않습니다.',
+    '- 원문 근거에 열린 질문의 답과 그 답 때문에 생기는 다음 질문이 모두 있을 때만 이를 회차에 담습니다. 없으면 새 답·폭로·페이오프를 만들지 않습니다.',
+    '- 원문 근거에 구체적인 반전·위협·기한·강제된 선택이 있을 때만 마지막 2~3문장을 그 요소로 끝냅니다. 근거가 없으면 이미 일어난 가장 강한 행동·감각에서 멈추며 새 사건이나 결정을 만들지 않습니다.',
+    '- 후크 뒤에 분량 보충 문장을 붙이지 않습니다.',
     '- 테스트·QA·복구·UI 안내·스키마·타임스탬프처럼 작품 밖 메타 표식은, 사용자가 작품 내부 고유명사라고 명시하지 않은 한 title·hook·outline·beats·prose·newCanonFacts 어디에도 넣지 않습니다.',
     '- newCanonFacts에는 원문·현재 장면·기존 캐논에 명시된 사실과 장면 성립에 꼭 필요한 최소 추론만 넣습니다. 근거 없는 새 이름·기관·범행 원인·시간·관계는 확정하지 않습니다.',
     '- 초안을 장면화한 뒤, 기존 기억의 "한국어 문체·보이스 규칙"을 마지막 문장 패스로 적용합니다. 사건·사실은 바꾸지 않고 문장 리듬·어휘·말투를 그 규칙에 맞춥니다.',
     '- "한국어 문체·보이스 규칙"을 최종 검수 체크리스트로 사용합니다. 물리적 신호로 드러낸 감정을 바로 뒤에서 감정 이름으로 재설명하지 않고, 규칙에 적힌 금지어를 최종 원고에 남기지 않습니다.',
     '- 인물별 호칭·높임말·말끝은 원문과 캐릭터 카드의 근거를 따릅니다. 근거 없이 반말과 존댓말을 오가거나 호칭을 바꾸지 않습니다.',
-    '- 장면 연결과 말미에서는 질문·선택을 기능적으로 해설하거나 요약하지 말고, 사물·행동·대사로 압력을 보여줍니다. 인과를 설명한 뒤 내리는 결정은 구체 동사의 독립 단문으로 둡니다.',
+    '- 장면 연결과 말미에서는 질문·선택을 기능적으로 해설하거나 요약하지 말고, 사물·행동·대사로 압력을 보여줍니다. 원문에 결정이 있으면 그 결정은 구체 동사의 독립 단문으로 둡니다.',
     '- 캐릭터 카드의 욕망·말투·우선순위를 서술자가 요약·평가하거나 이행 보고처럼 재진술하지 않습니다. 독자가 행동과 대사에서만 알아차리게 합니다.',
     '- 말투 규칙은 캐릭터의 실제 대사 배열에만 적용합니다. 대사 앞뒤에 문장 길이·말끝·호칭의 변화를 해설하는 문장을 추가하지 않습니다.',
     '- prose에서 장면 기능을 "질문"·"문제"·"선택"·"답"이라고 명명하지 않고, 이미 드러난 양자택일을 다시 비교 설명하지 않습니다. 딜레마가 드러나면 즉시 행동으로 넘어갑니다.',
-    '- 마지막 2~3문장은 각 문장마다 하나의 구체 행동·감각·시한만 담은 독립문으로 둡니다. 행동 직전에 의미·동기·선택을 해설하지 않습니다.',
+    '- 원문 근거가 마지막 2~3문장을 뒷받침할 때만 각 문장마다 하나의 구체 행동·감각·시한을 담은 독립문으로 둡니다. 근거가 부족하면 더 짧게 멈추며, 행동 직전에 의미·동기·선택을 해설하지 않습니다.',
     '',
     '## 현재 장면',
     scene || '(장면 미설정)',
     '',
-    '## 이야기 아크 (JSON — 긴장·다음 전개를 반영해 페이오프 있는 회차로)',
+    '## 이야기 아크 (JSON — 원문을 해석하고 모순을 막는 제약으로만 사용)',
     arc || '(없음)',
     '',
     '## 캐릭터',

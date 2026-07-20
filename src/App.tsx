@@ -60,6 +60,8 @@ import {
   defaultPlannedEpisodes,
   deriveBeatSheet,
   deriveOnboardingSeed,
+  parseEpisodeLengthContract,
+  type Chapter,
   type ContractLengthClass,
   type DraftChapterPayload,
   type SeriesProject,
@@ -127,12 +129,16 @@ import { cancelDiveCondenseJob, DiveCondenseJobError, getDiveCondenseJob, reques
 import type { DiveSetup } from './lib/diveProposal';
 import {
   appendGenerationInboxItem,
+  canonicalizeRecoveryDraftEpisodeLength,
+  EPISODE_LENGTH_RECEIPT_SCHEMA,
   hasDurableRecoveryDraftReceipt,
+  hasUsableRecoveryDraftEpisodeLength,
   isActiveGeneration,
   loadGenerationInbox,
   expireGenerationJob,
   mergeGenerationJob,
   persistGenerationInboxState,
+  receiptEpisodeLengthMatchesChapter,
   upsertApprovedCondenseCheckpoint,
   type ApprovedCondenseCheckpoint,
   type GenerationInboxItem
@@ -237,6 +243,17 @@ const mediaBridgeRoutes = [
 
 type AppStage = 'landing' | 'login' | 'projects' | 'home' | 'editor' | 'publish' | 'dive';
 
+function withCanonicalReceiptEpisodeLength(
+  recovery: PlayRecoverySnapshot,
+  receipt?: GenerationInboxItem
+): PlayRecoverySnapshot {
+  if (!receipt) return recovery;
+  const { episodeLength: _storedEpisodeLength, ...targetlessRecovery } = recovery;
+  return receipt.episodeLength
+    ? { ...targetlessRecovery, episodeLength: receipt.episodeLength }
+    : targetlessRecovery;
+}
+
 function buildLocalRecoveryReceipt(
   draft: PlayRecoveryWorkDraft,
   openedAt = draft.createdAt
@@ -248,6 +265,8 @@ function buildLocalRecoveryReceipt(
     projectTitle: draft.source.projectTitle,
     baseRevision: 'local-recovery',
     episode: draft.source.episode,
+    episodeLength: draft.source.episodeLength,
+    ...(draft.source.episodeLength ? { episodeLengthSchema: EPISODE_LENGTH_RECEIPT_SCHEMA } : {}),
     status: 'failed',
     createdAt: openedAt,
     updatedAt: openedAt,
@@ -426,6 +445,9 @@ function App() {
       kind: 'dive-condense',
       projectTitle: request.projectTitle,
       sourceSpan: recovery.sourceSpan,
+      sourceFingerprint: recovery.sourceFingerprint,
+      episodeLengthSchema: EPISODE_LENGTH_RECEIPT_SCHEMA,
+      episodeLength: request.episodeLength,
       recovery
     }));
   }
@@ -688,10 +710,12 @@ function App() {
       receipt.episode !== approval.chapter.episode ||
       receipt.result.title !== approval.chapter.title ||
       receipt.result.prose !== approval.chapter.prose ||
+      !receiptEpisodeLengthMatchesChapter(receipt, approval.chapter) ||
       (receipt.approvedCondenseCheckpoint && (
         receipt.approvedCondenseCheckpoint.chapter.episode !== receipt.episode ||
         receipt.approvedCondenseCheckpoint.chapter.title !== receipt.result.title ||
-        receipt.approvedCondenseCheckpoint.chapter.prose !== receipt.result.prose
+        receipt.approvedCondenseCheckpoint.chapter.prose !== receipt.result.prose ||
+        !receiptEpisodeLengthMatchesChapter(receipt, receipt.approvedCondenseCheckpoint.chapter)
       ))
     ) return null;
     return { committed, receipt };
@@ -832,8 +856,13 @@ function App() {
       approval.sessionBeforeApproval,
       context.receipt.sourceSpan,
       context.receipt.recovery?.sourceSpan,
-      context.receipt.recovery?.condensedThroughTurn
+      context.receipt.recovery?.condensedThroughTurn,
+      context.receipt.sourceFingerprint ?? context.receipt.recovery?.sourceFingerprint
     );
+    if (receiptSourceBoundary === undefined) {
+      window.alert('생성 당시 PLAY 원문과 현재 세션이 달라 승인하지 않았습니다. 응결 결과는 보관함에 유지했습니다.');
+      return 'failed';
+    }
     const receiptSourceSpan = typeof receiptSourceBoundary === 'object'
       ? receiptSourceBoundary
       : undefined;
@@ -962,25 +991,28 @@ function App() {
 
   function handleOpenRecoveryWorkDraft(recovery: PlayRecoverySnapshot, generationId?: string): void {
     const latestInbox = loadGenerationInboxMutationBase().items;
-    if (generationId) {
-      const receipt = latestInbox.find((item) => item.id === generationId);
-      if (receipt?.recoveredAt && receipt.recoveredChapterId) return;
-    }
+    const previousReceipt = generationId
+      ? latestInbox.find((item) => item.id === generationId)
+      : undefined;
+    if (previousReceipt?.recoveredAt && previousReceipt.recoveredChapterId) return;
     if (!loadProjectLibrary().some((entry) => entry.projectId === recovery.projectId)) {
       window.alert('원래 작품을 찾지 못했습니다. PLAY 기록 TXT로 먼저 보관해 주세요.');
       return;
     }
     const openedAt = new Date().toISOString();
-    const candidate = createPlayRecoveryWorkDraft(recovery, generationId, openedAt);
+    const canonicalRecovery = withCanonicalReceiptEpisodeLength(recovery, previousReceipt);
+    const candidate = createPlayRecoveryWorkDraft(canonicalRecovery, generationId, openedAt);
     const receiptId = generationId ?? `local-${candidate.id}`;
-    const previousReceipt = latestInbox.find((item) => item.id === receiptId);
     const preferredDraftId = previousReceipt?.recoveryDraftId ?? candidate.id;
     const previousDraft = listPlayRecoveryWorkDrafts(recovery.projectId)
       .find((item) => item.id === preferredDraftId);
-    const draft = previousDraft
+    const draftCandidate = previousDraft
       ? previousDraft.generationId ? previousDraft : { ...previousDraft, generationId: receiptId }
       : { ...candidate, generationId: receiptId };
-    if (previousReceipt?.recoveredAt && previousReceipt.recoveredChapterId) return;
+    const draft = {
+      ...draftCandidate,
+      source: withCanonicalReceiptEpisodeLength(draftCandidate.source, previousReceipt)
+    };
     if (!savePlayRecoveryWorkDraft(draft, true)) {
       setRecoveryDraftSaveStatus('error');
       setRecoveryDraftSaveError('복구 작업본 저장 공간을 열지 못했습니다. PLAY 기록 TXT로 먼저 보관해 주세요.');
@@ -1036,13 +1068,22 @@ function App() {
 
   function handleCommitRecoveryWorkDraft(draft: PlayRecoveryWorkDraft): void {
     if (committedRecoveryDraftIdsRef.current.has(draft.id)) return;
-    const requestedDraft = draft.generationId
+    const draftWithGenerationId = draft.generationId
       ? draft
       : { ...draft, generationId: `local-${draft.id}` };
+    const durableCompletedReceipt = loadGenerationInbox()
+      .find((item) => item.id === draftWithGenerationId.generationId);
+    if (!hasUsableRecoveryDraftEpisodeLength(draftWithGenerationId, durableCompletedReceipt)) {
+      setRecoveryDraftSaveStatus('error');
+      setRecoveryDraftSaveError('생성 당시 회차 목표 기록이 손상되어 저장을 멈췄습니다. 작업본은 별도 보관함에 그대로 남아 있습니다.');
+      return;
+    }
+    const requestedDraft = canonicalizeRecoveryDraftEpisodeLength(
+      draftWithGenerationId,
+      durableCompletedReceipt
+    );
     const latestStoredDraft = listPlayRecoveryWorkDrafts(requestedDraft.projectId)
       .find((candidate) => candidate.id === requestedDraft.id);
-    const durableCompletedReceipt = loadGenerationInbox()
-      .find((item) => item.id === requestedDraft.generationId);
     if (
       durableCompletedReceipt?.recoveredAt &&
       durableCompletedReceipt.recoveredChapterId &&
@@ -1070,7 +1111,14 @@ function App() {
       setRecoveryDraftSaveError('저장한 작업본을 다시 확인하지 못해 회차 저장을 멈췄습니다.');
       return;
     }
-    const receiptLinkedDraft = persistedDraft;
+    // commitIntent가 있는 기존 journal은 stale 저장을 이길 수 있다. 재로드한 값도 다시
+    // durable receipt와 연결·정본화해 과거 nested 목표가 Chapter로 우회하지 못하게 한다.
+    if (!hasUsableRecoveryDraftEpisodeLength(persistedDraft, durableCompletedReceipt)) {
+      setRecoveryDraftSaveStatus('error');
+      setRecoveryDraftSaveError('저장된 작업본과 생성 당시 회차 목표 연결이 달라 회차 저장을 멈췄습니다. 작업본은 그대로 남아 있습니다.');
+      return;
+    }
+    const receiptLinkedDraft = canonicalizeRecoveryDraftEpisodeLength(persistedDraft, durableCompletedReceipt);
     if (!activateProject(receiptLinkedDraft.projectId)) {
       window.alert('원래 작품을 찾지 못했습니다. 작업본은 별도 보관함에 남아 있습니다.');
       return;
