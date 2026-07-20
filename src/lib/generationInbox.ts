@@ -1,15 +1,23 @@
 import type { DiveCondensePayload } from './diveClient';
 import { parseCondenseSourceSpan, type CondenseSourceSpan } from './diveSession';
-import type { PlayRecoverySnapshot } from './playRecovery';
-import type { Chapter, SeriesProject } from './storyEngine';
+import type { PlayRecoverySnapshot, PlayRecoveryWorkDraft } from './playRecovery';
+import {
+  parseEpisodeLengthContract,
+  type Chapter,
+  type EpisodeLengthContract,
+  type SeriesProject
+} from './storyEngine';
 
 export type GenerationStatus = 'running' | 'succeeded' | 'failed' | 'cancelled' | 'timed-out' | 'expired';
+export const EPISODE_LENGTH_RECEIPT_SCHEMA = 'storyx/episode-length/v1' as const;
 
 export interface GenerationJobSnapshot {
   id: string;
   projectId: string;
   baseRevision: string;
   episode: number;
+  /** 생성 시작 순간 고정한 회차별 분량 계약. 구버전 job/receipt는 undefined. */
+  episodeLength?: EpisodeLengthContract;
   status: Exclude<GenerationStatus, 'expired'>;
   createdAt: string;
   updatedAt: string;
@@ -40,6 +48,10 @@ export interface GenerationInboxItem extends Omit<GenerationJobSnapshot, 'status
   status: GenerationStatus;
   /** recovery snapshot 압축 후에도 남아야 하는 생성 source 경계. */
   sourceSpan?: CondenseSourceSpan;
+  /** recovery가 quota 압축돼도 남는 frozen source identity. */
+  sourceFingerprint?: string;
+  /** 이 영수증이 분량 계약 세대임을 남겨 root 손상을 legacy로 오인하지 않는다. */
+  episodeLengthSchema?: typeof EPISODE_LENGTH_RECEIPT_SCHEMA;
   recovery?: PlayRecoverySnapshot;
   recoveryDraftOpenedAt?: string;
   recoveryDraftId?: string;
@@ -92,7 +104,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function parseResult(value: unknown): DiveCondensePayload | undefined {
   if (!isRecord(value) || typeof value.title !== 'string' || typeof value.prose !== 'string') return undefined;
-  return value as unknown as DiveCondensePayload;
+  const {
+    episodeLength: _episodeLength,
+    actualChars: _actualChars,
+    lengthStatus: _lengthStatus,
+    ...payload
+  } = value;
+  const episodeLength = parseEpisodeLengthContract(value.episodeLength);
+  const actualChars = typeof value.actualChars === 'number' &&
+    Number.isInteger(value.actualChars) && value.actualChars >= 0
+    ? value.actualChars
+    : undefined;
+  const lengthStatus = value.lengthStatus === 'under' ||
+    value.lengthStatus === 'within' || value.lengthStatus === 'over'
+    ? value.lengthStatus
+    : undefined;
+  return {
+    ...payload,
+    ...(episodeLength ? { episodeLength } : {}),
+    ...(actualChars !== undefined ? { actualChars } : {}),
+    ...(lengthStatus ? { lengthStatus } : {})
+  } as unknown as DiveCondensePayload;
 }
 
 function parseRecovery(value: unknown): PlayRecoverySnapshot | undefined {
@@ -105,6 +137,10 @@ function parseRecovery(value: unknown): PlayRecoverySnapshot | undefined {
   )) return undefined;
   // 손상된 optional span은 recovery 원문과 분리해 강등한다.
   const sourceSpan = parseCondenseSourceSpan(value.sourceSpan);
+  const sourceFingerprint = typeof value.sourceFingerprint === 'string' && value.sourceFingerprint
+    ? value.sourceFingerprint
+    : undefined;
+  const episodeLength = parseEpisodeLengthContract(value.episodeLength);
   return {
     schema: 'storyx/play-recovery/v1',
     projectId: value.projectId,
@@ -116,7 +152,66 @@ function parseRecovery(value: unknown): PlayRecoverySnapshot | undefined {
       ? { condensedThroughTurn: value.condensedThroughTurn }
       : {}),
     ...(sourceSpan ? { sourceSpan } : {}),
+    ...(sourceFingerprint ? { sourceFingerprint } : {}),
+    ...(episodeLength ? { episodeLength } : {}),
     capturedAt: value.capturedAt
+  };
+}
+
+/** 현대 receipt는 root 분량 계약이 사라지거나 손상되면 targetless legacy로 승인하지 않는다. */
+export function receiptEpisodeLengthMatchesChapter(
+  receipt: GenerationInboxItem,
+  chapter: Chapter
+): boolean {
+  const chapterEpisodeLength = parseEpisodeLengthContract(chapter.episodeLength);
+  if (receipt.episodeLengthSchema === EPISODE_LENGTH_RECEIPT_SCHEMA && !receipt.episodeLength) {
+    return false;
+  }
+  if (!receipt.episodeLength) return chapterEpisodeLength === undefined;
+  return chapterEpisodeLength?.preset === receipt.episodeLength.preset;
+}
+
+/**
+ * 작업본 commit 직전 receipt 연결과 목표 정본을 함께 검사한다.
+ * 등록 전 local 실패만 recovery snapshot을 신뢰하며, 등록된 잡은 durable receipt 유실 시 막는다.
+ */
+export function hasUsableRecoveryDraftEpisodeLength(
+  draft: PlayRecoveryWorkDraft,
+  receipt: GenerationInboxItem | undefined
+): boolean {
+  if (!receipt) return Boolean(draft.generationId?.startsWith('local-'));
+  if (
+    receipt.id !== draft.generationId ||
+    receipt.projectId !== draft.projectId ||
+    receipt.episode !== draft.episodeHint
+  ) return false;
+  return !(
+    receipt.episodeLengthSchema === EPISODE_LENGTH_RECEIPT_SCHEMA &&
+    !receipt.episodeLength
+  );
+}
+
+/**
+ * 별도 작업본은 오래 열려 있을 수 있으므로 회차 commit 직전에 durable receipt root를
+ * 다시 정본으로 삼는다. receipt가 없거나 서로 다른 작업이면 과거 nested 목표를 제거한다.
+ */
+export function canonicalizeRecoveryDraftEpisodeLength(
+  draft: PlayRecoveryWorkDraft,
+  receipt: GenerationInboxItem | undefined
+): PlayRecoveryWorkDraft {
+  if (!receipt && draft.generationId?.startsWith('local-')) return draft;
+  const { episodeLength: _draftEpisodeLength, ...targetlessSource } = draft.source;
+  const linkedReceipt = receipt &&
+    receipt.id === draft.generationId &&
+    receipt.projectId === draft.projectId &&
+    receipt.episode === draft.episodeHint
+    ? receipt
+    : undefined;
+  return {
+    ...draft,
+    source: linkedReceipt?.episodeLength
+      ? { ...targetlessSource, episodeLength: linkedReceipt.episodeLength }
+      : targetlessSource
   };
 }
 
@@ -205,11 +300,23 @@ function isValidChapter(value: unknown): value is Chapter {
   return beatIds.size === value.beats.length && canonIds.size === value.newCanonFacts.length;
 }
 
+function parseChapter(value: unknown): Chapter | undefined {
+  if (!isValidChapter(value)) return undefined;
+  const { episodeLength: _episodeLength, ...chapter } = value as Chapter;
+  const episodeLength = parseEpisodeLengthContract(value.episodeLength);
+  return {
+    ...chapter,
+    ...(episodeLength ? { episodeLength } : {})
+  } as Chapter;
+}
+
 function parseApprovedCondenseCheckpoint(
   value: unknown,
   expectedEpisode?: number
 ): ApprovedCondenseCheckpoint | undefined {
-  if (!isRecord(value) || !isValidChapter(value.chapter) || !Array.isArray(value.retcons)) return undefined;
+  if (!isRecord(value) || !Array.isArray(value.retcons)) return undefined;
+  const chapter = parseChapter(value.chapter);
+  if (!chapter) return undefined;
   if (typeof value.baseProjectRevision !== 'string' || !value.baseProjectRevision.trim()) return undefined;
   if (typeof value.committedProjectRevision !== 'string' || !value.committedProjectRevision.trim()) return undefined;
   const condensedThroughTurn = value.condensedThroughTurn === undefined
@@ -221,7 +328,7 @@ function parseApprovedCondenseCheckpoint(
   const sourceSpan = parsedSourceSpan?.throughTurn === condensedThroughTurn
     ? parsedSourceSpan
     : undefined;
-  if (expectedEpisode !== undefined && value.chapter.episode !== expectedEpisode) return undefined;
+  if (expectedEpisode !== undefined && chapter.episode !== expectedEpisode) return undefined;
   const retcons: ApprovedCondenseCheckpoint['retcons'] = [];
   const factIds = new Set<string>();
   for (const retcon of value.retcons) {
@@ -240,7 +347,7 @@ function parseApprovedCondenseCheckpoint(
     committedProjectRevision: value.committedProjectRevision,
     condensedThroughTurn: condensedThroughTurn as number,
     ...(sourceSpan ? { sourceSpan } : {}),
-    chapter: value.chapter,
+    chapter,
     retcons
   };
 }
@@ -255,6 +362,29 @@ function parseItem(value: unknown): GenerationInboxItem | null {
   const result = parseResult(value.result);
   // root span은 성공 recovery 원문이 quota 압축될 때도 남는 소비 경계다.
   const sourceSpan = parseCondenseSourceSpan(value.sourceSpan);
+  const sourceFingerprint = typeof value.sourceFingerprint === 'string' && value.sourceFingerprint
+    ? value.sourceFingerprint
+    : undefined;
+  // root 목표는 recovery가 quota 압축돼도 실행 시도·재시도의 정본으로 남는다.
+  const episodeLength = parseEpisodeLengthContract(value.episodeLength);
+  // root가 손상·삭제돼도 result/recovery에 남은 P2-d 길이 메타는 현대 영수증의 증거다.
+  // nested 목표를 root 정본으로 승격하지 않고 marker만 복원해 승인·재시도를 fail-closed한다.
+  const rawResult = isRecord(value.result) ? value.result : undefined;
+  const rawRecovery = isRecord(value.recovery) ? value.recovery : undefined;
+  const hasNestedEpisodeLengthEvidence = Boolean(
+    rawResult && (
+      'episodeLength' in rawResult ||
+      'actualChars' in rawResult ||
+      'lengthStatus' in rawResult
+    ) ||
+    rawRecovery && 'episodeLength' in rawRecovery
+  );
+  // marker 도입 전의 유효한 P2-d root도 한 번 읽은 뒤 schema를 획득한다.
+  const episodeLengthSchema = value.episodeLengthSchema !== undefined ||
+    value.episodeLength !== undefined ||
+    hasNestedEpisodeLengthEvidence
+    ? EPISODE_LENGTH_RECEIPT_SCHEMA
+    : undefined;
   const parsedRecovery = parseRecovery(value.recovery);
   const recovery = parsedRecovery?.projectId === value.projectId && parsedRecovery.episode === value.episode
     ? parsedRecovery
@@ -287,6 +417,9 @@ function parseItem(value: unknown): GenerationInboxItem | null {
     updatedAt: value.updatedAt,
     result,
     ...(sourceSpan ? { sourceSpan } : {}),
+    ...(sourceFingerprint ? { sourceFingerprint } : {}),
+    ...(episodeLengthSchema ? { episodeLengthSchema } : {}),
+    ...(episodeLength ? { episodeLength } : {}),
     recovery,
     recoveryDraftOpenedAt: recoveryDraftOpenedAt && recoveryDraftId ? recoveryDraftOpenedAt : undefined,
     recoveryDraftId: recoveryDraftOpenedAt && recoveryDraftId ? recoveryDraftId : undefined,
@@ -427,13 +560,32 @@ export function mergeGenerationJob(item: GenerationInboxItem, job: GenerationJob
   // poll/cancel 요청을 보낼 때 running이었어도 mutation 시점의 receipt가 이미 terminal이면
   // 느린 응답으로 상태를 역행시키거나 성공 checkpoint를 떨어뜨리지 않는다.
   if (item.status === 'succeeded' && item.result) return item;
+  const { episodeLength: rawJobEpisodeLength, ...jobWithoutEpisodeLength } = job;
+  const episodeLength = item.episodeLength ?? parseEpisodeLengthContract(rawJobEpisodeLength);
+  const episodeLengthSchema = item.episodeLengthSchema ?? (
+    rawJobEpisodeLength !== undefined ? EPISODE_LENGTH_RECEIPT_SCHEMA : undefined
+  );
   // provider 성공은 실패·취소·시간 초과·404보다 정보량이 많은 최상위 상태다.
   // 종료 상태가 먼저 도착했어도 유효한 늦은 성공 결과를 버리지 않는다.
   if (job.status === 'succeeded' && job.result) {
-    return { ...item, ...job, kind: 'dive-condense', projectTitle: item.projectTitle };
+    return {
+      ...item,
+      ...jobWithoutEpisodeLength,
+      kind: 'dive-condense',
+      projectTitle: item.projectTitle,
+      ...(episodeLengthSchema ? { episodeLengthSchema } : {}),
+      ...(episodeLength ? { episodeLength } : {})
+    };
   }
   if (item.status !== 'running') return item;
-  return { ...item, ...job, kind: 'dive-condense', projectTitle: item.projectTitle };
+  return {
+    ...item,
+    ...jobWithoutEpisodeLength,
+    kind: 'dive-condense',
+    projectTitle: item.projectTitle,
+    ...(episodeLengthSchema ? { episodeLengthSchema } : {}),
+    ...(episodeLength ? { episodeLength } : {})
+  };
 }
 
 export function expireGenerationJob(

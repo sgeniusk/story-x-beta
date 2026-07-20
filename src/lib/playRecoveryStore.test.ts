@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PlayRecoveryWorkDraft } from './playRecovery';
+import { planPlayRecoveryCommit, type PlayRecoveryWorkDraft } from './playRecovery';
+import { createEmptyProject, episodeLengthContractFor } from './storyEngine';
+import {
+  canonicalizeRecoveryDraftEpisodeLength,
+  type GenerationInboxItem
+} from './generationInbox';
 import {
   activatePlayRecoveryWorkDraft,
   clearPlayRecoveryWorkDraftProject,
@@ -71,6 +76,59 @@ describe('PLAY recovery work draft store', () => {
 
     expect(savePlayRecoveryWorkDraft(withSourceSpan)).toBe(true);
     expect(getActivePlayRecoveryWorkDraft('project-a')).toEqual(withSourceSpan);
+  });
+
+  it('recovery source fingerprint를 작업본 저장소에서 정확히 왕복한다', () => {
+    const withSourceFingerprint = {
+      ...draft('source-fingerprint'),
+      source: {
+        ...draft('source-fingerprint').source,
+        sourceFingerprint: '{"schema":"storyx/condense-source-fingerprint/v1","messages":[]}'
+      }
+    };
+
+    expect(savePlayRecoveryWorkDraft(withSourceFingerprint)).toBe(true);
+    expect(getActivePlayRecoveryWorkDraft('project-a')).toEqual(withSourceFingerprint);
+  });
+
+  it('recovery source의 유효한 회차 분량 계약을 작업본 저장소에서 정확히 왕복한다', () => {
+    const withEpisodeLength = {
+      ...draft('episode-length'),
+      source: {
+        ...draft('episode-length').source,
+        episodeLength: episodeLengthContractFor('extended')
+      }
+    };
+
+    expect(savePlayRecoveryWorkDraft(withEpisodeLength)).toBe(true);
+    expect(getActivePlayRecoveryWorkDraft('project-a')).toEqual(withEpisodeLength);
+  });
+
+  it('손상된 optional 회차 분량만 제거하고 recovery 작업본과 원문은 보존한다', () => {
+    const original = draft('damaged-episode-length', 'project-a', '사용자가 쓴 본문');
+    const raw = JSON.stringify({
+      schema: 'storyx/play-recovery-work-draft-store/v1',
+      projects: {
+        'project-a': {
+          drafts: [{
+            ...original,
+            source: {
+              ...original.source,
+              episodeLength: {
+                ...episodeLengthContractFor('standard'),
+                targetChars: 1
+              }
+            }
+          }],
+          activeDraftId: original.id
+        }
+      }
+    });
+
+    expect(parsePlayRecoveryWorkDraftStore(raw).projects['project-a']).toEqual({
+      drafts: [original],
+      activeDraftId: original.id
+    });
   });
 
   it('손상된 optional recovery source span만 제거하고 작업본과 원문은 보존한다', () => {
@@ -165,6 +223,40 @@ describe('PLAY recovery work draft store', () => {
     expect(savePlayRecoveryWorkDraft(stale)).toBe(true);
 
     expect(getActivePlayRecoveryWorkDraft('project-a')).toEqual(journaled);
+  });
+
+  it('commit intent가 stale nested 목표를 보존해도 재로드 뒤 receipt root로 다시 정본화해 Chapter를 만든다', () => {
+    const compact = episodeLengthContractFor('compact');
+    const extended = episodeLengthContractFor('extended');
+    const journaled: PlayRecoveryWorkDraft = {
+      ...draft('contract-journal', 'project-a', '사용자가 쓴 회차 본문'),
+      title: '복구한 3화',
+      source: { ...draft('contract-journal').source, episodeLength: compact },
+      commitIntent: {
+        chapterId: 'episode-3',
+        chapterTitle: '복구한 3화',
+        requestedAt: '2026-07-20T00:00:00.000Z'
+      }
+    };
+    const receipt: GenerationInboxItem = {
+      id: journaled.generationId!, kind: 'dive-condense',
+      projectId: journaled.projectId, projectTitle: '첫 작품', baseRevision: 'rev-1',
+      episode: journaled.episodeHint, status: 'failed',
+      episodeLengthSchema: 'storyx/episode-length/v1', episodeLength: extended,
+      createdAt: journaled.createdAt, updatedAt: journaled.updatedAt
+    };
+    expect(savePlayRecoveryWorkDraft(journaled)).toBe(true);
+    expect(savePlayRecoveryWorkDraft(canonicalizeRecoveryDraftEpisodeLength(journaled, receipt))).toBe(true);
+
+    const persisted = getActivePlayRecoveryWorkDraft('project-a');
+    expect(persisted?.source.episodeLength).toEqual(compact);
+    if (!persisted) throw new Error('persisted recovery draft expected');
+    const receiptLinked = canonicalizeRecoveryDraftEpisodeLength(persisted, receipt);
+    const project = { ...createEmptyProject({ title: '첫 작품' }), id: 'project-a', currentEpisode: 2 };
+    const plan = planPlayRecoveryCommit(project, project, receiptLinked);
+    expect(plan.status).toBe('ready');
+    if (plan.status !== 'ready') throw new Error('ready recovery plan expected');
+    expect(plan.chapter.episodeLength).toEqual(extended);
   });
 
   it('프로젝트마다 최신 작업본 20개까지만 보존한다', () => {

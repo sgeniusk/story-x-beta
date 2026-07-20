@@ -4,6 +4,71 @@
 
 ---
 
+## 2026-07-20 17:36 — P2-d 응결 목표 분량 계약 완료, 실제 작품 테스트 대기
+
+> Last Updated: 2026-07-20 17:36 KST
+
+### Current Objective
+
+PLAY 응결에 회차별 3천/5천/8천자 목표를 추가하고, 선택한 목표를 잡 시작부터 결과 검토·실패 복구·재시도·승인·WRITE까지 같은 값으로 보존하는 P2-d를 완료했다. 목표 달성을 위해 원문 밖 사건을 발명하거나 본문을 자동으로 늘리고 자르지 않으며, 완료 결과는 여전히 사용자 승인 전까지 본편·캐논 밖에 있다. 구현은 `91b5c6d`, Draft PR은 #46이고 머지는 사용자에게 남긴다.
+
+### Recommended Next Step
+
+실행 중인 `http://127.0.0.1:5175/?stage=projects`에서 실제 작품의 PLAY로 들어가 충분한 대화를 만든 뒤 `기본 · 5천자`를 선택해 응결한다. 실행 중 프로젝트 보관함에 다녀와도 영수증에 같은 목표가 남는지, 완료 결과가 4,500~5,500자면 목표 범위로 표시되는지, 범위 밖이면 결과를 숨기지 않고 짧음/김 경고가 뜨는지 확인한다. 작품성·원문 충실도를 읽고 승인한 뒤 WRITE에 회차와 `현재자 / 목표 5,000자 · 진행률`이 함께 보이면 P2-d를 수용한다.
+
+### Branch · Commit · Verification
+
+- Branch — `codex/p2-condense-target-length` (`codex/p2-choice-composer` / Draft PR #45 위 스택)
+- Implementation — `91b5c6d` (`M11-review-driven-hardening: add P2-d target length contract`)
+- Draft PR — https://github.com/sgeniusk/story-x-beta/pull/46 (base `codex/p2-choice-composer`)
+- Verification — 2026-07-20 17:35 `bash init.sh` 녹색: 106 files / 1251 tests, tsc+Vite build 성공, `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`
+- Actual local Codex — 합성 standard 목표 응결 4,722자, `within`, provider `codex`, providerFailure 없음; 사용자 작품 저장·승인 없음
+- Independent audits — source/canon 연속성 PASS + 최종 계약 재감사 P0/P1/P2 0, `git diff --check` 녹색
+- Browser — 실제 저장 작품 WRITE에서 390/320px `1,122자 / 기본 5,000자 · 22%`, 한 줄·가로 overflow 0, 새로고침 이후 새 console 오류 0
+- Live handoff — `http://127.0.0.1:5175/?stage=projects`, viewport override 해제
+
+### What the Last Session Did
+
+1. P2-d를 3천/5천/8천 회차별 목표와 공백 제외 글자 수 계약으로 고정하고 brainstorm→spec→plan→TDD를 완료했다.
+2. 목표·source fingerprint/span을 잡·영수증·recovery snapshot·직접 쓰기 작업본에 영속하고 누락·불일치 재시도/승인을 fail-closed했다.
+3. 희소 원문을 분량 때문에 발명하지 않도록 새 사건·행동·결정·폭로·페이오프 금지를 prompt와 테스트에 고정했다.
+4. WRITE가 저장된 목표와 현재 편집 중 본문을 직접 세어 진행률을 표시하게 하고, 기존 회차는 기본 5천자 표시만 제공했다.
+5. 로컬 Codex 장편 응결 timeout을 provider 9분·잡 10분으로 분리하고 실제 4,722자 결과와 전체 하네스·실브라우저·독립 감사를 통과시킨 뒤 Draft PR #46을 만들었다.
+
+### Files To Touch (next milestone)
+
+- 사용자 실제 응결에서 목표 보존·범위 표시·WRITE 진행률 결함이 나오면 P2-d spec 범위 안에서 실패 테스트를 먼저 추가하고 최소 수정한다.
+- 결과의 작품성 편차가 목표 계약과 무관하면 자동 보정에 섞지 말고 별도 품질 슬라이스로 분리한다.
+- P2-d 수용 뒤 다음 백로그는 새 feature branch와 brainstorm→spec→plan→TDD로 시작한다.
+
+### Files NOT To Touch
+
+- `.agents/skills/story-score/` — 사용자 소유 untracked 폴더. 읽기·추가·수정·staging 금지.
+- 기존 사용자 작품 원문·회차·캐논을 자동 재생성·덮어쓰기·승인하는 작업.
+- 분량을 맞추기 위한 원문 밖 사건 발명, 자동 padding/truncate, blind retry, 사용자 승인 gate 우회.
+- P2-d 결함 수정에 에이전트 조직·출판·과금·다른 P2 백로그를 섞는 변경.
+- #39→#40→#41→#42→#43→#44→#45→#46 스택을 순서 없이 머지하거나 retarget 전 base 브랜치를 삭제하는 작업.
+
+### Blockers
+
+코드·전체 하네스·실브라우저·실제 로컬 Codex·Draft PR 차단은 없다. 실제 사용자 작품에서 5천자 응결의 읽기 품질과 승인 후 WRITE 연결을 최종 수용할 시점이다.
+
+### Known Issues
+
+- 실제 Codex 장편 검증은 안전한 합성 PLAY 원문으로 수행했다. 사용자의 실제 작품 목소리·장면 밀도·원문 충실도 판정은 의도적으로 남겼다.
+- 희소한 PLAY 원문은 발명 없이 8천자를 채울 수 없으므로 `under` 경고가 정상 결과일 수 있다. 목표를 이유로 자동 재시도하지 않는다.
+- P2-d 이전 legacy 회차에는 목표를 소급 저장하지 않고 UI에서 `기본 5,000자` 참고값만 표시한다.
+- provider 9분 또는 잡 10분 상한에 걸리면 안전하게 실패하고 원문/복구 경로를 남기지만 자동 재호출하지 않는다.
+- Vite production build의 기존 500kB chunk 경고는 남아 있으나 build 실패는 아니다.
+
+### Reference Documents
+
+- `docs/superpowers/specs/2026-07-20-p2d-condense-target-length-design.md`
+- `docs/superpowers/plans/2026-07-20-p2d-condense-target-length.md`
+- `progress.md` 맨 위 P2-d 완료 트랙
+
+---
+
 ## 2026-07-19 18:28 — P2-c1 PLAY 추천 답변 작성창 삽입 완료, 실제 말투 수정 테스트 대기
 
 > Last Updated: 2026-07-19 18:28 KST

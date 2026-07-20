@@ -1,9 +1,22 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-19 18:28 KST · Branch: `codex/p2-choice-composer` (**PLAY 추천 답변 작성창 삽입 완료, Draft PR #45 사용자 테스트 대기**)
+> Last Updated: 2026-07-20 17:36 KST · Branch: `codex/p2-condense-target-length` (**P2-d 응결 목표 분량 계약 완료, Draft PR #46 사용자 테스트 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-> 최근 검증(2026-07-19 18:28 KST) — `bash init.sh` 녹색: `npm test` 1169 통과(105 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+> 최근 검증(2026-07-20 17:35 KST) — `bash init.sh` 녹색: `npm test` 1251 통과(106 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+
+## 완료 트랙 — P2-d PLAY 응결 목표 분량 계약 (`done` · 2026-07-20, 구현 `91b5c6d` · Draft PR #46)
+
+PLAY 응결 전에 회차 목표를 **짧게 3천자 / 기본 5천자 / 길게 8천자** 중 고르고, 잡 시작 시 고정된 계약을 생성·영수증·복구·재시도·승인·WRITE까지 잃지 않게 했다. 분량은 작품성을 훼손하는 자동 채우기/자르기 대신 정직한 결과 상태와 경고로 다룬다. spec `docs/superpowers/specs/2026-07-20-p2d-condense-target-length-design.md` · plan `docs/superpowers/plans/2026-07-20-p2d-condense-target-length.md`.
+- **회차별 목표 계약** — 공백 제외·문장부호 포함 기준으로 compact 3,000자(최종 2,700~3,300), standard 5,000자(4,500~5,500, 기본), extended 8,000자(7,200~8,800)를 고정했다. 장면 수는 각각 2~3 / 3~4 / 4~6이며 결과는 `under | within | over`로 기록한다.
+- **잡·복구 신뢰성** — 목표와 정확한 PLAY source fingerprint/span을 잡 시작 시 동결하고 영수증 root·recovery snapshot·직접 쓰기 작업본으로 운반한다. 재시도·승인·복구 journal 재개 때 source 또는 목표가 없거나 어긋나면 자동 추정하지 않고 fail-closed한다.
+- **작품 보호** — 원문에 없는 새 행동·사건·결정·폭로·페이오프를 목표 분량을 채우려고 만들지 않는다. 부족하면 짧은 결과와 경고를 남기며 자동 padding·truncate·blind retry·캐논 반영은 하지 않는다. 완료 결과도 사용자 승인 전에는 본편이나 캐논에 들어가지 않는다.
+- **로컬 Codex 안정성** — 응결 provider 상한을 9분, 잡 상한을 10분으로 분리하고 timeout은 안전한 실패 metadata만 남긴다. timeout 뒤 자동 재호출하지 않아 같은 응결이 중복 실행되지 않는다.
+- **WRITE 피드백** — 저장된 목표가 있는 회차는 현재 편집 본문 기준 `현재자 / 목표자 · 진행률`, 이전 회차는 `현재자 / 기본 5,000자 · 진행률`을 원고 상단 보조문구에 표시한다. 390px·320px에서 한 줄 유지·가로 overflow 0을 실측했다.
+- **TDD·실생성** — 최종 `bash init.sh` 106파일/1251테스트, tsc·Vite build, `git diff --check` 녹색. 합성 PLAY 원문을 실제 로컬 Codex로 standard 응결해 본문 4,722자·`within`·providerFailure 없음으로 완료했으며 사용자 작품에는 저장·승인하지 않았다.
+- **독립 감사** — source/canon 연속성 및 전체 계약 재감사 모두 PASS, P0/P1/P2 0. 실브라우저 새로고침 이후 새 console 오류 0.
+- **게시/의존** — Draft PR #46 `https://github.com/sgeniusk/story-x-beta/pull/46`은 #45 위 스택이다. 기존 순서 **#39 → #40 → #41 → #42 → #43 → #44 → #45 → #46**을 유지하고 머지는 사용자에게 남긴다.
+- **Recommended Next Step** — 실제 작품 PLAY에서 `기본 · 5천자`로 응결을 한 번 시작하고 다른 화면에 다녀와도 같은 목표가 표시되는지 확인한다. 완료 결과가 4,500~5,500자면 `목표 범위`, 밖이면 정직한 짧음/김 경고가 보여야 한다. 작품성·원문 충실도를 읽어 승인한 뒤 WRITE에 해당 회차와 5,000자 목표 표시가 함께 보이면 P2-d를 수용한다.
 
 ## 완료 트랙 — P2-c1 PLAY 추천 답변 작성창 삽입 (`done` · 2026-07-19, 구현 `8b72ad5` · Draft PR #45)
 

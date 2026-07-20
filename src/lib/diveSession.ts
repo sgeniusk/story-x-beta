@@ -1,6 +1,6 @@
 // Dive X 실시간 채팅 세션의 순수 도메인 — 버퍼 누적·응결 분기·컨텍스트 압축
 import type { PlayTurnVerdict } from './playRuntimeValidator';
-import type { SeriesProject } from './storyEngine';
+import type { EpisodeLengthPreset, SeriesProject } from './storyEngine';
 import type { VsCandidatesInput } from './vsCandidatesClient';
 // episodeBriefing 은 런타임 import 가 전부 type-only 라 순환 없음.
 import { collectUnpaidPromises } from './episodeBriefing';
@@ -28,6 +28,8 @@ export interface DiveSession {
   chatBuffer: DiveMessage[];
   lastCondensedTurn: number;
   pendingCondenseSuggested: boolean;
+  /** P2-d — 이 PLAY 세션에서 다음 응결에 쓸 회차 목표. 없으면 standard로 해석한다. */
+  episodeLengthPreset?: EpisodeLengthPreset;
   scene?: string;
   arc?: StoryArc;
 }
@@ -41,6 +43,23 @@ export interface CondenseSourceSpan {
   messageIds: string[];
   /** 승인 뒤 PLAY 연결 문맥으로 남길 source tail(최대 2개). */
   continuityMessageIds: string[];
+}
+
+/**
+ * 자동 재시도·승인이 같은 turn 번호의 다른 PLAY를 원문으로 오인하지 않게 하는
+ * 충돌 없는 canonical source identity. 해시로 줄이지 않아 원문 차이를 잃지 않는다.
+ */
+export function buildCondenseSourceFingerprint(messages: DiveMessage[]): string {
+  return JSON.stringify({
+    schema: 'storyx/condense-source-fingerprint/v1',
+    messages: messages.map((message) => [
+      message.id,
+      message.turn,
+      message.role,
+      message.text,
+      Boolean(message.verdict?.blocksCanonization)
+    ])
+  });
 }
 
 export const CONDENSE_SUGGEST_TURNS = 12;
@@ -146,9 +165,49 @@ function sourceSpanMatchesSession(session: DiveSession, value: unknown): Condens
     (message) => message.turn > span.afterTurn && message.turn <= span.throughTurn
   );
   if (captured.length !== span.messageIds.length) return undefined;
-  if (captured.some((message, index) => message.id !== span.messageIds[index])) return undefined;
+  if (captured.some((message, index) => (
+    message.id !== span.messageIds[index] ||
+    message.turn !== span.afterTurn + index + 1
+  ))) return undefined;
   if ((captured.at(-1)?.turn ?? span.afterTurn) !== span.throughTurn) return undefined;
   return span;
+}
+
+function sourceMessagesForSpan(session: DiveSession, sourceSpan: CondenseSourceSpan): DiveMessage[] {
+  return session.chatBuffer.filter(
+    (message) => message.turn > sourceSpan.afterTurn && message.turn <= sourceSpan.throughTurn
+  );
+}
+
+export interface CondenseRetrySource {
+  sourceSpan: CondenseSourceSpan;
+  transcript: string;
+}
+
+/**
+ * 재시도는 복구 TXT용 raw transcript를 생성 source로 승격하지 않는다.
+ * root → recovery 순으로 현재 PLAY와 정확히 일치하는 frozen span만 재조립하고,
+ * 차단 턴을 걸러 빈 source가 되면 fail-closed한다.
+ */
+export function resolveCondenseRetrySource(
+  session: DiveSession,
+  primarySourceSpan?: unknown,
+  recoverySourceSpan?: unknown,
+  expectedSourceFingerprint?: unknown
+): CondenseRetrySource | undefined {
+  if (typeof expectedSourceFingerprint !== 'string' || !expectedSourceFingerprint) return undefined;
+  const candidates = [primarySourceSpan, recoverySourceSpan]
+    .map((candidate) => sourceSpanMatchesSession(session, candidate))
+    .filter((candidate): candidate is CondenseSourceSpan => Boolean(candidate));
+  for (const sourceSpan of candidates) {
+    if (sourceSpan.messageIds.length === 0) continue;
+    const messages = sourceMessagesForSpan(session, sourceSpan);
+    if (buildCondenseSourceFingerprint(messages) !== expectedSourceFingerprint) continue;
+    const transcript = buildTranscript(messages.filter((message) => !message.verdict?.blocksCanonization));
+    if (!transcript.trim()) continue;
+    return { sourceSpan, transcript };
+  }
+  return undefined;
 }
 
 /**
@@ -159,12 +218,23 @@ export function resolveCondenseSourceBoundary(
   session: DiveSession,
   primarySourceSpan?: unknown,
   recoverySourceSpan?: unknown,
-  legacyBoundary?: unknown
-): CondenseSourceSpan | number {
+  legacyBoundary?: unknown,
+  expectedSourceFingerprint?: unknown
+): CondenseSourceSpan | number | undefined {
+  const matchesFingerprint = (span: CondenseSourceSpan | undefined): span is CondenseSourceSpan => Boolean(
+    span && (
+      typeof expectedSourceFingerprint !== 'string' ||
+      !expectedSourceFingerprint ||
+      buildCondenseSourceFingerprint(sourceMessagesForSpan(session, span)) === expectedSourceFingerprint
+    )
+  );
   const primary = sourceSpanMatchesSession(session, primarySourceSpan);
-  if (primary) return primary;
+  if (matchesFingerprint(primary)) return primary;
   const recovery = sourceSpanMatchesSession(session, recoverySourceSpan);
-  if (recovery) return recovery;
+  if (matchesFingerprint(recovery)) return recovery;
+  // 현대 영수증의 source identity가 하나라도 존재하면 불일치를 legacy 숫자로
+  // 강등하지 않는다. 숫자 fallback은 fingerprint 이전 영수증에만 허용한다.
+  if (typeof expectedSourceFingerprint === 'string' && expectedSourceFingerprint) return undefined;
   const maxTurn = session.chatBuffer.at(-1)?.turn ?? session.lastCondensedTurn;
   return isNonNegativeInteger(legacyBoundary) && legacyBoundary <= maxTurn
     ? legacyBoundary

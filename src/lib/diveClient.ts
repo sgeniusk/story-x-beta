@@ -1,5 +1,6 @@
 // Dive X 로컬 브리지(/api/dive-chat·/api/dive-condense) fetch 래퍼
 import { isValidProposal, type DiveProposal, type DiveSetup, type NoveltyLevel } from './diveProposal';
+import type { EpisodeLengthContract, EpisodeLengthStatus } from './storyEngine';
 
 export interface DiveChatRequest {
   character: string;
@@ -25,6 +26,7 @@ export interface DiveCondenseRequest {
   transcript: string;
   episode: number;
   arc?: string;
+  episodeLength: EpisodeLengthContract;
 }
 
 export interface DiveCondensePayload {
@@ -35,6 +37,10 @@ export interface DiveCondensePayload {
   beats: Array<{ label: string; summary: string; tension: number }>;
   prose: string;
   newCanonFacts: Array<{ owner: string; statement: string }>;
+  /** Legacy 영수증에는 없을 수 있지만 새 CLI 결과는 세 필드를 항상 반환한다. */
+  episodeLength?: EpisodeLengthContract;
+  actualChars?: number;
+  lengthStatus?: EpisodeLengthStatus;
   warning?: string;
 }
 

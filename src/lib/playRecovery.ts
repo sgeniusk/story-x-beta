@@ -1,5 +1,6 @@
 import {
   buildTranscript,
+  buildCondenseSourceFingerprint,
   captureCondenseSourceSpan,
   selectCondenseSpan,
   type CondenseSourceSpan,
@@ -7,8 +8,11 @@ import {
 } from './diveSession';
 import {
   chapterFromDraftPayload,
+  episodeLengthContractFor,
   nextEpisodeNumber,
+  parseEpisodeLengthContract,
   type Chapter,
+  type EpisodeLengthContract,
   type SeriesProject
 } from './storyEngine';
 import { countPendingSync, type PendingSync } from './syncConsole';
@@ -23,8 +27,12 @@ export interface PlayRecoverySnapshot {
   transcript: string;
   /** 응결 시작 순간에 고정한 미소비 PLAY source. 구버전 스냅샷은 undefined. */
   sourceSpan?: CondenseSourceSpan;
+  /** source의 ID·turn·화자·본문·차단 판정을 함께 고정한다. 없는 legacy는 자동 재시도하지 않는다. */
+  sourceFingerprint?: string;
   /** 생성 시작 시 실제 응결 payload에 포함된 마지막 turn. 구버전 스냅샷은 undefined. */
   condensedThroughTurn?: number;
+  /** 생성 시작 순간 고정한 회차별 분량 계약. 구버전 스냅샷은 undefined. */
+  episodeLength?: EpisodeLengthContract;
   capturedAt: string;
 }
 
@@ -103,7 +111,9 @@ export function buildPlayRecoverySnapshot(
     // 이미 작품화된 연결 tail은 PLAY에 남아도 recovery에서 다시 반출하지 않는다.
     transcript: buildTranscript(condense),
     sourceSpan,
+    sourceFingerprint: buildCondenseSourceFingerprint(condense),
     condensedThroughTurn: sourceSpan.throughTurn,
+    episodeLength: episodeLengthContractFor(session.episodeLengthPreset),
     capturedAt
   };
 }
@@ -198,7 +208,12 @@ export function planPlayRecoveryCommit(
       newCanonFacts: []
     },
     // 복구 작업본 저장은 캐논·성장 승인이 아니다. 본문만 정식 회차에 옮긴다.
-    { genre: committed.genre, intent: '', pressure: '' }
+    {
+      genre: committed.genre,
+      intent: '',
+      pressure: '',
+      episodeLength: draft.source.episodeLength
+    }
   );
 
   return {
@@ -247,7 +262,8 @@ export function inspectPlayRecoveryCommitIntent(
     hasNoEntries(chapter.beats) &&
     hasNoEntries(chapter.newCanonFacts) &&
     hasNoEntries(chapter.rewardArc) &&
-    hasNoEntries(chapter.stakesLedger);
+    hasNoEntries(chapter.stakesLedger) &&
+    sameEpisodeLengthContract(chapter.episodeLength, draft.source.episodeLength);
   return matchesPreparedChapter
     ? { status: 'committed', chapter }
     : { status: 'conflict' };
@@ -255,6 +271,16 @@ export function inspectPlayRecoveryCommitIntent(
 
 function hasNoEntries(value: unknown): boolean {
   return !Array.isArray(value) || value.length === 0;
+}
+
+function sameEpisodeLengthContract(
+  actual: EpisodeLengthContract | undefined,
+  expected: EpisodeLengthContract | undefined
+): boolean {
+  if (actual === undefined || expected === undefined) return actual === expected;
+  const parsedActual = parseEpisodeLengthContract(actual);
+  const parsedExpected = parseEpisodeLengthContract(expected);
+  return Boolean(parsedActual && parsedExpected && parsedActual.preset === parsedExpected.preset);
 }
 
 /**

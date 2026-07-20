@@ -15,7 +15,13 @@ interface ScoreReport {
   deterministic: {
     episodeCount: number;
     lengths: {
-      perEpisode: Array<{ episode: number; title: string; chars: number; inRange: boolean }>;
+      perEpisode: Array<{
+        episode: number;
+        title: string;
+        chars: number;
+        targetRange: { min: number; max: number };
+        inRange: boolean;
+      }>;
       targetRange: { min: number; max: number };
       fitRate: number;
     };
@@ -46,8 +52,9 @@ interface ScoreReport {
 
 // 목표 분량(1,800~2,700자) 적합/이탈과 말미 후크 유무를 통제한 4회차 픽스처
 function makeProse(length: number, tail: string): string {
-  // 패딩과 꼬리 사이에 개행을 둬 토큰 경계를 만든다 — 전체 길이는 요청값과 같다
-  return '가'.repeat(Math.max(0, length - tail.length - 1)) + '\n' + tail;
+  // 패딩과 꼬리 사이에 개행을 둬 토큰 경계를 만든다 — 공백 제외 글자 수가 요청값과 같다
+  const tailChars = tail.replace(/\s/g, '').length;
+  return '가'.repeat(Math.max(0, length - tailChars)) + '\n' + tail;
 }
 
 const fixtureChapters = [
@@ -124,7 +131,7 @@ function writeMarkdownDir(dir: string): string {
 // v0.2 테스트용 — 임의 chapters 로 형식1 백업을 만든다
 function writeCustomBackup(
   dir: string,
-  chapters: Array<{ episode: number; title: string; prose: string }>
+  chapters: Array<{ episode: number; title: string; prose: string; episodeLength?: unknown }>
 ): string {
   const path = join(dir, 'custom-backup.json');
   writeFileSync(
@@ -195,6 +202,61 @@ describe('storyscore CLI', () => {
     expect(lengths.fitRate).toBeCloseTo(0.5);
     expect(scores.formatDiscipline.max).toBe(10);
     expect(scores.formatDiscipline.value).toBeCloseTo(5);
+  });
+
+  it('P2-d — valid v1 회차는 자기 범위와 공백 제외 글자 수를 쓰고 legacy는 기존 범위를 유지한다', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'storyscore-p2d-length-'));
+    const compactLength = {
+      schema: 'storyx/episode-length/v1',
+      preset: 'compact',
+      targetChars: 3000,
+      minChars: 2700,
+      maxChars: 3300,
+      generationMinChars: 2850,
+      generationMaxChars: 3150,
+      minScenes: 2,
+      maxScenes: 3
+    };
+    const invalidLength = { ...compactLength, minChars: 3300, maxChars: 2700 };
+    const path = writeCustomBackup(dir, [
+      {
+        episode: 1,
+        title: '새 분량 계약',
+        // raw length는 4,199자지만 공백 제외 2,800자라 compact 범위 안이다.
+        prose: `${'가 '.repeat(1399)}가${'나'.repeat(1400)}`,
+        episodeLength: compactLength
+      },
+      { episode: 2, title: 'legacy 회차', prose: makeProse(2000, '기존 범위를 쓴다.') },
+      {
+        episode: 3,
+        title: '손상 계약 회차',
+        prose: makeProse(2000, '손상된 optional 계약만 무시한다.'),
+        episodeLength: invalidLength
+      }
+    ]);
+
+    const report = runReport(path);
+    const [v1, legacy, invalid] = report.deterministic.lengths.perEpisode;
+
+    expect(report.deterministic.lengths.targetRange).toEqual({ min: 1800, max: 2700 });
+    expect(v1).toEqual(expect.objectContaining({
+      episode: 1,
+      chars: 2800,
+      targetRange: { min: 2700, max: 3300 },
+      inRange: true
+    }));
+    expect(legacy).toEqual(expect.objectContaining({
+      episode: 2,
+      chars: 2000,
+      targetRange: { min: 1800, max: 2700 },
+      inRange: true
+    }));
+    expect(invalid).toEqual(expect.objectContaining({
+      episode: 3,
+      chars: 2000,
+      targetRange: { min: 1800, max: 2700 },
+      inRange: true
+    }));
   });
 
   it('builds a roster appearance matrix and flags spelling variants without flagging particles', () => {

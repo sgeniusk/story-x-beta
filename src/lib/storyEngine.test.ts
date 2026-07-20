@@ -17,6 +17,11 @@ import {
   renameCharacter,
   createEmptyProject,
   createSeedProject,
+  countEpisodeChars,
+  buildWriteEpisodeLengthProgress,
+  episodeLengthContractFor,
+  evaluateEpisodeLength,
+  parseEpisodeLengthContract,
   defaultPlannedEpisodes,
   deriveBeatSheet,
   deriveOnboardingSeed,
@@ -47,6 +52,78 @@ import {
 } from './diveSession';
 
 describe('storyEngine', () => {
+  it('P2-d 회차 분량은 5천자를 기본으로 3천·5천·8천 계약을 제공한다', () => {
+    expect(episodeLengthContractFor()).toEqual(expect.objectContaining({
+      schema: 'storyx/episode-length/v1',
+      preset: 'standard',
+      targetChars: 5000,
+      minChars: 4500,
+      maxChars: 5500,
+      generationMinChars: 4750,
+      generationMaxChars: 5250,
+      minScenes: 3,
+      maxScenes: 4
+    }));
+    expect(episodeLengthContractFor('compact')).toEqual(expect.objectContaining({
+      targetChars: 3000, minChars: 2700, maxChars: 3300,
+      generationMinChars: 2850, generationMaxChars: 3150,
+      minScenes: 2, maxScenes: 3
+    }));
+    expect(episodeLengthContractFor('extended')).toEqual(expect.objectContaining({
+      targetChars: 8000, minChars: 7200, maxChars: 8800,
+      generationMinChars: 7600, generationMaxChars: 8400,
+      minScenes: 4, maxScenes: 6
+    }));
+  });
+
+  it('P2-d 본문 글자 수는 공백을 빼고 세며 목표 미달·범위 안·초과를 구분한다', () => {
+    const contract = episodeLengthContractFor('compact');
+    expect(countEpisodeChars('가 나\n다\t라')).toBe(4);
+    expect(evaluateEpisodeLength('가'.repeat(2699), contract)).toEqual({ actualChars: 2699, status: 'under' });
+    expect(evaluateEpisodeLength('가'.repeat(3000), contract)).toEqual({ actualChars: 3000, status: 'within' });
+    expect(evaluateEpisodeLength('가'.repeat(3301), contract)).toEqual({ actualChars: 3301, status: 'over' });
+  });
+
+  it('WRITE 진행률은 editor 원문만 세고 legacy는 5천자, 승인 목표는 해당 분모를 쓴다', () => {
+    expect(buildWriteEpisodeLengthProgress('', undefined)).toEqual({
+      actualChars: 0,
+      targetChars: 5000,
+      percent: 0,
+      isLegacyTarget: true
+    });
+    expect(buildWriteEpisodeLengthProgress(
+      '가 나\n다!',
+      episodeLengthContractFor('extended')
+    )).toEqual({
+      actualChars: 4,
+      targetChars: 8000,
+      percent: 0,
+      isLegacyTarget: false
+    });
+  });
+
+  it('P2-d 저장 parser는 정본 계약만 받고 손상된 optional 계약은 강등한다', () => {
+    const standard = episodeLengthContractFor('standard');
+
+    expect(parseEpisodeLengthContract(standard)).toEqual(standard);
+    expect(parseEpisodeLengthContract({ ...standard, minChars: 1 })).toBeUndefined();
+    expect(parseEpisodeLengthContract({ ...standard, schema: 'storyx/episode-length/v0' })).toBeUndefined();
+    expect(parseEpisodeLengthContract(null)).toBeUndefined();
+  });
+
+  it('chapterFromDraftPayload는 생성 시점의 회차 분량 계약을 Chapter에 기록한다', () => {
+    const project = createEmptyProject({ title: '분량 계약 작품' });
+    const episodeLength = episodeLengthContractFor('extended');
+    const result = chapterFromDraftPayload(
+      project,
+      { title: '1화', hook: '문이 열렸다', outline: [], beats: [], prose: '본문', newCanonFacts: [] },
+      { genre: project.genre, intent: '', pressure: '', episodeLength }
+    );
+
+    expect(result.chapter.episodeLength).toEqual(episodeLength);
+    expect(result.updatedProject.chapters[0].episodeLength).toEqual(episodeLength);
+  });
+
   it('uses a neutral sample project name instead of a fake production title', () => {
     expect(createSeedProject().title).toBe('샘플 작품');
   });

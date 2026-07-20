@@ -5,6 +5,35 @@ import { join } from 'node:path';
 
 const VERSION = 'STORYSCORE_V0_2';
 const TARGET_RANGE = { min: 1800, max: 2700 };
+const EPISODE_LENGTH_PRESETS = {
+  compact: {
+    targetChars: 3000,
+    minChars: 2700,
+    maxChars: 3300,
+    generationMinChars: 2850,
+    generationMaxChars: 3150,
+    minScenes: 2,
+    maxScenes: 3
+  },
+  standard: {
+    targetChars: 5000,
+    minChars: 4500,
+    maxChars: 5500,
+    generationMinChars: 4750,
+    generationMaxChars: 5250,
+    minScenes: 3,
+    maxScenes: 4
+  },
+  extended: {
+    targetChars: 8000,
+    minChars: 7200,
+    maxChars: 8800,
+    generationMinChars: 7600,
+    generationMaxChars: 8400,
+    minScenes: 4,
+    maxScenes: 6
+  }
+};
 const FORMAT_DISCIPLINE_MAX = 10;
 const HOOK_DETERMINISM_MAX = 7;
 // 말미 후크 전환 신호 — 마지막 200자 안에서 찾는다. v0.2에서 문학적 후크(반전어)를 추가해 저점을 보완.
@@ -133,11 +162,17 @@ function normalizeInput(path) {
 
   const episodes = project.chapters
     .filter(isRecord)
-    .map((chapter, index) => ({
-      episode: typeof chapter.episode === 'number' ? chapter.episode : index + 1,
-      title: typeof chapter.title === 'string' ? chapter.title : `${index + 1}화`,
-      prose: typeof chapter.prose === 'string' ? chapter.prose.trim() : ''
-    }))
+    .map((chapter, index) => {
+      const episodeLength = normalizeEpisodeLengthContract(chapter.episodeLength);
+      return {
+        episode: typeof chapter.episode === 'number' ? chapter.episode : index + 1,
+        title: typeof chapter.title === 'string' ? chapter.title : `${index + 1}화`,
+        prose: typeof chapter.prose === 'string' ? chapter.prose.trim() : '',
+        targetRange: episodeLength
+          ? { min: episodeLength.minChars, max: episodeLength.maxChars }
+          : null
+      };
+    })
     .sort((a, b) => a.episode - b.episode);
 
   const harnessDiagnostics = {
@@ -164,7 +199,8 @@ function readMarkdownDir(dirPath) {
       return {
         episode: header ? Number(header[1]) : fallbackEpisode,
         title: header ? header[2].trim() : name.replace(/\.md$/i, ''),
-        prose: lines.slice(1).join('\n').trim()
+        prose: lines.slice(1).join('\n').trim(),
+        targetRange: null
       };
     })
     .sort((a, b) => a.episode - b.episode);
@@ -174,12 +210,14 @@ function readMarkdownDir(dirPath) {
 
 function analyzeLengths(episodes) {
   const perEpisode = episodes.map((entry) => {
-    const chars = entry.prose.length;
+    const chars = countEpisodeChars(entry.prose);
+    const targetRange = entry.targetRange ?? TARGET_RANGE;
     return {
       episode: entry.episode,
       title: entry.title,
       chars,
-      inRange: chars >= TARGET_RANGE.min && chars <= TARGET_RANGE.max
+      targetRange: { ...targetRange },
+      inRange: chars >= targetRange.min && chars <= targetRange.max
     };
   });
   const fitCount = perEpisode.filter((entry) => entry.inRange).length;
@@ -327,12 +365,20 @@ function buildJudgePackage(episodes) {
 
 function renderSummary(value) {
   const det = value.deterministic;
+  const hasChapterTargets = det.lengths.perEpisode.some(
+    (entry) =>
+      entry.targetRange.min !== det.lengths.targetRange.min ||
+      entry.targetRange.max !== det.lengths.targetRange.max
+  );
+  const lengthTargetLabel = hasChapterTargets
+    ? `회차별 목표(legacy ${det.lengths.targetRange.min}~${det.lengths.targetRange.max}자)`
+    : `목표 ${det.lengths.targetRange.min}~${det.lengths.targetRange.max}자`;
   const lines = [
     `${value.version} — 결정론 분석 요약`,
     `입력: ${value.input.path} (${value.input.kind})`,
     `회차 수: ${det.episodeCount}`,
     '',
-    `분량 — 평균 ${det.lengths.averageChars}자 (${det.lengths.minChars}~${det.lengths.maxChars}자), 목표 ${det.lengths.targetRange.min}~${det.lengths.targetRange.max}자 적합률 ${formatPercent(det.lengths.fitRate)}`,
+    `분량 — 평균 ${det.lengths.averageChars}자 (${det.lengths.minChars}~${det.lengths.maxChars}자), ${lengthTargetLabel} 적합률 ${formatPercent(det.lengths.fitRate)}`,
     `말미 후크 — 후크 회차 비율 ${formatPercent(det.hooks.hookRate)}`,
     `제목 반복 — 직전 제목과 어간을 공유한 회차 비율 ${formatPercent(det.titles.repetitionRate)}`,
     '',
@@ -371,6 +417,20 @@ function readFlag(values, flag, fallback) {
 
 function isRecord(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeEpisodeLengthContract(value) {
+  if (!isRecord(value) || value.schema !== 'storyx/episode-length/v1') return null;
+  const expected = EPISODE_LENGTH_PRESETS[value.preset];
+  if (!expected) return null;
+  for (const [key, expectedValue] of Object.entries(expected)) {
+    if (value[key] !== expectedValue) return null;
+  }
+  return { ...expected, schema: value.schema, preset: value.preset };
+}
+
+function countEpisodeChars(prose) {
+  return String(prose).replace(/\s/g, '').length;
 }
 
 function roundRate(value) {

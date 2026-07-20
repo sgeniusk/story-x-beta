@@ -10,6 +10,7 @@ import { replacePaceSeed, type PaceQuestion } from '../lib/paceInterview';
 import type { LeakReport } from '../lib/leakGate';
 import type { RetentionStats } from '../lib/retentionStats';
 import { formatElapsed, generationStageMessage, GENERATION_TIME_HINT } from '../lib/generationProgress';
+import type { WriteEpisodeLengthProgress } from '../lib/storyEngine';
 import { DeskMetaLine } from './DeskMetaLine';
 
 interface ChapterBeatLike {
@@ -23,6 +24,7 @@ interface ChapterBeatLike {
 export interface FloatingEditorProps {
   kicker: string;
   charCount: string;
+  episodeLengthProgress?: WriteEpisodeLengthProgress;
   chapterTitle: string;
   chapterSub: string;
   paragraphs: Paragraph[];
@@ -99,6 +101,7 @@ type PopState = { x: number; y: number; selectedText?: string; anchor?: string }
 export function FloatingEditor({
   kicker,
   charCount,
+  episodeLengthProgress,
   chapterTitle,
   chapterSub,
   paragraphs,
@@ -483,7 +486,11 @@ export function FloatingEditor({
             <div className="ep-kicker">
               <span>{kicker}</span>
               <span className="line" />
-              <span>{charCount}</span>
+              <span className="ep-length-progress">
+                {episodeLengthProgress
+                  ? `${episodeLengthProgress.actualChars.toLocaleString('ko-KR')}자 / ${episodeLengthProgress.isLegacyTarget ? '기본' : '목표'} ${episodeLengthProgress.targetChars.toLocaleString('ko-KR')}자 · ${episodeLengthProgress.percent}%`
+                  : charCount}
+              </span>
             </div>
             {retention && (
               <div className="ep-streak" aria-label="집필 연속">

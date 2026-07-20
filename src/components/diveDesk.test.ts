@@ -4,8 +4,9 @@ import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DiveDesk } from './DiveDesk';
 import { createDiveSession } from '../lib/diveSession';
-import { createEmptyProject } from '../lib/storyEngine';
+import { createEmptyProject, episodeLengthContractFor } from '../lib/storyEngine';
 import type { PlayRecoverySnapshot } from '../lib/playRecovery';
+import { buildCondenseSourceFingerprint } from '../lib/diveSession';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -23,6 +24,17 @@ function enterTextareaValue(textarea: HTMLTextAreaElement, value: string) {
   const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
   setter?.call(textarea, value);
   textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function condenseReadySession(projectId: string) {
+  return {
+    ...createDiveSession('seed-childhood', projectId),
+    chatBuffer: [
+      { id: 'm1', role: 'user' as const, text: '문을 연다', turn: 1 },
+      { id: 'm2', role: 'character' as const, text: '안쪽에서 종이 타는 냄새가 난다', turn: 2 },
+      { id: 'm3', role: 'user' as const, text: '불빛을 따라 들어간다', turn: 3 }
+    ]
+  };
 }
 
 describe('DiveDesk', () => {
@@ -150,6 +162,407 @@ describe('DiveDesk', () => {
     );
     expect(html).toContain('dx-vs-request');
     expect(html).toContain('✦ 전개 후보');
+  });
+
+  it('새 응결 재료 앞에 기본 5천자 선택 레일을 두고 수동 CTA를 작성창에서 분리한다', () => {
+    const project = createEmptyProject({ title: '분량 선택' });
+    const session = condenseReadySession(project.id);
+    const onChange = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange, onBack: () => {}, onStartGeneration: async () => {}
+    })));
+
+    const rail = host.querySelector('.dx-condense-target');
+    expect(rail?.tagName).toBe('FIELDSET');
+    expect(rail?.nextElementSibling?.classList.contains('dx-workbench-dock')).toBe(true);
+    expect(rail?.textContent).toContain('회차 분량');
+    expect(rail?.textContent).toContain('3천자 · 2~3장면');
+    expect(rail?.textContent).toContain('5천자 · 3~4장면');
+    expect(rail?.textContent).toContain('8천자 · 4~6장면');
+    expect(rail?.textContent).toContain('재료가 모자라면 짧게 돌아오며, 자동으로 내용을 만들거나 잘라내지 않습니다.');
+    expect((rail?.querySelector('input[value="standard"]') as HTMLInputElement).checked).toBe(true);
+    expect(rail?.querySelector('.dx-condense-target-action')?.textContent).toBe('5천자로 응결');
+    expect(host.querySelector('.dx-composer .dx-condense-manual')).toBeNull();
+
+    act(() => (rail?.querySelector('input[value="extended"]') as HTMLInputElement).click());
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ episodeLengthPreset: 'extended' }),
+      project
+    );
+
+    const extendedSession = onChange.mock.calls.at(-1)?.[0];
+    act(() => root.render(createElement(DiveDesk, {
+      session: extendedSession, project, onChange, onBack: () => {}, onStartGeneration: async () => {}
+    })));
+    expect(host.querySelector('.dx-condense-target-action')?.textContent).toBe('8천자로 응결');
+
+    act(() => root.unmount());
+    host.remove();
+  });
+
+  it('응결 가능한 재료 수에서 캐논화 차단 턴을 제외하고 실행·검토 중에는 선택 레일을 숨긴다', () => {
+    const project = createEmptyProject({ title: '유효 재료' });
+    const blockedVerdict = { conflicts: [], surpriseCandidates: [], blocksCanonization: true };
+    const blockedSession = {
+      ...createDiveSession('seed-childhood', project.id),
+      chatBuffer: [
+        { id: 'b1', role: 'user' as const, text: '차단 1', turn: 1, verdict: blockedVerdict },
+        { id: 'b2', role: 'character' as const, text: '차단 2', turn: 2, verdict: blockedVerdict },
+        { id: 'b3', role: 'user' as const, text: '차단 3', turn: 3, verdict: blockedVerdict }
+      ]
+    };
+    const readySession = condenseReadySession(project.id);
+    const common = { project, onChange: () => {}, onBack: () => {} };
+
+    const blockedHtml = renderToStaticMarkup(createElement(DiveDesk, { ...common, session: blockedSession }));
+    expect(blockedHtml).not.toContain('dx-condense-target');
+
+    const runningHtml = renderToStaticMarkup(createElement(DiveDesk, {
+      ...common,
+      session: readySession,
+      generationInbox: [{
+        id: 'job-running', kind: 'dive-condense', projectId: project.id, projectTitle: project.title,
+        baseRevision: 'r1', episode: 1, status: 'running', createdAt: 'x', updatedAt: 'x',
+        episodeLength: episodeLengthContractFor('standard')
+      }]
+    }));
+    expect(runningHtml).not.toContain('dx-condense-target');
+
+    const reviewHtml = renderToStaticMarkup(createElement(DiveDesk, {
+      ...common,
+      session: readySession,
+      selectedGeneration: {
+        id: 'job-review', kind: 'dive-condense', projectId: project.id, projectTitle: project.title,
+        baseRevision: 'r1', episode: 1, status: 'succeeded', createdAt: 'x', updatedAt: 'x',
+        episodeLength: episodeLengthContractFor('standard'),
+        result: {
+          status: 'complete', title: '검토 회차', hook: '', outline: [], beats: [], prose: '본문',
+          newCanonFacts: [], episodeLength: episodeLengthContractFor('standard'), actualChars: 2,
+          lengthStatus: 'under'
+        }
+      }
+    }));
+    expect(reviewHtml).not.toContain('dx-condense-target');
+  });
+
+  it('선택한 회차 분량을 요청과 복구 snapshot에 같은 값으로 고정한다', async () => {
+    const project = createEmptyProject({ title: '8천자 요청' });
+    const session = { ...condenseReadySession(project.id), episodeLengthPreset: 'extended' as const };
+    const onStartGeneration = vi.fn().mockResolvedValue(undefined);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, onStartGeneration
+    })));
+    await act(async () => {
+      (host.querySelector('.dx-condense-target-action') as HTMLButtonElement).click();
+      await Promise.resolve();
+    });
+
+    const [request, recovery] = onStartGeneration.mock.calls[0];
+    expect(request.episodeLength).toEqual(episodeLengthContractFor('extended'));
+    expect(recovery.episodeLength).toEqual(episodeLengthContractFor('extended'));
+
+    act(() => root.unmount());
+    host.remove();
+  });
+
+  it('실패 재시도는 현재 선택과 새 PLAY 턴 대신 영수증의 원문·장면·회차·목표를 재사용한다', async () => {
+    const project = createEmptyProject({ title: 'frozen 재시도' });
+    const extended = episodeLengthContractFor('extended');
+    const sourceSpan = {
+      afterTurn: 0, throughTurn: 3, messageIds: ['m1', 'm2', 'm3'], continuityMessageIds: ['m2', 'm3']
+    };
+    const blockedVerdict = { conflicts: [], surpriseCandidates: [], blocksCanonization: true };
+    const recovery: PlayRecoverySnapshot = {
+      schema: 'storyx/play-recovery/v1', projectId: project.id, projectTitle: project.title,
+      episode: 1, scene: '생성 당시 옥상',
+      transcript: '나: 문을 연다\n상대: 차단된 원문\n나: 불빛을 따라 들어간다', sourceSpan,
+      condensedThroughTurn: 3, episodeLength: episodeLengthContractFor('compact'),
+      capturedAt: '2026-07-20T00:00:00Z'
+    };
+    const session = {
+      ...createDiveSession('seed-childhood', project.id),
+      episodeLengthPreset: 'compact' as const,
+      scene: '나중에 바뀐 지하실',
+      chatBuffer: [
+        { id: 'm1', role: 'user' as const, text: '문을 연다', turn: 1 },
+        { id: 'm2', role: 'character' as const, text: '차단된 원문', turn: 2, verdict: blockedVerdict },
+        { id: 'm3', role: 'user' as const, text: '불빛을 따라 들어간다', turn: 3 },
+        { id: 'm4', role: 'character' as const, text: '새로 추가된 대화', turn: 4 }
+      ]
+    };
+    recovery.sourceFingerprint = buildCondenseSourceFingerprint(session.chatBuffer.slice(0, 3));
+    const onStartGeneration = vi.fn().mockResolvedValue(undefined);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, onStartGeneration,
+      generationInbox: [{
+        id: 'job-failed', kind: 'dive-condense', projectId: project.id, projectTitle: project.title,
+        baseRevision: 'r1', episode: 1, status: 'failed', createdAt: 'x', updatedAt: 'x',
+        episodeLength: extended, sourceSpan, recovery
+      }]
+    })));
+    await act(async () => {
+      Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '응결 다시 시도')?.click();
+      await Promise.resolve();
+    });
+
+    const [request, retriedRecovery] = onStartGeneration.mock.calls[0];
+    expect(request).toMatchObject({
+      transcript: '나: 문을 연다\n나: 불빛을 따라 들어간다',
+      scene: '생성 당시 옥상', episode: 1, episodeLength: extended
+    });
+    expect(request.transcript).not.toContain('차단된 원문');
+    expect(request.transcript).not.toContain('새로 추가된 대화');
+    expect(retriedRecovery).toMatchObject({ sourceSpan, scene: '생성 당시 옥상', episode: 1, episodeLength: extended });
+
+    act(() => root.unmount());
+    host.remove();
+  });
+
+  it('source·목표가 없는 legacy 복구본은 raw transcript로 재시도하지 않고 직접 쓰기·TXT만 남긴다', async () => {
+    const project = createEmptyProject({ title: 'legacy 재시도' });
+    const recovery: PlayRecoverySnapshot = {
+      schema: 'storyx/play-recovery/v1', projectId: project.id, projectTitle: project.title,
+      episode: 1, scene: '옛 장면', transcript: '나: legacy 원문', capturedAt: '2026-07-16T00:00:00Z'
+    };
+    const session = { ...condenseReadySession(project.id), episodeLengthPreset: 'compact' as const };
+    const onStartGeneration = vi.fn().mockResolvedValue(undefined);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, onStartGeneration,
+      generationInbox: [{
+        id: 'job-legacy-retry', kind: 'dive-condense', projectId: project.id, projectTitle: project.title,
+        baseRevision: 'r1', episode: 1, status: 'failed', createdAt: 'x', updatedAt: 'x', recovery
+      }],
+      onDownloadRecovery: () => {}, onSendRecoveryToDraft: () => {}
+    })));
+
+    expect(host.textContent).not.toContain('응결 다시 시도');
+    expect(host.textContent).toContain('자동 재시도는 막았습니다');
+    expect(host.textContent).toContain('PLAY 기록 TXT');
+    expect(host.textContent).toContain('원문으로 직접 쓰기');
+    expect(onStartGeneration).not.toHaveBeenCalled();
+
+    act(() => root.unmount());
+    host.remove();
+  });
+
+  it('현재 세션에 frozen ID가 하나라도 없으면 부분 원문 재시도를 fail-closed한다', () => {
+    const project = createEmptyProject({ title: '부분 source 차단' });
+    const target = episodeLengthContractFor('extended');
+    const sourceSpan = {
+      afterTurn: 0, throughTurn: 3,
+      messageIds: ['m1', 'm2', 'm3'], continuityMessageIds: ['m2', 'm3']
+    };
+    const recovery: PlayRecoverySnapshot = {
+      schema: 'storyx/play-recovery/v1', projectId: project.id, projectTitle: project.title,
+      episode: 1, scene: '옥상', transcript: '나: 문을 연다\n상대: raw에는 있다\n나: 들어간다',
+      sourceSpan, condensedThroughTurn: 3, episodeLength: target, capturedAt: '2026-07-20T00:00:00Z'
+    };
+    const session = {
+      ...createDiveSession('seed-childhood', project.id),
+      chatBuffer: [
+        { id: 'm1', role: 'user' as const, text: '문을 연다', turn: 1 },
+        { id: 'm3', role: 'user' as const, text: '들어간다', turn: 3 }
+      ]
+    };
+    const onStartGeneration = vi.fn().mockResolvedValue(undefined);
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, onStartGeneration,
+      generationInbox: [{
+        id: 'job-partial', kind: 'dive-condense', projectId: project.id, projectTitle: project.title,
+        baseRevision: 'r1', episode: 1, status: 'failed', createdAt: 'x', updatedAt: 'x',
+        episodeLength: target, sourceSpan, recovery
+      }],
+      onDownloadRecovery: () => {}, onSendRecoveryToDraft: () => {}
+    }));
+
+    expect(html).not.toContain('응결 다시 시도');
+    expect(html).toContain('자동 재시도는 막았습니다');
+    expect(onStartGeneration).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['누락', undefined],
+    ['손상', { schema: 'damaged-length-contract' }]
+  ] as const)('영수증 root 목표가 %s되면 recovery 목표로 보충하지 않고 재시도를 막는다', (_case, rootTarget) => {
+    const project = createEmptyProject({ title: '목표 유실 차단' });
+    const session = condenseReadySession(project.id);
+    const sourceSpan = {
+      afterTurn: 0, throughTurn: 3,
+      messageIds: ['m1', 'm2', 'm3'], continuityMessageIds: ['m2', 'm3']
+    };
+    const recovery: PlayRecoverySnapshot = {
+      schema: 'storyx/play-recovery/v1', projectId: project.id, projectTitle: project.title,
+      episode: 1, scene: '옥상', transcript: '나: 문을 연다', sourceSpan,
+      sourceFingerprint: buildCondenseSourceFingerprint(session.chatBuffer.slice(0, 3)),
+      condensedThroughTurn: 3, episodeLength: episodeLengthContractFor('compact'),
+      capturedAt: '2026-07-20T00:00:00Z'
+    };
+    const onStartGeneration = vi.fn().mockResolvedValue(undefined);
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, onStartGeneration,
+      generationInbox: [{
+        id: 'job-target-dropped', kind: 'dive-condense', projectId: project.id,
+        projectTitle: project.title, baseRevision: 'r1', episode: 1, status: 'failed',
+        createdAt: 'x', updatedAt: 'x', sourceSpan, recovery,
+        ...(rootTarget === undefined ? {} : { episodeLength: rootTarget as never })
+      }],
+      onDownloadRecovery: () => {}, onSendRecoveryToDraft: () => {}
+    }));
+
+    expect(html).not.toContain('응결 다시 시도');
+    expect(html).toContain('목표 기록을 확인할 수 없어 자동 재시도는 막았습니다');
+    expect(html).not.toContain('5천자로 응결');
+    expect(onStartGeneration).not.toHaveBeenCalled();
+  });
+
+  it('root 목표가 없는 영수증의 recovery/result 목표는 검토·직접 쓰기에 소급하지 않는다', () => {
+    const project = createEmptyProject({ title: 'legacy 목표 차단' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const nestedTarget = episodeLengthContractFor('extended');
+    const nestedRecovery: PlayRecoverySnapshot = {
+      schema: 'storyx/play-recovery/v1', projectId: project.id, projectTitle: project.title,
+      episode: 1, scene: '옛 장면', transcript: '나: 원문', episodeLength: nestedTarget,
+      capturedAt: '2026-07-20T00:00:00Z'
+    };
+    const onSendRecoveryToDraft = vi.fn();
+    const failedItem = {
+      id: 'job-no-root-write', kind: 'dive-condense' as const, projectId: project.id,
+      projectTitle: project.title, baseRevision: 'r1', episode: 1, status: 'failed' as const,
+      createdAt: 'x', updatedAt: 'x', recovery: nestedRecovery
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, onSendRecoveryToDraft,
+      generationInbox: [failedItem]
+    })));
+    act(() => Array.from(host.querySelectorAll('button'))
+      .find((button) => button.textContent === '원문으로 직접 쓰기')?.click());
+    expect(onSendRecoveryToDraft).toHaveBeenCalledWith(
+      expect.not.objectContaining({ episodeLength: expect.anything() }),
+      failedItem.id
+    );
+
+    const succeededItem = {
+      ...failedItem,
+      id: 'job-no-root-review',
+      status: 'succeeded' as const,
+      result: {
+        status: 'complete' as const, title: '옛 결과', hook: '', outline: [], beats: [], prose: '본문',
+        newCanonFacts: [], episodeLength: nestedTarget
+      }
+    };
+    const reviewHtml = renderToStaticMarkup(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, selectedGeneration: succeededItem
+    }));
+    expect(reviewHtml).toContain('목표 기록 없음');
+    expect(reviewHtml).not.toContain('목표 8,000자');
+
+    act(() => root.unmount());
+    host.remove();
+  });
+
+  it('실행 중 카드는 현재 selector가 아니라 영수증의 목표와 장면 수를 표시한다', () => {
+    const project = createEmptyProject({ title: '영수증 목표' });
+    const session = { ...condenseReadySession(project.id), episodeLengthPreset: 'compact' as const };
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {},
+      generationInbox: [{
+        id: 'job-running-target', kind: 'dive-condense', projectId: project.id,
+        projectTitle: project.title, baseRevision: 'r1', episode: 1, status: 'running',
+        createdAt: '2026-07-20T00:00:00Z', updatedAt: '2026-07-20T00:00:00Z',
+        episodeLength: episodeLengthContractFor('standard')
+      }]
+    }));
+
+    expect(html).toContain('5천자 목표 · 3~4장면 응결 중');
+    expect(html).not.toContain('3천자 목표 · 2~3장면 응결 중');
+  });
+
+  it.each([
+    ['under', 3940, '3,940자 / 목표 5,000자 · 목표 미달, 자동으로 채우지 않음'],
+    ['within', 4820, '4,820자 / 목표 5,000자 · 범위 안'],
+    ['over', 5810, '5,810자 / 목표 5,000자 · 목표 초과, 자동으로 자르지 않음']
+  ] as const)('검토창은 %s 실제/목표 영수증을 표시한다', (lengthStatus, actualChars, copy) => {
+    const project = createEmptyProject({ title: '분량 검토' });
+    const standard = episodeLengthContractFor('standard');
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session: { ...createDiveSession('seed-childhood', project.id), episodeLengthPreset: 'compact' },
+      project, onChange: () => {}, onBack: () => {},
+      selectedGeneration: {
+        id: `job-${lengthStatus}`, kind: 'dive-condense', projectId: project.id, projectTitle: project.title,
+        baseRevision: 'r1', episode: 1, status: 'succeeded', createdAt: 'x', updatedAt: 'x',
+        episodeLength: standard,
+        result: {
+          status: 'complete', title: '분량 결과', hook: '', outline: [], beats: [], prose: '가'.repeat(actualChars),
+          newCanonFacts: [], episodeLength: episodeLengthContractFor('extended'), actualChars, lengthStatus
+        }
+      }
+    }));
+
+    expect(html).toContain(copy);
+    if (lengthStatus !== 'within') {
+      expect(html).toContain(`${actualChars.toLocaleString('ko-KR')}자로 승인 — 캐논으로 고정`);
+      expect(html).not.toMatch(/disabled[^>]*>[^<]*자로 승인/);
+    }
+  });
+
+  it('검토창은 손상된 result 길이 메타 대신 본문을 다시 세어 판정한다', () => {
+    const project = createEmptyProject({ title: '길이 재계산' });
+    const standard = episodeLengthContractFor('standard');
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session: createDiveSession('seed-childhood', project.id), project,
+      onChange: () => {}, onBack: () => {},
+      selectedGeneration: {
+        id: 'job-mismatch', kind: 'dive-condense', projectId: project.id, projectTitle: project.title,
+        baseRevision: 'r1', episode: 1, status: 'succeeded', createdAt: 'x', updatedAt: 'x',
+        episodeLength: standard,
+        result: {
+          status: 'complete', title: '재계산 결과', hook: '', outline: [], beats: [],
+          prose: '가'.repeat(4820), newCanonFacts: [], episodeLength: standard,
+          actualChars: 9000, lengthStatus: 'over'
+        }
+      }
+    }));
+
+    expect(html).toContain('4,820자 / 목표 5,000자 · 범위 안');
+    expect(html).not.toContain('9,000자');
+  });
+
+  it('목표가 없는 legacy 결과는 목표를 소급하지 않고 기록 없음으로 표시한다', () => {
+    const project = createEmptyProject({ title: 'legacy 결과' });
+    const html = renderToStaticMarkup(createElement(DiveDesk, {
+      session: createDiveSession('seed-childhood', project.id), project,
+      onChange: () => {}, onBack: () => {},
+      selectedGeneration: {
+        id: 'job-legacy', kind: 'dive-condense', projectId: project.id, projectTitle: project.title,
+        baseRevision: 'r1', episode: 1, status: 'succeeded', createdAt: 'x', updatedAt: 'x',
+        result: {
+          status: 'complete', title: '옛 결과', hook: '', outline: [], beats: [], prose: '본문', newCanonFacts: []
+        }
+      }
+    }));
+
+    expect(html).toContain('목표 기록 없음');
+    expect(html).not.toContain('목표 5,000자');
   });
 
   it('진행 중 응결 잡과 전역 보관함 바로가기를 렌더한다', () => {
@@ -467,7 +880,7 @@ describe('DiveDesk', () => {
       expect(host.querySelector('.dx-progress-card')).toBeNull();
 
       await act(async () => {
-        Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '지금 응결')?.click();
+        (host.querySelector('.dx-condense-target-action') as HTMLButtonElement | null)?.click();
         await Promise.resolve();
       });
       expect(host.querySelector('.dx-progress-card')?.textContent).toContain('응결 등록');
@@ -500,11 +913,45 @@ describe('DiveDesk', () => {
     expect(html).toContain('PLAY 기록은 안전합니다');
     expect(html).toContain('PLAY 기록 TXT');
     expect(html).toContain('원문으로 직접 쓰기');
-    expect(html).toContain('응결 다시 시도');
+    expect(html).not.toContain('응결 다시 시도');
+    expect(html).toContain('자동 재시도는 막았습니다');
     expect(html).toContain('생성 보관함');
     expect(html).toContain('role="region"');
     expect(html).toContain('role="status"');
     expect(html).not.toContain('dx-generation-receipt');
+  });
+
+  it('PLAY 직접 쓰기는 recovery optional 목표가 빠졌어도 영수증 root 목표를 복구 작업본에 넘긴다', () => {
+    const project = createEmptyProject({ title: 'root 목표 복구' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const rootTarget = episodeLengthContractFor('extended');
+    const recovery: PlayRecoverySnapshot = {
+      schema: 'storyx/play-recovery/v1', projectId: project.id, projectTitle: project.title, episode: 1,
+      scene: '옥상', transcript: '나: 기록', capturedAt: '2026-07-20T00:00:00Z'
+    };
+    const onSendRecoveryToDraft = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, onSendRecoveryToDraft,
+      generationInbox: [{
+        id: 'job-root-target', kind: 'dive-condense', projectId: project.id,
+        projectTitle: project.title, baseRevision: 'r1', episode: 1, status: 'failed',
+        createdAt: 'x', updatedAt: 'x', episodeLength: rootTarget, recovery
+      }]
+    })));
+    act(() => Array.from(host.querySelectorAll('button'))
+      .find((button) => button.textContent === '원문으로 직접 쓰기')?.click());
+
+    expect(onSendRecoveryToDraft).toHaveBeenCalledWith(
+      expect.objectContaining({ episodeLength: rootTarget }),
+      'job-root-target'
+    );
+
+    act(() => root.unmount());
+    host.remove();
   });
 
   it('실패 뒤 재시도 잡이 실행 중이면 이전 복구 카드 대신 현재 진행 상태를 보여준다', () => {
@@ -687,7 +1134,7 @@ describe('DiveDesk', () => {
     act(() => root.render(createElement(DiveDesk, {
       session, project, onChange: () => {}, onBack: () => {}, onStartGeneration
     })));
-    const condense = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '지금 응결');
+    const condense = host.querySelector('.dx-condense-target-action') as HTMLButtonElement | null;
     await act(async () => { condense?.click(); await Promise.resolve(); });
 
     expect(onStartGeneration).toHaveBeenCalledTimes(1);
@@ -728,7 +1175,7 @@ describe('DiveDesk', () => {
       session, project, onChange: () => {}, onBack: () => {},
       onStartGeneration, onDownloadRecovery, onSendRecoveryToDraft
     })));
-    const condense = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '지금 응결');
+    const condense = host.querySelector('.dx-condense-target-action') as HTMLButtonElement | null;
     await act(async () => { condense?.click(); await Promise.resolve(); });
 
     expect(onStartGeneration).toHaveBeenCalledTimes(1);
@@ -802,6 +1249,36 @@ describe('DiveDesk', () => {
     expect(onChange).not.toHaveBeenCalled();
     expect(onResolveGeneration).not.toHaveBeenCalled();
     expect(host.textContent).not.toContain('응결된 회차 — 옥상의 약속');
+
+    act(() => root.unmount());
+    host.remove();
+  });
+
+  it('성공 응결 승인은 result metadata가 달라도 영수증 root 목표를 Chapter 정본으로 보존한다', () => {
+    const project = createEmptyProject({ title: '승인 목표 정본' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const rootTarget = episodeLengthContractFor('extended');
+    const onApproveGeneration = vi.fn().mockReturnValue('committed');
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, onApproveGeneration,
+      selectedGeneration: {
+        id: 'job-canonical-target', kind: 'dive-condense', projectId: project.id,
+        projectTitle: project.title, baseRevision: 'r1', episode: 1, status: 'succeeded',
+        createdAt: 'x', updatedAt: 'x', episodeLength: rootTarget,
+        result: {
+          status: 'complete', title: '정본 목표', hook: '', outline: [], beats: [], prose: '본문',
+          newCanonFacts: [], episodeLength: episodeLengthContractFor('compact')
+        }
+      }
+    })));
+    act(() => Array.from(host.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('승인 — 캐논으로 고정'))?.click());
+
+    expect(onApproveGeneration.mock.calls[0]?.[0].chapter.episodeLength).toEqual(rootTarget);
 
     act(() => root.unmount());
     host.remove();
@@ -1021,6 +1498,58 @@ describe('DiveDesk', () => {
     expect(keptTurns.filter((turn: number) => turn <= rootSourceSpan.throughTurn)).toEqual([5, 6]);
     expect(keptTurns.filter((turn: number) => turn > rootSourceSpan.throughTurn)).toEqual([7, 8]);
     expect(approval.session.lastCondensedTurn).toBe(6);
+
+    act(() => root.unmount());
+    host.remove();
+  });
+
+  it('성공 영수증과 같은 ID·turn이어도 PLAY 본문 fingerprint가 다르면 승인을 막는다', () => {
+    const project = createEmptyProject({ title: 'source identity 승인 차단' });
+    const original = [
+      { id: 'm1', role: 'user' as const, text: '원래 문을 연다', turn: 1 },
+      { id: 'm2', role: 'character' as const, text: '원래 멈춰.', turn: 2 }
+    ];
+    const session = {
+      ...createDiveSession('seed-childhood', project.id),
+      chatBuffer: [
+        { ...original[0], text: '다른 계단을 오른다' },
+        { ...original[1], text: '다른 대답' }
+      ]
+    };
+    const sourceSpan = {
+      afterTurn: 0,
+      throughTurn: 2,
+      messageIds: ['m1', 'm2'],
+      continuityMessageIds: ['m1', 'm2']
+    };
+    const onApproveGeneration = vi.fn().mockReturnValue('committed');
+    const selectedGeneration = {
+      id: 'job-source-identity', kind: 'dive-condense' as const, projectId: project.id,
+      projectTitle: project.title, baseRevision: 'r1', episode: 1, status: 'succeeded' as const,
+      createdAt: '2026-07-20T00:00:00Z', updatedAt: '2026-07-20T00:01:00Z',
+      sourceSpan,
+      sourceFingerprint: buildCondenseSourceFingerprint(original),
+      result: {
+        status: 'complete' as const,
+        title: '원래 PLAY 응결본', hook: '', outline: [], beats: [],
+        prose: '원래 PLAY로 만든 본문.', newCanonFacts: []
+      }
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session, project, onChange: () => {}, onBack: () => {}, selectedGeneration,
+      onApproveGeneration
+    })));
+    const approveButton = Array.from(host.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('승인 — 캐논으로 고정'));
+
+    expect(host.textContent).toContain('생성 당시 PLAY 원문과 현재 세션이 달라 승인할 수 없습니다');
+    expect(approveButton?.disabled).toBe(true);
+    approveButton?.click();
+    expect(onApproveGeneration).not.toHaveBeenCalled();
 
     act(() => root.unmount());
     host.remove();
