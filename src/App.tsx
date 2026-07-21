@@ -122,13 +122,12 @@ import {
   type PendingSync
 } from './lib/syncConsole';
 import { deriveReconcilePlan, type ReconcilePlan } from './lib/playRuntimeValidator';
-import { seedPlayFromProject, presetToDiveSetup, buildPlayFirstProject } from './lib/playEntry';
+import { seedPlayFromProject, buildPlayFirstProject } from './lib/playEntry';
 import { STORY_PRESETS, type StoryPreset } from './lib/storyPresets';
 import { requestLlmDraft } from './lib/draftClient';
 import { StoryXDesk } from './StoryXDesk';
 import { flowModes, canonAxes, flowEntryAgents, flowPublishMedia } from './landingFlow';
 import { PlaySeedPanel } from './components/PlaySeedPanel';
-import { DIVE_SEED_CHARACTERS } from './lib/diveSeedCharacters';
 import { cancelDiveCondenseJob, DiveCondenseJobError, getDiveCondenseJob, requestDiveSetup, startDiveCondenseJob, type DiveCondenseJobRequest } from './lib/diveClient';
 import type { DiveSetup } from './lib/diveProposal';
 import {
@@ -3532,14 +3531,8 @@ function StoryXHome({
                 loading={playSeedLoading}
                 error={playSeedError}
                 loadingNote={`${formatElapsed(playSeedElapsed)} 경과 · 보통 1~2분 걸려요. 새로고침하지 마세요.`}
-                presets={DIVE_SEED_CHARACTERS}
                 partnerIndex={playPartnerIndex}
                 onPickPartner={setPlayPartnerIndex}
-                onPickPreset={(i) => {
-                  setPlaySetup(presetToDiveSetup(DIVE_SEED_CHARACTERS[i]));
-                  setPlayPartnerIndex(0);
-                  setPlaySeedError('');
-                }}
                 onConfirm={confirmPlaySeed}
                 onBack={() => setHomeFlowStep(usesSourceDiscovery ? playSeedEntry : 'freewrite')}
               />

@@ -7775,30 +7775,6 @@ body {
   color: var(--nx-slate);
   margin: 0;
 }
-.home-page .hx-playseed-presets {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.home-page .hx-playseed-preset {
-  display: grid;
-  gap: 2px;
-  padding: 8px 14px;
-  border: 1px solid var(--nx-hairline-strong);
-  border-radius: var(--nx-r);
-  background: var(--nx-canvas);
-  color: var(--nx-ink);
-  cursor: pointer;
-  text-align: left;
-  transition: border-color var(--st-dur-fast) var(--st-ease), background var(--st-dur-fast) var(--st-ease);
-}
-.home-page .hx-playseed-preset:hover:not(:disabled) {
-  border-color: rgba(100, 72, 211, 0.38);
-}
-.home-page .hx-playseed-preset span {
-  font-size: 0.75rem;
-  color: var(--nx-steel);
-}
 .home-page .hx-playseed-card {
   display: grid;
   gap: 12px;

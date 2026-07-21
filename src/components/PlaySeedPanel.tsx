@@ -1,6 +1,5 @@
 // PLAY-first 온보딩 확인 카드 — 제안/프리셋 설정을 보여주고 바로 플레이로. 수정 UI 없음(스펙 결정 3).
 import type { DiveSetup } from '../lib/diveProposal';
-import type { DiveSeedCharacter } from '../lib/diveSeedCharacters';
 
 export const PLAY_SEED_DISCLAIMER =
   '이 설정은 정확하지 않아도 됩니다 — 플레이하며 완성해나가는 초안입니다.';
@@ -9,8 +8,6 @@ interface PlaySeedPanelProps {
   setup: DiveSetup | null;
   loading: boolean;
   error: string;
-  presets: DiveSeedCharacter[];
-  onPickPreset: (index: number) => void;
   onConfirm: () => void;
   onBack: () => void;
   // 대화 상대 선택 — cast 중 세션 상대역(기본 cast[0]). 프레젠테이션 전용, 상태는 App 이 쥔다.
@@ -21,26 +18,11 @@ interface PlaySeedPanelProps {
 }
 
 export function PlaySeedPanel({
-  setup, loading, error, presets, onPickPreset, onConfirm, onBack, partnerIndex, onPickPartner, loadingNote
+  setup, loading, error, onConfirm, onBack, partnerIndex, onPickPartner, loadingNote
 }: PlaySeedPanelProps) {
   return (
     <div className="hx-playseed">
       <p className="hx-playseed-disclaimer">{PLAY_SEED_DISCLAIMER}</p>
-
-      <div className="hx-playseed-presets" role="group" aria-label="프리셋 상대">
-        {presets.map((p, i) => (
-          <button
-            key={p.character.id}
-            type="button"
-            className="hx-playseed-preset"
-            onClick={() => onPickPreset(i)}
-            disabled={loading}
-          >
-            <strong>{p.character.name}</strong>
-            <span>{p.character.role}</span>
-          </button>
-        ))}
-      </div>
 
       {loading && <p className="hx-playseed-loading" role="status">플레이 상대를 준비하는 중…</p>}
       {loading && loadingNote && <p className="hx-playseed-loading-note">{loadingNote}</p>}
