@@ -36,6 +36,10 @@ import { formatElapsed, interviewStageMessage, INTERVIEW_TIME_HINT, generationSt
 import { AiStatusBadge } from './components/AiStatusBadge';
 import { PublishScreen } from './components/PublishScreen';
 import { buildAcademicPublishSummary } from './lib/academicPublish';
+import {
+  LOCAL_RUNTIME_REQUIRED_MESSAGE,
+  STORYX_RUNTIME_CAPABILITIES
+} from './lib/runtimeCapabilities';
 
 // 매체 코드를 사용자 표시용 한국어 라벨로 매핑. 헤더·퍼블리시 화면 등에 노출.
 function mediumDisplayLabel(medium: CreativeMedium): string {
@@ -404,6 +408,7 @@ function App() {
   }
   useEffect(() => {
     let stopped = false;
+    if (!STORYX_RUNTIME_CAPABILITIES.condenseJobs) return undefined;
     let polling = false;
     const poll = async () => {
       if (polling) return;
@@ -439,6 +444,7 @@ function App() {
     request: DiveCondenseJobRequest,
     recovery: PlayRecoverySnapshot
   ): Promise<void> {
+    if (!STORYX_RUNTIME_CAPABILITIES.condenseJobs) return;
     const job = await startDiveCondenseJob(request);
     commitGenerationInboxMutation((latest) => appendGenerationInboxItem(latest, {
       ...job,
@@ -457,6 +463,7 @@ function App() {
   }
 
   async function handleCancelGeneration(item: GenerationInboxItem): Promise<void> {
+    if (!STORYX_RUNTIME_CAPABILITIES.condenseJobs) return;
     try {
       const job = await cancelDiveCondenseJob(item.id);
       commitGenerationInboxMutation((latest) => latest.map((candidate) => (
@@ -2561,6 +2568,10 @@ function StoryXHome({
 
   // 인터뷰 단계로 진입 — 자유 서술이 있으면 그 작품에 맞는 질문을 LLM에 요청한다
   async function goToIntake() {
+    if (!STORYX_RUNTIME_CAPABILITIES.coreAi) {
+      setInterviewFallbackReason(LOCAL_RUNTIME_REQUIRED_MESSAGE);
+      return;
+    }
     setHomeFlowStep('intake');
     setIntakeQuestionIndex(0);
     if (llmIntakeQuestions || isInterviewLoading || !freewriteText.trim()) {
@@ -2596,6 +2607,10 @@ function StoryXHome({
   // S3(적응형 인터뷰)에서 이 경로를 재배선할 때 PlaySeedEntry 에 진입원 값을 추가하면 된다.
   async function goToPlaySeed() {
     if (playSeedLoading) return;
+    if (!STORYX_RUNTIME_CAPABILITIES.playAi) {
+      setPlaySeedError(LOCAL_RUNTIME_REQUIRED_MESSAGE);
+      return;
+    }
     setHomeFlowStep('playseed');
     setPlaySeedError('');
     const story = freewriteText.trim();
@@ -2629,6 +2644,10 @@ function StoryXHome({
   // 함께 구상 턴(S2) — 하이브리드 응결: condense=true 면 강제 응결 지시(고정 문구 버블 동반).
   async function sendOnboardChat(text: string, condense = false) {
     if (onboardChatBusy) return;
+    if (!STORYX_RUNTIME_CAPABILITIES.coreAi) {
+      setOnboardChatNote(LOCAL_RUNTIME_REQUIRED_MESSAGE);
+      return;
+    }
     const trimmed = text.trim() || (condense ? '이 소재로 시작할게요.' : '');
     if (!trimmed) return;
     const userMessage: OnboardChatMessage = { id: `oc-${Date.now()}`, role: 'user', text: trimmed };
@@ -2705,6 +2724,10 @@ function StoryXHome({
     if (isSpineSuggesting) {
       return;
     }
+    if (!STORYX_RUNTIME_CAPABILITIES.coreAi) {
+      setSpineSuggestNote(LOCAL_RUNTIME_REQUIRED_MESSAGE);
+      return;
+    }
     setIsSpineSuggesting(true);
     setSpineSuggestNote(null);
     try {
@@ -2743,6 +2766,10 @@ function StoryXHome({
   // 인터뷰 답변까지 모아 첫 초안(연재형=회차, 단독 완결형=원고)을 만들고, 끝나면 에디터로 넘긴다
   async function goToBuilding() {
     if (isBuilding) {
+      return;
+    }
+    if (!STORYX_RUNTIME_CAPABILITIES.coreAi) {
+      setInterviewFallbackReason(LOCAL_RUNTIME_REQUIRED_MESSAGE);
       return;
     }
     setHomeFlowStep('building');
@@ -3000,6 +3027,11 @@ function StoryXHome({
                 return ` · 예상 낭독 ${minutes}분 ${seconds}초`;
               })()}
             </p>
+            {interviewFallbackReason && (
+              <p className="hx-building-note" role="status" aria-live="polite">
+                {interviewFallbackReason}
+              </p>
+            )}
             {blueprint.medium === 'essay' && (
               <p className="hx-fact-note">
                 <Lock size={13} aria-hidden="true" />
@@ -3043,6 +3075,8 @@ function StoryXHome({
                 busy={onboardChatBusy}
                 busyNote={`${formatElapsed(onboardChatElapsed)} 경과 · 보통 30초~1분 걸려요. 새로고침하지 마세요.`}
                 note={onboardChatNote}
+                aiDisabled={!STORYX_RUNTIME_CAPABILITIES.coreAi}
+                disabledReason={LOCAL_RUNTIME_REQUIRED_MESSAGE}
                 onSend={(text) => void sendOnboardChat(text)}
                 onCondense={() => void sendOnboardChat('', true)}
                 onUseSetup={useOnboardSetup}

@@ -38,6 +38,49 @@ function condenseReadySession(projectId: string) {
 }
 
 describe('DiveDesk', () => {
+  it('Sites runtime은 PLAY 입력·영수증을 보존하고 대화·잡 취소를 시작하지 않는다', async () => {
+    const project = createEmptyProject({ title: '비공개 미리보기' });
+    const session = createDiveSession('seed-childhood', project.id);
+    const onChange = vi.fn();
+    const onCancelGeneration = vi.fn();
+    const running = {
+      id: 'job-sites-running', kind: 'dive-condense' as const, projectId: project.id,
+      projectTitle: project.title, baseRevision: 'r1', episode: 1, status: 'running' as const,
+      createdAt: '2026-07-21T00:00:00Z', updatedAt: '2026-07-21T00:00:00Z',
+      episodeLength: episodeLengthContractFor('standard')
+    };
+    const host = document.createElement('div');
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(DiveDesk, {
+      session,
+      project,
+      onChange,
+      onBack: () => {},
+      generationInbox: [running],
+      onCancelGeneration,
+      playAiEnabled: false,
+      condenseJobsEnabled: false,
+      disabledReason: '로컬 Story X에서 실행하세요.'
+    })));
+    const composer = host.querySelector('textarea[aria-label="PLAY 답변 작성"]') as HTMLTextAreaElement;
+    act(() => enterTextareaValue(composer, '아직 보내지 않은 원고 조각'));
+    const send = host.querySelector('.dx-send') as HTMLButtonElement;
+    const cancel = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '생성 취소');
+
+    expect(send.disabled).toBe(true);
+    expect(cancel?.disabled).toBe(true);
+    expect(host.textContent).toContain('로컬 Story X에서 실행하세요.');
+    await act(async () => { send.click(); await Promise.resolve(); });
+    act(() => cancel?.click());
+    expect(onChange).not.toHaveBeenCalled();
+    expect(onCancelGeneration).not.toHaveBeenCalled();
+    expect(composer.value).toBe('아직 보내지 않은 원고 조각');
+    expect(host.textContent).toContain('영수증과 PLAY 기록을 보존');
+
+    act(() => root.unmount());
+  });
+
   it('연대기 회차와 채팅 버블을 렌더한다', () => {
     const base = createEmptyProject({ title: 't' });
     const project = {

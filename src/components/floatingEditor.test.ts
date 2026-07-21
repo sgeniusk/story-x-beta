@@ -10,6 +10,7 @@ import { CORE_PERSONAS } from '../lib/extendedPersonas';
 import type { MarginReview, Paragraph } from '../lib/marginReview';
 import { splitIntoParagraphs } from '../lib/marginReview';
 import type { StudioMetrics } from '../lib/studioMetrics';
+import { LOCAL_RUNTIME_REQUIRED_MESSAGE } from '../lib/runtimeCapabilities';
 import {
   chapterFromDraftPayload,
   createEmptyProject,
@@ -108,6 +109,27 @@ describe('FloatingEditor 실데이터 배선', () => {
     unmount();
   });
 
+  it('로컬 런타임이 필요하면 단일·전체 검토를 호출하지 않고 실제 사유를 즉시 보여준다', () => {
+    const onSummon = vi.fn();
+    const onRunAll = vi.fn();
+    const { host, click, unmount } = mount(baseProps({
+      onSummon,
+      onRunAll,
+      reviewActionBlockedReason: LOCAL_RUNTIME_REQUIRED_MESSAGE,
+    }));
+
+    click(host.querySelector('.wrow[data-state="wait"]'));
+    expect(onSummon).not.toHaveBeenCalled();
+    expect(host.querySelector('.hint')?.textContent).toBe(LOCAL_RUNTIME_REQUIRED_MESSAGE);
+    expect(host.querySelector('.hint')?.textContent).not.toContain('검토합니다');
+
+    click(host.querySelector('.assignAll'));
+    expect(onRunAll).not.toHaveBeenCalled();
+    expect(host.querySelector('.hint')?.textContent).toBe(LOCAL_RUNTIME_REQUIRED_MESSAGE);
+    expect(host.querySelector('.hint')?.textContent).not.toContain('전체 검토');
+    unmount();
+  });
+
   it('빈 reviews·빈 paragraphs 에서도 안전하다', () => {
     const { host, unmount } = mount(baseProps({ reviews: [], paragraphs: [] }));
     expect(host.querySelectorAll('.mnote').length).toBe(0);
@@ -192,6 +214,18 @@ describe('FloatingEditor 실데이터 배선', () => {
     const { host, click, unmount } = mount(baseProps({ onGenerateDraft }));
     click(host.querySelector('.btn-primary'));
     expect(onGenerateDraft).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('메인 CTA 차단 사유가 로컬 런타임이면 헌장 잠금으로 오표시하지 않는다', () => {
+    const { host, unmount } = mount(baseProps({
+      productionBlockedReason: LOCAL_RUNTIME_REQUIRED_MESSAGE,
+    }));
+    const cta = host.querySelector('.fc-sheet-cta .btn-primary') as HTMLButtonElement;
+
+    expect(cta.disabled).toBe(true);
+    expect(cta.textContent).toContain(LOCAL_RUNTIME_REQUIRED_MESSAGE);
+    expect(cta.textContent).not.toContain('헌장 잠금 필요');
     unmount();
   });
 

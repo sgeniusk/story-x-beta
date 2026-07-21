@@ -1,6 +1,7 @@
 // /api/onboard-chat 브리지에 온보딩 구상 대화 턴을 요청하는 클라이언트. planChatClient 패턴(fetch·failed·reportAiCall).
 import { reportAiCall } from './aiStatus';
 import { normalizeOnboardChatResponse, type OnboardChatTurn } from './onboardChat';
+import { storyXApiFetch } from './runtimeCapabilities';
 
 export interface OnboardChatInput {
   medium: string;
@@ -19,7 +20,7 @@ export interface OnboardChatResult {
 
 async function _runOnboardChat(input: OnboardChatInput): Promise<OnboardChatResult> {
   try {
-    const response = await fetch('/api/onboard-chat', {
+    const response = await storyXApiFetch('/api/onboard-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input)

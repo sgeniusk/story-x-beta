@@ -1,7 +1,8 @@
 // OnboardChatPanel — 버블·응결 시드 카드·상시 「이걸로 시작」 순수 렌더 검증.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createElement } from 'react';
+import { act, createElement } from 'react';
+import { createRoot } from 'react-dom/client';
 import { OnboardChatPanel, type OnboardChatPanelProps } from './OnboardChatPanel';
 import type { OnboardChatMessage } from '../lib/onboardChat';
 import type { DiveSetup } from '../lib/diveProposal';
@@ -27,6 +28,14 @@ const setup: DiveSetup = {
 const userMsg: OnboardChatMessage = { id: 'u1', role: 'user', text: '검술 도장 이야기 어때요?' };
 const partnerMsg: OnboardChatMessage = { id: 'p1', role: 'partner', text: '좋아요, 폐관 직전이라는 조건을 얹어볼까요?' };
 const seedMsg: OnboardChatMessage = { id: 'p2', role: 'partner', text: '이 정도면 시작할 수 있겠어요.', setup };
+
+(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+function enterTextareaValue(textarea: HTMLTextAreaElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+  setter?.call(textarea, value);
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
 
 describe('OnboardChatPanel', () => {
   it('빈 대화면 안내 문구를 렌더한다', () => {
@@ -75,5 +84,39 @@ describe('OnboardChatPanel', () => {
   });
   it('note 를 렌더한다', () => {
     expect(render({ note: '응답이 늦어져 잠시 뒤 다시 보내주세요' })).toContain('응답이 늦어져');
+  });
+  it('AI disabled에서는 작성문을 보존하고 전송·응결만 막되 저장된 시드 승인은 유지한다', () => {
+    const onSend = vi.fn();
+    const onCondense = vi.fn();
+    const onUseSetup = vi.fn();
+    const host = document.createElement('div');
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(OnboardChatPanel, {
+      messages: [seedMsg], busy: false, note: null,
+      aiDisabled: true, disabledReason: '로컬 Story X에서 실행하세요.',
+      onSend, onCondense, onUseSetup
+    })));
+    const textarea = host.querySelector('textarea') as HTMLTextAreaElement;
+    act(() => enterTextareaValue(textarea, '이 문장은 사라지면 안 됩니다.'));
+
+    const buttons = Array.from(host.querySelectorAll('button'));
+    const send = buttons.find((button) => button.textContent === '보내기');
+    const condense = buttons.find((button) => button.textContent === '이걸로 시작');
+    const useSetup = buttons.find((button) => button.textContent === '이 설정으로 계속');
+    expect(send?.disabled).toBe(true);
+    expect(condense?.disabled).toBe(true);
+    expect(textarea.disabled).toBe(false);
+    expect(host.textContent).toContain('로컬 Story X에서 실행하세요.');
+
+    act(() => send?.click());
+    act(() => condense?.click());
+    expect(onSend).not.toHaveBeenCalled();
+    expect(onCondense).not.toHaveBeenCalled();
+    expect(textarea.value).toBe('이 문장은 사라지면 안 됩니다.');
+
+    act(() => useSetup?.click());
+    expect(onUseSetup).toHaveBeenCalledWith(setup);
+    act(() => root.unmount());
   });
 });

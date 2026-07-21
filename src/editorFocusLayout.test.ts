@@ -11,6 +11,12 @@ const canonDataView = readFileSync(resolve(__dirname, 'lib/canonDataView.ts'), '
 const componentSrc = (name: string) =>
   readFileSync(resolve(__dirname, `components/${name}.tsx`), 'utf8');
 
+function sourceBetween(source: string, start: string, end: string): string {
+  const startIndex = source.indexOf(start);
+  const endIndex = source.indexOf(end, startIndex + start.length);
+  return startIndex >= 0 && endIndex >= 0 ? source.slice(startIndex, endIndex) : '';
+}
+
 describe('Story X focused editor layout', () => {
   it('keeps the creative artifact as the 70 percent center of the editor', () => {
     expect(css).toContain('grid-template-columns: clamp(200px, 15vw, 260px) minmax(0, 1fr) clamp(220px, 18vw, 320px)');
@@ -85,6 +91,49 @@ describe('Story X focused editor layout', () => {
     expect(css).toContain('.sx-rail-seg');
     expect(css).toContain('.sx-data-stack');
     expect(css).toContain('.sx-axis-input');
+  });
+
+  it('Sites runtime은 WRITE·PLAN AI와 mock/deterministic fallback의 첫 mutation 전에 멈춘다', () => {
+    const actions = [
+      ['const runMarginReviewAll = useCallback(', '\n  const summonMarginReviewAgent', 'setIsReviewing(true)'],
+      ['const askShowrunnerPace = useCallback(', '\n  const handleRequestVsCandidates', 'setIsPaceInterviewLoading(true)'],
+      ['const handleRequestVsCandidates = useCallback(', '\n\n  // floating', 'setIsVsLoading(true)'],
+      ['async function sendPlanChat(', '\n\n  // 제안 승인', 'setPlanChatMessages(next)'],
+      ['async function produceEpisode()', '\n\n  function applyReviewResult', 'setIsGenerating(true)'],
+      ['async function runAiReview(', '\n\n  function reviewDraft', 'setIsReviewing(true)'],
+      ['async function runDataReview(', '\n\n  // 데이터 모드', 'setDataReviewingCategory(category)']
+    ] as const;
+    for (const [start, end, firstMutation] of actions) {
+      const block = sourceBetween(desk, start, end);
+      expect(block.indexOf('runtimeCapabilities.coreAi'), start).toBeGreaterThanOrEqual(0);
+      expect(block.indexOf('runtimeCapabilities.coreAi'), start).toBeLessThan(block.indexOf(firstMutation));
+    }
+
+    expect(desk).toContain('canRunAll: () => runtimeCapabilities.coreAi && !isReviewing && !isGenerating');
+    expect(desk).toContain('onSummon: runtimeCapabilities.coreAi');
+    expect(desk).toContain('aiDisabled={!runtimeCapabilities.coreAi}');
+    const production = sourceBetween(desk, 'async function produceEpisode()', '\n\n  function applyReviewResult');
+    expect(production.indexOf('runtimeCapabilities.coreAi')).toBeLessThan(production.indexOf('produceNextChapter'));
+    const review = sourceBetween(desk, 'async function runAiReview(', '\n\n  function reviewDraft');
+    expect(review.indexOf('runtimeCapabilities.coreAi')).toBeLessThan(review.indexOf('buildMockAiCliReviewResult'));
+    const data = sourceBetween(desk, 'async function runDataReview(', '\n\n  // 데이터 모드');
+    expect(data.indexOf('runtimeCapabilities.coreAi')).toBeLessThan(data.indexOf('buildDeterministicDataReview'));
+
+    const reviewDraft = sourceBetween(desk, 'function reviewDraft()', '\n\n  function requestBibleReview');
+    expect(reviewDraft.indexOf('runtimeCapabilities.coreAi')).toBeGreaterThanOrEqual(0);
+    expect(reviewDraft.indexOf('runtimeCapabilities.coreAi')).toBeLessThan(
+      reviewDraft.indexOf('marginReview.onRunAll')
+    );
+
+    const blockedReason = sourceBetween(
+      desk,
+      'const productionBlockedReason =',
+      '\n\n  // Phase 2a'
+    );
+    expect(blockedReason).toContain('!runtimeCapabilities.coreAi');
+    expect(blockedReason.indexOf('!runtimeCapabilities.coreAi')).toBeLessThan(
+      blockedReason.indexOf('productionGate.allowed')
+    );
   });
 
   it('P1-b — WRITE의 현재 선택 회차와 저장 전 본문을 반출 액션에 직접 전달한다', () => {
@@ -470,9 +519,14 @@ describe('검증 데스크 회귀 — 생성 피드백·검토 fallback (2026-06
     expect(desk.slice(draftReturn, draftReturn + 900)).toContain('CommandPalette');
     const cmdStart = desk.indexOf("id: 'run-all-review'");
     expect(cmdStart).toBeGreaterThan(-1);
-    const block = desk.slice(cmdStart, cmdStart + 400);
+    const block = desk.slice(cmdStart, cmdStart + 700);
     expect(block).toContain('전체 검토');
     expect(block).toContain('marginReview.onRunAll');
+    expect(block.indexOf('runtimeCapabilities.coreAi')).toBeGreaterThanOrEqual(0);
+    expect(block.indexOf('runtimeCapabilities.coreAi')).toBeLessThan(
+      block.indexOf('marginReview.onRunAll')
+    );
+    expect(block).toContain('LOCAL_RUNTIME_REQUIRED_MESSAGE');
   });
 });
 

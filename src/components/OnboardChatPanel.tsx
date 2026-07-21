@@ -8,16 +8,28 @@ export interface OnboardChatPanelProps {
   busy: boolean;
   busyNote?: string;   // App 이 경과 타이머로 조립 — busy 중에만 렌더
   note: string | null; // 실패·응결 미완 강등 안내
+  aiDisabled?: boolean;
+  disabledReason?: string;
   onSend: (text: string) => void;
   onCondense: () => void;                  // 「이걸로 시작」 상시 버튼
   onUseSetup: (setup: DiveSetup) => void;  // 시드 카드 승인 → playseed 진입
 }
 
-export function OnboardChatPanel({ messages, busy, busyNote, note, onSend, onCondense, onUseSetup }: OnboardChatPanelProps) {
+export function OnboardChatPanel({
+  messages,
+  busy,
+  busyNote,
+  note,
+  aiDisabled = false,
+  disabledReason,
+  onSend,
+  onCondense,
+  onUseSetup
+}: OnboardChatPanelProps) {
   const [draft, setDraft] = useState('');
   const submit = () => {
     const text = draft.trim();
-    if (!text || busy) return;
+    if (!text || busy || aiDisabled) return;
     setDraft('');
     onSend(text);
   };
@@ -72,6 +84,7 @@ export function OnboardChatPanel({ messages, busy, busyNote, note, onSend, onCon
       </div>
       {busy && busyNote && <p className="ocp-busy" role="status">{busyNote}</p>}
       {note && <p className="ocp-note">{note}</p>}
+      {aiDisabled && disabledReason && <p className="ocp-note" role="status">{disabledReason}</p>}
       <div className="ocp-input">
         <textarea
           value={draft}
@@ -87,7 +100,7 @@ export function OnboardChatPanel({ messages, busy, busyNote, note, onSend, onCon
           disabled={busy}
           aria-label="구상 파트너에게 보낼 말"
         />
-        <button type="button" className="ocp-send" disabled={busy || !draft.trim()} onClick={submit}>
+        <button type="button" className="ocp-send" disabled={busy || aiDisabled || !draft.trim()} onClick={submit}>
           보내기
         </button>
       </div>
@@ -95,7 +108,7 @@ export function OnboardChatPanel({ messages, busy, busyNote, note, onSend, onCon
         <button
           type="button"
           className="hx-btn ocp-condense"
-          disabled={busy || messages.length === 0}
+          disabled={busy || aiDisabled || messages.length === 0}
           onClick={onCondense}
         >
           이걸로 시작
