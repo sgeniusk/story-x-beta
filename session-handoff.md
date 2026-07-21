@@ -4,6 +4,71 @@
 
 ---
 
+## 2026-07-21 13:14 — ChatGPT Sites 소유자 전용 비공개 파일럿 배포, 사용자 체감 테스트 대기
+
+> Last Updated: 2026-07-21 13:14 KST
+
+### Current Objective
+
+Story X의 ChatGPT Sites 호환성을 최소 위험으로 검증하는 SITES-0를 완료했다. 소유자 한 명만 사이트를 열 수 있고, 호스팅 환경의 AI 호출은 fail-closed하며, 실제 작품·캐논·private memory는 업로드하지 않았다. 로컬 Codex 잡·폴링은 그대로 유지한다. 구현은 `398a476`, Sites v1은 실제 배포 완료, Draft PR은 #47이며 머지는 사용자에게 남긴다.
+
+### Recommended Next Step
+
+로그인된 ChatGPT 계정으로 `https://story-x-private-pilot.gomgomeewookii.chatgpt.site`를 열어 프로젝트 보관함과 WRITE 화면을 둘러본다. 상단에 `Sites 비공개 미리보기` 경계가 계속 보이는지, 생성·응결·리뷰 행동이 원격 성공을 가장하지 않고 `로컬 Story X에서 실행`하라고 안내하는지 확인한다. 실제 작품을 이어 쓰거나 캐논을 승인할 때는 계속 `http://127.0.0.1:5175/`의 로컬 모드를 사용한다.
+
+### Branch · Commit · Verification
+
+- Branch — `codex/sites-private-pilot` (`codex/p2-condense-target-length` / Draft PR #46 위 스택)
+- Implementation — `398a476` (`M11-review-driven-hardening: add private Sites pilot`)
+- Draft PR — https://github.com/sgeniusk/story-x-beta/pull/47 (base `codex/p2-condense-target-length`, draft, 미머지)
+- Sites — v1, `https://story-x-private-pilot.gomgomeewookii.chatgpt.site`, access `custom`, 허용 사용자 1명·그룹 0개
+- Deployment source — app-only snapshot `84696327ea1ed56a1d351eec76a370f7c9c845c7`; 사용자 작품·캐논·memory-bank·인계 문서 제외
+- Final verification — 2026-07-21 13:14 `NODE_DISABLE_COMPILE_CACHE=1 bash init.sh` 녹색, tsc·Vitest·Vite build 전체 통과
+- Additional builds — production 기본 disabled, 명시적 Vercel `remote-api`, dual Sites client/Worker build와 exact-snapshot rebuild 모두 성공
+- Live browser — 로그인된 Chrome에서 루트·`/write` 딥링크와 비공개 미리보기 안내 확인; 인증된 실제 `/api/draft`가 HTTP 503 JSON·`no-store` 반환
+- Independent audit — 최종 P0/P1/P2 0, `git diff --check` 녹색
+
+### What the Last Session Did
+
+1. Sites building·hosting 계약에 맞춰 brainstorm→spec→plan→TDD로 소유자 전용 호환성 파일럿을 설계했다.
+2. `local-codex | remote-api | disabled` runtime capability와 공용 API guard를 도입해 호스팅 production에서 생성·검토가 fail-closed하도록 했다.
+3. Worker가 `/api/**`를 정적 자산보다 먼저 차단하고, HTML 딥링크만 SPA fallback하는 dual Vite build를 추가했다.
+4. 실제 작품·캐논이 없는 app-source-only snapshot을 만들어 5파일 배포 패키지를 검수한 뒤 Sites v1으로 배포했다.
+5. 소유자 정책, 루트·WRITE 렌더, 실제 API 503, 전체 하네스를 동기 검증하고 Draft PR #47을 열었다.
+
+### Files To Touch (next milestone)
+
+- 사용자 체감 테스트에서 SITES-0 경계 결함이 나오면 `src/lib/runtimeCapabilities.ts`, 관련 client·UI guard, `sites/worker.ts`, 두 Sites Vite config와 대응 테스트만 실패 테스트부터 수정한다.
+- Sites를 실제 원격 생성 서비스로 확장하려면 인증·서버 저장소·비밀 관리·비용 주체·캐논 동기화 계약을 별도 brainstorm과 feature branch에서 새로 설계한다.
+
+### Files NOT To Touch
+
+- `.agents/skills/story-score/` — 사용자 소유 untracked 폴더. 읽기·추가·수정·staging 금지.
+- 기존 사용자 작품 원문·회차·캐논·private raw source를 Sites에 업로드·자동 이전·승인하는 작업.
+- Sites access policy를 public·조직 전체·추가 사용자/그룹으로 넓히는 변경.
+- 브라우저 bundle에 OpenAI/API 키를 넣거나 ChatGPT 로그인을 구독 모델 API 권한으로 간주하는 구현.
+- 로컬 Codex 잡·폴링·PLAY 승인·캐논 gate를 SITES-0에 맞춰 약화하는 변경.
+- #39→#40→#41→#42→#43→#44→#45→#46→#47 스택을 순서 없이 머지하거나 retarget 전 base 브랜치를 삭제하는 작업.
+
+### Blockers
+
+코드·배포·비공개 접근·Draft PR 차단은 없다. 이 파일럿에는 ChatGPT 구독을 임의 웹사이트 AI 런타임으로 사용하는 경로가 없으므로, 원격 생성은 의도적으로 비활성화되어 있다. UI와 보안 경계의 사용자 수용 판정만 남았다.
+
+### Known Issues
+
+- 호스팅 데이터는 해당 브라우저의 localStorage에만 있으므로 로컬 Story X 보관함과 자동 동기화되지 않고, 브라우저 프로필/저장소를 지우면 사라질 수 있다.
+- 인앱 브라우저의 로그아웃 상태에서는 `Sign in required`가 정상이며, 로그인된 Chrome에서 실배포를 검증했다.
+- Vite production build의 기존 500kB chunk 경고는 남아 있으나 build 실패는 아니다.
+- Sites source는 개인정보 보호와 원격 저장소 크기 제한을 위해 제품 실행 파일만 담은 별도 parentless snapshot이다. GitHub 검토 정본은 Draft PR #47이다.
+
+### Reference Documents
+
+- `docs/superpowers/specs/2026-07-21-sites-private-pilot-design.md`
+- `docs/superpowers/plans/2026-07-21-sites-private-pilot.md`
+- `progress.md` 맨 위 SITES-0 완료 트랙
+
+---
+
 ## 2026-07-20 17:36 — P2-d 응결 목표 분량 계약 완료, 실제 작품 테스트 대기
 
 > Last Updated: 2026-07-20 17:36 KST
