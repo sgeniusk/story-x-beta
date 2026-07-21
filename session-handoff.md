@@ -4,6 +4,71 @@
 
 ---
 
+## 2026-07-22 00:30 — P2-a PLAY 확인 카드 맥락 정리 완료, 사용자 체감 테스트 대기
+
+> Last Updated: 2026-07-22 00:30 KST
+
+### Current Objective
+
+인기 프리셋·함께 구상에서 이미 정한 설정 뒤에 무관한 도윤·하란·세하가 다시 나타나 현재 세계관을 교체하던 P2-a 결함을 닫았다. 확인 카드는 이제 직전 `scene·myRole·cast`를 검토하고 그 cast 안에서 상대를 고르는 단계다. 구현은 `71a69d7`, Draft PR은 #48이고 머지는 사용자에게 남긴다.
+
+### Recommended Next Step
+
+실행 중인 `http://127.0.0.1:5175/?stage=home`에서 `소재발굴로 계속`→인기 프리셋 하나→선택으로 들어간다. 확인 카드에 선택한 작품의 첫 장면·내 역할·인물만 보이고 도윤·하란·세하가 별도 후보로 나오지 않는지 본다. 두 번째 인물을 눌러 선택 표시가 한 명에게만 이동하고 `이전`이 프리셋 목록으로 돌아오면 P2-a를 수용한다. 다음 구현 후보는 이번에 발견한 모바일 상단 nav 잘림이며, 이를 별도 P2 feature branch에서 닫은 뒤 S3 적응형 인터뷰로 간다.
+
+### Branch · Commit · Verification
+
+- Branch — `codex/p2a-playseed-provenance` (`codex/sites-private-pilot` / Draft PR #47 위 스택)
+- Implementation — `71a69d7` (`M11-review-driven-hardening: keep PLAY setup contextual`)
+- Draft PR — https://github.com/sgeniusk/story-x-beta/pull/48 (base `codex/sites-private-pilot`, draft, 미머지)
+- Final verification — 2026-07-22 00:30 `NODE_DISABLE_COMPILE_CACHE=1 bash init.sh` 녹색: tsc·Vitest·Vite build 전체 성공
+- Focused TDD — 3개 RED 실패 확인 후 5 files / 93 tests GREEN; `git diff --check` 통과
+- Independent review — 코드 감사 P0/P1/P2 0; storyx-persona-review Quick PASS
+- Live browser — 격리 origin에서 인기 프리셋과 실제 로컬 Codex 함께 구상 모두 확인; 1280/390/320px playseed overflow·clipping 0, console error/warning 0, 상대 선택·이전·시작 정상
+- Captures — `/private/tmp/storyx-p2a-playseed-1280.png` · `/private/tmp/storyx-p2a-playseed-390.png` · `/private/tmp/storyx-p2a-playseed-320.png` · `/private/tmp/storyx-p2a-ideate-playseed-1280.png`
+- Live handoff — `http://127.0.0.1:5175/` 서버 실행 중; 브라우저 하네스는 격리 origin을 사용해 사용자 작품·캐논을 수정하지 않음
+
+### What the Last Session Did
+
+1. 2026-07-13 실플레이와 5 페르소나가 공통 지적한 범용 인물 재주입을 P2-a 단일 슬라이스로 고르고 brainstorm→spec→plan→TDD를 완료했다.
+2. `PlaySeedPanel`의 범용 프리셋 그룹·props와 App의 `DIVE_SEED_CHARACTERS`·`presetToDiveSetup` 확인 카드 배선을 제거했다.
+3. 현재 setup의 cast 선택, `aria-pressed`, `playPartnerIndex`, 시작·이전, setup 없음·loading·error 계약은 그대로 보존했다.
+4. legacy Dive 데이터·도메인 코드는 유지하고 생성·캐논·저장·S3·다른 P2 항목을 변경 범위에서 제외했다.
+5. 집중/전체 테스트, 독립 코드·페르소나 검토와 두 실제 진입 경로의 반응형 브라우저 검증 후 Draft PR #48을 열었다.
+
+### Files To Touch (next milestone)
+
+- 사용자 P2-a 체감 테스트에서 결함이 나오면 현재 spec의 5개 구현 파일과 대응 테스트만 실패 테스트부터 최소 수정한다.
+- 모바일 상단 nav 잘림은 새 feature branch에서 brainstorm→spec→plan→TDD로 시작하고 `.hx-nav`·`.hx-steps`·반응형 헤더 테스트만 별도 범위로 확정한다.
+- nav 수용 뒤 S3 적응형 인터뷰는 별도 설계로 시작한다.
+
+### Files NOT To Touch
+
+- `.agents/skills/story-score/` — 사용자 소유 untracked 폴더. 읽기·추가·수정·staging 금지.
+- 기존 사용자 작품 원문·회차·캐논·PLAY transcript를 자동 재생성·덮어쓰기·승인하는 경로.
+- `DIVE_SEED_CHARACTERS`, `presetToDiveSetup`, legacy Dive 복원·도메인 호환 자산을 P2-a 후속에서 삭제하는 변경.
+- 응결·생성 잡·보관함·실패 복구·승인·캐논·저장 스키마를 확인 카드 수정에 섞는 변경.
+- 온보딩 단계 인디케이터·프로젝트 제목·내부 용어·S3 인터뷰를 같은 슬라이스에 섞는 변경.
+- #39→#40→#41→#42→#43→#44→#45→#46→#47→#48 스택을 순서 없이 머지하거나 retarget 전 base 브랜치를 삭제하는 작업.
+
+### Blockers
+
+코드·전체 하네스·playseed 실브라우저·Draft PR 차단은 없다. 실제 사용자 눈으로 프리셋 확인 카드의 맥락이 자연스러운지 판정하는 수용 테스트만 남았다.
+
+### Known Issues
+
+- 기존 `.hx-nav`가 390/320px에서 폭 773px인 내용을 clip해 3·4단계와 AI·에디터 버튼을 볼 수 없다. P2-a 회귀는 아니지만 다음 반응형 UI 슬라이스의 우선 후보다.
+- 모바일 playseed CTA는 잘리거나 겹치지 않고 hit-test도 통과했으나 높이가 40px라 44px 터치 목표에는 4px 모자란다. nav 슬라이스에서 함께 고칠지 brainstorm에서 범위를 결정한다.
+- Vite production build의 기존 500kB chunk 경고는 남아 있으나 build 실패는 아니다.
+
+### Reference Documents
+
+- `docs/superpowers/specs/2026-07-21-p2a-playseed-context-design.md`
+- `docs/superpowers/plans/2026-07-21-p2a-playseed-context.md`
+- `progress.md` 맨 위 P2-a 완료 트랙
+
+---
+
 ## 2026-07-21 13:14 — ChatGPT Sites 소유자 전용 비공개 파일럿 배포, 사용자 체감 테스트 대기
 
 > Last Updated: 2026-07-21 13:14 KST

@@ -1,9 +1,20 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-21 13:14 KST · Branch: `codex/sites-private-pilot` (**SITES-0 소유자 전용 ChatGPT Sites 파일럿 배포, Draft PR #47 사용자 테스트 대기**)
+> Last Updated: 2026-07-22 00:30 KST · Branch: `codex/p2a-playseed-provenance` (**P2-a PLAY 확인 카드 맥락 정리 완료, Draft PR #48 사용자 테스트 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-> 최근 검증(2026-07-21 13:14 KST) — `NODE_DISABLE_COMPILE_CACHE=1 bash init.sh` 녹색: `npm test` 1278 통과(110 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+> 최근 검증(2026-07-22 00:30 KST) — `NODE_DISABLE_COMPILE_CACHE=1 bash init.sh` 녹색: `npm test` 1279 통과(110 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+
+## 완료 트랙 — P2-a PLAY 확인 카드 맥락 정리 (`done` · 2026-07-22, 구현 `71a69d7` · Draft PR #48)
+
+인기 프리셋이나 함께 구상에서 이미 정한 세계관 뒤에 초기 Dive X 범용 인물 도윤·하란·세하가 다시 나타나 설정을 조용히 교체하던 경로를 제거했다. PLAY 시드 확인 카드는 이제 **직전 단계의 첫 장면·내 역할·현재 cast를 검토하고 대화 상대를 고르는 provenance-preserving gate**다. spec `docs/superpowers/specs/2026-07-21-p2a-playseed-context-design.md` · plan `docs/superpowers/plans/2026-07-21-p2a-playseed-context.md`.
+- **현재 작품만 확인** — `PlaySeedPanel`에서 범용 프리셋 그룹과 관련 props를 제거하고, App도 `DIVE_SEED_CHARACTERS`·`presetToDiveSetup`을 확인 카드에 재주입하지 않는다. `setup.scene`·`setup.myRole`·`setup.cast`와 상대 선택만 남겼다.
+- **실패·레거시 경계** — setup이 없으면 기존처럼 시작을 비활성화하고 오류·대기 안내와 `이전` 복귀를 유지한다. `DIVE_SEED_CHARACTERS`, `presetToDiveSetup`, legacy Dive 복원·도메인 테스트는 삭제하지 않았고 생성·캐논·저장 계약도 바꾸지 않았다.
+- **TDD·감사** — 범용 그룹과 App 배선을 막는 3개 RED 실패를 먼저 확인한 뒤 GREEN으로 전환했다. focused 5파일/93테스트, 타입 검사, `git diff --check`, 독립 코드 감사 P0/P1/P2 0, Quick 페르소나 검토 PASS를 통과했다.
+- **실브라우저** — 격리된 신규 origin에서 인기 프리셋과 실제 로컬 Codex `함께 구상` 양쪽을 확인했다. 1280/390/320px에서 playseed 가로 overflow·clipping과 console error/warning 0, 상대 `aria-pressed` 반전·진입원별 `이전`·시작 hit-test 정상. 캡처 `/private/tmp/storyx-p2a-playseed-1280.png`, `/private/tmp/storyx-p2a-playseed-390.png`, `/private/tmp/storyx-p2a-playseed-320.png`, `/private/tmp/storyx-p2a-ideate-playseed-1280.png`.
+- **별도 발견** — 모바일 `.hx-nav`가 390px에서 390/773, 320px에서 320/773(client/scroll width)로 잘려 3·4단계와 AI·에디터가 화면 밖에 놓인다. 이번 diff가 건드리지 않은 기존 셸 결함이므로 별도 P2 UI 슬라이스로 분리한다.
+- **게시/의존** — Draft PR #48 `https://github.com/sgeniusk/story-x-beta/pull/48`은 #47 위 스택이며 머지는 사용자에게 남긴다. 기존 순서 **#39 → #40 → #41 → #42 → #43 → #44 → #45 → #46 → #47 → #48**을 유지한다.
+- **Recommended Next Step** — 로컬 `http://127.0.0.1:5175/?stage=home`에서 `소재발굴로 계속`→인기 프리셋 하나→선택을 눌러 확인 카드에 그 작품의 장면·역할·인물만 보이는지 판정한다. 두 번째 인물을 눌러 선택 테두리가 이동하고 `이전`이 프리셋 목록으로 돌아오면 P2-a를 수용한다. 수용 뒤에는 별도 feature branch에서 모바일 상단 nav 잘림을 먼저 닫고, 이후 S3 적응형 인터뷰를 새 brainstorm으로 시작한다.
 
 ## 완료 트랙 — SITES-0 ChatGPT Sites 소유자 전용 호환성 파일럿 (`done` · 2026-07-21, 구현 `398a476` · Sites v1 · Draft PR #47)
 

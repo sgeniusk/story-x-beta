@@ -2,28 +2,25 @@ import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
 import { PlaySeedPanel } from './PlaySeedPanel';
-import { DIVE_SEED_CHARACTERS } from '../lib/diveSeedCharacters';
 
 const baseProps = {
   setup: null,
   loading: false,
   error: '',
-  presets: DIVE_SEED_CHARACTERS,
   partnerIndex: 0,
   onPickPartner: () => {},
-  onPickPreset: () => {},
   onConfirm: () => {},
   onBack: () => {}
 };
 
 describe('PlaySeedPanel', () => {
-  it('주의사항 고정 문구와 프리셋 3칩을 항상 렌더한다', () => {
+  it('주의사항은 유지하되 확인 단계에 범용 프리셋 그룹을 렌더하지 않는다', () => {
     const html = renderToStaticMarkup(createElement(PlaySeedPanel, baseProps));
     expect(html).toContain('이 설정은 정확하지 않아도 됩니다');
     expect(html).toContain('플레이하며 완성해나가는 초안');
-    const chips = html.match(/hx-playseed-preset/g) ?? [];
-    expect(chips.length).toBeGreaterThanOrEqual(3);
-    expect(html).toContain(DIVE_SEED_CHARACTERS[0].character.name);
+    expect(html).not.toContain('aria-label="프리셋 상대"');
+    expect(html).not.toContain('hx-playseed-presets');
+    expect(html).not.toContain('hx-playseed-preset');
   });
 
   it('setup 이 없으면 「이대로 시작」이 비활성', () => {
@@ -47,6 +44,7 @@ describe('PlaySeedPanel', () => {
     expect(html).toContain('늦은 밤 편의점.');
     expect(html).toContain('단골');
     expect(html).toContain('이대로 시작');
+    expect(html).not.toContain('hx-playseed-presets');
   });
 
   it('error 를 안내 문구로 렌더한다', () => {
@@ -75,10 +73,8 @@ describe('PlaySeedPanel', () => {
         },
         loading: false,
         error: '',
-        presets: [],
         partnerIndex: 1,
         onPickPartner: () => {},
-        onPickPreset: () => {},
         onConfirm: () => {},
         onBack: () => {}
       })
