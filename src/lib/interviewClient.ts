@@ -8,6 +8,7 @@ import { pickComicInterviewers } from './comicPersonas';
 import { pickAudiobookInterviewers } from './audiobookPersonas';
 import type { MediaPersona } from './mediaPersonas';
 import { reportAiCall } from './aiStatus';
+import { storyXApiFetch } from './runtimeCapabilities';
 
 const KNOWN_AGENT_IDS: IntakeAgentId[] = [
   'showrunner',
@@ -132,7 +133,7 @@ async function _runLlmInterview(input: InterviewRequestInput): Promise<LlmInterv
   }));
 
   try {
-    const response = await fetch('/api/interview', {
+    const response = await storyXApiFetch('/api/interview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...input, personaLineup: lineup })

@@ -8,6 +8,7 @@
     "storyx": "node tools/storyx.mjs",
     "storyscore": "node tools/storyscore.mjs",
     "build": "tsc --noEmit && vite build",
+    "build:sites": "tsc --noEmit && vite build --config vite.sites.client.config.ts && vite build --config vite.sites.worker.config.ts",
     "test": "vitest run",
     "preview": "vite preview --host 127.0.0.1",
     "deploy": "bash tools/deploy.sh"

@@ -2,6 +2,7 @@
 // interviewClient 의 requestLlmInterview 패턴(fetch·status:'failed' 처리·reportAiCall·폴백)을 따른다.
 import type { PaceQuestion } from './paceInterview';
 import { reportAiCall } from './aiStatus';
+import { storyXApiFetch } from './runtimeCapabilities';
 
 export interface PaceInterviewInput {
   medium: string;
@@ -73,7 +74,7 @@ export function normalizePaceQuestions(raw: unknown): PaceQuestion[] {
 // 내부 실행 함수 — fetch·status:'failed' 처리·폴백.
 async function _runPaceInterview(input: PaceInterviewInput): Promise<PaceInterviewResult> {
   try {
-    const response = await fetch('/api/pace-interview', {
+    const response = await storyXApiFetch('/api/pace-interview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),

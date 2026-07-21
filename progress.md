@@ -1,9 +1,21 @@
 # Story X — Progress
 
-> Last Updated: 2026-07-20 17:36 KST · Branch: `codex/p2-condense-target-length` (**P2-d 응결 목표 분량 계약 완료, Draft PR #46 사용자 테스트 대기**)
+> Last Updated: 2026-07-21 13:14 KST · Branch: `codex/sites-private-pilot` (**SITES-0 소유자 전용 ChatGPT Sites 파일럿 배포, Draft PR #47 사용자 테스트 대기**)
 > 코드 하네스 상태는 이 파일, 스토리 하네스 설계는 `docs/storyx-harness-architecture.md`.
 
-> 최근 검증(2026-07-20 17:35 KST) — `bash init.sh` 녹색: `npm test` 1251 통과(106 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+> 최근 검증(2026-07-21 13:14 KST) — `NODE_DISABLE_COMPILE_CACHE=1 bash init.sh` 녹색: `npm test` 1278 통과(110 파일) · `npm run build`(tsc+vite) 성공 · `✓ 하네스 검증 통과 — tsc · vitest · build 전체 통과`.
+
+## 완료 트랙 — SITES-0 ChatGPT Sites 소유자 전용 호환성 파일럿 (`done` · 2026-07-21, 구현 `398a476` · Sites v1 · Draft PR #47)
+
+Story X의 전체 제품을 곧바로 원격 서비스로 옮기지 않고, **UI는 Sites에서 소유자만 열되 AI·작품·캐논은 로컬 경계를 넘지 않는** 호환성 파일럿을 배포했다. ChatGPT 로그인은 비공개 접근 제어에만 쓰며, 임의 웹사이트에서 ChatGPT 구독 모델을 호출하는 경로로 해석하지 않는다. spec `docs/superpowers/specs/2026-07-21-sites-private-pilot-design.md` · plan `docs/superpowers/plans/2026-07-21-sites-private-pilot.md`.
+- **소유자 전용 접근** — Sites access policy를 `custom`으로 유지하고 배포 직전 허용 사용자 1명·허용 그룹 0개를 재검증했다. 공개 전환이나 조직 전체 공개는 하지 않았다.
+- **AI fail-closed** — 로컬 개발은 기존 Codex 잡·폴링을 유지하고, Sites production 기본값은 `disabled`다. 호스팅된 `/api/**`는 정적 앱보다 먼저 `503 local_runtime_required`와 `no-store`를 반환하며, UI의 생성·검토 행동도 성공을 가장하지 않고 로컬 Story X가 필요하다고 안내한다. Vercel 호환 경로만 명시적 `remote-api` build env로 분리했다.
+- **작품·캐논 보호** — 사용자 작품, 캐논, raw source, memory-bank, 인계 문서, 로컬 실행 기록을 Sites에 업로드하거나 이전하지 않았다. 호스팅 앱은 현재 브라우저의 로컬 저장소만 사용하므로 로컬 Story X 보관함과 자동 동기화되지 않는다.
+- **최소 배포 원본** — app-source-only parentless snapshot `84696327ea1ed56a1d351eec76a370f7c9c845c7`(260 files)에서 정확히 재빌드했다. 배포 패키지는 client HTML/CSS/JS·Worker·hosting manifest 5개만 포함하고 source map·키·로컬 경로·private memory를 제외했다.
+- **실호스팅 검증** — Sites v1을 `https://story-x-private-pilot.gomgomeewookii.chatgpt.site`에 배포했다. 로그인된 Chrome에서 루트와 `/write` 딥링크, 상단 `Sites 비공개 미리보기` 경계를 확인했고, 인증된 실제 `/api/draft`는 HTTP 503 JSON·`cache-control: no-store`로 확인했다.
+- **TDD·검증** — runtime capability·Worker·호스팅 경계 테스트를 RED→GREEN으로 추가하고 production disabled, Vercel remote, Sites build를 각각 검증했다. 최종 전체 하네스와 `git diff --check`, 독립 코드 감사 P0/P1/P2 0을 통과했다.
+- **게시/의존** — Draft PR #47 `https://github.com/sgeniusk/story-x-beta/pull/47`은 #46 위 스택이며 머지는 사용자에게 남긴다. 기존 순서 **#39 → #40 → #41 → #42 → #43 → #44 → #45 → #46 → #47**을 유지한다.
+- **Recommended Next Step** — 로그인된 ChatGPT 계정으로 위 Sites 주소를 열어 프로젝트 보관함·WRITE 레이아웃과 비공개 미리보기 안내를 확인한다. 생성·응결·리뷰 버튼이 원격 성공을 가장하지 않고 로컬 실행 필요를 알리는지 판정한다. 실제 작품 생성·캐논 승인은 계속 `http://127.0.0.1:5175/`에서 수행한다.
 
 ## 완료 트랙 — P2-d PLAY 응결 목표 분량 계약 (`done` · 2026-07-20, 구현 `91b5c6d` · Draft PR #46)
 

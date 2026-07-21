@@ -84,6 +84,11 @@ import { buildPlanChatCatalog, buildPlanChatTranscript, type PlanChatMessage } f
 import { requestPlanChat } from './lib/planChatClient';
 import { PlanChatPanel } from './components/PlanChatPanel';
 import type { PlayRecoveryWorkDraft } from './lib/playRecovery';
+import {
+  LOCAL_RUNTIME_REQUIRED_MESSAGE,
+  STORYX_RUNTIME_CAPABILITIES,
+  type StoryXRuntimeCapabilities
+} from './lib/runtimeCapabilities';
 
 type DeskTrack = 'draft' | 'bible';
 type ApprovalDecision = MemoryApprovalDecision;
@@ -367,6 +372,7 @@ interface StoryXDeskProps {
   onCloseRecoveryWorkDraft?: () => void;
   recoveryDraftSaveStatus?: RecoveryDraftSaveStatus;
   recoveryDraftSaveError?: string | null;
+  runtimeCapabilities?: StoryXRuntimeCapabilities;
 }
 
 // B2 — 활동일 기록 헬퍼. todayStr 는 작가 로컬 '오늘'(UI 레이어라 Date 허용),
@@ -404,7 +410,8 @@ export function StoryXDesk({
   onCommitRecoveryWorkDraft,
   onCloseRecoveryWorkDraft,
   recoveryDraftSaveStatus = 'saved',
-  recoveryDraftSaveError = null
+  recoveryDraftSaveError = null,
+  runtimeCapabilities = STORYX_RUNTIME_CAPABILITIES
 }: StoryXDeskProps) {
   // 기본 회차 의도는 빈 값 — 의도 메모를 비워두면 produceEpisode 가 캐논 digest 만으로 다음 회차를 만든다.
   // 데모 장르 문구를 박으면 사용자가 안 건드릴 때 다음 회차 intent(freewrite)로 새어 오염된다 (P3, #2 로판 2화 "용사와 외계인" 사고).
@@ -738,6 +745,10 @@ export function StoryXDesk({
   );
   const runMarginReviewAll = useCallback(
     async (onPartial: (review: MarginReview) => void) => {
+      if (!runtimeCapabilities.coreAi) {
+        setGenerationNote(LOCAL_RUNTIME_REQUIRED_MESSAGE);
+        return;
+      }
       if (isReviewing || isGenerating) {
         return;
       }
@@ -862,7 +873,8 @@ export function StoryXDesk({
       marginDefaultAnchor,
       marginParagraphs,
       project,
-      reviewScale
+      reviewScale,
+      runtimeCapabilities.coreAi
     ]
   );
   const summonMarginReviewAgent = useCallback(
@@ -912,7 +924,7 @@ export function StoryXDesk({
     paragraphs: marginParagraphs,
     corePersonaIds: mediumReviewAgentIds,
     runAll: runMarginReviewAll,
-    canRunAll: () => !isReviewing && !isGenerating,
+    canRunAll: () => runtimeCapabilities.coreAi && !isReviewing && !isGenerating,
     summonOne: summonMarginReviewAgent
   });
   const academicClaimMarginReviews = useMemo(
@@ -959,10 +971,15 @@ export function StoryXDesk({
       ? actionLabels.nextDraft
       : actionLabels.review;
   const mainActionRun = !latestChapter || isLatestLocked ? produceEpisode : reviewDraft;
-  // 단계적 집필 게이트(A-2) — 미잠금 헌장이면 생성 CTA 만 비활성화하고 사유를 보여준다(검토·다른 동선은 유지).
+  // Sites에서는 생성·검토 CTA를 모두 닫고, 로컬 런타임 사유를 행동 위치에 보여준다.
+  // 로컬에서는 단계적 집필 게이트(A-2)가 생성 CTA만 비활성화하며 기존 검토 동선은 유지한다.
   const productionGate = evaluateProductionGate(project);
   const productionBlockedReason =
-    (!latestChapter || isLatestLocked) && !productionGate.allowed ? productionGate.reason : undefined;
+    !runtimeCapabilities.coreAi
+      ? LOCAL_RUNTIME_REQUIRED_MESSAGE
+      : (!latestChapter || isLatestLocked) && !productionGate.allowed
+        ? productionGate.reason
+        : undefined;
 
   // Phase 2a — floating 본문 편집 쓰기-백(단일 원천 editorText). 타이핑 경로는 bodyVersion 을 올리지 않는다.
   const handleFloatingBodyChange = useCallback((text: string) => {
@@ -973,6 +990,10 @@ export function StoryXDesk({
   // 쇼러너 서술형 LLM 페이스 인터뷰 — fc-pace 카드 "쇼러너에게 묻기" 트리거.
   const askShowrunnerPace = useCallback(async () => {
     if (isPaceInterviewLoading) return;
+    if (!runtimeCapabilities.coreAi) {
+      setPaceInterviewNote(LOCAL_RUNTIME_REQUIRED_MESSAGE);
+      return;
+    }
     setIsPaceInterviewLoading(true);
     setPaceInterviewNote(null);
     try {
@@ -1019,8 +1040,12 @@ export function StoryXDesk({
     } finally {
       setIsPaceInterviewLoading(false);
     }
-  }, [blueprint.medium, blueprint.format, isPaceInterviewLoading, project]);
+  }, [blueprint.medium, blueprint.format, isPaceInterviewLoading, project, runtimeCapabilities.coreAi]);
   const handleRequestVsCandidates = useCallback(async () => {
+    if (!runtimeCapabilities.coreAi) {
+      setVsNote(LOCAL_RUNTIME_REQUIRED_MESSAGE);
+      return;
+    }
     setIsVsLoading(true);
     setVsNote(null);
     const status = buildContractStatus(project);
@@ -1052,7 +1077,7 @@ export function StoryXDesk({
     } finally {
       setIsVsLoading(false);
     }
-  }, [project, blueprint.medium, blueprint.format, chapterLabel]);
+  }, [project, blueprint.medium, blueprint.format, chapterLabel, runtimeCapabilities.coreAi]);
 
   // floating 이 편집 기본이므로 props 를 mainActionRun 정의 아래에서 구성한다(const 호이스팅 회피).
   // B3 — 본문(editorText) 등장 캐논 멘션. editorText/canonFacts 변경 시만 재계산(floatingEditorProps 전체 재계산 회피).
@@ -1089,8 +1114,15 @@ export function StoryXDesk({
       chapterSub: project.logline,
       paragraphs: marginParagraphs,
       reviews: marginReview.reviews,
-      onSummon: marginReview.onSummon,
-      onRunAll: marginReview.onRunAll,
+      onSummon: runtimeCapabilities.coreAi
+        ? marginReview.onSummon
+        : () => setGenerationNote(LOCAL_RUNTIME_REQUIRED_MESSAGE),
+      onRunAll: runtimeCapabilities.coreAi
+        ? marginReview.onRunAll
+        : () => setGenerationNote(LOCAL_RUNTIME_REQUIRED_MESSAGE),
+      reviewActionBlockedReason: runtimeCapabilities.coreAi
+        ? undefined
+        : LOCAL_RUNTIME_REQUIRED_MESSAGE,
       onAcceptDiff: acceptMarginDiff,
       onRejectReview: marginReview.onRejectReview,
       beats: latestChapter?.beats ?? [],
@@ -1179,6 +1211,7 @@ export function StoryXDesk({
       leakBlock,
       canonMentionViews,
       handleToggleCanonInclude,
+      runtimeCapabilities.coreAi,
     ]
   );
   const commandItems = useMemo<DeskCommand[]>(
@@ -1202,7 +1235,13 @@ export function StoryXDesk({
         section: '원고',
         description: '현재 회차 본문을 작가진 전원에게 한 번에 검토받습니다.',
         shortcut: 'ReviewAll',
-        run: () => marginReview.onRunAll()
+        run: () => {
+          if (!runtimeCapabilities.coreAi) {
+            setGenerationNote(LOCAL_RUNTIME_REQUIRED_MESSAGE);
+            return;
+          }
+          marginReview.onRunAll();
+        }
       },
       {
         id: 'open-draft',
@@ -1284,7 +1323,8 @@ export function StoryXDesk({
       publishingPlan.releaseLock.notice,
       project,
       request,
-      reviewScale
+      reviewScale,
+      runtimeCapabilities.coreAi
     ]
   );
   const filteredCommandItems = useMemo(() => {
@@ -1761,6 +1801,10 @@ export function StoryXDesk({
   async function sendPlanChat(text: string) {
     const trimmed = text.trim();
     if (!trimmed || planChatBusy) return;
+    if (!runtimeCapabilities.coreAi) {
+      setPlanChatNote(LOCAL_RUNTIME_REQUIRED_MESSAGE);
+      return;
+    }
     const userMsg: PlanChatMessage = { id: `pc-${Date.now()}`, role: 'user', text: trimmed };
     const next = [...planChatMessages, userMsg];
     setPlanChatMessages(next);
@@ -1866,6 +1910,10 @@ export function StoryXDesk({
     if (isGenerating || isReviewing) {
       return;
     }
+    if (!runtimeCapabilities.coreAi) {
+      setGenerationNote(LOCAL_RUNTIME_REQUIRED_MESSAGE);
+      return;
+    }
     // 단계적 집필 게이트(A-2) — 헌장이 있는데 척추가 미잠금이면 본문을 만들지 않고 안내만 한다.
     const gate = evaluateProductionGate(project);
     if (!gate.allowed) {
@@ -1931,6 +1979,10 @@ export function StoryXDesk({
   // 에이전트별 분리 검토 — 한 명씩 따로 호출하고, 도착하는 순서대로 작가진 카드를 갱신한다
   async function runAiReview(reviewTarget: string, contextOverride?: string) {
     if (isReviewing || isGenerating) {
+      return;
+    }
+    if (!runtimeCapabilities.coreAi) {
+      setGenerationNote(LOCAL_RUNTIME_REQUIRED_MESSAGE);
       return;
     }
 
@@ -2036,6 +2088,10 @@ export function StoryXDesk({
   }
 
   function reviewDraft() {
+    if (!runtimeCapabilities.coreAi) {
+      setGenerationNote(LOCAL_RUNTIME_REQUIRED_MESSAGE);
+      return;
+    }
     marginReview.onRunAll();
   }
 
@@ -2057,6 +2113,10 @@ export function StoryXDesk({
   // 브리지 미연결·실패 시 deterministic 검토로 폴백해 오프라인에서도 결과가 나온다.
   async function runDataReview(category: CanonCategory) {
     if (dataReviewingCategory) {
+      return;
+    }
+    if (!runtimeCapabilities.coreAi) {
+      setGenerationNote(LOCAL_RUNTIME_REQUIRED_MESSAGE);
       return;
     }
 
@@ -2390,6 +2450,8 @@ export function StoryXDesk({
         messages={planChatMessages}
         busy={planChatBusy}
         note={planChatNote}
+        aiDisabled={!runtimeCapabilities.coreAi}
+        disabledReason={LOCAL_RUNTIME_REQUIRED_MESSAGE}
         harnessPreview={
           planPatches.length > 0
             ? {

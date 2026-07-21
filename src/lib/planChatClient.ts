@@ -1,6 +1,7 @@
 // /api/plan-chat 브리지에 설계 대화 턴을 요청하는 클라이언트. vsCandidatesClient 패턴(fetch·failed·reportAiCall).
 import { reportAiCall } from './aiStatus';
 import { normalizePlanChatResponse, type PlanChatCatalog, type PlanChatTurn } from './planChat';
+import { storyXApiFetch } from './runtimeCapabilities';
 
 export interface PlanChatInput {
   medium: string;
@@ -20,7 +21,7 @@ export interface PlanChatResult {
 
 async function _runPlanChat(input: PlanChatInput, catalog: PlanChatCatalog): Promise<PlanChatResult> {
   try {
-    const response = await fetch('/api/plan-chat', {
+    const response = await storyXApiFetch('/api/plan-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input)

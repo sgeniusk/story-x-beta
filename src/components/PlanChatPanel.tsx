@@ -13,6 +13,8 @@ export interface PlanChatPanelProps {
   busy: boolean;
   note: string | null;
   harnessPreview: PlanChatHarnessPreview | null;
+  aiDisabled?: boolean;
+  disabledReason?: string;
   onSend: (text: string) => void;
   onApproveProposal: (messageId: string, index: number) => void;
 }
@@ -35,11 +37,20 @@ const FIELD_LABELS: Record<string, string> = {
   tone: '문체 톤'
 };
 
-export function PlanChatPanel({ messages, busy, note, harnessPreview, onSend, onApproveProposal }: PlanChatPanelProps) {
+export function PlanChatPanel({
+  messages,
+  busy,
+  note,
+  harnessPreview,
+  aiDisabled = false,
+  disabledReason,
+  onSend,
+  onApproveProposal
+}: PlanChatPanelProps) {
   const [draft, setDraft] = useState('');
   const submit = () => {
     const text = draft.trim();
-    if (!text || busy) return;
+    if (!text || busy || aiDisabled) return;
     setDraft('');
     onSend(text);
   };
@@ -81,6 +92,7 @@ export function PlanChatPanel({ messages, busy, note, harnessPreview, onSend, on
       </div>
       {busy && <p className="pcp-busy">파트너가 생각 중… (수십 초 걸릴 수 있어요)</p>}
       {note && <p className="pcp-note">{note}</p>}
+      {aiDisabled && disabledReason && <p className="pcp-note" role="status">{disabledReason}</p>}
       <div className="pcp-input">
         <textarea
           value={draft}
@@ -96,7 +108,7 @@ export function PlanChatPanel({ messages, busy, note, harnessPreview, onSend, on
           disabled={busy}
           aria-label="설계 파트너에게 보낼 말"
         />
-        <button type="button" onClick={submit} disabled={busy || !draft.trim()}>보내기</button>
+        <button type="button" onClick={submit} disabled={busy || aiDisabled || !draft.trim()}>보내기</button>
       </div>
     </div>
   );

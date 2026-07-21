@@ -2,6 +2,7 @@
 // interviewClient/paceInterviewClient 패턴(fetch·status:'failed'·reportAiCall·폴백은 호출 측)을 따른다.
 import type { StorySpine } from './storyEngine';
 import { reportAiCall } from './aiStatus';
+import { storyXApiFetch } from './runtimeCapabilities';
 
 export interface SpineSuggestionInput {
   medium: string;
@@ -34,7 +35,7 @@ export function normalizeSpine(raw: unknown): StorySpine | null {
 
 async function _runSpineSuggestion(input: SpineSuggestionInput): Promise<SpineSuggestionResult> {
   try {
-    const response = await fetch('/api/spine-suggest', {
+    const response = await storyXApiFetch('/api/spine-suggest', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input)

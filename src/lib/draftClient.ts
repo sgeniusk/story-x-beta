@@ -1,6 +1,7 @@
 // storyx 로컬 브리지(/api/draft)에 회차 초안 LLM 생성을 요청하는 클라이언트
 import type { DraftChapterPayload } from './storyEngine';
 import { reportAiCall } from './aiStatus';
+import { storyXApiFetch } from './runtimeCapabilities';
 
 export interface DraftRequestInput {
   medium: string;
@@ -32,7 +33,7 @@ export async function requestLlmDraft(input: DraftRequestInput): Promise<LlmDraf
 
 async function _runLlmDraft(input: DraftRequestInput): Promise<LlmDraftResult> {
   try {
-    const response = await fetch('/api/draft', {
+    const response = await storyXApiFetch('/api/draft', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input)

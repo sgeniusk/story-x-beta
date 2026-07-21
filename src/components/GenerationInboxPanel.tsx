@@ -1,4 +1,5 @@
 import { canRecoverGeneration, type GenerationInboxItem } from '../lib/generationInbox';
+import { STORYX_RUNTIME_CAPABILITIES } from '../lib/runtimeCapabilities';
 import type { EpisodeLengthContract } from '../lib/storyEngine';
 
 interface GenerationInboxPanelProps {
@@ -8,6 +9,8 @@ interface GenerationInboxPanelProps {
   onDiscard: (item: GenerationInboxItem) => void;
   onDownloadRecovery: (item: GenerationInboxItem) => void;
   onSendRecoveryToDraft: (item: GenerationInboxItem) => void;
+  canManageJobs?: boolean;
+  jobManagementNotice?: string;
 }
 
 const STATUS_LABEL: Record<GenerationInboxItem['status'], string> = {
@@ -29,7 +32,9 @@ export function GenerationInboxPanel({
   onCancel,
   onDiscard,
   onDownloadRecovery,
-  onSendRecoveryToDraft
+  onSendRecoveryToDraft,
+  canManageJobs = STORYX_RUNTIME_CAPABILITIES.condenseJobs,
+  jobManagementNotice = '이 배포본에서는 로컬 생성 상태를 확인하거나 취소할 수 없습니다. 영수증과 PLAY 기록은 지우지 않았습니다.'
 }: GenerationInboxPanelProps) {
   return (
     <section className="gix-panel" aria-labelledby="generation-inbox-title">
@@ -40,6 +45,9 @@ export function GenerationInboxPanel({
         </div>
         <span className="gix-count">{items.length}</span>
       </header>
+      {!canManageJobs && items.some((item) => item.status === 'running') && (
+        <p className="gix-recovery-note" role="status">{jobManagementNotice}</p>
+      )}
       {items.length === 0 ? (
         <div className="gix-empty">
           <strong>완료된 회차가 이곳에 도착합니다.</strong>
@@ -87,7 +95,15 @@ export function GenerationInboxPanel({
                   )}
                 </div>
                 <div className="gix-actions">
-                  {item.status === 'running' && <button type="button" onClick={() => onCancel(item)}>생성 취소</button>}
+                  {item.status === 'running' && (
+                    <button
+                      type="button"
+                      disabled={!canManageJobs}
+                      onClick={() => { if (canManageJobs) onCancel(item); }}
+                    >
+                      생성 취소
+                    </button>
+                  )}
                   {item.status === 'succeeded' && item.result && <button type="button" className="is-primary" onClick={() => onReview(item)}>작품에서 검토</button>}
                   {(exposesRecoveryDraft || needsImmediateDownload) && item.recovery && (
                     <>

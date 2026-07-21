@@ -32,6 +32,8 @@ export interface FloatingEditorProps {
   personas: PersonaCard[];
   onSummon: SummonHandler;
   onRunAll: () => void;
+  /** AI 검토를 실행할 수 없는 런타임의 실제 사유. 호출을 막고 해당 액션 위치에 바로 알린다. */
+  reviewActionBlockedReason?: string;
   onAcceptDiff: (diff: InlineDiff) => void;
   onRejectReview: (review: MarginReview) => void;
   beats: ChapterBeatLike[];
@@ -109,6 +111,7 @@ export function FloatingEditor({
   personas,
   onSummon,
   onRunAll,
+  reviewActionBlockedReason,
   onAcceptDiff,
   onRejectReview,
   beats,
@@ -393,17 +396,25 @@ export function FloatingEditor({
   const callOne = useCallback(
     (id: string, selectedText?: string, anchor?: string) => {
       setPop(null);
+      if (reviewActionBlockedReason) {
+        toast(reviewActionBlockedReason);
+        return;
+      }
       onSummon(id, { selectedText, anchor });
       toast(`<b>${personaById(id).name}</b> 호출 — 이 대목을 검토합니다`);
     },
-    [onSummon, toast, personaById]
+    [onSummon, toast, personaById, reviewActionBlockedReason]
   );
 
   const assignAll = useCallback(() => {
     setOpenPanel('writers');
+    if (reviewActionBlockedReason) {
+      toast(reviewActionBlockedReason);
+      return;
+    }
     onRunAll();
     toast('<b>5명에게 전체 검토</b>를 맡겼습니다');
-  }, [onRunAll, toast]);
+  }, [onRunAll, reviewActionBlockedReason, toast]);
 
   function resolveReview(review: MarginReview, ok: boolean) {
     if (ok && review.diffs[0]) onAcceptDiff(review.diffs[0]);
@@ -617,7 +628,7 @@ export function FloatingEditor({
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                   <path d="M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5z" />
                 </svg>
-                <span>{isGenerating ? `생성 중 · ${formatElapsed(genElapsed)}` : productionBlockedReason ? '헌장 잠금 필요' : mainActionLabel}</span>
+                <span>{isGenerating ? `생성 중 · ${formatElapsed(genElapsed)}` : productionBlockedReason ?? mainActionLabel}</span>
               </button>
               {isGenerating && (
                 <p className="fc-gen-progress" role="status" aria-live="polite">

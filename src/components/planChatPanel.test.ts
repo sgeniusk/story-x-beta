@@ -1,7 +1,8 @@
 // PlanChatPanel — 버블·승인형 제안 카드·하네스 미리보기 순수 렌더 검증.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createElement } from 'react';
+import { act, createElement } from 'react';
+import { createRoot } from 'react-dom/client';
 import { PlanChatPanel, type PlanChatPanelProps } from './PlanChatPanel';
 import type { PlanChatMessage } from '../lib/planChat';
 
@@ -19,6 +20,14 @@ const partnerMsg: PlanChatMessage = {
   id: 'm1', role: 'partner', text: '욕망을 좁혀볼까요?',
   proposals: [{ kind: 'character', targetId: 'c1', targetLabel: '리아나', field: 'desire', after: '형의 누명을 벗긴다', rationale: '방어에서 목표로' }]
 };
+
+(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+function enterTextareaValue(textarea: HTMLTextAreaElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+  setter?.call(textarea, value);
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
 
 describe('PlanChatPanel', () => {
   it('빈 대화면 안내 문구를 렌더한다', () => {
@@ -50,5 +59,32 @@ describe('PlanChatPanel', () => {
   it('busy 면 대기 안내·note 면 실패 안내를 렌더한다', () => {
     expect(render({ busy: true })).toContain('수십 초');
     expect(render({ note: '브리지 응답 오류' })).toContain('브리지 응답 오류');
+  });
+  it('AI disabled에서는 작성문을 보존하고 전송만 막되 기존 제안 승인은 유지한다', () => {
+    const onSend = vi.fn();
+    const onApproveProposal = vi.fn();
+    const host = document.createElement('div');
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(PlanChatPanel, {
+      messages: [partnerMsg], busy: false, note: null, harnessPreview: null,
+      aiDisabled: true, disabledReason: '로컬 Story X에서 실행하세요.',
+      onSend, onApproveProposal
+    })));
+    const textarea = host.querySelector('textarea') as HTMLTextAreaElement;
+    act(() => enterTextareaValue(textarea, '내 설계 메모를 보존해 주세요.'));
+    const send = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '보내기');
+    const approve = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '설계안으로');
+
+    expect(send?.disabled).toBe(true);
+    expect(textarea.disabled).toBe(false);
+    expect(host.textContent).toContain('로컬 Story X에서 실행하세요.');
+    act(() => send?.click());
+    expect(onSend).not.toHaveBeenCalled();
+    expect(textarea.value).toBe('내 설계 메모를 보존해 주세요.');
+
+    act(() => approve?.click());
+    expect(onApproveProposal).toHaveBeenCalledWith('m1', 0);
+    act(() => root.unmount());
   });
 });

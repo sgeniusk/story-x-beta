@@ -1,5 +1,6 @@
 // Dive X 로컬 브리지(/api/dive-chat·/api/dive-condense) fetch 래퍼
 import { isValidProposal, type DiveProposal, type DiveSetup, type NoveltyLevel } from './diveProposal';
+import { storyXApiFetch } from './runtimeCapabilities';
 import type { EpisodeLengthContract, EpisodeLengthStatus } from './storyEngine';
 
 export interface DiveChatRequest {
@@ -70,7 +71,7 @@ async function postJson<T>(route: string, body: unknown): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), DIVE_TIMEOUT_MS);
   try {
-    const res = await fetch(route, {
+    const res = await storyXApiFetch(route, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -91,7 +92,7 @@ export function requestDiveCondense(req: DiveCondenseRequest): Promise<DiveConde
 }
 
 async function requestJobJson(route: string, method: 'POST' | 'GET' | 'DELETE', body?: unknown): Promise<DiveCondenseJob> {
-  const res = await fetch(route, {
+  const res = await storyXApiFetch(route, {
     method,
     ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   });

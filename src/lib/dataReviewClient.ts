@@ -1,6 +1,7 @@
 // storyx 로컬 브리지(/api/review-data)에 캐논 분야별 데이터 검토를 요청하는 클라이언트.
 // 한 분야(인물/장소/사물/사건/시간선)의 작품 내 정합과 보강 제안을 정합/제안 노트로 받아온다.
 import { reportAiCall } from './aiStatus';
+import { storyXApiFetch } from './runtimeCapabilities';
 
 // 데이터 검토 노트 한 건 — 정합(consistency check) 또는 제안(strengthening idea).
 export type DataReviewNoteKind = '정합' | '제안';
@@ -52,7 +53,7 @@ export async function requestDataReview(input: DataReviewInput): Promise<DataRev
 
 async function _runDataReview(input: DataReviewInput): Promise<DataReviewResult> {
   try {
-    const response = await fetch('/api/review-data', {
+    const response = await storyXApiFetch('/api/review-data', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -9,6 +9,7 @@ import {
 import type { ValidationAgentId } from './agentReviewProcess';
 import { reportAiCall } from './aiStatus';
 import { appendEvolutionEvent } from './evolutionMemory';
+import { storyXApiFetch } from './runtimeCapabilities';
 
 export interface AgentReviewInput {
   agentId: string;
@@ -74,7 +75,7 @@ export async function requestAgentReview(input: AgentReviewInput): Promise<Agent
 
 async function _runAgentReview(input: AgentReviewInput): Promise<AgentReviewResult> {
   try {
-    const response = await fetch('/api/review-agent', {
+    const response = await storyXApiFetch('/api/review-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

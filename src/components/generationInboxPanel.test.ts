@@ -39,6 +39,33 @@ describe('GenerationInboxPanel', () => {
     expect(html).toContain('생성 실패');
   });
 
+  it('Sites에서는 running 영수증과 복구 행동을 보존하고 취소만 막는다', () => {
+    const onCancel = vi.fn();
+    const onReview = vi.fn();
+    const host = document.createElement('div');
+    const root = createRoot(host);
+
+    act(() => root.render(createElement(GenerationInboxPanel, {
+      items: [makeItem('running'), makeItem('succeeded')],
+      canManageJobs: false,
+      jobManagementNotice: '이 배포본에서는 로컬 생성 상태를 확인하거나 취소할 수 없습니다. 영수증은 지우지 않았습니다.',
+      onReview, onCancel, onDiscard: () => {}, onDownloadRecovery: () => {}, onSendRecoveryToDraft: () => {}
+    })));
+
+    expect(host.textContent).toContain('생성 중');
+    expect(host.textContent).toContain('영수증은 지우지 않았습니다');
+    const cancel = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '생성 취소');
+    const review = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === '작품에서 검토');
+    expect(cancel?.disabled).toBe(true);
+    expect(review?.disabled).toBe(false);
+    act(() => cancel?.click());
+    expect(onCancel).not.toHaveBeenCalled();
+    act(() => review?.click());
+    expect(onReview).toHaveBeenCalledWith(expect.objectContaining({ status: 'succeeded' }));
+
+    act(() => root.unmount());
+  });
+
   it('보관함 카드는 root 영수증 목표만 표시하고 recovery/result의 보조 목표를 legacy에 소급하지 않는다', () => {
     const html = renderToStaticMarkup(createElement(GenerationInboxPanel, {
       items: [

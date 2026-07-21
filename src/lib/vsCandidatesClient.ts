@@ -2,6 +2,7 @@
 // spineSuggestClient 패턴(fetch·status:'failed'·reportAiCall·폴백은 호출 측)을 따른다.
 import { reportAiCall } from './aiStatus';
 import { normalizeVsCandidates, type VsCandidate } from './episodeBriefing';
+import { storyXApiFetch } from './runtimeCapabilities';
 
 export interface VsCandidatesInput {
   medium: string;
@@ -20,7 +21,7 @@ export interface VsCandidatesResult {
 
 async function _runVsCandidates(input: VsCandidatesInput): Promise<VsCandidatesResult> {
   try {
-    const response = await fetch('/api/vs-candidates', {
+    const response = await storyXApiFetch('/api/vs-candidates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input)

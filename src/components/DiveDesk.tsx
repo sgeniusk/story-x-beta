@@ -50,6 +50,10 @@ import {
   playProgressPresentation,
   type PlayProgressKind
 } from '../lib/generationProgress';
+import {
+  LOCAL_RUNTIME_REQUIRED_MESSAGE,
+  STORYX_RUNTIME_CAPABILITIES
+} from '../lib/runtimeCapabilities';
 
 export type CondenseApprovalResolution = 'committed' | 'pending-conflict' | 'failed';
 
@@ -78,6 +82,9 @@ interface DiveDeskProps {
   onApproveGeneration?: (approval: CondenseApprovalRequest) => CondenseApprovalResolution;
   onDownloadRecovery?: (recovery: PlayRecoverySnapshot) => void;
   onSendRecoveryToDraft?: (recovery: PlayRecoverySnapshot, generationId?: string) => void;
+  playAiEnabled?: boolean;
+  condenseJobsEnabled?: boolean;
+  disabledReason?: string;
 }
 
 const EPISODE_LENGTH_OPTIONS: Array<{
@@ -242,7 +249,10 @@ function DiveProgressCard({
 export function DiveDesk({
   session, project, onChange, onBack, generationInbox = [], selectedGeneration = null,
   onStartGeneration, onCancelGeneration, onOpenGenerationInbox, onResolveGeneration,
-  onApproveGeneration, onDownloadRecovery, onSendRecoveryToDraft
+  onApproveGeneration, onDownloadRecovery, onSendRecoveryToDraft,
+  playAiEnabled = STORYX_RUNTIME_CAPABILITIES.playAi,
+  condenseJobsEnabled = STORYX_RUNTIME_CAPABILITIES.condenseJobs,
+  disabledReason = LOCAL_RUNTIME_REQUIRED_MESSAGE
 }: DiveDeskProps) {
   const selectedResultBlocked = selectedGeneration?.result ? inspectLeak(selectedGeneration.result.prose).blocked : false;
   const [input, setInput] = useState('');
@@ -399,6 +409,10 @@ export function DiveDesk({
 
   async function reviewConsolidation() {
     if (!pending || reviewing) return;
+    if (!playAiEnabled) {
+      setGenerationStartError(disabledReason);
+      return;
+    }
     setReviewing(true);
     try {
       const res = await requestDiveConsolidate({ prose: pending.prose, context: buildProjectContextDigest(project) });
@@ -413,6 +427,10 @@ export function DiveDesk({
   async function send(textArg?: string) {
     const userText = (textArg ?? input).trim();
     if (!userText || busy || pending !== null) return;
+    if (!playAiEnabled) {
+      setGenerationStartError(disabledReason);
+      return;
+    }
     if (textArg === undefined) setInput('');
     setBusy(true);
     const progressId = beginProgress('dialogue', `${charName}의 다음 대화`);
@@ -460,6 +478,10 @@ export function DiveDesk({
   // ✦ 전개 후보 — 명시 버튼 opt-in. 라이브 상태를 VS 입력으로 조립해 후보 다발을 1회 생성. 실패는 안내로 강등.
   async function requestCandidates() {
     if (busy || vsBusy || pending !== null) return;
+    if (!playAiEnabled) {
+      setGenerationStartError(disabledReason);
+      return;
+    }
     setVsBusy(true);
     const progressId = beginProgress('candidates');
     setVsReason(null);
@@ -479,6 +501,10 @@ export function DiveDesk({
 
   // 후보 선택 → 괄호 연출로 굴림(⏭전개과 같은 계열). 패널은 닫는다.
   function pickCandidate(direction: string) {
+    if (!playAiEnabled) {
+      setGenerationStartError(disabledReason);
+      return;
+    }
     setVsCandidates([]);
     setVsReason(null);
     send(buildPlayDirectionSeed(direction));
@@ -486,6 +512,10 @@ export function DiveDesk({
 
   async function condense(retry?: { recovery: PlayRecoverySnapshot; item: GenerationInboxItem | null }) {
     if (busy || startingGeneration || activeGeneration || (!retry && !hasEnoughCondenseMaterial)) return;
+    if (!condenseJobsEnabled) {
+      setGenerationStartError(disabledReason);
+      return;
+    }
     const retrySource = retry
       ? resolveCondenseRetrySource(
           session,
@@ -552,6 +582,10 @@ export function DiveDesk({
 
   async function askShowrunner() {
     if (!srInput.trim() || busy) return;
+    if (!playAiEnabled) {
+      setGenerationStartError(disabledReason);
+      return;
+    }
     const directive = srInput.trim();
     setSrInput('');
     setBusy(true);
@@ -677,6 +711,10 @@ export function DiveDesk({
         <span className="dx-title">{card}</span>
       </header>
 
+      {(!playAiEnabled || !condenseJobsEnabled) && (
+        <p className="dx-start-error" role="status">{disabledReason}</p>
+      )}
+
       <div className="dx-scene">
         <label className="dx-scene-label">🎬 현재 장면</label>
         <textarea
@@ -712,7 +750,7 @@ export function DiveDesk({
               placeholder="쇼러너에게 지시 (예: 비를 내려줘 · 도윤 엄마를 의심하게)"
               disabled={busy}
             />
-            <button className="dx-send" onClick={askShowrunner} disabled={busy}>지시</button>
+            <button className="dx-send" onClick={askShowrunner} disabled={busy || !playAiEnabled}>지시</button>
             <span className="dx-sr-cost">· 포인트(추후)</span>
           </div>
         </div>
@@ -895,7 +933,7 @@ export function DiveDesk({
             }
           />
           <div className="dx-review-row">
-            <button className="dx-review-btn" onClick={reviewConsolidation} disabled={reviewing}>
+            <button className="dx-review-btn" onClick={reviewConsolidation} disabled={reviewing || !playAiEnabled}>
               {reviewing ? '검토 중…' : '🔍 정밀 검토'}
             </button>
           </div>
@@ -925,7 +963,7 @@ export function DiveDesk({
         <button
           className="dx-ambient"
           onClick={() => condense()}
-          disabled={busy || pending !== null || !hasEnoughCondenseMaterial || inlineRecovery !== null}
+          disabled={busy || !condenseJobsEnabled || pending !== null || !hasEnoughCondenseMaterial || inlineRecovery !== null}
         >
           {turnCounts.surprise > 0 && <span className="dx-amb-surprise">✦ 의외 전개 후보 {turnCounts.surprise}</span>}
           {turnCounts.major > 0 && <span className="dx-amb-major">🟡 경고 {turnCounts.major}</span>}
@@ -969,7 +1007,7 @@ export function DiveDesk({
             type="button"
             className="dx-condense-target-action"
             onClick={() => condense()}
-            disabled={busy || startingGeneration}
+            disabled={busy || startingGeneration || !condenseJobsEnabled}
           >
             {startingGeneration
               ? '잡 등록 중…'
@@ -1013,7 +1051,18 @@ export function DiveDesk({
             </div>
           )}
           <div className="dx-generation-actions">
-            {activeGeneration && onCancelGeneration && <button type="button" onClick={() => onCancelGeneration(activeGeneration)}>생성 취소</button>}
+            {!condenseJobsEnabled && (
+              <span className="dx-start-error">이 배포본에서는 상태 확인·취소를 하지 않으며 영수증과 PLAY 기록을 보존합니다.</span>
+            )}
+            {activeGeneration && onCancelGeneration && (
+              <button
+                type="button"
+                disabled={!condenseJobsEnabled}
+                onClick={() => { if (condenseJobsEnabled) onCancelGeneration(activeGeneration); }}
+              >
+                생성 취소
+              </button>
+            )}
             {currentGenerationNeedsImmediateDownload && currentEpisodeGeneration?.recovery && onDownloadRecovery && (
               <button type="button" onClick={() => onDownloadRecovery(currentEpisodeGeneration.recovery!)}>PLAY 기록 TXT</button>
             )}
@@ -1049,14 +1098,14 @@ export function DiveDesk({
           disabled={busy || pending !== null}
           rows={1}
         />
-        <button className="dx-send" onClick={() => send()} disabled={busy || pending !== null}>보내기</button>
-        <button className="dx-continue" onClick={() => send('(가만히 지켜본다. 시간이 잠시 흐른다.)')} disabled={busy || pending !== null}>
+        <button className="dx-send" onClick={() => send()} disabled={busy || !playAiEnabled || pending !== null}>보내기</button>
+        <button className="dx-continue" onClick={() => send('(가만히 지켜본다. 시간이 잠시 흐른다.)')} disabled={busy || !playAiEnabled || pending !== null}>
           ⏳ 계속
         </button>
-        <button className="dx-escalate" onClick={() => send('(이야기를 다음 국면으로 크게 밀어붙인다.)')} disabled={busy || pending !== null}>
+        <button className="dx-escalate" onClick={() => send('(이야기를 다음 국면으로 크게 밀어붙인다.)')} disabled={busy || !playAiEnabled || pending !== null}>
           ⏭ 전개
         </button>
-        <button className="dx-vs-request" onClick={requestCandidates} disabled={busy || vsBusy || pending !== null}>
+        <button className="dx-vs-request" onClick={requestCandidates} disabled={busy || vsBusy || !playAiEnabled || pending !== null}>
           ✦ 전개 후보
         </button>
       </div>

@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "buildCommand": "npm run build",
+  "buildCommand": "VITE_STORYX_AI_RUNTIME=remote-api npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "functions": {

@@ -8,6 +8,12 @@ const blueprintSource = readFileSync(resolve(__dirname, 'lib/projectBlueprint.ts
 const projectCardSource = readFileSync(resolve(__dirname, 'components/ProjectLibraryCard.tsx'), 'utf8');
 const diveDeskSource = readFileSync(resolve(__dirname, 'components/DiveDesk.tsx'), 'utf8');
 
+function sourceBetween(source: string, start: string, end: string): string {
+  const startIndex = source.indexOf(start);
+  const endIndex = source.indexOf(end, startIndex + start.length);
+  return startIndex >= 0 && endIndex >= 0 ? source.slice(startIndex, endIndex) : '';
+}
+
 describe('Story X page experience', () => {
   it('320px viewport에서도 세로 스크롤바가 body 최소 폭을 밀어 가로 스크롤을 만들지 않는다', () => {
     expect(css).toMatch(/body\s*\{[\s\S]*?min-width:\s*min\(320px,\s*100%\)/);
@@ -181,6 +187,45 @@ describe('Story X page experience', () => {
     expect(app).toContain('async function goToIntake');
     expect(app).toContain('async function goToBuilding');
     expect(app).toContain('effectiveIntakeQuestions');
+  });
+
+  it('Sites runtime은 poll·HOME AI·첫 초안 fallback보다 먼저 fail-closed한다', () => {
+    const poll = sourceBetween(app, 'useEffect(() => {\n    let stopped = false;', '\n  }, []);');
+    expect(poll.indexOf('STORYX_RUNTIME_CAPABILITIES.condenseJobs')).toBeGreaterThanOrEqual(0);
+    expect(poll.indexOf('STORYX_RUNTIME_CAPABILITIES.condenseJobs')).toBeLessThan(poll.indexOf('const poll = async'));
+
+    const startJob = sourceBetween(app, 'async function handleStartGeneration(', '\n  function handleDownloadRecovery');
+    expect(startJob.indexOf('STORYX_RUNTIME_CAPABILITIES.condenseJobs')).toBeLessThan(startJob.indexOf('startDiveCondenseJob'));
+    const cancelJob = sourceBetween(app, 'async function handleCancelGeneration(', '\n  function discardGeneration');
+    expect(cancelJob.indexOf('STORYX_RUNTIME_CAPABILITIES.condenseJobs')).toBeLessThan(cancelJob.indexOf('cancelDiveCondenseJob'));
+
+    const actions = [
+      ['async function goToIntake()', '\n  // [휴면', 'STORYX_RUNTIME_CAPABILITIES.coreAi', "setHomeFlowStep('intake')"],
+      ['async function goToPlaySeed()', '\n  // 인기 프리셋', 'STORYX_RUNTIME_CAPABILITIES.playAi', "setHomeFlowStep('playseed')"],
+      ['async function sendOnboardChat(', '\n  // 시드 카드', 'STORYX_RUNTIME_CAPABILITIES.coreAi', 'setOnboardChatMessages(next)'],
+      ['async function suggestSpine()', '\n  // 인터뷰 답변까지', 'STORYX_RUNTIME_CAPABILITIES.coreAi', 'setIsSpineSuggesting(true)'],
+      ['async function goToBuilding()', '\n  const homeFlowSteps', 'STORYX_RUNTIME_CAPABILITIES.coreAi', "setHomeFlowStep('building')"]
+    ] as const;
+    for (const [start, end, guard, firstMutation] of actions) {
+      const block = sourceBetween(app, start, end);
+      expect(block.indexOf(guard), start).toBeGreaterThanOrEqual(0);
+      expect(block.indexOf(guard), start).toBeLessThan(block.indexOf(firstMutation));
+    }
+    const building = sourceBetween(app, 'async function goToBuilding()', '\n  const homeFlowSteps');
+    expect(building.indexOf('STORYX_RUNTIME_CAPABILITIES.coreAi')).toBeLessThan(building.indexOf('buildFallbackDraft'));
+    expect(app).toContain('aiDisabled={!STORYX_RUNTIME_CAPABILITIES.coreAi}');
+  });
+
+  it('Sites에서 인터뷰가 막히면 자유 서술 화면에 즉시 사유를 보여준다', () => {
+    const freewrite = sourceBetween(
+      app,
+      "{(!usesSourceDiscovery || homeFlowStep === 'freewrite') && (",
+      "{usesSourceDiscovery && homeFlowStep === 'ideate' && ("
+    );
+
+    expect(freewrite).toContain('{interviewFallbackReason && (');
+    expect(freewrite).toContain('role="status"');
+    expect(freewrite).toContain('{interviewFallbackReason}');
   });
 
   it('keeps the editor desk reachable from the routed stages', () => {

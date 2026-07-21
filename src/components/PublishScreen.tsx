@@ -23,6 +23,10 @@ import { requestAgentReview } from '../lib/reviewClient';
 import type { AiCliAgentReport } from '../lib/aiCliHarness';
 import type { AcademicPublishSummary } from '../lib/academicPublish';
 import type { SeriesProject } from '../lib/storyEngine';
+import {
+  LOCAL_RUNTIME_REQUIRED_MESSAGE,
+  STORYX_RUNTIME_CAPABILITIES
+} from '../lib/runtimeCapabilities';
 
 type PublishAgentId = 'book-designer' | 'pr-specialist' | 'platform-curator' | 'business-strategist';
 
@@ -39,6 +43,8 @@ interface PublishScreenProps {
   workTitle?: string;
   mediumLabel?: string;
   onBack: () => void;
+  aiEnabled?: boolean;
+  disabledReason?: string;
 }
 
 interface PublishAgentCard {
@@ -624,7 +630,16 @@ const lockButtonStyle = (canLock: boolean, isLocked: boolean): CSSProperties => 
   transition: 'transform 120ms ease'
 });
 
-export function PublishScreen({ medium, format, academicSummary, workTitle, mediumLabel, onBack }: PublishScreenProps) {
+export function PublishScreen({
+  medium,
+  format,
+  academicSummary,
+  workTitle,
+  mediumLabel,
+  onBack,
+  aiEnabled = STORYX_RUNTIME_CAPABILITIES.coreAi,
+  disabledReason = LOCAL_RUNTIME_REQUIRED_MESSAGE
+}: PublishScreenProps) {
   // 출간 화면도 스튜디오와 같은 storage 에서 project 를 읽고 동일한 publishingPlan 빌더를 쓴다.
   // reviewCandidates·decisions 같은 in-memory state 는 출간 단계에서 별도 관리하지 않으므로 빈 옵션으로 호출.
   const project = useMemo(() => loadProject(), []);
@@ -657,6 +672,7 @@ export function PublishScreen({ medium, format, academicSummary, workTitle, medi
   // 출판 에이전트 호출 — 작품의 핵심 결만 컨텍스트로 던지고, 각자의 영역에서 출간 단계 가이드를 받는다.
   // target 은 원고 미리보기(excerpt), context 는 작품·매체·발간 노트·패키지 묶음.
   const handleAgentInvoke = async (agentId: PublishAgentId) => {
+    if (!aiEnabled) return;
     const target = publishingPlan.excerpt || publishingPlan.platformProof || project.logline;
     const context = buildAgentContext(project, publishingPlan, mediumLabel ?? medium);
     setReviewStates((current) => ({ ...current, [agentId]: { status: 'loading' } }));
@@ -736,6 +752,7 @@ export function PublishScreen({ medium, format, academicSummary, workTitle, medi
 
           <section>
             <h2 style={sectionTitleStyle}>출판 에이전트 4명</h2>
+            {!aiEnabled && <p role="status" style={footerNoteStyle}>{disabledReason}</p>}
             <div style={gridStyle}>
               {PUBLISH_AGENTS.map((agent) => {
                 const Icon = agent.Icon;
@@ -760,7 +777,12 @@ export function PublishScreen({ medium, format, academicSummary, workTitle, medi
                         </li>
                       ))}
                     </ul>
-                    {renderAgentReview(reviewStates[agent.id], () => handleAgentInvoke(agent.id), agent.cta)}
+                    {renderAgentReview(
+                      reviewStates[agent.id],
+                      () => handleAgentInvoke(agent.id),
+                      agent.cta,
+                      aiEnabled
+                    )}
                   </article>
                 );
               })}
@@ -945,10 +967,15 @@ function formatGateLabel(gate: AcademicPublishSummary['gateStatus'][number]['gat
 }
 
 // 카드의 CTA + 결과 패널 렌더링. idle / loading / success / failed 4가지 상태를 인라인 처리.
-function renderAgentReview(state: AgentReviewState, onInvoke: () => void, ctaLabel: string) {
+function renderAgentReview(
+  state: AgentReviewState,
+  onInvoke: () => void,
+  ctaLabel: string,
+  aiEnabled = true
+) {
   if (state.status === 'idle') {
     return (
-      <button type="button" style={cardCtaStyle(false, false)} onClick={onInvoke}>
+      <button type="button" style={cardCtaStyle(false, false)} disabled={!aiEnabled} onClick={onInvoke}>
         {ctaLabel}
       </button>
     );
@@ -965,7 +992,7 @@ function renderAgentReview(state: AgentReviewState, onInvoke: () => void, ctaLab
       <div style={reviewPanelStyle('failed')}>
         <span style={reviewStatusChipStyle('failed')}>호출 실패</span>
         <span style={{ color: 'rgba(237, 237, 243, 0.78)' }}>{state.reason}</span>
-        <button type="button" style={cardCtaStyle(false, false)} onClick={onInvoke}>
+        <button type="button" style={cardCtaStyle(false, false)} disabled={!aiEnabled} onClick={onInvoke}>
           다시 호출
         </button>
       </div>
@@ -997,7 +1024,7 @@ function renderAgentReview(state: AgentReviewState, onInvoke: () => void, ctaLab
           </ul>
         </div>
       )}
-      <button type="button" style={cardCtaStyle(false, true)} onClick={onInvoke}>
+      <button type="button" style={cardCtaStyle(false, true)} disabled={!aiEnabled} onClick={onInvoke}>
         다시 호출
       </button>
     </div>
